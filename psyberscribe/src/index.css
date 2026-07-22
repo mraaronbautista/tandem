@@ -1,0 +1,71 @@
+:root {
+  --text: #4a4550;
+  --text-h: #08060d;
+  --bg: #faf7f2;
+  --card-bg: #ffffff;
+  --border: #e5e4e7;
+  --accent: #d9a066;
+  --accent-h: #c98a4a;
+  --overdue: #c94f4f;
+  --pill-bg: #f0eee8;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 16px/145% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #c7c2cc;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --card-bg: #1f2028;
+    --border: #2e303a;
+    --pill-bg: #262832;
+  }
+}
+
+/* Explicit user choice (via the theme toggle) always wins over the OS
+   setting — including color-scheme, so native controls like checkboxes and
+   date pickers render with the same theme as the rest of the page instead
+   of following the OS preference underneath it. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #c7c2cc;
+  --text-h: #f3f4f6;
+  --bg: #16171d;
+  --card-bg: #1f2028;
+  --border: #2e303a;
+  --pill-bg: #262832;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --text: #4a4550;
+  --text-h: #08060d;
+  --bg: #faf7f2;
+  --card-bg: #ffffff;
+  --border: #e5e4e7;
+  --pill-bg: #f0eee8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1, h2 {
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+}
