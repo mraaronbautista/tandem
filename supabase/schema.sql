@@ -54,7 +54,11 @@ create table tasks (
   -- the `task-attachments` Storage bucket (see the bucket + policies
   -- below). Stored as the full public URL rather than just the object
   -- path since the bucket is public and the URL is all the client needs.
-  completion_image_url text
+  completion_image_url text,
+  -- Set once the "about to start" push reminder has fired for this task,
+  -- so the reminder cron job (runs every few minutes) doesn't re-notify
+  -- on every subsequent pass. Null means not sent yet.
+  reminder_sent_at timestamptz
 );
 
 create index tasks_status_idx on tasks (status);
@@ -169,3 +173,31 @@ create policy "members can update task attachments"
 create policy "members can delete task attachments"
   on storage.objects for delete
   using (bucket_id = 'task-attachments' and is_member());
+
+-- Web push subscriptions. One member can have several rows (one per
+-- device/browser they've enabled notifications on — phone + desktop,
+-- say). The Edge Functions that actually send pushes use the service
+-- role key and so bypass RLS entirely; these policies only govern what
+-- a signed-in client can do to its own subscriptions directly.
+create table push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members (id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table push_subscriptions enable row level security;
+
+create policy "members can read own push subscriptions"
+  on push_subscriptions for select
+  using (member_id = auth.uid());
+
+create policy "members can insert own push subscriptions"
+  on push_subscriptions for insert
+  with check (member_id = auth.uid());
+
+create policy "members can delete own push subscriptions"
+  on push_subscriptions for delete
+  using (member_id = auth.uid());

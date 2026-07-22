@@ -10,6 +10,7 @@ import {
   getOverlappingTaskIds,
 } from '../lib/tasks'
 import { fetchMembers } from '../lib/members'
+import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { useAuth } from '../lib/AuthContext'
 import { timeOfDayGreeting } from '../lib/greeting'
 import { WHO_LABEL, whoKeyForName } from '../lib/whoLabels'
@@ -42,6 +43,29 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [peekTaskId, setPeekTaskId] = useState(null)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+
+  useEffect(() => {
+    if (pushSupported()) getPushSubscription().then((sub) => setPushEnabled(Boolean(sub)))
+  }, [])
+
+  async function handleTogglePush() {
+    setPushBusy(true)
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush()
+        setPushEnabled(false)
+      } else {
+        await subscribeToPush(session.user.id)
+        setPushEnabled(true)
+      }
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   async function reload() {
     try {
@@ -151,6 +175,16 @@ export default function TaskBoard({ theme, toggleTheme }) {
       <header className="task-board-header">
         <h1>{timeOfDayGreeting(me?.display_name)}</h1>
         <div className="header-actions">
+          {pushSupported() && (
+            <button
+              className="push-toggle"
+              onClick={handleTogglePush}
+              disabled={pushBusy}
+              title={pushEnabled ? 'Disable notifications' : 'Enable notifications'}
+            >
+              {pushEnabled ? '🔔' : '🔕'}
+            </button>
+          )}
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <button className="sign-out" onClick={signOut}>
             Sign out
