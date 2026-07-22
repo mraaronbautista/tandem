@@ -256,7 +256,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent);
+  /* background set inline per-task from PRIORITY_COLOR */
   margin-top: 15px;
 }
 
@@ -479,27 +479,25 @@
   font-size: 13px;
 }
 
-.task-submission {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
+.submission-modal h2 {
+  font-size: 17px;
 }
 
-.task-submission-label {
+.submission-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   font-size: 12px;
-  opacity: 0.6;
-  margin-bottom: 6px;
+  opacity: 0.75;
 }
 
-.task-submission-note {
-  width: 100%;
-  padding: 7px 8px;
-  border-radius: 6px;
+.submission-modal label input[type='text'] {
+  padding: 8px 10px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-h);
   font: inherit;
-  font-size: 13px;
 }
 
 .task-submission-upload {
@@ -619,12 +617,32 @@
 }
 
 .modal-backdrop .new-task-form,
-.modal-backdrop .peek-task {
+.modal-backdrop .peek-task,
+.modal-backdrop .submission-modal {
   max-width: 480px;
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
   margin-bottom: 0;
+}
+
+.modal-backdrop .scroll-select-modal {
+  max-width: 220px;
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+}
+
+.submission-modal {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 @media (max-width: 640px) {
@@ -705,11 +723,9 @@
 }
 
 /* ScrollSelect — compact custom dropdown for option lists too long for a
-   native <select>'s unstylable popover. */
-.scroll-select {
-  position: relative;
-}
-
+   native <select>'s unstylable popover. Opens via the shared Modal
+   overlay (see .scroll-select-modal in the modal sizing rules above)
+   instead of an absolutely-positioned panel. */
 .scroll-select-trigger {
   width: 100%;
   padding: 7px 8px;
@@ -722,25 +738,17 @@
   cursor: pointer;
 }
 
-.scroll-select-panel {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  min-width: 140px;
+.scroll-select-list {
   overflow-y: auto;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .scroll-select-option {
   display: block;
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: none;
   border-radius: 6px;
   background: none;
@@ -749,6 +757,7 @@
   text-align: left;
   cursor: pointer;
   white-space: nowrap;
+  flex: none;
 }
 
 .scroll-select-option:hover {

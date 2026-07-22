@@ -1,3 +1,4 @@
+import { PRIORITY_COLOR } from '../lib/priorityColors'
 import TaskRow from './TaskRow'
 
 export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
@@ -7,11 +8,11 @@ export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
     <div className="timeline-row">
       <div className="timeline-time">{label}</div>
       <div className="timeline-rail">
-        <span className="timeline-dot" />
+        <span className="timeline-dot" style={{ background: PRIORITY_COLOR[task.priority] }} />
         {!isLast && <span className="timeline-connector" />}
       </div>
       <div className="timeline-content">
-        <TaskRow task={task} {...taskRowProps} />
+        <TaskRow task={task} hidePriorityDot {...taskRowProps} />
       </div>
     </div>
   )
