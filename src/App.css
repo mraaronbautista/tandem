@@ -479,6 +479,64 @@
   font-size: 13px;
 }
 
+.task-submission {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.task-submission-label {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
+.task-submission-note {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 13px;
+}
+
+.task-submission-upload {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.task-submission-image {
+  margin-top: 8px;
+}
+
+.task-submission-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.task-submission-image button {
+  margin-top: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--overdue);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .task-row-actions {
   display: flex;
   gap: 8px;
@@ -644,6 +702,62 @@
 .new-task-source-note {
   flex: 2 1 160px;
   align-self: flex-end;
+}
+
+/* ScrollSelect — compact custom dropdown for option lists too long for a
+   native <select>'s unstylable popover. */
+.scroll-select {
+  position: relative;
+}
+
+.scroll-select-trigger {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scroll-select-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  min-width: 140px;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+}
+
+.scroll-select-option {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.scroll-select-option:hover {
+  background: var(--bg);
+}
+
+.scroll-select-option-selected {
+  background: var(--accent);
+  color: #fff;
 }
 
 .new-task-actions {

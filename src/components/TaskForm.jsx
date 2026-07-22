@@ -3,6 +3,7 @@ import { WHO_LABEL } from '../lib/whoLabels'
 import { TIMEZONE_OPTIONS, DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
 import ChecklistEditor from './ChecklistEditor'
+import ScrollSelect from './ScrollSelect'
 
 export const emptyTaskForm = {
   title: '',
@@ -70,23 +71,25 @@ function minutesToTimeLabel(mins) {
 
 // End-time picker for a given start: 15-minute steps for the first 2
 // hours (fine control for short tasks), then 30-minute steps out to a
-// 12-hour cap matching Duration's longest preset. Tiered rather than one
-// flat 15-minute list all the way out — a 24-hour list at 15-minute
-// resolution is 96 entries, unusably long to actually scroll through.
-// Every Duration preset still lands on an exact tick either way, so the
-// two stay interchangeable. Spans crossing midnight (e.g. a 10 PM–3 AM
-// overnight shift) are labeled "(+1 day)".
+// 48-hour cap — long enough for a task that spans into the day after
+// next. Rendered through ScrollSelect rather than a native <select>, so a
+// long list here is fine: it shows a handful of rows at a time and
+// scrolls, rather than dumping everything into an unstylable native
+// popover. Every Duration preset still lands on an exact tick, so the two
+// stay interchangeable. Spans crossing midnight are labeled "(+1 day)" /
+// "(+2 days)".
 function buildEndTimeOptions(startTime) {
   const startMinutes = timeToMinutes(startTime)
   const offsets = []
   for (let offset = 15; offset <= 120; offset += 15) offsets.push(offset)
-  for (let offset = 150; offset <= 12 * 60; offset += 30) offsets.push(offset)
+  for (let offset = 150; offset <= 48 * 60; offset += 30) offsets.push(offset)
 
   const options = [{ value: '', label: 'None' }]
   for (const offset of offsets) {
     const total = startMinutes + offset
-    const nextDay = total >= 24 * 60 ? ' (+1 day)' : ''
-    options.push({ value: String(offset), label: `${minutesToTimeLabel(total % (24 * 60))}${nextDay}` })
+    const daysAhead = Math.floor(total / (24 * 60))
+    const dayLabel = daysAhead > 0 ? ` (+${daysAhead} day${daysAhead > 1 ? 's' : ''})` : ''
+    options.push({ value: String(offset), label: `${minutesToTimeLabel(total % (24 * 60))}${dayLabel}` })
   }
   return options
 }
@@ -182,13 +185,11 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
 
         <label>
           End time
-          <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
-            {endTimeOptions.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+          <ScrollSelect
+            value={form.duration_minutes}
+            onChange={(v) => set('duration_minutes', v)}
+            options={endTimeOptions}
+          />
         </label>
 
         <label>

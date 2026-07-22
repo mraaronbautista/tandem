@@ -3,6 +3,7 @@ import { isOverdue, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
+import { uploadCompletionImage } from '../lib/attachments'
 import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 
@@ -39,6 +40,8 @@ export default function TaskRow({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const [editing, setEditing] = useState(false)
+  const [noteDraft, setNoteDraft] = useState(task.completion_note || '')
+  const [uploading, setUploading] = useState(false)
   const overdue = isOverdue(task)
   const overlapping = overlappingIds?.has(task.id) ?? false
   const hasNotes = Boolean(task.notes)
@@ -57,6 +60,37 @@ export default function TaskRow({
   function handleToggleChecklistItem(itemId) {
     const updated = checklist.map((item) => (item.id === itemId ? { ...item, done: !item.done } : item))
     onUpdate(task.id, { checklist: updated })
+  }
+
+  function handleStatusToggle() {
+    const next = task.status === 'done' ? 'to_do' : 'done'
+    onStatusChange(task.id, next)
+    // Marking done surfaces the (optional) completion submission fields
+    // right away, instead of making you dig into the row separately.
+    if (next === 'done') setOpen(true)
+  }
+
+  function handleSaveNote() {
+    if (noteDraft === (task.completion_note || '')) return
+    onUpdate(task.id, { completion_note: noteDraft || null })
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadCompletionImage(task.id, file)
+      await onUpdate(task.id, { completion_image_url: url })
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  function handleRemoveImage(e) {
+    e.stopPropagation()
+    onUpdate(task.id, { completion_image_url: null })
   }
 
   if (editing) {
@@ -87,7 +121,7 @@ export default function TaskRow({
           className="task-done-checkbox"
           checked={task.status === 'done'}
           onClick={(e) => e.stopPropagation()}
-          onChange={() => onStatusChange(task.id, task.status === 'done' ? 'to_do' : 'done')}
+          onChange={handleStatusToggle}
         />
         <span className="task-priority-dot" style={{ background: PRIORITY_COLOR[task.priority] }} />
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
@@ -132,6 +166,31 @@ export default function TaskRow({
           {!sourceLabel && !task.notes && !checklist.length && task.recurrence === 'none' && !creatorName && (
             <p className="task-notes-empty">No additional details.</p>
           )}
+
+          <div className="task-submission">
+            <p className="task-submission-label">Submission (optional)</p>
+            <input
+              type="text"
+              className="task-submission-note"
+              placeholder="Link, note, or details…"
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              onBlur={handleSaveNote}
+            />
+            {task.completion_image_url ? (
+              <div className="task-submission-image">
+                <img src={task.completion_image_url} alt="Submission" />
+                <button type="button" onClick={handleRemoveImage}>
+                  Remove image
+                </button>
+              </div>
+            ) : (
+              <label className="task-submission-upload">
+                {uploading ? 'Uploading…' : '+ Attach image'}
+                <input type="file" accept="image/*" onChange={handleImageUpload} hidden />
+              </label>
+            )}
+          </div>
 
           <div className="task-row-actions">
             <button onClick={() => setEditing(true)}>Edit</button>

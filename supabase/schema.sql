@@ -45,7 +45,16 @@ create table tasks (
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  completed_at timestamptz
+  completed_at timestamptz,
+  -- Optional proof-of-completion, e.g. a link to the finished website or
+  -- a note about what was done — filled in after checking a task done,
+  -- not required to complete it.
+  completion_note text,
+  -- Public URL of an optional completion screenshot/photo, uploaded to
+  -- the `task-attachments` Storage bucket (see the bucket + policies
+  -- below). Stored as the full public URL rather than just the object
+  -- path since the bucket is public and the URL is all the client needs.
+  completion_image_url text
 );
 
 create index tasks_status_idx on tasks (status);
@@ -139,3 +148,24 @@ create policy "members can update tasks"
 create policy "members can delete tasks"
   on tasks for delete
   using (is_member());
+
+-- Storage bucket for optional completion screenshots/photos. Public
+-- (read) since these are casual task attachments, not sensitive
+-- documents — a public bucket also means getPublicUrl() works directly
+-- with no signed-URL/expiry logic needed client-side. Writes are still
+-- restricted to the two allow-listed members.
+insert into storage.buckets (id, name, public)
+values ('task-attachments', 'task-attachments', true)
+on conflict (id) do nothing;
+
+create policy "members can upload task attachments"
+  on storage.objects for insert
+  with check (bucket_id = 'task-attachments' and is_member());
+
+create policy "members can update task attachments"
+  on storage.objects for update
+  using (bucket_id = 'task-attachments' and is_member());
+
+create policy "members can delete task attachments"
+  on storage.objects for delete
+  using (bucket_id = 'task-attachments' and is_member());

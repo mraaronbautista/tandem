@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 
 const TASK_COLUMNS =
-  'id, title, who, status, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at'
+  'id, title, who, status, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at, completion_note, completion_image_url'
 
 export async function fetchTasks() {
   const { data, error } = await supabase
