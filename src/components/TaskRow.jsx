@@ -28,10 +28,19 @@ function dueLabel(task) {
   return `${start} – ${end.toLocaleTimeString([], TIME_ONLY_FORMAT)} (${formatDuration(task.duration_minutes)})`
 }
 
-export default function TaskRow({ task, onStatusChange, onUpdate, onDelete, memberName, defaultOpen = false }) {
+export default function TaskRow({
+  task,
+  onStatusChange,
+  onUpdate,
+  onDelete,
+  memberName,
+  defaultOpen = false,
+  overlappingIds,
+}) {
   const [open, setOpen] = useState(defaultOpen)
   const [editing, setEditing] = useState(false)
   const overdue = isOverdue(task)
+  const overlapping = overlappingIds?.has(task.id) ?? false
   const hasNotes = Boolean(task.notes)
   const sourceLabel = SOURCE_LABEL[task.source]
   const creatorName = memberName(task.created_by)
@@ -68,7 +77,10 @@ export default function TaskRow({ task, onStatusChange, onUpdate, onDelete, memb
   }
 
   return (
-    <div className={`task-row ${task.status === 'done' ? 'task-row-done' : ''}`} onClick={() => setOpen((v) => !v)}>
+    <div
+      className={`task-row ${task.status === 'done' ? 'task-row-done' : ''} ${overlapping ? 'task-row-overlapping' : ''}`}
+      onClick={() => setOpen((v) => !v)}
+    >
       <div className="task-row-main">
         <input
           type="checkbox"
@@ -82,6 +94,11 @@ export default function TaskRow({ task, onStatusChange, onUpdate, onDelete, memb
           {WHO_LABEL[task.who]}
         </span>
         <span className="task-title">{task.title}</span>
+        {overlapping && (
+          <span className="task-overlap-badge" title="Overlaps another task's time">
+            ⚠ Overlap
+          </span>
+        )}
         {hasNotes && <span className="task-notes-icon" title="Has notes">📝</span>}
         {checklist.length > 0 && (
           <span className="task-checklist-badge" title="Subtasks">

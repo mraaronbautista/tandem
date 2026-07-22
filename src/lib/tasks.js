@@ -44,6 +44,38 @@ export function formatDuration(minutes) {
   return `${minutes} min`
 }
 
+// Task IDs whose time span overlaps another active task belonging to the
+// same person — e.g. breakfast 9:00–9:15 and a shower 9:10–10:00. Only
+// tasks with both a due_date and a duration_minutes actually occupy a
+// span; point-in-time tasks (no duration) can't conflict with anything.
+// Done tasks are excluded — a finished task isn't a live conflict anymore.
+// Scoped per-person (`who`), not per currently-viewed tab, since two
+// different people having tasks at the same time isn't a real conflict.
+export function getOverlappingTaskIds(tasks) {
+  const timed = tasks.filter((t) => t.status !== 'done' && t.due_date && t.duration_minutes)
+  const overlapping = new Set()
+
+  for (let i = 0; i < timed.length; i++) {
+    for (let j = i + 1; j < timed.length; j++) {
+      const a = timed[i]
+      const b = timed[j]
+      if (a.who !== b.who) continue
+
+      const aStart = new Date(a.due_date).getTime()
+      const aEnd = aStart + a.duration_minutes * 60000
+      const bStart = new Date(b.due_date).getTime()
+      const bEnd = bStart + b.duration_minutes * 60000
+
+      if (aStart < bEnd && bStart < aEnd) {
+        overlapping.add(a.id)
+        overlapping.add(b.id)
+      }
+    }
+  }
+
+  return overlapping
+}
+
 export function isOverdue(task) {
   if (!task.due_date || task.status === 'done') return false
   return new Date(task.due_date).getTime() < Date.now()

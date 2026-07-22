@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { fetchTasks, createTask, updateTask, deleteTask, getOverdueTasks, getTasksForDay } from '../lib/tasks'
+import {
+  fetchTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  getOverdueTasks,
+  getTasksForDay,
+  getOverlappingTaskIds,
+} from '../lib/tasks'
 import { fetchMembers } from '../lib/members'
 import { useAuth } from '../lib/AuthContext'
 import { timeOfDayGreeting } from '../lib/greeting'
@@ -97,6 +105,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   const dayTasks = useMemo(() => getTasksForDay(whoFiltered, selectedDate), [whoFiltered, selectedDate])
 
+  // Computed across all tasks, not just whoFiltered — a conflict is real
+  // regardless of which "who" tab you happen to be looking at.
+  const overlappingIds = useMemo(() => getOverlappingTaskIds(tasks), [tasks])
+
   const peekTask = peekTaskId ? tasks.find((t) => t.id === peekTaskId) : null
 
   useEffect(() => {
@@ -131,6 +143,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     onUpdate: handleUpdate,
     onDelete: handleDelete,
     memberName,
+    overlappingIds,
   }
 
   return (

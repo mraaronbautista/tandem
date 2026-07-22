@@ -33,6 +33,11 @@ export const DURATION_OPTIONS = [
   { value: '120', label: '2 hr' },
   { value: '180', label: '3 hr' },
   { value: '240', label: '4 hr' },
+  { value: '300', label: '5 hr' },
+  { value: '360', label: '6 hr' },
+  { value: '480', label: '8 hr' },
+  { value: '600', label: '10 hr' },
+  { value: '720', label: '12 hr' },
 ]
 
 // Half-hour increments across the day, e.g. "09:00" -> "9:00 AM".
@@ -43,6 +48,14 @@ export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const label = new Date(2000, 0, 1, h, Number(m)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
   return { value, label }
 })
+
+// "YYYY-MM-DD" for today in the browser's own local timezone — matches
+// what the native date input expects and what's stored in due_date.
+function todayDateString() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 
 function timeToMinutes(t) {
   const [h, m] = t.split(':').map(Number)
@@ -55,17 +68,22 @@ function minutesToTimeLabel(mins) {
   return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
-// End-time picker for a given start: every 15-minute mark from just after
-// the start up through a full day later — spans that cross midnight (e.g.
-// a 10 PM–3 AM overnight shift) are real here, so this isn't capped to the
-// same calendar day. 15-minute steps (rather than TIME_OPTIONS' 30) so
-// every Duration preset below lands on an exact tick and the two stay
-// interchangeable — picking "15 min" produces an end time this list can
-// represent exactly, and vice versa.
+// End-time picker for a given start: 15-minute steps for the first 2
+// hours (fine control for short tasks), then 30-minute steps out to a
+// 12-hour cap matching Duration's longest preset. Tiered rather than one
+// flat 15-minute list all the way out — a 24-hour list at 15-minute
+// resolution is 96 entries, unusably long to actually scroll through.
+// Every Duration preset still lands on an exact tick either way, so the
+// two stay interchangeable. Spans crossing midnight (e.g. a 10 PM–3 AM
+// overnight shift) are labeled "(+1 day)".
 function buildEndTimeOptions(startTime) {
   const startMinutes = timeToMinutes(startTime)
+  const offsets = []
+  for (let offset = 15; offset <= 120; offset += 15) offsets.push(offset)
+  for (let offset = 150; offset <= 12 * 60; offset += 30) offsets.push(offset)
+
   const options = [{ value: '', label: 'None' }]
-  for (let offset = 15; offset <= 24 * 60 - 15; offset += 15) {
+  for (const offset of offsets) {
     const total = startMinutes + offset
     const nextDay = total >= 24 * 60 ? ' (+1 day)' : ''
     options.push({ value: String(offset), label: `${minutesToTimeLabel(total % (24 * 60))}${nextDay}` })
@@ -80,6 +98,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
   const [form, setForm] = useState({
     ...emptyTaskForm,
     ...initialValues,
+    due_date: initialValues?.due_date || todayDateString(),
     source_note: initialValues?.source_note ?? '',
     notes: initialValues?.notes ?? '',
     duration_minutes: initialValues?.duration_minutes != null ? String(initialValues.duration_minutes) : '',
