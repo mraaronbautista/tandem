@@ -31,7 +31,7 @@ export default function Login({ theme, toggleTheme }) {
       <div className="login-theme-toggle">
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
-      <h1>PsyberScribe</h1>
+      <h1>Tandem</h1>
       <p>Sign in with the email address invited to this board.</p>
 
       {status === 'sent' ? (

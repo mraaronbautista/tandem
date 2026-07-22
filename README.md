@@ -1,4 +1,4 @@
-# PsyberScribe
+# Tandem
 
 Shared task board for Ada and Aaron — one place to drop requests, see status, and know what's in motion without checking in.
 

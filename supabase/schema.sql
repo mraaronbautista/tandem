@@ -1,4 +1,4 @@
--- PsyberScribe schema: shared task board for exactly two accounts (you + Ada).
+-- Tandem schema: shared task board for exactly two accounts (you + Ada).
 -- Run this in the Supabase SQL editor (or via `supabase db push`) on a fresh project.
 
 create extension if not exists pgcrypto;
