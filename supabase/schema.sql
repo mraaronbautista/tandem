@@ -28,6 +28,12 @@ create table tasks (
   -- in whichever timezone the browser that created it happened to be in).
   -- Needed to redisplay the same intended time consistently for both of you.
   due_timezone text not null default 'America/New_York',
+  -- How long the task is expected to take, in minutes, starting at
+  -- due_date — null means it's just a point-in-time/deadline with no
+  -- span. Drives the "7:45–8:45 PM" range display; the end time is always
+  -- derived (due_date + duration_minutes), never stored separately, so it
+  -- can't drift out of sync with due_date.
+  duration_minutes integer,
   source task_source not null default 'none',
   source_note text,
   notes text,
@@ -86,9 +92,9 @@ begin
       from jsonb_array_elements(new.checklist) as item;
 
     insert into tasks (
-      title, who, priority, due_date, due_timezone, source, source_note, notes, checklist, recurrence, created_by
+      title, who, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by
     ) values (
-      new.title, new.who, new.priority, next_due, new.due_timezone, new.source, new.source_note, new.notes, reset_checklist, new.recurrence, new.created_by
+      new.title, new.who, new.priority, next_due, new.due_timezone, new.duration_minutes, new.source, new.source_note, new.notes, reset_checklist, new.recurrence, new.created_by
     );
   end if;
   return new;

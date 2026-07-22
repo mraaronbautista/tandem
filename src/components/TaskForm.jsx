@@ -10,12 +10,29 @@ export const emptyTaskForm = {
   due_date: '',
   due_time: '09:00',
   due_timezone: DEFAULT_TIMEZONE,
+  duration_minutes: '',
   source: 'none',
   source_note: '',
   notes: '',
   checklist: [],
   recurrence: 'none',
 }
+
+// Quick-pick spans for "how long will this take" — covers the common
+// cases without needing a free-form time input. Empty string means no
+// span: the task is just a point-in-time/deadline, same as before this
+// field existed.
+export const DURATION_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: '15', label: '15 min' },
+  { value: '30', label: '30 min' },
+  { value: '45', label: '45 min' },
+  { value: '60', label: '1 hr' },
+  { value: '90', label: '1.5 hr' },
+  { value: '120', label: '2 hr' },
+  { value: '180', label: '3 hr' },
+  { value: '240', label: '4 hr' },
+]
 
 // Half-hour increments across the day, e.g. "09:00" -> "9:00 AM".
 export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -35,6 +52,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
     ...initialValues,
     source_note: initialValues?.source_note ?? '',
     notes: initialValues?.notes ?? '',
+    duration_minutes: initialValues?.duration_minutes != null ? String(initialValues.duration_minutes) : '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -51,6 +69,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
       await onSubmit({
         ...rest,
         due_date: form.due_date ? zonedTimeToUtcIso(form.due_date, due_time, form.due_timezone) : null,
+        duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
         source_note: form.source_note || null,
         notes: form.notes || null,
         checklist: form.checklist.filter((item) => item.text.trim()),
@@ -110,6 +129,17 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
             {TIMEZONE_OPTIONS.map((tz) => (
               <option key={tz.value} value={tz.value}>
                 {tz.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Duration
+          <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
+            {DURATION_OPTIONS.map((d) => (
+              <option key={d.value} value={d.value}>
+                {d.label}
               </option>
             ))}
           </select>

@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 
 const TASK_COLUMNS =
-  'id, title, who, status, priority, due_date, due_timezone, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at'
+  'id, title, who, status, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at'
 
 export async function fetchTasks() {
   const { data, error } = await supabase
@@ -34,6 +34,14 @@ export async function updateTask(id, patch) {
 export async function deleteTask(id) {
   const { error } = await supabase.from('tasks').delete().eq('id', id)
   if (error) throw error
+}
+
+// Human label for a task's duration, e.g. 90 -> "1.5 hr", 45 -> "45 min".
+export function formatDuration(minutes) {
+  if (!minutes) return ''
+  if (minutes % 60 === 0) return `${minutes / 60} hr`
+  if (minutes > 60) return `${(minutes / 60).toFixed(1)} hr`
+  return `${minutes} min`
 }
 
 export function isOverdue(task) {

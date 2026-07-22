@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { isOverdue } from '../lib/tasks'
+import { isOverdue, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
@@ -8,6 +8,7 @@ import ChecklistView from './ChecklistView'
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
+const TIME_ONLY_FORMAT = { hour: 'numeric', minute: '2-digit' }
 
 // Editing/assigning a task stays explicit about which zone the time is
 // in (so you can target Ada's zone precisely) — but glancing at the list
@@ -16,6 +17,15 @@ const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minu
 // it's always "your" time, unambiguous by definition.
 function localLabel(isoString) {
   return new Date(isoString).toLocaleString([], DATE_TIME_FORMAT)
+}
+
+// "Jul 23, 5:30 – 6:10 PM (40 min)" when a duration is set, otherwise just
+// the point-in-time label as before.
+function dueLabel(task) {
+  const start = localLabel(task.due_date)
+  if (!task.duration_minutes) return start
+  const end = new Date(new Date(task.due_date).getTime() + task.duration_minutes * 60000)
+  return `${start} – ${end.toLocaleTimeString([], TIME_ONLY_FORMAT)} (${formatDuration(task.duration_minutes)})`
 }
 
 export default function TaskRow({ task, onStatusChange, onUpdate, onDelete, memberName, defaultOpen = false }) {
@@ -82,7 +92,7 @@ export default function TaskRow({ task, onStatusChange, onUpdate, onDelete, memb
           <span className="task-due">Completed {localLabel(task.completed_at)}</span>
         ) : (
           task.due_date && (
-            <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{localLabel(task.due_date)}</span>
+            <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{dueLabel(task)}</span>
           )
         )}
       </div>
