@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { WHO_LABEL } from '../lib/whoLabels'
 import { TIMEZONE_OPTIONS, DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../lib/timezone'
+import { formatDuration } from '../lib/tasks'
 import ChecklistEditor from './ChecklistEditor'
 
 export const emptyTaskForm = {
@@ -43,6 +44,35 @@ export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value, label }
 })
 
+function timeToMinutes(t) {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+function minutesToTimeLabel(mins) {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+// End-time picker for a given start: every 15-minute mark from just after
+// the start up through a full day later — spans that cross midnight (e.g.
+// a 10 PM–3 AM overnight shift) are real here, so this isn't capped to the
+// same calendar day. 15-minute steps (rather than TIME_OPTIONS' 30) so
+// every Duration preset below lands on an exact tick and the two stay
+// interchangeable — picking "15 min" produces an end time this list can
+// represent exactly, and vice versa.
+function buildEndTimeOptions(startTime) {
+  const startMinutes = timeToMinutes(startTime)
+  const options = [{ value: '', label: 'None' }]
+  for (let offset = 15; offset <= 24 * 60 - 15; offset += 15) {
+    const total = startMinutes + offset
+    const nextDay = total >= 24 * 60 ? ' (+1 day)' : ''
+    options.push({ value: String(offset), label: `${minutesToTimeLabel(total % (24 * 60))}${nextDay}` })
+  }
+  return options
+}
+
 export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true }) {
   // source_note/notes are nullable in the database — coalesce to '' so
   // editing a task that never had them doesn't hand a controlled input a
@@ -59,6 +89,14 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
   }
+
+  // Both selects below just read/write the same form.duration_minutes —
+  // "End time" expresses it as a clock time, "Duration" as a span, but
+  // they're two views on one value, so picking either one updates both.
+  const endTimeOptions = buildEndTimeOptions(form.due_time)
+  const durationOptions = DURATION_OPTIONS.some((d) => d.value === form.duration_minutes)
+    ? DURATION_OPTIONS
+    : [...DURATION_OPTIONS, { value: form.duration_minutes, label: formatDuration(Number(form.duration_minutes)) }]
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -124,6 +162,17 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         </label>
 
         <label>
+          End time
+          <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
+            {endTimeOptions.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
           Time zone
           <select value={form.due_timezone} onChange={(e) => set('due_timezone', e.target.value)}>
             {TIMEZONE_OPTIONS.map((tz) => (
@@ -137,7 +186,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         <label>
           Duration
           <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
-            {DURATION_OPTIONS.map((d) => (
+            {durationOptions.map((d) => (
               <option key={d.value} value={d.value}>
                 {d.label}
               </option>

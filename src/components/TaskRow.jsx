@@ -88,12 +88,11 @@ export default function TaskRow({ task, onStatusChange, onUpdate, onDelete, memb
             ☑ {checklistDone}/{checklist.length}
           </span>
         )}
-        {task.status === 'done' && task.completed_at ? (
-          <span className="task-due">Completed {localLabel(task.completed_at)}</span>
-        ) : (
-          task.due_date && (
-            <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{dueLabel(task)}</span>
-          )
+        {task.due_date && (
+          <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{dueLabel(task)}</span>
+        )}
+        {task.status === 'done' && task.completed_at && (
+          <span className="task-completed-at">Completed {localLabel(task.completed_at)}</span>
         )}
       </div>
 

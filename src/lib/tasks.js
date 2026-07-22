@@ -67,23 +67,25 @@ export function getOverdueTasks(tasks) {
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
-// Everything that "belongs" to a given day: tasks due that day if they're
-// still not done, plus tasks actually completed that day regardless of when
-// they were originally due — a done task's home becomes the day it was
-// finished, not its original due date, so completing a recurring task
-// doesn't pile years of history onto one date. Sorted by whichever
-// timestamp is relevant to that task.
+// Everything that "belongs" to a given day: tasks due that day, whether or
+// not they're done — completing a task keeps it anchored to its original
+// due time rather than jumping to whenever it was checked off, so a task's
+// position on the board doesn't move out from under you the moment you
+// finish it. Tasks with no due_date at all (all-day) fall back to the day
+// they were completed, purely so a finished all-day task doesn't vanish
+// with nowhere left to show it.
 export function getTasksForDay(tasks, date) {
   const dayKey = localDayKey(date)
 
   return tasks
     .filter((t) => {
+      if (t.due_date) return localDayKey(new Date(t.due_date)) === dayKey
       if (t.status === 'done') return t.completed_at && localDayKey(new Date(t.completed_at)) === dayKey
-      return t.due_date && localDayKey(new Date(t.due_date)) === dayKey
+      return false
     })
     .sort((a, b) => {
-      const at = a.status === 'done' ? a.completed_at : a.due_date
-      const bt = b.status === 'done' ? b.completed_at : b.due_date
+      const at = a.due_date || a.completed_at
+      const bt = b.due_date || b.completed_at
       return new Date(at) - new Date(bt)
     })
 }

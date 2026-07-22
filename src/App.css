@@ -359,6 +359,12 @@
   font-weight: 600;
 }
 
+.task-completed-at {
+  font-size: 11px;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
 .task-done-checkbox {
   flex: none;
   width: 18px;
