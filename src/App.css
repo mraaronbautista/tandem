@@ -118,6 +118,25 @@
   font-size: 22px;
 }
 
+.pull-to-refresh-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: height 0.15s ease-out;
+}
+
+.pull-to-refresh-spinner {
+  font-size: 18px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease-out;
+}
+
+.pull-to-refresh-ready {
+  opacity: 1;
+  color: var(--accent);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -125,12 +144,18 @@
 }
 
 .sign-out {
-  border: none;
-  background: none;
-  color: var(--text);
-  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  font-size: 15px;
+  line-height: 1;
   cursor: pointer;
-  text-decoration: underline;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
 }
 
 .push-toggle {

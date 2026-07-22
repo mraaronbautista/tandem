@@ -21,6 +21,7 @@ import NewTaskForm from './NewTaskForm'
 import ThemeToggle from './ThemeToggle'
 import Modal from './Modal'
 import DateStrip from './DateStrip'
+import PullToRefresh from './PullToRefresh'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -186,32 +187,33 @@ export default function TaskBoard({ theme, toggleTheme }) {
             </button>
           )}
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <button className="sign-out" onClick={signOut}>
-            Sign out
+          <button className="sign-out" onClick={signOut} title="Sign out">
+            🚪
           </button>
         </div>
       </header>
 
-      <DateStrip
-        selectedDate={selectedDate}
-        onSelect={setSelectedDate}
-        headerRight={
-          <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
-            {WHO_TABS.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        }
-      />
+      <PullToRefresh onRefresh={reload}>
+        <DateStrip
+          selectedDate={selectedDate}
+          onSelect={setSelectedDate}
+          headerRight={
+            <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
+              {WHO_TABS.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          }
+        />
 
-      {error && <p className="error">{error}</p>}
-      {loading ? (
-        <p className="loading">Loading…</p>
-      ) : (
-        <div className="task-list">
-          {allDay.length > 0 && (
+        {error && <p className="error">{error}</p>}
+        {loading ? (
+          <p className="loading">Loading…</p>
+        ) : (
+          <div className="task-list">
+            {allDay.length > 0 && (
             <section>
               <h2 className="task-section-heading">All Day</h2>
               <AllDayRow
@@ -259,8 +261,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
           )}
 
           {!allDay.length && !overdue.length && !dayTasks.length && <p className="empty">Nothing here.</p>}
-        </div>
-      )}
+          </div>
+        )}
+      </PullToRefresh>
 
       <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} />
 
