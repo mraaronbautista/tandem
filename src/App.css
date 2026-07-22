@@ -84,6 +84,22 @@
   padding: 16px;
 }
 
+.login-tagline {
+  opacity: 0.65;
+  font-size: 14px;
+}
+
+.login-mode-toggle {
+  display: block;
+  margin: 14px auto 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* Board */
 .task-board {
   max-width: 640px;
