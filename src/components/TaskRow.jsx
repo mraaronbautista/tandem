@@ -43,6 +43,7 @@ export default function TaskRow({
   const [open, setOpen] = useState(defaultOpen)
   const [editing, setEditing] = useState(false)
   const [submitOpen, setSubmitOpen] = useState(false)
+  const [viewSubmissionOpen, setViewSubmissionOpen] = useState(false)
   const [noteDraft, setNoteDraft] = useState(task.completion_note || '')
   const [uploading, setUploading] = useState(false)
   const hasSubmission = Boolean(task.completion_note || task.completion_image_url)
@@ -86,6 +87,8 @@ export default function TaskRow({
     try {
       const url = await uploadCompletionImage(task.id, file)
       await onUpdate(task.id, { completion_image_url: url })
+    } catch (err) {
+      alert(err.message)
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -175,6 +178,9 @@ export default function TaskRow({
 
           <div className="task-row-actions">
             <button onClick={() => setEditing(true)}>Edit</button>
+            {task.status === 'done' && hasSubmission && (
+              <button onClick={() => setViewSubmissionOpen(true)}>View submission</button>
+            )}
             {task.status === 'done' && (
               <button onClick={() => setSubmitOpen(true)}>{hasSubmission ? 'Edit submission' : 'Submit'}</button>
             )}
@@ -183,6 +189,25 @@ export default function TaskRow({
             </button>
           </div>
         </div>
+      )}
+
+      {viewSubmissionOpen && (
+        <Modal onClose={() => setViewSubmissionOpen(false)}>
+          <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Submission</h2>
+            {task.completion_note && <p className="task-submission-note-text">{task.completion_note}</p>}
+            {task.completion_image_url && (
+              <div className="task-submission-image">
+                <img src={task.completion_image_url} alt="Submission" />
+              </div>
+            )}
+            <div className="new-task-actions">
+              <button type="button" onClick={() => setViewSubmissionOpen(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {submitOpen && (

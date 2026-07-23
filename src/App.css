@@ -588,6 +588,11 @@
   font: inherit;
 }
 
+.task-submission-note-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .task-submission-upload {
   display: inline-block;
   margin-top: 8px;
