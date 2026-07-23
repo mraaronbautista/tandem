@@ -198,6 +198,11 @@ create policy "members can insert own push subscriptions"
   on push_subscriptions for insert
   with check (member_id = auth.uid());
 
+create policy "members can update own push subscriptions"
+  on push_subscriptions for update
+  using (member_id = auth.uid())
+  with check (member_id = auth.uid());
+
 create policy "members can delete own push subscriptions"
   on push_subscriptions for delete
   using (member_id = auth.uid());

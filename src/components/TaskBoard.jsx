@@ -251,7 +251,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   <TimelineRow
                     key={task.id}
                     task={task}
-                    time={task.due_date || task.completed_at}
+                    time={task.status === 'done' ? task.completed_at : task.due_date}
                     isLast={i === dayTasks.length - 1}
                     {...taskRowProps}
                   />

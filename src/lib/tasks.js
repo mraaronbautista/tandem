@@ -99,25 +99,27 @@ export function getOverdueTasks(tasks) {
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
-// Everything that "belongs" to a given day: tasks due that day, whether or
-// not they're done — completing a task keeps it anchored to its original
-// due time rather than jumping to whenever it was checked off, so a task's
-// position on the board doesn't move out from under you the moment you
-// finish it. Tasks with no due_date at all (all-day) fall back to the day
-// they were completed, purely so a finished all-day task doesn't vanish
-// with nowhere left to show it.
+// Everything that "belongs" to a given day: tasks due that day if still
+// not done, plus tasks actually completed that day regardless of when
+// they were originally due. That last part matters for a household
+// split across timezones — Ada assigning something at 3pm her time can
+// land on what's already "yesterday" on your calendar, and if a
+// completed task stayed pinned to that original (now past) day, it'd
+// look like nothing got done today even though it did. The label still
+// always shows the original due time (see TaskRow's dueLabel) plus a
+// small "Completed" tag — only which day's list it appears in follows
+// completion time, not the label itself.
 export function getTasksForDay(tasks, date) {
   const dayKey = localDayKey(date)
 
   return tasks
     .filter((t) => {
-      if (t.due_date) return localDayKey(new Date(t.due_date)) === dayKey
       if (t.status === 'done') return t.completed_at && localDayKey(new Date(t.completed_at)) === dayKey
-      return false
+      return t.due_date && localDayKey(new Date(t.due_date)) === dayKey
     })
     .sort((a, b) => {
-      const at = a.due_date || a.completed_at
-      const bt = b.due_date || b.completed_at
+      const at = a.status === 'done' ? a.completed_at : a.due_date
+      const bt = b.status === 'done' ? b.completed_at : b.due_date
       return new Date(at) - new Date(bt)
     })
 }

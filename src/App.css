@@ -126,15 +126,42 @@
   transition: height 0.15s ease-out;
 }
 
-.pull-to-refresh-spinner {
-  font-size: 18px;
-  opacity: 0.5;
-  transition: opacity 0.15s ease-out;
+.pull-to-refresh-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.6;
+  color: var(--text);
+  transition: opacity 0.15s ease-out, color 0.15s ease-out;
 }
 
-.pull-to-refresh-ready {
+.pull-to-refresh-content.pull-to-refresh-ready {
   opacity: 1;
   color: var(--accent);
+}
+
+.pull-to-refresh-spinner {
+  font-size: 18px;
+  line-height: 1;
+  display: inline-block;
+}
+
+.pull-to-refresh-spinner.pull-to-refresh-spinning {
+  animation: pull-to-refresh-spin 0.7s linear infinite;
+}
+
+.pull-to-refresh-label {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+@keyframes pull-to-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .header-actions {

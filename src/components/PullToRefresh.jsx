@@ -19,13 +19,17 @@ export default function PullToRefresh({ onRefresh, children }) {
 
   function handleTouchMove(e) {
     if (touchStartY.current === null || refreshing) return
-    const delta = e.touches[0].clientY - touchStartY.current
-    if (delta > 0 && window.scrollY === 0) {
-      setPullY(Math.min(delta * 0.5, 90))
-    } else {
-      touchStartY.current = null
+    // Scrolled away from the top mid-gesture — stop tracking, but don't
+    // reset touchStartY: a little jitter right at the start of a touch
+    // (a pixel or two of noise before the deliberate pull begins) used to
+    // permanently kill tracking for the rest of that touch here, which is
+    // exactly why this felt like it "didn't work."
+    if (window.scrollY > 0) {
       setPullY(0)
+      return
     }
+    const delta = e.touches[0].clientY - touchStartY.current
+    setPullY(delta > 0 ? Math.min(delta * 0.5, 90) : 0)
   }
 
   async function handleTouchEnd() {
@@ -40,14 +44,18 @@ export default function PullToRefresh({ onRefresh, children }) {
   }
 
   const indicatorHeight = refreshing ? THRESHOLD : pullY
+  const ready = refreshing || pullY > THRESHOLD
 
   return (
     <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="pull-to-refresh-indicator" style={{ height: indicatorHeight }}>
         {indicatorHeight > 0 && (
-          <span className={`pull-to-refresh-spinner${refreshing || pullY > THRESHOLD ? ' pull-to-refresh-ready' : ''}`}>
-            {refreshing ? '↻' : '↓'}
-          </span>
+          <div className={`pull-to-refresh-content${ready ? ' pull-to-refresh-ready' : ''}`}>
+            <span className={`pull-to-refresh-spinner${refreshing ? ' pull-to-refresh-spinning' : ''}`}>↻</span>
+            <span className="pull-to-refresh-label">
+              {refreshing ? 'Refreshing…' : ready ? 'Release to refresh' : 'Pull to refresh'}
+            </span>
+          </div>
         )}
       </div>
       {children}
