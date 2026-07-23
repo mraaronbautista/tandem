@@ -50,17 +50,17 @@ create table tasks (
   -- a note about what was done — filled in after checking a task done,
   -- not required to complete it.
   completion_note text,
-  -- Public URL of an optional completion attachment — a screenshot, but
-  -- also just as often a PDF/doc/slide deck/whatever else — uploaded to
-  -- the `task-attachments` Storage bucket (see the bucket + policies
-  -- below). Stored as the full public URL rather than just the object
-  -- path since the bucket is public and the URL is all the client needs.
-  completion_attachment_url text,
-  -- Original filename, kept separately from the storage path (which is
-  -- namespaced/timestamped to avoid collisions) so the UI can show
-  -- "meeting_notes.docx" instead of a generated path, and so it knows
-  -- whether to render an image preview vs. a plain download link.
-  completion_attachment_name text,
+  -- Optional completion attachments — screenshots, PDFs, docs, slide
+  -- decks, whatever the task called for — uploaded to the
+  -- `task-attachments` Storage bucket (see the bucket + policies below).
+  -- A jsonb array of { url, name }, same pattern as checklist: a handful
+  -- of files per task doesn't need its own child table. url is the full
+  -- public URL (bucket is public); name is the original filename, kept
+  -- separately from the storage path (which is namespaced/timestamped to
+  -- avoid collisions) so the UI can show "meeting_notes.docx" instead of
+  -- a generated path, and so it knows whether to render an image preview
+  -- or a plain download link.
+  completion_attachments jsonb not null default '[]'::jsonb,
   -- Set once the "about to start" push reminder has fired for this task,
   -- so the reminder cron job (runs every few minutes) doesn't re-notify
   -- on every subsequent pass. Null means not sent yet.

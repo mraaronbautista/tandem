@@ -568,79 +568,157 @@
 }
 
 .submission-modal h2 {
-  font-size: 17px;
+  font-size: 19px;
 }
 
-.submission-modal label {
+.submission-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  opacity: 0.75;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.85;
 }
 
-.submission-modal label input[type='text'] {
-  padding: 8px 10px;
+.submission-field-label {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.submission-field input[type='text'] {
+  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-h);
   font: inherit;
+  font-size: 15px;
 }
 
 .task-submission-note-text {
   white-space: pre-wrap;
   word-break: break-word;
+  font-size: 15px;
 }
 
-.task-submission-upload {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--pill-bg);
-  color: var(--text-h);
-  font-size: 13px;
-  cursor: pointer;
+.task-submission-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.task-submission-image {
-  margin-top: 8px;
+.task-submission-attachment {
+  position: relative;
 }
 
-.task-submission-image img {
+.task-submission-attachment-image img {
   display: block;
   max-width: 100%;
-  max-height: 240px;
-  border-radius: 8px;
+  max-height: 280px;
+  border-radius: 10px;
   border: 1px solid var(--border);
 }
 
 .task-submission-file-link {
-  display: inline-block;
-  padding: 8px 12px;
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--pill-bg);
-  color: var(--text-h);
-  text-decoration: none;
-  word-break: break-word;
 }
 
-.task-submission-file-link:hover {
+a.task-submission-file-link {
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+a.task-submission-file-link:hover {
   border-color: var(--accent);
 }
 
-.task-submission-image button {
-  margin-top: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
+.task-submission-file-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+.task-submission-file-icon {
+  font-size: 18px;
+  flex: none;
+}
+
+.task-submission-file-name {
+  word-break: break-word;
+}
+
+.task-submission-remove {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
   border: 1px solid var(--border);
-  background: var(--pill-bg);
+  background: var(--card-bg);
   color: var(--overdue);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-submission-attachment-image .task-submission-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.task-submission-upload {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
   font-size: 13px;
   cursor: pointer;
+}
+
+.task-submission-upload:hover {
+  border-color: var(--accent);
+}
+
+.submission-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.submission-actions button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.submission-actions button.submission-save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
 }
 
 .task-row-actions {
@@ -734,6 +812,10 @@
   margin-bottom: 0;
 }
 
+.modal-backdrop .submission-modal {
+  max-width: 560px;
+}
+
 .modal-backdrop .scroll-select-modal {
   max-width: 220px;
   width: 100%;
@@ -760,13 +842,15 @@
   }
 
   .modal-backdrop .new-task-form,
-  .modal-backdrop .peek-task {
+  .modal-backdrop .peek-task,
+  .modal-backdrop .submission-modal {
     max-width: 100%;
     max-height: 88vh;
     animation: modal-slide-up 0.2s ease-out;
   }
 
-  .modal-backdrop .new-task-form {
+  .modal-backdrop .new-task-form,
+  .modal-backdrop .submission-modal {
     border-radius: 16px 16px 0 0;
   }
 

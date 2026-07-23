@@ -46,7 +46,8 @@ export default function TaskRow({
   const [viewSubmissionOpen, setViewSubmissionOpen] = useState(false)
   const [noteDraft, setNoteDraft] = useState(task.completion_note || '')
   const [uploading, setUploading] = useState(false)
-  const hasSubmission = Boolean(task.completion_note || task.completion_attachment_url)
+  const attachments = task.completion_attachments || []
+  const hasSubmission = Boolean(task.completion_note || attachments.length)
   const overdue = isOverdue(task)
   const overlapping = overlappingIds?.has(task.id) ?? false
   const hasNotes = Boolean(task.notes)
@@ -81,12 +82,14 @@ export default function TaskRow({
   }
 
   async function handleAttachmentUpload(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
     setUploading(true)
     try {
-      const url = await uploadCompletionAttachment(task.id, file)
-      await onUpdate(task.id, { completion_attachment_url: url, completion_attachment_name: file.name })
+      const uploaded = await Promise.all(
+        files.map(async (file) => ({ url: await uploadCompletionAttachment(task.id, file), name: file.name })),
+      )
+      await onUpdate(task.id, { completion_attachments: [...attachments, ...uploaded] })
     } catch (err) {
       alert(err.message)
     } finally {
@@ -95,9 +98,9 @@ export default function TaskRow({
     }
   }
 
-  function handleRemoveAttachment(e) {
+  function handleRemoveAttachment(e, index) {
     e.stopPropagation()
-    onUpdate(task.id, { completion_attachment_url: null, completion_attachment_name: null })
+    onUpdate(task.id, { completion_attachments: attachments.filter((_, i) => i !== index) })
   }
 
   if (editing) {
@@ -196,22 +199,29 @@ export default function TaskRow({
           <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Submission</h2>
             {task.completion_note && <p className="task-submission-note-text">{task.completion_note}</p>}
-            {task.completion_attachment_url &&
-              (isImageAttachment(task.completion_attachment_name) ? (
-                <div className="task-submission-image">
-                  <img src={task.completion_attachment_url} alt={task.completion_attachment_name || 'Attachment'} />
-                </div>
-              ) : (
-                <a
-                  className="task-submission-file-link"
-                  href={task.completion_attachment_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  📎 {task.completion_attachment_name || 'View attachment'}
-                </a>
-              ))}
-            <div className="new-task-actions">
+            {attachments.length > 0 && (
+              <div className="task-submission-attachments">
+                {attachments.map((a, i) =>
+                  isImageAttachment(a.name) ? (
+                    <div className="task-submission-attachment task-submission-attachment-image" key={i}>
+                      <img src={a.url} alt={a.name || 'Attachment'} />
+                    </div>
+                  ) : (
+                    <a
+                      className="task-submission-attachment task-submission-file-link"
+                      href={a.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      key={i}
+                    >
+                      <span className="task-submission-file-icon">📎</span>
+                      <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
+                    </a>
+                  ),
+                )}
+              </div>
+            )}
+            <div className="submission-actions">
               <button type="button" onClick={() => setViewSubmissionOpen(false)}>
                 Close
               </button>
@@ -224,7 +234,7 @@ export default function TaskRow({
         <Modal onClose={() => setSubmitOpen(false)}>
           <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Submission</h2>
-            <label>
+            <label className="submission-field">
               Link, note, or details
               <input
                 type="text"
@@ -234,32 +244,51 @@ export default function TaskRow({
               />
             </label>
 
-            {task.completion_attachment_url ? (
-              <div className="task-submission-image">
-                {isImageAttachment(task.completion_attachment_name) ? (
-                  <img src={task.completion_attachment_url} alt={task.completion_attachment_name || 'Attachment'} />
-                ) : (
-                  <a
-                    className="task-submission-file-link"
-                    href={task.completion_attachment_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    📎 {task.completion_attachment_name || 'View attachment'}
-                  </a>
-                )}
-                <button type="button" onClick={handleRemoveAttachment}>
-                  Remove attachment
-                </button>
-              </div>
-            ) : (
-              <label className="task-submission-upload">
-                {uploading ? 'Uploading…' : '+ Attach a file'}
-                <input type="file" onChange={handleAttachmentUpload} hidden />
-              </label>
-            )}
+            <div className="submission-field">
+              <span className="submission-field-label">Attachments</span>
 
-            <div className="new-task-actions">
+              {attachments.length > 0 && (
+                <div className="task-submission-attachments">
+                  {attachments.map((a, i) =>
+                    isImageAttachment(a.name) ? (
+                      <div className="task-submission-attachment task-submission-attachment-image" key={i}>
+                        <img src={a.url} alt={a.name || 'Attachment'} />
+                        <button
+                          type="button"
+                          className="task-submission-remove"
+                          onClick={(e) => handleRemoveAttachment(e, i)}
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="task-submission-attachment task-submission-file-link" key={i}>
+                        <a href={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
+                          <span className="task-submission-file-icon">📎</span>
+                          <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
+                        </a>
+                        <button
+                          type="button"
+                          className="task-submission-remove"
+                          onClick={(e) => handleRemoveAttachment(e, i)}
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+
+              <label className="task-submission-upload">
+                {uploading ? 'Uploading…' : '+ Attach files'}
+                <input type="file" multiple onChange={handleAttachmentUpload} hidden />
+              </label>
+            </div>
+
+            <div className="submission-actions">
               <button
                 type="button"
                 onClick={() => {
@@ -269,7 +298,7 @@ export default function TaskRow({
               >
                 Cancel
               </button>
-              <button type="button" onClick={handleSaveNote}>
+              <button type="button" className="submission-save" onClick={handleSaveNote}>
                 Save
               </button>
             </div>

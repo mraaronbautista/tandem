@@ -1,11 +1,11 @@
 // Triggered by a Database Webhook on tasks INSERT and UPDATE (configure
 // both event types to point at this function — see setup steps).
 //
-// Notification rules (deliberately asymmetric, not a general preference
-// system — this app is hardcoded for exactly two people):
-//   - New task assigned to Aaron (by Ada, not by himself) -> ping Aaron now.
-//   - New task assigned to Ada -> no ping now; she only hears about it
-//     when notify-reminders fires closer to its start time.
+// Notification rules — this app is hardcoded for exactly two people, not
+// a general preference system:
+//   - New task assigned to someone by the OTHER person -> ping the
+//     assignee now, symmetric in both directions. Assigning a task to
+//     yourself doesn't ping you — you already know.
 //   - Either person completing a task -> ping the OTHER person, so they
 //     know it got done.
 import { resolveMemberIds, notifyMember } from '../_shared/notify.ts'
@@ -16,8 +16,9 @@ Deno.serve(async (req) => {
 
   if (payload.type === 'INSERT') {
     const task = payload.record
-    if (task.who === 'assistant' && task.created_by !== assistant) {
-      await notifyMember(assistant, {
+    const assigneeId = task.who === 'assistant' ? assistant : yours
+    if (task.created_by !== assigneeId) {
+      await notifyMember(assigneeId, {
         title: 'New task assigned',
         body: task.title,
         url: '/',
