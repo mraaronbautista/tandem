@@ -22,6 +22,10 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
+      // Android honors this; iOS mostly ignores custom vibration patterns
+      // and just defers to the device's own Sounds & Haptics settings —
+      // no web API controls that on iOS specifically.
+      vibrate: [200, 100, 200],
       data: { url: payload.url || '/' },
     }),
   )
