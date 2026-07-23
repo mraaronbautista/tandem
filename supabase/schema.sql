@@ -50,11 +50,17 @@ create table tasks (
   -- a note about what was done — filled in after checking a task done,
   -- not required to complete it.
   completion_note text,
-  -- Public URL of an optional completion screenshot/photo, uploaded to
+  -- Public URL of an optional completion attachment — a screenshot, but
+  -- also just as often a PDF/doc/slide deck/whatever else — uploaded to
   -- the `task-attachments` Storage bucket (see the bucket + policies
   -- below). Stored as the full public URL rather than just the object
   -- path since the bucket is public and the URL is all the client needs.
-  completion_image_url text,
+  completion_attachment_url text,
+  -- Original filename, kept separately from the storage path (which is
+  -- namespaced/timestamped to avoid collisions) so the UI can show
+  -- "meeting_notes.docx" instead of a generated path, and so it knows
+  -- whether to render an image preview vs. a plain download link.
+  completion_attachment_name text,
   -- Set once the "about to start" push reminder has fired for this task,
   -- so the reminder cron job (runs every few minutes) doesn't re-notify
   -- on every subsequent pass. Null means not sent yet.
@@ -168,6 +174,10 @@ create policy "members can upload task attachments"
 
 create policy "members can update task attachments"
   on storage.objects for update
+  using (bucket_id = 'task-attachments' and is_member());
+
+create policy "members can view task attachments"
+  on storage.objects for select
   using (bucket_id = 'task-attachments' and is_member());
 
 create policy "members can delete task attachments"

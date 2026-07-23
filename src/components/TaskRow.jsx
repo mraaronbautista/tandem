@@ -3,7 +3,7 @@ import { isOverdue, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
-import { uploadCompletionImage } from '../lib/attachments'
+import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 import Modal from './Modal'
@@ -46,7 +46,7 @@ export default function TaskRow({
   const [viewSubmissionOpen, setViewSubmissionOpen] = useState(false)
   const [noteDraft, setNoteDraft] = useState(task.completion_note || '')
   const [uploading, setUploading] = useState(false)
-  const hasSubmission = Boolean(task.completion_note || task.completion_image_url)
+  const hasSubmission = Boolean(task.completion_note || task.completion_attachment_url)
   const overdue = isOverdue(task)
   const overlapping = overlappingIds?.has(task.id) ?? false
   const hasNotes = Boolean(task.notes)
@@ -80,13 +80,13 @@ export default function TaskRow({
     setSubmitOpen(false)
   }
 
-  async function handleImageUpload(e) {
+  async function handleAttachmentUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
     try {
-      const url = await uploadCompletionImage(task.id, file)
-      await onUpdate(task.id, { completion_image_url: url })
+      const url = await uploadCompletionAttachment(task.id, file)
+      await onUpdate(task.id, { completion_attachment_url: url, completion_attachment_name: file.name })
     } catch (err) {
       alert(err.message)
     } finally {
@@ -95,9 +95,9 @@ export default function TaskRow({
     }
   }
 
-  function handleRemoveImage(e) {
+  function handleRemoveAttachment(e) {
     e.stopPropagation()
-    onUpdate(task.id, { completion_image_url: null })
+    onUpdate(task.id, { completion_attachment_url: null, completion_attachment_name: null })
   }
 
   if (editing) {
@@ -196,11 +196,21 @@ export default function TaskRow({
           <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Submission</h2>
             {task.completion_note && <p className="task-submission-note-text">{task.completion_note}</p>}
-            {task.completion_image_url && (
-              <div className="task-submission-image">
-                <img src={task.completion_image_url} alt="Submission" />
-              </div>
-            )}
+            {task.completion_attachment_url &&
+              (isImageAttachment(task.completion_attachment_name) ? (
+                <div className="task-submission-image">
+                  <img src={task.completion_attachment_url} alt={task.completion_attachment_name || 'Attachment'} />
+                </div>
+              ) : (
+                <a
+                  className="task-submission-file-link"
+                  href={task.completion_attachment_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  📎 {task.completion_attachment_name || 'View attachment'}
+                </a>
+              ))}
             <div className="new-task-actions">
               <button type="button" onClick={() => setViewSubmissionOpen(false)}>
                 Close
@@ -224,17 +234,28 @@ export default function TaskRow({
               />
             </label>
 
-            {task.completion_image_url ? (
+            {task.completion_attachment_url ? (
               <div className="task-submission-image">
-                <img src={task.completion_image_url} alt="Submission" />
-                <button type="button" onClick={handleRemoveImage}>
-                  Remove image
+                {isImageAttachment(task.completion_attachment_name) ? (
+                  <img src={task.completion_attachment_url} alt={task.completion_attachment_name || 'Attachment'} />
+                ) : (
+                  <a
+                    className="task-submission-file-link"
+                    href={task.completion_attachment_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    📎 {task.completion_attachment_name || 'View attachment'}
+                  </a>
+                )}
+                <button type="button" onClick={handleRemoveAttachment}>
+                  Remove attachment
                 </button>
               </div>
             ) : (
               <label className="task-submission-upload">
-                {uploading ? 'Uploading…' : '+ Attach image'}
-                <input type="file" accept="image/*" onChange={handleImageUpload} hidden />
+                {uploading ? 'Uploading…' : '+ Attach a file'}
+                <input type="file" onChange={handleAttachmentUpload} hidden />
               </label>
             )}
 
