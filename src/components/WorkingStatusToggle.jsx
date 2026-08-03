@@ -33,9 +33,9 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
         className={`working-toggle${isWorking ? ' working-toggle-on' : ''}`}
         onClick={handleClick}
         disabled={busy}
-        title={isWorking ? 'Stop working' : 'Start working'}
+        title={isWorking ? `Working since ${formatSince(me.working_since)} — tap to stop` : 'Start working'}
       >
-        {isWorking ? `🟢 Working since ${formatSince(me.working_since)}` : '⚪ Not working'}
+        {isWorking ? '🟢 Working' : '⚪ Not working'}
       </button>
     )
   }
