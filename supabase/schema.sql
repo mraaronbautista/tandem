@@ -13,7 +13,11 @@ create type task_recurrence as enum ('none', 'daily', 'weekly', 'monthly');
 -- Populate this manually after inviting each account via Supabase Auth.
 create table members (
   id uuid primary key references auth.users (id) on delete cascade,
-  display_name text not null
+  display_name text not null,
+  -- Nullable timestamp rather than a plain boolean: doubles as the on/off
+  -- flag (is/isn't null) and lets the UI show "working since 2:15 PM" for
+  -- free, with no second column that could drift out of sync.
+  working_since timestamptz
 );
 
 create table tasks (
@@ -216,3 +220,61 @@ create policy "members can update own push subscriptions"
 create policy "members can delete own push subscriptions"
   on push_subscriptions for delete
   using (member_id = auth.uid());
+
+-- Allow updating your own working_since — members previously had only a
+-- SELECT policy.
+create policy "members can update own working status"
+  on members for update
+  using (id = auth.uid())
+  with check (id = auth.uid());
+
+-- End-of-day/week/month reports: manually submitted, auto-tallied from
+-- that period's completed tasks but editable before sending. Persisted
+-- (not just a fire-and-forget push) since push delivery is best-effort —
+-- losing the report entirely if the notification doesn't land defeats
+-- the point, especially once it's tracking logged hours. Append-only: no
+-- update/delete policy, it's a log entry.
+create type report_period as enum ('day', 'week', 'month');
+
+create table eod_reports (
+  id uuid primary key default gen_random_uuid(),
+  submitted_by uuid not null references members (id),
+  period report_period not null default 'day',
+  report_date date not null default current_date,
+  hours_logged numeric,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table eod_reports enable row level security;
+
+create policy "members can read all eod reports"
+  on eod_reports for select
+  using (is_member());
+
+create policy "members can insert own eod reports"
+  on eod_reports for insert
+  with check (is_member() and submitted_by = auth.uid());
+
+-- Priorities for the upcoming day/week/month — a shared planning note,
+-- not a personal log like eod_reports, so both members can set it (unlike
+-- eod_reports which is Aaron's own work log). Append-only: each save is a
+-- new row, most recent per period is "current"; querying history is free
+-- rather than needing its own table later.
+create table priorities (
+  id uuid primary key default gen_random_uuid(),
+  set_by uuid not null references members (id),
+  period report_period not null,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table priorities enable row level security;
+
+create policy "members can read all priorities"
+  on priorities for select
+  using (is_member());
+
+create policy "members can insert priorities"
+  on priorities for insert
+  with check (is_member() and set_by = auth.uid());

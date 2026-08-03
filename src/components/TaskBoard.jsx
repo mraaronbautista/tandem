@@ -11,6 +11,7 @@ import {
 } from '../lib/tasks'
 import { fetchMembers } from '../lib/members'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
+import { sendNudge } from '../lib/manualNotify'
 import { useAuth } from '../lib/AuthContext'
 import { timeOfDayGreeting } from '../lib/greeting'
 import { WHO_LABEL, whoKeyForName } from '../lib/whoLabels'
@@ -22,6 +23,10 @@ import ThemeToggle from './ThemeToggle'
 import Modal from './Modal'
 import DateStrip from './DateStrip'
 import PullToRefresh from './PullToRefresh'
+import WorkingStatusToggle from './WorkingStatusToggle'
+import EndOfDayReportForm from './EndOfDayReportForm'
+import EodReportsList from './EodReportsList'
+import PrioritiesForm from './PrioritiesForm'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -46,6 +51,22 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [peekTaskId, setPeekTaskId] = useState(null)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportsListOpen, setReportsListOpen] = useState(false)
+  const [prioritiesOpen, setPrioritiesOpen] = useState(false)
+  const [nudgeState, setNudgeState] = useState('idle') // idle | sending | sent
+
+  async function handleNudge() {
+    setNudgeState('sending')
+    try {
+      await sendNudge()
+      setNudgeState('sent')
+      setTimeout(() => setNudgeState('idle'), 2000)
+    } catch (err) {
+      alert(err.message)
+      setNudgeState('idle')
+    }
+  }
 
   useEffect(() => {
     if (pushSupported()) getPushSubscription().then((sub) => setPushEnabled(Boolean(sub)))
@@ -91,12 +112,23 @@ export default function TaskBoard({ theme, toggleTheme }) {
     reload()
     reloadMembers()
 
-    const channel = supabase
+    const tasksChannel = supabase
       .channel('tasks-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => reload())
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    // So Ada's "working" badge (and anything else about the other
+    // person) updates live too — reloadMembers() otherwise only ran once
+    // on mount.
+    const membersChannel = supabase
+      .channel('members-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => reloadMembers())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(tasksChannel)
+      supabase.removeChannel(membersChannel)
+    }
   }, [])
 
   const me = useMemo(() => members.find((m) => m.id === session.user.id), [members, session])
@@ -176,6 +208,28 @@ export default function TaskBoard({ theme, toggleTheme }) {
       <header className="task-board-header">
         <h1>{timeOfDayGreeting(me?.display_name)}</h1>
         <div className="header-actions">
+          <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
+          <button className="icon-button" onClick={() => setPrioritiesOpen(true)} title="Set priorities">
+            🎯
+          </button>
+          <button className="icon-button" onClick={() => setReportsListOpen(true)} title="View end-of-day reports">
+            📋
+          </button>
+          {me?.display_name === 'Aaron' && (
+            <button className="icon-button" onClick={() => setReportOpen(true)} title="Submit end-of-day report">
+              📝
+            </button>
+          )}
+          {me?.display_name === 'Ada' && (
+            <button
+              className="icon-button nudge-button"
+              onClick={handleNudge}
+              disabled={nudgeState === 'sending'}
+              title="Nudge Aaron about something urgent"
+            >
+              {nudgeState === 'sent' ? '✅' : '🚨'}
+            </button>
+          )}
           {pushSupported() && (
             <button
               className="push-toggle"
@@ -273,6 +327,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
             <TaskRow task={peekTask} defaultOpen {...taskRowProps} />
           </div>
         </Modal>
+      )}
+
+      {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} onClose={() => setReportOpen(false)} />}
+
+      {reportsListOpen && <EodReportsList memberName={memberName} onClose={() => setReportsListOpen(false)} />}
+
+      {prioritiesOpen && (
+        <PrioritiesForm me={me} memberName={memberName} onClose={() => setPrioritiesOpen(false)} />
       )}
     </div>
   )

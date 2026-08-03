@@ -63,8 +63,8 @@ export default function TaskRow({
     }
   }
 
-  function handleToggleChecklistItem(itemId) {
-    const updated = checklist.map((item) => (item.id === itemId ? { ...item, done: !item.done } : item))
+  function handleChecklistItemChange(itemId, patch) {
+    const updated = checklist.map((item) => (item.id === itemId ? { ...item, ...patch } : item))
     onUpdate(task.id, { checklist: updated })
   }
 
@@ -171,7 +171,7 @@ export default function TaskRow({
             </p>
           )}
           {task.notes && <p className="task-notes-text">{task.notes}</p>}
-          <ChecklistView items={checklist} onToggle={handleToggleChecklistItem} />
+          <ChecklistView items={checklist} onItemChange={handleChecklistItemChange} />
           {task.recurrence !== 'none' && (
             <p className="task-recurrence">Repeats {task.recurrence}</p>
           )}

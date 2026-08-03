@@ -107,6 +107,16 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
     duration_minutes: initialValues?.duration_minutes != null ? String(initialValues.duration_minutes) : '',
   })
   const [saving, setSaving] = useState(false)
+  // Distinct from "the date field happens to be blank" — that ambiguity
+  // used to mean saving an All Day task unchanged silently gave it
+  // today's date the moment it was edited (splitDueDateInZone(null, tz)
+  // returns due_date: '', which then defaulted to today above). Whether a
+  // due_date key was present in initialValues at all is what tells apart
+  // "editing an existing All Day task" from "a brand-new task."
+  const [allDay, setAllDay] = useState(() => {
+    const hasDueDateKey = initialValues && Object.prototype.hasOwnProperty.call(initialValues, 'due_date')
+    return Boolean(hasDueDateKey && !initialValues.due_date)
+  })
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -128,7 +138,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
       const { due_time, ...rest } = form
       await onSubmit({
         ...rest,
-        due_date: form.due_date ? zonedTimeToUtcIso(form.due_date, due_time, form.due_timezone) : null,
+        due_date: allDay || !form.due_date ? null : zonedTimeToUtcIso(form.due_date, due_time, form.due_timezone),
         duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
         source_note: form.source_note || null,
         notes: form.notes || null,
@@ -167,52 +177,61 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           </select>
         </label>
 
-        <label>
-          Date
-          <input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
+        <label className="new-task-checkbox-label">
+          <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+          All day (no due date)
         </label>
 
-        <label>
-          Time
-          <select value={form.due_time} onChange={(e) => set('due_time', e.target.value)}>
-            {TIME_OPTIONS.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!allDay && (
+          <>
+            <label>
+              Date
+              <input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
+            </label>
 
-        <label>
-          End time
-          <ScrollSelect
-            value={form.duration_minutes}
-            onChange={(v) => set('duration_minutes', v)}
-            options={endTimeOptions}
-          />
-        </label>
+            <label>
+              Time
+              <select value={form.due_time} onChange={(e) => set('due_time', e.target.value)}>
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label>
-          Time zone
-          <select value={form.due_timezone} onChange={(e) => set('due_timezone', e.target.value)}>
-            {TIMEZONE_OPTIONS.map((tz) => (
-              <option key={tz.value} value={tz.value}>
-                {tz.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            <label>
+              End time
+              <ScrollSelect
+                value={form.duration_minutes}
+                onChange={(v) => set('duration_minutes', v)}
+                options={endTimeOptions}
+              />
+            </label>
 
-        <label>
-          Duration
-          <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
-            {durationOptions.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            <label>
+              Time zone
+              <select value={form.due_timezone} onChange={(e) => set('due_timezone', e.target.value)}>
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Duration
+              <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
+                {durationOptions.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
 
         <label>
           Repeats

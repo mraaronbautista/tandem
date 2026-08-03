@@ -99,6 +99,28 @@ export function getOverdueTasks(tasks) {
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
+// Start of the current day/week/month, in the viewer's own local
+// timezone. Week starts Sunday, matching DateStrip's weekday order.
+function startOfPeriod(period) {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  if (period === 'week') d.setDate(d.getDate() - d.getDay())
+  if (period === 'month') d.setDate(1)
+  return d
+}
+
+// Completed tasks belonging to a given `who` within the current day/week/
+// month — the starting draft for an end-of-day/week/month report.
+export function getCompletedInPeriod(tasks, whoKey, period) {
+  const start = startOfPeriod(period)
+  const now = new Date()
+  return tasks.filter((t) => {
+    if (t.who !== whoKey || t.status !== 'done' || !t.completed_at) return false
+    const completedAt = new Date(t.completed_at)
+    return completedAt >= start && completedAt <= now
+  })
+}
+
 // Everything that "belongs" to a given day: tasks due that day if still
 // not done, plus tasks actually completed that day regardless of when
 // they were originally due. That last part matters for a household
