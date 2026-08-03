@@ -230,10 +230,6 @@
   cursor: default;
 }
 
-.nudge-button {
-  border-color: var(--overdue);
-}
-
 .push-toggle:disabled {
   opacity: 0.5;
   cursor: default;
@@ -834,10 +830,18 @@ a.task-submission-file-link:hover {
 }
 
 /* New task form */
-.fab-new-task {
+.quick-actions {
   position: fixed;
   right: 20px;
   bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 40;
+}
+
+.fab-new-task {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -851,11 +855,38 @@ a.task-submission-file-link:hover {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  z-index: 40;
+  flex: none;
 }
 
 .fab-new-task:hover {
   background: var(--accent-h);
+}
+
+.quick-actions-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.quick-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-h);
+  font-size: 14px;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.quick-action-icon {
+  font-size: 16px;
 }
 
 .new-task-form {

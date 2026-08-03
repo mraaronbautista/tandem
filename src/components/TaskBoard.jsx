@@ -54,17 +54,16 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [reportOpen, setReportOpen] = useState(false)
   const [reportsListOpen, setReportsListOpen] = useState(false)
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
-  const [nudgeState, setNudgeState] = useState('idle') // idle | sending | sent
 
+  // The quick-actions menu closes as soon as an item is picked (see
+  // NewTaskForm), so there's no persistent button left to show a "sent"
+  // state on — a quick confirmation alert is the feedback instead.
   async function handleNudge() {
-    setNudgeState('sending')
     try {
       await sendNudge()
-      setNudgeState('sent')
-      setTimeout(() => setNudgeState('idle'), 2000)
+      alert('Nudge sent to Aaron.')
     } catch (err) {
       alert(err.message)
-      setNudgeState('idle')
     }
   }
 
@@ -203,33 +202,23 @@ export default function TaskBoard({ theme, toggleTheme }) {
     overlappingIds,
   }
 
+  // Folded into the "+" FAB as a speed-dial rather than separate header
+  // icons — that's what got cluttered as these got added one by one.
+  const quickActions = [
+    { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
+    { key: 'reports', icon: '📋', label: 'View reports', onSelect: () => setReportsListOpen(true) },
+    ...(me?.display_name === 'Aaron'
+      ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
+      : []),
+    ...(me?.display_name === 'Ada' ? [{ key: 'nudge', icon: '🚨', label: 'Nudge Aaron', onSelect: handleNudge }] : []),
+  ]
+
   return (
     <div className="task-board">
       <header className="task-board-header">
         <h1>{timeOfDayGreeting(me?.display_name)}</h1>
         <div className="header-actions">
           <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
-          <button className="icon-button" onClick={() => setPrioritiesOpen(true)} title="Set priorities">
-            🎯
-          </button>
-          <button className="icon-button" onClick={() => setReportsListOpen(true)} title="View end-of-day reports">
-            📋
-          </button>
-          {me?.display_name === 'Aaron' && (
-            <button className="icon-button" onClick={() => setReportOpen(true)} title="Submit end-of-day report">
-              📝
-            </button>
-          )}
-          {me?.display_name === 'Ada' && (
-            <button
-              className="icon-button nudge-button"
-              onClick={handleNudge}
-              disabled={nudgeState === 'sending'}
-              title="Nudge Aaron about something urgent"
-            >
-              {nudgeState === 'sent' ? '✅' : '🚨'}
-            </button>
-          )}
           {pushSupported() && (
             <button
               className="push-toggle"
@@ -319,7 +308,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
         )}
       </PullToRefresh>
 
-      <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} />
+      <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} extraActions={quickActions} />
 
       {peekTask && (
         <Modal onClose={() => setPeekTaskId(null)}>
