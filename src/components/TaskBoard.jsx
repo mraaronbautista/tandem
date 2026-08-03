@@ -19,7 +19,6 @@ import TaskRow from './TaskRow'
 import TimelineRow from './TimelineRow'
 import AllDayRow from './AllDayRow'
 import NewTaskForm from './NewTaskForm'
-import ThemeToggle from './ThemeToggle'
 import Modal from './Modal'
 import DateStrip from './DateStrip'
 import PullToRefresh from './PullToRefresh'
@@ -27,6 +26,7 @@ import WorkingStatusToggle from './WorkingStatusToggle'
 import EndOfDayReportForm from './EndOfDayReportForm'
 import EodReportsList from './EodReportsList'
 import PrioritiesForm from './PrioritiesForm'
+import SettingsMenu from './SettingsMenu'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -54,6 +54,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [reportOpen, setReportOpen] = useState(false)
   const [reportsListOpen, setReportsListOpen] = useState(false)
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   // The quick-actions menu closes as soon as an item is picked (see
   // NewTaskForm), so there's no persistent button left to show a "sent"
@@ -219,19 +220,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <h1>{timeOfDayGreeting(me?.display_name)}</h1>
         <div className="header-actions">
           <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
-          {pushSupported() && (
-            <button
-              className="push-toggle"
-              onClick={handleTogglePush}
-              disabled={pushBusy}
-              title={pushEnabled ? 'Disable notifications' : 'Enable notifications'}
-            >
-              {pushEnabled ? '🔔' : '🔕'}
-            </button>
-          )}
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <button className="sign-out" onClick={signOut} title="Sign out">
-            🚪
+          <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">
+            ⚙️
           </button>
         </div>
       </header>
@@ -324,6 +314,19 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       {prioritiesOpen && (
         <PrioritiesForm me={me} memberName={memberName} onClose={() => setPrioritiesOpen(false)} />
+      )}
+
+      {settingsOpen && (
+        <SettingsMenu
+          theme={theme}
+          toggleTheme={toggleTheme}
+          showPush={pushSupported()}
+          pushEnabled={pushEnabled}
+          pushBusy={pushBusy}
+          onTogglePush={handleTogglePush}
+          onSignOut={signOut}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
     </div>
   )

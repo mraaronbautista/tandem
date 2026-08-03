@@ -775,6 +775,35 @@ a.task-submission-file-link:hover {
   font-weight: 600;
 }
 
+.settings-menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.settings-menu-icon {
+  font-size: 17px;
+}
+
+.settings-menu-item-danger {
+  color: var(--overdue);
+}
+
 .submission-actions {
   display: flex;
   justify-content: flex-end;
