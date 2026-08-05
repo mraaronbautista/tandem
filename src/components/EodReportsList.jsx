@@ -6,6 +6,14 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+function formatMinutes(minutes) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
 export default function EodReportsList({ memberName, onClose }) {
   const [reports, setReports] = useState(null)
   const [error, setError] = useState('')
@@ -30,8 +38,8 @@ export default function EodReportsList({ memberName, onClose }) {
             {reports.map((r) => (
               <div className="eod-report-item" key={r.id}>
                 <p className="eod-report-meta">
-                  <strong>{memberName(r.submitted_by)}</strong> — {r.period} — {formatDate(r.created_at)}
-                  {r.hours_logged != null && ` — ${r.hours_logged} hrs`}
+                  <strong>{memberName(r.submitted_by)}</strong> — {r.period} — updated {formatDate(r.updated_at)}
+                  {r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}
                 </p>
                 <p className="task-submission-note-text">{r.body}</p>
               </div>

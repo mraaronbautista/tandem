@@ -109,8 +109,16 @@ function startOfPeriod(period) {
   return d
 }
 
+// The report_date to bucket an eod_reports row under, in the submitter's
+// own local timezone — passed explicitly rather than relying on the
+// database's `current_date` default, which evaluates in UTC and would be
+// wrong for a meaningful part of every day for Aaron (UTC+8).
+export function reportDateForPeriod(period) {
+  return localDayKey(startOfPeriod(period))
+}
+
 // Completed tasks belonging to a given `who` within the current day/week/
-// month — the starting draft for an end-of-day/week/month report.
+// month — the starting draft for a fresh end-of-day/week/month report.
 export function getCompletedInPeriod(tasks, whoKey, period) {
   const start = startOfPeriod(period)
   const now = new Date()
@@ -118,6 +126,18 @@ export function getCompletedInPeriod(tasks, whoKey, period) {
     if (t.who !== whoKey || t.status !== 'done' || !t.completed_at) return false
     const completedAt = new Date(t.completed_at)
     return completedAt >= start && completedAt <= now
+  })
+}
+
+// Like getCompletedInPeriod, but only tasks completed after `since` — used
+// when appending to an already-started report, so a second session's
+// draft doesn't re-list what an earlier session already reported.
+export function getCompletedSince(tasks, whoKey, since) {
+  const now = new Date()
+  return tasks.filter((t) => {
+    if (t.who !== whoKey || t.status !== 'done' || !t.completed_at) return false
+    const completedAt = new Date(t.completed_at)
+    return completedAt > since && completedAt <= now
   })
 }
 

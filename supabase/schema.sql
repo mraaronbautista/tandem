@@ -232,18 +232,34 @@ create policy "members can update own working status"
 -- that period's completed tasks but editable before sending. Persisted
 -- (not just a fire-and-forget push) since push delivery is best-effort —
 -- losing the report entirely if the notification doesn't land defeats
--- the point, especially once it's tracking logged hours. Append-only: no
--- update/delete policy, it's a log entry.
+-- the point, especially once it's tracking logged minutes. One row per
+-- (submitted_by, period, report_date) — a work day rarely happens in one
+-- sitting, so later submissions the same day append to the existing
+-- row's body (see upsert_eod_report below) rather than creating a new,
+-- disconnected row per session.
 create type report_period as enum ('day', 'week', 'month');
 
 create table eod_reports (
   id uuid primary key default gen_random_uuid(),
   submitted_by uuid not null references members (id),
   period report_period not null default 'day',
-  report_date date not null default current_date,
-  hours_logged numeric,
+  -- Always passed explicitly by the client, computed in the submitter's
+  -- own local timezone (see reportDateForPeriod in src/lib/tasks.js) —
+  -- deliberately no default here, since a UTC-based one would silently
+  -- bucket under the wrong day for part of every day in the Philippines.
+  report_date date not null,
+  -- Minutes, not decimal hours — avoids "4h20m -> 4.33" mental math, and
+  -- an unambiguous integer over float rounding. Overwritten, not summed,
+  -- on each submission: this tracks an external time tracker's running
+  -- total for the day, which the submitter corrects to match, not
+  -- something this app tallies itself.
+  minutes_logged integer,
   body text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Bumped on every append — this is the "since my last submission"
+  -- boundary the report form uses to avoid re-listing already-reported
+  -- completed tasks in a second session's draft.
+  updated_at timestamptz not null default now()
 );
 
 alter table eod_reports enable row level security;
@@ -255,6 +271,48 @@ create policy "members can read all eod reports"
 create policy "members can insert own eod reports"
   on eod_reports for insert
   with check (is_member() and submitted_by = auth.uid());
+
+create policy "members can update own eod reports"
+  on eod_reports for update
+  using (submitted_by = auth.uid())
+  with check (submitted_by = auth.uid());
+
+create unique index eod_reports_unique_bucket
+  on eod_reports (submitted_by, period, report_date);
+
+-- security invoker (the default, stated explicitly) so the insert/update
+-- below still runs under RLS as the calling user — that's why the update
+-- policy above is required even though nothing hits it directly from the
+-- client. Plain .upsert() can't express this: it can only overwrite
+-- columns with literal values, not "old body + new chunk."
+create or replace function upsert_eod_report(
+  p_period report_period,
+  p_report_date date,
+  p_body_chunk text,
+  p_minutes_logged integer
+) returns eod_reports
+language plpgsql
+security invoker
+as $$
+declare
+  result eod_reports;
+begin
+  insert into eod_reports (submitted_by, period, report_date, minutes_logged, body, updated_at)
+  values (auth.uid(), p_period, p_report_date, p_minutes_logged, coalesce(p_body_chunk, ''), now())
+  on conflict (submitted_by, period, report_date)
+  do update set
+    body = case
+      when p_body_chunk is null or btrim(p_body_chunk) = '' then eod_reports.body
+      else eod_reports.body || E'\n\n---\n' || p_body_chunk
+    end,
+    minutes_logged = coalesce(p_minutes_logged, eod_reports.minutes_logged),
+    updated_at = now()
+  returning * into result;
+  return result;
+end;
+$$;
+
+grant execute on function upsert_eod_report(report_period, date, text, integer) to authenticated;
 
 -- Priorities for the upcoming day/week/month — a shared planning note,
 -- not a personal log like eod_reports, so both members can set it (unlike

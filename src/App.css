@@ -617,7 +617,8 @@
   opacity: 0.85;
 }
 
-.submission-field input[type='text'] {
+.submission-field input[type='text'],
+.submission-field input[type='number'] {
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -627,10 +628,46 @@
   font-size: 15px;
 }
 
+.hours-minutes-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hours-minutes-row input[type='number'] {
+  width: 64px;
+}
+
+.hours-minutes-row select {
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 15px;
+}
+
+.hours-minutes-row span {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
 .task-submission-note-text {
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 15px;
+}
+
+.eod-report-existing {
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  opacity: 0.85;
 }
 
 .eod-reports-list {
