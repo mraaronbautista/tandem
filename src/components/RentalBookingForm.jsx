@@ -15,6 +15,7 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
   const [guestName, setGuestName] = useState('')
   const [checkIn, setCheckIn] = useState(todayDateString())
   const [checkOut, setCheckOut] = useState('')
+  const [status, setStatus] = useState('confirmed')
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e) {
@@ -27,6 +28,7 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
         guest_name: guestName.trim(),
         check_in: checkIn,
         check_out: checkOut,
+        status,
         created_by: createdBy,
       })
       onCreated(booking)
@@ -72,6 +74,14 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
         <label>
           Last day
           <input type="date" required min={checkIn} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+        </label>
+
+        <label>
+          Status
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="confirmed">Confirmed</option>
+            <option value="pending">Pending request</option>
+          </select>
         </label>
 
         <div className="submission-actions">

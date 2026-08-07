@@ -112,7 +112,9 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
 
             const isStart = dateStr === booking.check_in || col === 0
             const isEnd = dateStr === booking.check_out || col === 6 || day === numDays
+            const isPending = booking.status === 'pending'
             classes.push('rental-month-day-occupied')
+            if (isPending) classes.push('rental-month-day-pending')
             if (isStart) classes.push('rental-month-day-start')
             if (isEnd) classes.push('rental-month-day-end')
 
@@ -120,8 +122,15 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
               <div
                 key={dateStr}
                 className={classes.join(' ')}
-                style={{ background: unit.color }}
-                title={`${booking.guest_name}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
+                style={{
+                  // Pending requests get a diagonal stripe instead of a solid
+                  // fill — still visible as "held" but distinct from a
+                  // confirmed guest at a glance.
+                  background: isPending
+                    ? `repeating-linear-gradient(45deg, ${unit.color}, ${unit.color} 4px, transparent 4px, transparent 8px)`
+                    : unit.color,
+                }}
+                title={`${booking.guest_name}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
                 onClick={() => setSelectedBooking(booking)}
               >
                 {day}
@@ -149,6 +158,10 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
           booking={selectedBooking}
           onClose={() => setSelectedBooking(null)}
           onDeleted={() => {
+            setSelectedBooking(null)
+            onBookingsChanged()
+          }}
+          onConfirmed={() => {
             setSelectedBooking(null)
             onBookingsChanged()
           }}

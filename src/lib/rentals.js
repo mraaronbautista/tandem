@@ -43,6 +43,38 @@ export function chargeDatesForBooking(booking) {
   return dates
 }
 
+// Net cash flow (confirmed-booking revenue minus overhead) summed for
+// every calendar month from trackingStart ('YYYY-MM-DD', always the 1st)
+// through the current real-world month — using today's date, not
+// whichever month the calendar happens to be showing, since a month that
+// hasn't happened yet can't have contributed savings. `bookings` should
+// be the company's full booking history (not month-scoped), since a
+// charge relevant to an early tracked month can come from a booking
+// whose check_in predates it.
+export function cumulativeSavings(bookings, properties, expenses, trackingStart) {
+  const rentByProperty = new Map(properties.map((p) => [p.id, Number(p.monthly_rent)]))
+  const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
+  const confirmed = bookings.filter((b) => b.status === 'confirmed')
+
+  const now = new Date()
+  const current = new Date(now.getFullYear(), now.getMonth(), 1)
+  const [ty, tm] = trackingStart.split('-').map(Number)
+  let month = new Date(ty, tm - 1, 1)
+
+  let total = 0
+  while (month <= current) {
+    const { start, end } = monthRangeStrings(month)
+    let revenue = 0
+    for (const b of confirmed) {
+      const count = chargeDatesForBooking(b).filter((d) => d >= start && d < end).length
+      revenue += count * (rentByProperty.get(b.property_id) || 0)
+    }
+    total += revenue - overhead
+    month = new Date(month.getFullYear(), month.getMonth() + 1, 1)
+  }
+  return total
+}
+
 export async function fetchRentalProperties(company) {
   const { data, error } = await supabase
     .from('rental_properties')
@@ -71,10 +103,42 @@ export async function fetchRentalExpenses(company) {
 export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
   const { data, error } = await supabase
     .from('rental_bookings')
-    .select('id, property_id, guest_name, check_in, check_out, rental_properties!inner(company)')
+    .select('id, property_id, guest_name, check_in, check_out, status, rental_properties!inner(company)')
     .eq('rental_properties.company', company)
     .lt('check_in', rangeEnd)
     .gte('check_out', rangeStart)
+  if (error) throw error
+  return data
+}
+
+// Full booking history for the company, unscoped by date — used for the
+// savings-goal running total, which can reach back further than whatever
+// month the calendar is currently showing.
+export async function fetchAllRentalBookings(company) {
+  const { data, error } = await supabase
+    .from('rental_bookings')
+    .select('id, property_id, guest_name, check_in, check_out, status, rental_properties!inner(company)')
+    .eq('rental_properties.company', company)
+  if (error) throw error
+  return data
+}
+
+export async function fetchSavingsGoal(company) {
+  const { data, error } = await supabase
+    .from('rental_savings_goal')
+    .select('id, company, target_amount, tracking_start')
+    .eq('company', company)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function saveSavingsGoal(company, { target_amount, tracking_start }) {
+  const { data, error } = await supabase
+    .from('rental_savings_goal')
+    .upsert({ company, target_amount, tracking_start }, { onConflict: 'company' })
+    .select('id, company, target_amount, tracking_start')
+    .single()
   if (error) throw error
   return data
 }
@@ -91,20 +155,27 @@ async function hasOverlappingBooking(propertyId, checkIn, checkOut) {
   return data.length > 0
 }
 
-export async function createRentalBooking({ property_id, guest_name, check_in, check_out, created_by }) {
-  // A unit can't be rented to two guests at once — check before inserting
+export async function createRentalBooking({ property_id, guest_name, check_in, check_out, status, created_by }) {
+  // A unit can't be held for two guests at once — check before inserting
   // rather than relying on a DB constraint, so the error message can name
-  // the actual problem instead of a generic conflict.
+  // the actual problem instead of a generic conflict. A pending request
+  // still blocks the dates (you might accept it), so this checks against
+  // both pending and confirmed bookings, not just confirmed ones.
   if (await hasOverlappingBooking(property_id, check_in, check_out)) {
     throw new Error('This unit already has a booking that overlaps those dates.')
   }
   const { data, error } = await supabase
     .from('rental_bookings')
-    .insert({ property_id, guest_name, check_in, check_out, created_by })
-    .select('id, property_id, guest_name, check_in, check_out')
+    .insert({ property_id, guest_name, check_in, check_out, status: status || 'confirmed', created_by })
+    .select('id, property_id, guest_name, check_in, check_out, status')
     .single()
   if (error) throw error
   return data
+}
+
+export async function confirmRentalBooking(id) {
+  const { error } = await supabase.from('rental_bookings').update({ status: 'confirmed' }).eq('id', id)
+  if (error) throw error
 }
 
 export async function deleteRentalBooking(id) {

@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { fetchRentalProperties, fetchRentalExpenses, fetchRentalBookings, monthRangeStrings } from '../lib/rentals'
+import {
+  fetchRentalProperties,
+  fetchRentalExpenses,
+  fetchRentalBookings,
+  fetchAllRentalBookings,
+  fetchSavingsGoal,
+  monthRangeStrings,
+} from '../lib/rentals'
 import Modal from './Modal'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
@@ -17,6 +24,8 @@ export default function RentalsView({ me, onClose }) {
   const [properties, setProperties] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [bookings, setBookings] = useState([])
+  const [allBookings, setAllBookings] = useState([])
+  const [goal, setGoal] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -26,7 +35,17 @@ export default function RentalsView({ me, onClose }) {
     fetchRentalExpenses(COMPANY)
       .then(setExpenses)
       .catch((err) => setError(err.message))
+    fetchSavingsGoal(COMPANY)
+      .then(setGoal)
+      .catch((err) => setError(err.message))
+    reloadAllBookings()
   }, [])
+
+  function reloadAllBookings() {
+    fetchAllRentalBookings(COMPANY)
+      .then(setAllBookings)
+      .catch((err) => setError(err.message))
+  }
 
   function reloadBookings() {
     const { start, end } = monthRangeStrings(monthDate)
@@ -36,6 +55,11 @@ export default function RentalsView({ me, onClose }) {
   }
 
   useEffect(reloadBookings, [monthDate])
+
+  function handleBookingsChanged() {
+    reloadBookings()
+    reloadAllBookings()
+  }
 
   function shiftMonth(delta) {
     setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + delta, 1))
@@ -86,10 +110,19 @@ export default function RentalsView({ me, onClose }) {
               bookings={bookings}
               monthDate={monthDate}
               createdBy={me?.id}
-              onBookingsChanged={reloadBookings}
+              onBookingsChanged={handleBookingsChanged}
             />
           ) : (
-            <RentalFinancials properties={properties} bookings={bookings} expenses={expenses} monthDate={monthDate} />
+            <RentalFinancials
+              company={COMPANY}
+              properties={properties}
+              bookings={bookings}
+              expenses={expenses}
+              monthDate={monthDate}
+              allBookings={allBookings}
+              goal={goal}
+              onGoalSaved={setGoal}
+            />
           ))}
 
         <div className="submission-actions">

@@ -342,6 +342,10 @@ create policy "members can insert priorities"
 -- covers both rather than duplicating awa_/azu_ prefixed tables — the
 -- 'company' column is what a calendar view filters/groups on.
 create type rental_company as enum ('awa', 'azu');
+-- 'pending' is an inbound request (e.g. an Airbnb reservation request)
+-- not yet accepted — still blocks the dates against a double-booking,
+-- but isn't counted as revenue in Financials until confirmed.
+create type rental_booking_status as enum ('pending', 'confirmed');
 
 create table rental_properties (
   id uuid primary key default gen_random_uuid(),
@@ -371,6 +375,7 @@ create table rental_bookings (
   -- Last occupied day, inclusive — not a hotel-style departure day. A
   -- single-day booking has check_out = check_in.
   check_out date not null,
+  status rental_booking_status not null default 'confirmed',
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
   constraint rental_bookings_dates_check check (check_out >= check_in)
@@ -443,4 +448,30 @@ create policy "members can update rental expenses"
 
 create policy "members can delete rental expenses"
   on rental_expenses for delete
+  using (is_member());
+
+-- One row per company: a savings target (e.g. a down payment on a new
+-- property) plus the month to start accumulating net cash flow from.
+-- One row per company rather than a history of goals — updating the
+-- target overwrites in place, since there's only ever one "current" goal.
+create table rental_savings_goal (
+  id uuid primary key default gen_random_uuid(),
+  company rental_company not null unique,
+  target_amount numeric(10, 2) not null,
+  tracking_start date not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table rental_savings_goal enable row level security;
+
+create policy "members can read all rental savings goals"
+  on rental_savings_goal for select
+  using (is_member());
+
+create policy "members can insert rental savings goals"
+  on rental_savings_goal for insert
+  with check (is_member());
+
+create policy "members can update rental savings goals"
+  on rental_savings_goal for update
   using (is_member());

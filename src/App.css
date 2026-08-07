@@ -1452,6 +1452,10 @@ label.new-task-checkbox-label {
   cursor: pointer;
 }
 
+.rental-month-day-pending {
+  color: var(--text-h);
+}
+
 .rental-month-day-start {
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
@@ -1460,6 +1464,53 @@ label.new-task-checkbox-label {
 .rental-month-day-end {
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;
+}
+
+.rental-savings {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.rental-savings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 8px;
+}
+
+.rental-savings-edit {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rental-savings-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--pill-bg);
+  overflow: hidden;
+}
+
+.rental-savings-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.rental-savings-amounts {
+  margin-top: 6px;
+  text-align: right;
+  font-size: 13px;
+  opacity: 0.8;
 }
 
 .rental-financials-summary {
@@ -1491,6 +1542,17 @@ label.new-task-checkbox-label {
 
 .rental-deficit {
   color: #dc2626;
+}
+
+.rental-pending-badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .rental-booking-detail-guest {
@@ -1529,7 +1591,7 @@ label.new-task-checkbox-label {
   font-size: 13px;
 }
 
-.rental-unit-badge-occupied {
+.rental-unit-badge-billed {
   color: #22c55e;
 }
 
@@ -1537,9 +1599,13 @@ label.new-task-checkbox-label {
   opacity: 0.75;
 }
 
-.rental-unit-badge-pending {
+.rental-unit-badge-nocharge {
   opacity: 0.6;
   font-style: italic;
+}
+
+.rental-unit-badge-request {
+  color: var(--accent);
 }
 
 .rental-fill-next-badge {
