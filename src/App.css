@@ -595,6 +595,11 @@
   opacity: 0.6;
 }
 
+.task-notes-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .task-meta {
   opacity: 0.6;
   font-size: 13px;
