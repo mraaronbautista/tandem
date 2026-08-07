@@ -348,6 +348,10 @@ create table rental_properties (
   company rental_company not null,
   unit_name text not null,
   address text,
+  -- Asking/listed monthly rent for the unit — not the same as actual
+  -- collected revenue, which would come from bookings if/when this tracks
+  -- payment amounts.
+  monthly_rent numeric(10, 2),
   -- Per-unit color for the calendar view (distinct ribbon/bar color per
   -- unit) — stored here rather than derived client-side so it stays
   -- consistent regardless of fetch order and can be picked deliberately
@@ -406,4 +410,35 @@ create policy "members can update rental bookings"
 
 create policy "members can delete rental bookings"
   on rental_bookings for delete
+  using (is_member());
+
+-- Recurring monthly costs (mortgage, utilities, ...) scoped to a company
+-- as a whole rather than to one rental_properties row — a mortgage can
+-- cover several units at once (e.g. Awa Rentalz's $2,500/mo covers both
+-- Rachel Street buildings/4 units together), so per-unit linkage would be
+-- wrong more often than it'd be right.
+create table rental_expenses (
+  id uuid primary key default gen_random_uuid(),
+  company rental_company not null,
+  label text not null,
+  amount numeric(10, 2) not null,
+  created_at timestamptz not null default now()
+);
+
+alter table rental_expenses enable row level security;
+
+create policy "members can read all rental expenses"
+  on rental_expenses for select
+  using (is_member());
+
+create policy "members can insert rental expenses"
+  on rental_expenses for insert
+  with check (is_member());
+
+create policy "members can update rental expenses"
+  on rental_expenses for update
+  using (is_member());
+
+create policy "members can delete rental expenses"
+  on rental_expenses for delete
   using (is_member());
