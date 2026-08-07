@@ -1,5 +1,42 @@
 import { supabase } from './supabaseClient'
 
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
+
+// 'YYYY-MM-DD' bounds for a calendar month as [start, end) — end is the
+// 1st of the following month, exclusive.
+export function monthRangeStrings(monthDate) {
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+  const start = `${year}-${pad(month + 1)}-01`
+  const next = new Date(year, month + 1, 1)
+  const end = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-01`
+  return { start, end }
+}
+
+function addDays(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + days)
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+}
+
+// Rent is paid upfront in ~30-day cycles starting at check-in (a security
+// deposit / Airbnb-style upfront payment, not a smooth per-calendar-day
+// accrual) — so a booking spanning Aug 15 - Dec 30 generates charges on
+// Aug 15, Sep 14, Oct 14, Nov 13, Dec 13, not one per calendar month it
+// happens to touch. A guest who checked in Aug 15 hasn't paid anything
+// new by Sep 1 — that's still covered by the Aug 15 charge.
+export function chargeDatesForBooking(booking) {
+  const dates = []
+  let d = booking.check_in
+  while (d <= booking.check_out) {
+    dates.push(d)
+    d = addDays(d, 30)
+  }
+  return dates
+}
+
 export async function fetchRentalProperties(company) {
   const { data, error } = await supabase
     .from('rental_properties')

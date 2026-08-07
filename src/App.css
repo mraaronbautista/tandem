@@ -1537,6 +1537,11 @@ label.new-task-checkbox-label {
   opacity: 0.75;
 }
 
+.rental-unit-badge-pending {
+  opacity: 0.6;
+  font-style: italic;
+}
+
 .rental-fill-next-badge {
   margin-left: 8px;
   padding: 2px 8px;

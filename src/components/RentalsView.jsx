@@ -1,24 +1,11 @@
 import { useEffect, useState } from 'react'
-import { fetchRentalProperties, fetchRentalExpenses, fetchRentalBookings } from '../lib/rentals'
+import { fetchRentalProperties, fetchRentalExpenses, fetchRentalBookings, monthRangeStrings } from '../lib/rentals'
 import Modal from './Modal'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 
 const COMPANY = 'awa'
 const COMPANY_LABEL = 'Awa Rentalz'
-
-function pad(n) {
-  return String(n).padStart(2, '0')
-}
-
-function monthRange(monthDate) {
-  const year = monthDate.getFullYear()
-  const month = monthDate.getMonth()
-  const start = `${year}-${pad(month + 1)}-01`
-  const nextMonth = new Date(year, month + 1, 1)
-  const end = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}-01`
-  return { start, end }
-}
 
 export default function RentalsView({ me, onClose }) {
   const [view, setView] = useState('calendar')
@@ -42,7 +29,7 @@ export default function RentalsView({ me, onClose }) {
   }, [])
 
   function reloadBookings() {
-    const { start, end } = monthRange(monthDate)
+    const { start, end } = monthRangeStrings(monthDate)
     fetchRentalBookings(COMPANY, start, end)
       .then(setBookings)
       .catch((err) => setError(err.message))
@@ -102,7 +89,7 @@ export default function RentalsView({ me, onClose }) {
               onBookingsChanged={reloadBookings}
             />
           ) : (
-            <RentalFinancials properties={properties} bookings={bookings} expenses={expenses} />
+            <RentalFinancials properties={properties} bookings={bookings} expenses={expenses} monthDate={monthDate} />
           ))}
 
         <div className="submission-actions">
