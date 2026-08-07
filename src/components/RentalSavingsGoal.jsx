@@ -9,46 +9,63 @@ function money(n) {
 
 // The purpose of tracking this business's financials at all: accumulating
 // toward a down payment on a new property, not just knowing this month's
-// number. Net cash flow is auto-summed month by month from a chosen start
-// date — see cumulativeSavings() — rather than a manually-kept ledger, so
-// there's nothing to remember to log.
-export default function RentalSavingsGoal({ company, goal, allBookings, properties, expenses, onSaved }) {
+// number. Multiple milestones (e.g. a $20k short-term goal, then $75k for
+// the actual down payment) can track the same growing pool of savings —
+// see cumulativeSavings() — auto-summed from confirmed-booking net cash
+// flow rather than a manually-kept ledger, so there's nothing to log.
+export default function RentalSavingsGoal({ company, goals, allBookings, properties, expenses, onGoalsChanged }) {
   const [formOpen, setFormOpen] = useState(false)
+  const [editingGoal, setEditingGoal] = useState(null)
 
-  const saved = goal ? cumulativeSavings(allBookings, properties, expenses, goal.tracking_start) : 0
-  const pct = goal ? Math.max(0, Math.min(100, (saved / Number(goal.target_amount)) * 100)) : 0
+  function openNew() {
+    setEditingGoal(null)
+    setFormOpen(true)
+  }
+
+  function openEdit(goal) {
+    setEditingGoal(goal)
+    setFormOpen(true)
+  }
 
   return (
-    <div className="rental-savings">
-      {goal ? (
-        <>
-          <div className="rental-savings-header">
-            <span>Savings toward new property</span>
-            <button type="button" className="rental-savings-edit" onClick={() => setFormOpen(true)}>
-              Edit
-            </button>
+    <div className="rental-savings-list">
+      {goals.map((goal) => {
+        const saved = cumulativeSavings(allBookings, properties, expenses, goal.tracking_start)
+        const pct = Math.max(0, Math.min(100, (saved / Number(goal.target_amount)) * 100))
+        return (
+          <div key={goal.id} className="rental-savings">
+            <div className="rental-savings-header">
+              <span>{goal.label}</span>
+              <button type="button" className="rental-savings-edit" onClick={() => openEdit(goal)}>
+                Edit
+              </button>
+            </div>
+            <div className="rental-savings-bar">
+              <div className="rental-savings-bar-fill" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="rental-savings-amounts">
+              {money(saved)} / {money(goal.target_amount)} ({Math.round(pct)}%)
+            </p>
           </div>
-          <div className="rental-savings-bar">
-            <div className="rental-savings-bar-fill" style={{ width: `${pct}%` }} />
-          </div>
-          <p className="rental-savings-amounts">
-            {money(saved)} / {money(goal.target_amount)} ({Math.round(pct)}%)
-          </p>
-        </>
-      ) : (
-        <button type="button" className="rental-add-booking" onClick={() => setFormOpen(true)}>
-          + Set savings goal
-        </button>
-      )}
+        )
+      })}
+
+      <button type="button" className="rental-add-booking" onClick={openNew}>
+        + Add goal
+      </button>
 
       {formOpen && (
         <RentalSavingsGoalForm
           company={company}
-          goal={goal}
+          goal={editingGoal}
           onClose={() => setFormOpen(false)}
-          onSaved={(g) => {
+          onSaved={() => {
             setFormOpen(false)
-            onSaved(g)
+            onGoalsChanged()
+          }}
+          onDeleted={() => {
+            setFormOpen(false)
+            onGoalsChanged()
           }}
         />
       )}

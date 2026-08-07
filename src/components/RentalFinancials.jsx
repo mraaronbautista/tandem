@@ -20,8 +20,8 @@ export default function RentalFinancials({
   expenses,
   monthDate,
   allBookings,
-  goal,
-  onGoalSaved,
+  goals,
+  onGoalsChanged,
 }) {
   const { start, end } = monthRangeStrings(monthDate)
 
@@ -54,11 +54,11 @@ export default function RentalFinancials({
     <div className="rental-financials">
       <RentalSavingsGoal
         company={company}
-        goal={goal}
+        goals={goals}
         allBookings={allBookings}
         properties={properties}
         expenses={expenses}
-        onSaved={onGoalSaved}
+        onGoalsChanged={onGoalsChanged}
       />
 
       <div className="rental-financials-summary">

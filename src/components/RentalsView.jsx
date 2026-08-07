@@ -4,7 +4,7 @@ import {
   fetchRentalExpenses,
   fetchRentalBookings,
   fetchAllRentalBookings,
-  fetchSavingsGoal,
+  fetchSavingsGoals,
   monthRangeStrings,
 } from '../lib/rentals'
 import Modal from './Modal'
@@ -25,7 +25,7 @@ export default function RentalsView({ me, onClose }) {
   const [expenses, setExpenses] = useState([])
   const [bookings, setBookings] = useState([])
   const [allBookings, setAllBookings] = useState([])
-  const [goal, setGoal] = useState(null)
+  const [goals, setGoals] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -35,11 +35,15 @@ export default function RentalsView({ me, onClose }) {
     fetchRentalExpenses(COMPANY)
       .then(setExpenses)
       .catch((err) => setError(err.message))
-    fetchSavingsGoal(COMPANY)
-      .then(setGoal)
-      .catch((err) => setError(err.message))
+    reloadGoals()
     reloadAllBookings()
   }, [])
+
+  function reloadGoals() {
+    fetchSavingsGoals(COMPANY)
+      .then(setGoals)
+      .catch((err) => setError(err.message))
+  }
 
   function reloadAllBookings() {
     fetchAllRentalBookings(COMPANY)
@@ -120,8 +124,8 @@ export default function RentalsView({ me, onClose }) {
               expenses={expenses}
               monthDate={monthDate}
               allBookings={allBookings}
-              goal={goal}
-              onGoalSaved={setGoal}
+              goals={goals}
+              onGoalsChanged={reloadGoals}
             />
           ))}
 

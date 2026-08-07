@@ -1466,6 +1466,12 @@ label.new-task-checkbox-label {
   border-bottom-right-radius: 8px;
 }
 
+.rental-savings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .rental-savings {
   border: 1px solid var(--border);
   border-radius: 10px;

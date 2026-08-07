@@ -123,24 +123,43 @@ export async function fetchAllRentalBookings(company) {
   return data
 }
 
-export async function fetchSavingsGoal(company) {
+// Multiple milestones can share the same underlying accumulating savings
+// (e.g. a $20k short-term goal, then $75k for the actual down payment) —
+// ordered ascending so the nearer milestone shows first.
+export async function fetchSavingsGoals(company) {
   const { data, error } = await supabase
     .from('rental_savings_goal')
-    .select('id, company, target_amount, tracking_start')
+    .select('id, company, label, target_amount, tracking_start')
     .eq('company', company)
-    .maybeSingle()
+    .order('target_amount', { ascending: true })
   if (error) throw error
   return data
 }
 
-export async function saveSavingsGoal(company, { target_amount, tracking_start }) {
+export async function createSavingsGoal(company, { label, target_amount, tracking_start }) {
   const { data, error } = await supabase
     .from('rental_savings_goal')
-    .upsert({ company, target_amount, tracking_start }, { onConflict: 'company' })
-    .select('id, company, target_amount, tracking_start')
+    .insert({ company, label, target_amount, tracking_start })
+    .select('id, company, label, target_amount, tracking_start')
     .single()
   if (error) throw error
   return data
+}
+
+export async function updateSavingsGoal(id, { label, target_amount, tracking_start }) {
+  const { data, error } = await supabase
+    .from('rental_savings_goal')
+    .update({ label, target_amount, tracking_start })
+    .eq('id', id)
+    .select('id, company, label, target_amount, tracking_start')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSavingsGoal(id) {
+  const { error } = await supabase.from('rental_savings_goal').delete().eq('id', id)
+  if (error) throw error
 }
 
 async function hasOverlappingBooking(propertyId, checkIn, checkOut) {
