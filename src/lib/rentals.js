@@ -27,10 +27,16 @@ function addDays(dateStr, days) {
 // Aug 15, Sep 14, Oct 14, Nov 13, Dec 13, not one per calendar month it
 // happens to touch. A guest who checked in Aug 15 hasn't paid anything
 // new by Sep 1 — that's still covered by the Aug 15 charge.
+//
+// A later cycle only counts if there's an actual day of stay left beyond
+// it: a 31-day stay (e.g. Aug 7 - Sep 6) has its would-be second cycle
+// land exactly on check_out itself (Aug 7 + 30 = Sep 6) with zero days of
+// occupancy past it, so no second charge happens — the trailing single
+// day is absorbed into the first cycle rather than billed again.
 export function chargeDatesForBooking(booking) {
-  const dates = []
-  let d = booking.check_in
-  while (d <= booking.check_out) {
+  const dates = [booking.check_in]
+  let d = addDays(booking.check_in, 30)
+  while (d < booking.check_out) {
     dates.push(d)
     d = addDays(d, 30)
   }
