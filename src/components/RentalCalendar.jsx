@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { deleteRentalBooking } from '../lib/rentals'
 import RentalBookingForm from './RentalBookingForm'
+import RentalBookingDetail from './RentalBookingDetail'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -46,6 +46,7 @@ function buildWeeks(year, month) {
 export default function RentalCalendar({ properties, bookings, monthDate, createdBy, onBookingsChanged }) {
   const [selectedUnitId, setSelectedUnitId] = useState(properties[0]?.id || '')
   const [formOpen, setFormOpen] = useState(false)
+  const [selectedBooking, setSelectedBooking] = useState(null)
 
   const unit = properties.find((p) => p.id === selectedUnitId) || properties[0]
   const unitBookings = unit ? bookings.filter((b) => b.property_id === unit.id) : []
@@ -55,13 +56,6 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
   const numDays = new Date(year, month + 1, 0).getDate()
   const weeks = buildWeeks(year, month)
   const todayStr = toDateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
-
-  async function handleDayClick(booking) {
-    const range = `${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`
-    if (!window.confirm(`Delete booking for ${booking.guest_name} (${range})? This can't be undone.`)) return
-    await deleteRentalBooking(booking.id)
-    onBookingsChanged()
-  }
 
   if (properties.length === 0) {
     return <p className="task-notes-empty">No units yet.</p>
@@ -128,7 +122,7 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
                 className={classes.join(' ')}
                 style={{ background: unit.color }}
                 title={`${booking.guest_name}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
-                onClick={() => handleDayClick(booking)}
+                onClick={() => setSelectedBooking(booking)}
               >
                 {day}
               </div>
@@ -140,10 +134,22 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
       {formOpen && (
         <RentalBookingForm
           properties={properties}
+          defaultPropertyId={selectedUnitId}
           createdBy={createdBy}
           onClose={() => setFormOpen(false)}
           onCreated={() => {
             setFormOpen(false)
+            onBookingsChanged()
+          }}
+        />
+      )}
+
+      {selectedBooking && (
+        <RentalBookingDetail
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onDeleted={() => {
+            setSelectedBooking(null)
             onBookingsChanged()
           }}
         />

@@ -10,8 +10,8 @@ function todayDateString() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-export default function RentalBookingForm({ properties, createdBy, onClose, onCreated }) {
-  const [propertyId, setPropertyId] = useState(properties[0]?.id || '')
+export default function RentalBookingForm({ properties, defaultPropertyId, createdBy, onClose, onCreated }) {
+  const [propertyId, setPropertyId] = useState(defaultPropertyId || properties[0]?.id || '')
   const [guestName, setGuestName] = useState('')
   const [checkIn, setCheckIn] = useState(todayDateString())
   const [checkOut, setCheckOut] = useState('')

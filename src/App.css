@@ -1493,6 +1493,23 @@ label.new-task-checkbox-label {
   color: #dc2626;
 }
 
+.rental-booking-detail-guest {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.rental-booking-detail-dates {
+  opacity: 0.75;
+}
+
+.submission-actions button.rental-delete-booking {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+  font-weight: 600;
+}
+
 .rental-financials-subheading {
   font-size: 13px;
   opacity: 0.6;
