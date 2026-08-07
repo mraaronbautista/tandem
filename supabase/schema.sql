@@ -368,10 +368,12 @@ create table rental_bookings (
   property_id uuid not null references rental_properties (id) on delete cascade,
   guest_name text not null,
   check_in date not null,
+  -- Last occupied day, inclusive — not a hotel-style departure day. A
+  -- single-day booking has check_out = check_in.
   check_out date not null,
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
-  constraint rental_bookings_dates_check check (check_out > check_in)
+  constraint rental_bookings_dates_check check (check_out >= check_in)
 );
 
 create index rental_bookings_property_id_idx on rental_bookings (property_id);

@@ -20,9 +20,9 @@ function formatDateStr(dateStr) {
 }
 
 // Finds the booking (if any) covering this exact day. check_out is the
-// checkout day itself, not an occupied night, so it's excluded from range.
+// last occupied day (inclusive), not a hotel-style departure day.
 function bookingForDay(bookings, dateStr) {
-  return bookings.find((b) => b.check_in <= dateStr && b.check_out > dateStr)
+  return bookings.find((b) => b.check_in <= dateStr && b.check_out >= dateStr)
 }
 
 // Weeks as 7-cell rows (Sun-Sat), padded with `null` before day 1 and
@@ -116,9 +116,8 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
               )
             }
 
-            const nextDateStr = toDateStr(year, month, Math.min(day + 1, numDays))
             const isStart = dateStr === booking.check_in || col === 0
-            const isEnd = booking.check_out <= nextDateStr || col === 6 || day === numDays
+            const isEnd = dateStr === booking.check_out || col === 6 || day === numDays
             classes.push('rental-month-day-occupied')
             if (isStart) classes.push('rental-month-day-start')
             if (isEnd) classes.push('rental-month-day-end')

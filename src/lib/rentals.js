@@ -23,15 +23,15 @@ export async function fetchRentalExpenses(company) {
 
 // rangeStart/rangeEnd are 'YYYY-MM-DD' strings; returns bookings that
 // overlap [rangeStart, rangeEnd) at all, i.e. check_in < rangeEnd and
-// check_out > rangeStart (check_out itself is the checkout day, not an
-// occupied night).
+// check_out >= rangeStart. check_out is the last occupied day (inclusive),
+// not a hotel-style departure day.
 export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
   const { data, error } = await supabase
     .from('rental_bookings')
     .select('id, property_id, guest_name, check_in, check_out, rental_properties!inner(company)')
     .eq('rental_properties.company', company)
     .lt('check_in', rangeEnd)
-    .gt('check_out', rangeStart)
+    .gte('check_out', rangeStart)
   if (error) throw error
   return data
 }
@@ -41,8 +41,8 @@ async function hasOverlappingBooking(propertyId, checkIn, checkOut) {
     .from('rental_bookings')
     .select('id')
     .eq('property_id', propertyId)
-    .lt('check_in', checkOut)
-    .gt('check_out', checkIn)
+    .lte('check_in', checkOut)
+    .gte('check_out', checkIn)
     .limit(1)
   if (error) throw error
   return data.length > 0

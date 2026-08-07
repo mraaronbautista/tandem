@@ -70,7 +70,7 @@ export default function RentalBookingForm({ properties, createdBy, onClose, onCr
         </label>
 
         <label>
-          Check-out
+          Last day
           <input type="date" required min={checkIn} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
         </label>
 
