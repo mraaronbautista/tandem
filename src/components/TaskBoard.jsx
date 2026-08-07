@@ -27,6 +27,7 @@ import EndOfDayReportForm from './EndOfDayReportForm'
 import EodReportsList from './EodReportsList'
 import PrioritiesForm from './PrioritiesForm'
 import SettingsMenu from './SettingsMenu'
+import RentalsView from './RentalsView'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -55,6 +56,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [reportsListOpen, setReportsListOpen] = useState(false)
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [rentalsOpen, setRentalsOpen] = useState(false)
 
   // The quick-actions menu closes as soon as an item is picked (see
   // NewTaskForm), so there's no persistent button left to show a "sent"
@@ -208,6 +210,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const quickActions = [
     { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
     { key: 'reports', icon: '📋', label: 'View reports', onSelect: () => setReportsListOpen(true) },
+    { key: 'rentals', icon: '🏠', label: 'Rentals', onSelect: () => setRentalsOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
       : []),
@@ -315,6 +318,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
       {prioritiesOpen && (
         <PrioritiesForm me={me} memberName={memberName} onClose={() => setPrioritiesOpen(false)} />
       )}
+
+      {rentalsOpen && <RentalsView me={me} onClose={() => setRentalsOpen(false)} />}
 
       {settingsOpen && (
         <SettingsMenu

@@ -1340,3 +1340,186 @@ label.new-task-checkbox-label {
   color: #fff;
   font-weight: 600;
 }
+
+/* Rentals: occupancy calendar + financials. Wider than the standard
+   .submission-modal since the calendar table needs room, but the table
+   itself still scrolls horizontally inside .rental-calendar-scroll rather
+   than forcing the whole modal wider than the viewport on mobile. */
+.modal-backdrop .rental-modal {
+  max-width: 720px;
+}
+
+.rental-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.rental-add-booking {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.rental-calendar-scroll {
+  overflow-x: auto;
+}
+
+.rental-calendar-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.rental-unit-label-header,
+.rental-day-header {
+  padding: 4px 3px;
+  font-weight: 400;
+  opacity: 0.6;
+  text-align: center;
+}
+
+.rental-unit-label-header {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--card-bg);
+}
+
+.rental-unit-row {
+  height: 30px;
+}
+
+.rental-unit-label {
+  padding: 4px 10px 4px 3px;
+  white-space: nowrap;
+  color: var(--text-h);
+  position: sticky;
+  left: 0;
+  background: var(--card-bg);
+}
+
+.rental-unit-dot,
+.rental-legend-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.rental-day-cell {
+  width: 18px;
+  height: 24px;
+  border-right: 1px solid var(--bg);
+}
+
+.rental-day-occupied {
+  cursor: pointer;
+}
+
+.rental-day-start {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.rental-day-end {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+.rental-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 12px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.rental-legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.rental-financials-month {
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: center;
+}
+
+.rental-financials-summary {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rental-financials-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.rental-financials-total {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.rental-surplus {
+  color: #22c55e;
+}
+
+.rental-deficit {
+  color: #dc2626;
+}
+
+.rental-financials-subheading {
+  font-size: 13px;
+  opacity: 0.6;
+  margin: 4px 0 -4px;
+}
+
+.rental-expense-row,
+.rental-unit-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.rental-unit-badge {
+  font-size: 13px;
+}
+
+.rental-unit-badge-occupied {
+  color: #22c55e;
+}
+
+.rental-unit-badge-vacant {
+  opacity: 0.75;
+}
+
+.rental-fill-next-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
