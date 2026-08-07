@@ -1466,6 +1466,12 @@ label.new-task-checkbox-label {
   border-bottom-right-radius: 8px;
 }
 
+.rental-financials {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .rental-savings-list {
   display: flex;
   flex-direction: column;
@@ -1517,6 +1523,38 @@ label.new-task-checkbox-label {
   text-align: right;
   font-size: 13px;
   opacity: 0.8;
+}
+
+.rental-adjustments {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.rental-adjustment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 0;
+}
+
+.rental-adjustment-date {
+  opacity: 0.6;
+}
+
+.rental-adjustment-delete {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .rental-financials-summary {

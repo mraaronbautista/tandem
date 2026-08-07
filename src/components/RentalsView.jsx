@@ -5,6 +5,7 @@ import {
   fetchRentalBookings,
   fetchAllRentalBookings,
   fetchSavingsGoals,
+  fetchSavingsAdjustments,
   monthRangeStrings,
 } from '../lib/rentals'
 import Modal from './Modal'
@@ -26,6 +27,7 @@ export default function RentalsView({ me, onClose }) {
   const [bookings, setBookings] = useState([])
   const [allBookings, setAllBookings] = useState([])
   const [goals, setGoals] = useState([])
+  const [adjustments, setAdjustments] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -36,12 +38,19 @@ export default function RentalsView({ me, onClose }) {
       .then(setExpenses)
       .catch((err) => setError(err.message))
     reloadGoals()
+    reloadAdjustments()
     reloadAllBookings()
   }, [])
 
   function reloadGoals() {
     fetchSavingsGoals(COMPANY)
       .then(setGoals)
+      .catch((err) => setError(err.message))
+  }
+
+  function reloadAdjustments() {
+    fetchSavingsAdjustments(COMPANY)
+      .then(setAdjustments)
       .catch((err) => setError(err.message))
   }
 
@@ -126,6 +135,9 @@ export default function RentalsView({ me, onClose }) {
               allBookings={allBookings}
               goals={goals}
               onGoalsChanged={reloadGoals}
+              adjustments={adjustments}
+              onAdjustmentsChanged={reloadAdjustments}
+              createdBy={me?.id}
             />
           ))}
 

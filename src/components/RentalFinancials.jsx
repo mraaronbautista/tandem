@@ -1,5 +1,6 @@
 import { chargeDatesForBooking, monthRangeStrings } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
+import RentalSavingsAdjustments from './RentalSavingsAdjustments'
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -22,6 +23,9 @@ export default function RentalFinancials({
   allBookings,
   goals,
   onGoalsChanged,
+  adjustments,
+  onAdjustmentsChanged,
+  createdBy,
 }) {
   const { start, end } = monthRangeStrings(monthDate)
 
@@ -58,7 +62,15 @@ export default function RentalFinancials({
         allBookings={allBookings}
         properties={properties}
         expenses={expenses}
+        adjustments={adjustments}
         onGoalsChanged={onGoalsChanged}
+      />
+
+      <RentalSavingsAdjustments
+        company={company}
+        adjustments={adjustments}
+        createdBy={createdBy}
+        onChanged={onAdjustmentsChanged}
       />
 
       <div className="rental-financials-summary">

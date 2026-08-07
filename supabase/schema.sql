@@ -482,3 +482,32 @@ create policy "members can update rental savings goals"
 create policy "members can delete rental savings goals"
   on rental_savings_goal for delete
   using (is_member());
+
+-- Manual corrections to the auto-computed running total — a pre-existing
+-- balance from before tracking started, or a month where the computed
+-- surplus didn't actually get saved (spent elsewhere instead). A signed
+-- amount + a required note explaining why, rather than letting someone
+-- silently overwrite the computed number — the adjustment stays visible
+-- and reversible (delete it) instead of hiding the correction.
+create table rental_savings_adjustment (
+  id uuid primary key default gen_random_uuid(),
+  company rental_company not null,
+  amount numeric(10, 2) not null,
+  note text not null,
+  created_by uuid not null references members (id),
+  created_at timestamptz not null default now()
+);
+
+alter table rental_savings_adjustment enable row level security;
+
+create policy "members can read all rental savings adjustments"
+  on rental_savings_adjustment for select
+  using (is_member());
+
+create policy "members can insert rental savings adjustments"
+  on rental_savings_adjustment for insert
+  with check (is_member());
+
+create policy "members can delete rental savings adjustments"
+  on rental_savings_adjustment for delete
+  using (is_member());

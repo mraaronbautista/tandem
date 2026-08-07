@@ -13,7 +13,15 @@ function money(n) {
 // the actual down payment) can track the same growing pool of savings —
 // see cumulativeSavings() — auto-summed from confirmed-booking net cash
 // flow rather than a manually-kept ledger, so there's nothing to log.
-export default function RentalSavingsGoal({ company, goals, allBookings, properties, expenses, onGoalsChanged }) {
+export default function RentalSavingsGoal({
+  company,
+  goals,
+  allBookings,
+  properties,
+  expenses,
+  adjustments,
+  onGoalsChanged,
+}) {
   const [formOpen, setFormOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState(null)
 
@@ -30,7 +38,7 @@ export default function RentalSavingsGoal({ company, goals, allBookings, propert
   return (
     <div className="rental-savings-list">
       {goals.map((goal) => {
-        const saved = cumulativeSavings(allBookings, properties, expenses, goal.tracking_start)
+        const saved = cumulativeSavings(allBookings, properties, expenses, goal.tracking_start, adjustments)
         const pct = Math.max(0, Math.min(100, (saved / Number(goal.target_amount)) * 100))
         return (
           <div key={goal.id} className="rental-savings">

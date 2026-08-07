@@ -51,7 +51,12 @@ export function chargeDatesForBooking(booking) {
 // be the company's full booking history (not month-scoped), since a
 // charge relevant to an early tracked month can come from a booking
 // whose check_in predates it.
-export function cumulativeSavings(bookings, properties, expenses, trackingStart) {
+//
+// `adjustments` corrects the computed total for reality it can't see on
+// its own: a balance that already existed before trackingStart, or a
+// month where the computed surplus didn't actually get saved (spent
+// elsewhere instead) — see rental_savings_adjustment.
+export function cumulativeSavings(bookings, properties, expenses, trackingStart, adjustments = []) {
   const rentByProperty = new Map(properties.map((p) => [p.id, Number(p.monthly_rent)]))
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const confirmed = bookings.filter((b) => b.status === 'confirmed')
@@ -72,7 +77,7 @@ export function cumulativeSavings(bookings, properties, expenses, trackingStart)
     total += revenue - overhead
     month = new Date(month.getFullYear(), month.getMonth() + 1, 1)
   }
-  return total
+  return total + adjustments.reduce((sum, a) => sum + Number(a.amount), 0)
 }
 
 export async function fetchRentalProperties(company) {
@@ -159,6 +164,31 @@ export async function updateSavingsGoal(id, { label, target_amount, tracking_sta
 
 export async function deleteSavingsGoal(id) {
   const { error } = await supabase.from('rental_savings_goal').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function fetchSavingsAdjustments(company) {
+  const { data, error } = await supabase
+    .from('rental_savings_adjustment')
+    .select('id, company, amount, note, created_at')
+    .eq('company', company)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createSavingsAdjustment(company, { amount, note, created_by }) {
+  const { data, error } = await supabase
+    .from('rental_savings_adjustment')
+    .insert({ company, amount, note, created_by })
+    .select('id, company, amount, note, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSavingsAdjustment(id) {
+  const { error } = await supabase.from('rental_savings_adjustment').delete().eq('id', id)
   if (error) throw error
 }
 
