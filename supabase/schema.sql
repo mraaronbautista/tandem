@@ -450,13 +450,16 @@ create policy "members can delete rental expenses"
   on rental_expenses for delete
   using (is_member());
 
--- One row per company: a savings target (e.g. a down payment on a new
--- property) plus the month to start accumulating net cash flow from.
--- One row per company rather than a history of goals — updating the
--- target overwrites in place, since there's only ever one "current" goal.
+-- Multiple milestones against the same accumulating savings (e.g. a
+-- $20k short-term goal, then $75k for the actual down payment) rather
+-- than one goal per company — tracking_start is duplicated per row
+-- instead of factored out, so each milestone stays self-contained and
+-- could in principle count from a different start date, though in
+-- practice they'll usually share the same one.
 create table rental_savings_goal (
   id uuid primary key default gen_random_uuid(),
-  company rental_company not null unique,
+  company rental_company not null,
+  label text not null,
   target_amount numeric(10, 2) not null,
   tracking_start date not null,
   updated_at timestamptz not null default now()
@@ -474,4 +477,8 @@ create policy "members can insert rental savings goals"
 
 create policy "members can update rental savings goals"
   on rental_savings_goal for update
+  using (is_member());
+
+create policy "members can delete rental savings goals"
+  on rental_savings_goal for delete
   using (is_member());
