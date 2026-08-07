@@ -82,7 +82,7 @@ export default function RentalsView({ me, onClose }) {
           <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
             ‹
           </button>
-          <span>{monthLabel}</span>
+          <span className="rental-month-label">{monthLabel}</span>
           <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
             ›
           </button>
@@ -102,7 +102,7 @@ export default function RentalsView({ me, onClose }) {
               onBookingsChanged={reloadBookings}
             />
           ) : (
-            <RentalFinancials properties={properties} bookings={bookings} expenses={expenses} monthDate={monthDate} />
+            <RentalFinancials properties={properties} bookings={bookings} expenses={expenses} />
           ))}
 
         <div className="submission-actions">

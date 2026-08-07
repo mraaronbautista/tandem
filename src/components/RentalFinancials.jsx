@@ -6,7 +6,7 @@ function money(n) {
 // fetch), so any property with a booking in that list is occupied that
 // month — no per-day proration, matching how these units are actually
 // billed (monthly, Furnished-Finder style), not nightly.
-export default function RentalFinancials({ properties, bookings, expenses, monthDate }) {
+export default function RentalFinancials({ properties, bookings, expenses }) {
   const occupiedIds = new Set(bookings.map((b) => b.property_id))
   const occupied = properties.filter((p) => occupiedIds.has(p.id))
   // properties arrives sorted by monthly_rent desc (see fetchRentalProperties),
@@ -17,12 +17,8 @@ export default function RentalFinancials({ properties, bookings, expenses, month
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const surplus = revenue - overhead
 
-  const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
-
   return (
     <div className="rental-financials">
-      <p className="rental-financials-month">{monthLabel}</p>
-
       <div className="rental-financials-summary">
         <div className="rental-financials-row">
           <span>Revenue ({occupied.length}/{properties.length} units)</span>

@@ -1357,6 +1357,16 @@ label.new-task-checkbox-label {
   color: var(--text-h);
 }
 
+/* Fixed width so the arrows stay put as the label's text width changes
+   between months ("May 2026" vs "September 2026") — without this the
+   whole flex row grows/shrinks and the centered row shifts the buttons
+   left/right on every navigation. */
+.rental-month-label {
+  display: inline-block;
+  min-width: 150px;
+  text-align: center;
+}
+
 .rental-calendar-toolbar {
   display: flex;
   gap: 8px;
@@ -1450,12 +1460,6 @@ label.new-task-checkbox-label {
 .rental-month-day-end {
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;
-}
-
-.rental-financials-month {
-  font-weight: 600;
-  color: var(--text-h);
-  text-align: center;
 }
 
 .rental-financials-summary {
