@@ -1341,13 +1341,12 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 
-/* Rentals: occupancy calendar + financials. Wider than the standard
-   .submission-modal since the calendar table needs room, but the table
-   itself still scrolls horizontally inside .rental-calendar-scroll rather
-   than forcing the whole modal wider than the viewport on mobile. */
-.modal-backdrop .rental-modal {
-  max-width: 720px;
-}
+/* Rentals: occupancy calendar + financials. No max-width override on
+   .rental-modal — the month grid below fits comfortably inside the
+   standard .submission-modal sizing (560px desktop / 100% on mobile via
+   the existing @media (max-width: 640px) reset above), unlike the earlier
+   multi-unit timeline table which needed extra width and ended up
+   breaking that mobile reset instead. */
 
 .rental-calendar-nav {
   display: flex;
@@ -1358,8 +1357,24 @@ label.new-task-checkbox-label {
   color: var(--text-h);
 }
 
+.rental-calendar-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rental-unit-select {
+  flex: 1;
+  min-width: 140px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
 .rental-add-booking {
-  align-self: flex-start;
   padding: 8px 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -1367,48 +1382,19 @@ label.new-task-checkbox-label {
   color: var(--text-h);
   cursor: pointer;
   font-size: 14px;
-  margin-bottom: 10px;
-}
-
-.rental-calendar-scroll {
-  overflow-x: auto;
-}
-
-.rental-calendar-table {
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.rental-unit-label-header,
-.rental-day-header {
-  padding: 4px 3px;
-  font-weight: 400;
-  opacity: 0.6;
-  text-align: center;
-}
-
-.rental-unit-label-header {
-  text-align: left;
-  position: sticky;
-  left: 0;
-  background: var(--card-bg);
-}
-
-.rental-unit-row {
-  height: 30px;
-}
-
-.rental-unit-label {
-  padding: 4px 10px 4px 3px;
   white-space: nowrap;
-  color: var(--text-h);
-  position: sticky;
-  left: 0;
-  background: var(--card-bg);
 }
 
-.rental-unit-dot,
-.rental-legend-swatch {
+.rental-unit-header {
+  display: flex;
+  align-items: center;
+  margin: 12px 0 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.rental-unit-dot {
   display: inline-block;
   width: 9px;
   height: 9px;
@@ -1416,38 +1402,54 @@ label.new-task-checkbox-label {
   margin-right: 6px;
 }
 
-.rental-day-cell {
-  width: 18px;
-  height: 24px;
-  border-right: 1px solid var(--bg);
+.rental-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
 }
 
-.rental-day-occupied {
+.rental-month-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.55;
+  padding-bottom: 4px;
+}
+
+.rental-month-day,
+.rental-month-day-empty {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.rental-month-day-empty {
+  visibility: hidden;
+}
+
+.rental-month-day-today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.rental-month-day-occupied {
+  color: #fff;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.rental-day-start {
-  border-top-left-radius: 999px;
-  border-bottom-left-radius: 999px;
+.rental-month-day-start {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
 }
 
-.rental-day-end {
-  border-top-right-radius: 999px;
-  border-bottom-right-radius: 999px;
-}
-
-.rental-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  margin-top: 12px;
-  font-size: 13px;
-  opacity: 0.85;
-}
-
-.rental-legend-item {
-  display: flex;
-  align-items: center;
+.rental-month-day-end {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 .rental-financials-month {
