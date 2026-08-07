@@ -336,3 +336,74 @@ create policy "members can read all priorities"
 create policy "members can insert priorities"
   on priorities for insert
   with check (is_member() and set_by = auth.uid());
+
+-- Rental occupancy calendar. Two businesses share the same shape (a unit
+-- has a name/address and a stream of bookings), so one pair of tables
+-- covers both rather than duplicating awa_/azu_ prefixed tables — the
+-- 'company' column is what a calendar view filters/groups on.
+create type rental_company as enum ('awa', 'azu');
+
+create table rental_properties (
+  id uuid primary key default gen_random_uuid(),
+  company rental_company not null,
+  unit_name text not null,
+  address text,
+  -- Per-unit color for the calendar view (distinct ribbon/bar color per
+  -- unit) — stored here rather than derived client-side so it stays
+  -- consistent regardless of fetch order and can be picked deliberately
+  -- per unit instead of auto-assigned.
+  color text not null default '#3b82f6',
+  -- Soft-hide rather than delete: keeps booking history intact if a unit
+  -- is sold/taken off the market.
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table rental_bookings (
+  id uuid primary key default gen_random_uuid(),
+  property_id uuid not null references rental_properties (id) on delete cascade,
+  guest_name text not null,
+  check_in date not null,
+  check_out date not null,
+  created_by uuid not null references members (id),
+  created_at timestamptz not null default now(),
+  constraint rental_bookings_dates_check check (check_out > check_in)
+);
+
+create index rental_bookings_property_id_idx on rental_bookings (property_id);
+create index rental_bookings_range_idx on rental_bookings (check_in, check_out);
+
+alter table rental_properties enable row level security;
+alter table rental_bookings enable row level security;
+
+create policy "members can read all rental properties"
+  on rental_properties for select
+  using (is_member());
+
+create policy "members can insert rental properties"
+  on rental_properties for insert
+  with check (is_member());
+
+create policy "members can update rental properties"
+  on rental_properties for update
+  using (is_member());
+
+create policy "members can delete rental properties"
+  on rental_properties for delete
+  using (is_member());
+
+create policy "members can read all rental bookings"
+  on rental_bookings for select
+  using (is_member());
+
+create policy "members can insert rental bookings"
+  on rental_bookings for insert
+  with check (is_member());
+
+create policy "members can update rental bookings"
+  on rental_bookings for update
+  using (is_member());
+
+create policy "members can delete rental bookings"
+  on rental_bookings for delete
+  using (is_member());
