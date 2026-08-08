@@ -485,3 +485,70 @@ create policy "members can update rental savings goals"
 create policy "members can delete rental savings goals"
   on rental_savings_goal for delete
   using (is_member());
+
+-- Shared password vault, encrypted client-side (AES-GCM, key derived from
+-- a master password via PBKDF2) before anything ever reaches Supabase —
+-- both members share one master password, consistent with everything
+-- else in this app being mutually visible. RLS here only governs who can
+-- read/write ciphertext; it is not the security boundary for the
+-- passwords themselves, the encryption is. A single row: salt for key
+-- derivation, plus a canary ciphertext that lets a later unlock attempt
+-- verify the master password before any real entry exists to test
+-- against. Delete policy exists for the forgot-password reset flow
+-- (there is no recovery path by design, so resetting is the only way
+-- out of a forgotten master password).
+create table vault_meta (
+  id uuid primary key default gen_random_uuid(),
+  salt text not null,
+  canary_ciphertext text not null,
+  canary_iv text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table vault_meta enable row level security;
+
+create policy "members can read vault meta"
+  on vault_meta for select
+  using (is_member());
+
+create policy "members can insert vault meta"
+  on vault_meta for insert
+  with check (is_member());
+
+create policy "members can delete vault meta"
+  on vault_meta for delete
+  using (is_member());
+
+-- One row per credential. `ciphertext` decrypts (with the vault key) to
+-- one JSON blob `{ label, username, loginMethod, password, url, notes }`
+-- (loginMethod is set instead of password for accounts with no password
+-- of their own, e.g. "Sign in with Google") — the label is encrypted too,
+-- not just the password, since even knowing an entry called "Chase Bank"
+-- exists is sensitive metadata worth not leaking to anyone with database
+-- access.
+create table vault_entries (
+  id uuid primary key default gen_random_uuid(),
+  ciphertext text not null,
+  iv text not null,
+  created_by uuid not null references members (id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table vault_entries enable row level security;
+
+create policy "members can read all vault entries"
+  on vault_entries for select
+  using (is_member());
+
+create policy "members can insert vault entries"
+  on vault_entries for insert
+  with check (is_member());
+
+create policy "members can update vault entries"
+  on vault_entries for update
+  using (is_member());
+
+create policy "members can delete vault entries"
+  on vault_entries for delete
+  using (is_member());

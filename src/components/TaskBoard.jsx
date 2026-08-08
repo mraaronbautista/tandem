@@ -28,6 +28,7 @@ import EodReportsList from './EodReportsList'
 import PrioritiesForm from './PrioritiesForm'
 import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
+import VaultView from './VaultView'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -57,6 +58,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [rentalsOpen, setRentalsOpen] = useState(false)
+  const [vaultOpen, setVaultOpen] = useState(false)
 
   // The quick-actions menu closes as soon as an item is picked (see
   // NewTaskForm), so there's no persistent button left to show a "sent"
@@ -213,6 +215,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // task-board use — sits last.
   const quickActions = [
     { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
+    { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
       : []),
@@ -324,6 +327,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
       )}
 
       {rentalsOpen && <RentalsView me={me} onClose={() => setRentalsOpen(false)} />}
+
+      {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
 
       {settingsOpen && (
         <SettingsMenu

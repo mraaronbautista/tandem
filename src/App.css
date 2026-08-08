@@ -617,6 +617,18 @@
   opacity: 0.85;
 }
 
+/* Plain <label>Text<input/></label> pairs inside a .submission-modal form
+   (RentalBookingForm, RentalSavingsGoalForm, Vault forms, ...) had no
+   stacking rule of their own — same underlying issue as .new-task-form's
+   fix below, just for the other modal family. */
+.submission-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 .submission-field-label {
   font-size: 13px;
   opacity: 0.85;
@@ -1146,6 +1158,19 @@ a.task-submission-file-link:hover {
   font: inherit;
 }
 
+/* Direct-child only, so it doesn't fight .new-task-row label's own
+   layout (flex-basis etc.) for labels nested inside that row — this just
+   covers the labels that sit directly in the form (Date, Time, Repeats,
+   ...), which had no stacking rule of their own and rendered as inline
+   text next to the input instead of above it. */
+.new-task-form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
 label.new-task-checkbox-label {
   flex-direction: row;
   align-items: center;
@@ -1651,4 +1676,104 @@ label.new-task-checkbox-label {
   color: #fff;
   font-size: 11px;
   font-weight: 600;
+}
+
+/* Vault */
+
+.vault-warning {
+  border: 1px solid var(--overdue);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  opacity: 0.9;
+  background: color-mix(in srgb, var(--overdue) 10%, transparent);
+}
+
+.vault-forgot-link {
+  align-self: center;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.vault-toolbar {
+  display: flex;
+  gap: 8px;
+}
+
+.vault-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vault-entry-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-h);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.vault-entry-label {
+  font-weight: 600;
+}
+
+.vault-entry-username {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.vault-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.vault-field-label {
+  flex: none;
+  width: 70px;
+  opacity: 0.6;
+  font-size: 13px;
+}
+
+.vault-field-value {
+  flex: 1;
+  color: var(--text-h);
+  word-break: break-all;
+}
+
+.vault-password-value {
+  font-family: monospace;
+}
+
+.vault-copy {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.vault-password-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.vault-password-input-row input {
+  flex: 1;
 }
