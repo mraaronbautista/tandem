@@ -207,14 +207,18 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   // Folded into the "+" FAB as a speed-dial rather than separate header
   // icons — that's what got cluttered as these got added one by one.
+  // Ordered so the reporting pair (Submit/View) stay adjacent instead of
+  // split apart, Priorities stays near the top (now spawns real tasks on
+  // save, not just a note), and Rentals — the most tangential to daily
+  // task-board use — sits last.
   const quickActions = [
     { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
-    { key: 'reports', icon: '📋', label: 'View reports', onSelect: () => setReportsListOpen(true) },
-    { key: 'rentals', icon: '🏠', label: 'Rentals', onSelect: () => setRentalsOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
       : []),
+    { key: 'reports', icon: '📋', label: 'View reports', onSelect: () => setReportsListOpen(true) },
     ...(me?.display_name === 'Ada' ? [{ key: 'nudge', icon: '🚨', label: 'Nudge Aaron', onSelect: handleNudge }] : []),
+    { key: 'rentals', icon: '🏠', label: 'Rentals', onSelect: () => setRentalsOpen(true) },
   ]
 
   return (

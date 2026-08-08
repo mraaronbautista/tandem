@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { createPriorities, fetchLatestPriorities } from '../lib/priorities'
+import { createTask } from '../lib/tasks'
+import { whoKeyForName } from '../lib/whoLabels'
+import { DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
+import PriorityItemsEditor from './PriorityItemsEditor'
 
 const PERIODS = [
   { value: 'day', label: 'Day' },
@@ -12,39 +16,66 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-// Shared planning note, not a personal log — either of you can set or
-// update priorities for the upcoming day/week/month. Opens showing
-// whatever's currently set for the selected period (if anything),
-// editable; saving adds a new entry rather than overwriting the old one,
-// so there's a free history of how priorities shifted over time.
+// 'YYYY-MM-DD' for today in the browser's own local timezone — matches
+// what zonedTimeToUtcIso expects as its date argument.
+function todayDateString() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// Shared planning note, not a personal log — either of you can set
+// priorities for the upcoming day/week/month, and each one becomes a real
+// task on save (not just a line of text that's easy to forget about).
+// "Last set" below is read-only reference only, never pre-filled into the
+// editable list — otherwise reopening this and hitting Save would
+// recreate a task for every old item, not just anything new.
 export default function PrioritiesForm({ me, memberName, onClose }) {
   const [period, setPeriod] = useState('day')
   const [latest, setLatest] = useState(null)
-  const [body, setBody] = useState('')
+  const [items, setItems] = useState([])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const defaultWho = whoKeyForName(me.display_name) || 'yours'
+
   useEffect(() => {
     fetchLatestPriorities()
-      .then((map) => {
-        setLatest(map)
-        setBody(map.day?.body || '')
-      })
+      .then(setLatest)
       .catch((err) => setError(err.message))
   }, [])
 
   function handlePeriodChange(next) {
     setPeriod(next)
-    setBody(latest?.[next]?.body || '')
+    setItems([])
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!body.trim()) return
+    const validItems = items.filter((i) => i.text.trim())
+    if (!validItems.length) return
     setSaving(true)
     try {
+      const body = validItems.map((i) => i.text.trim()).join('\n')
       const saved = await createPriorities(me.id, period, body)
       setLatest((prev) => ({ ...prev, [period]: saved }))
+
+      // Day priorities land on today (so an unfinished one can go
+      // overdue, same as any other daily task); week/month priorities
+      // become All Day tasks — no specific date, they just stick around
+      // until done.
+      const dueDate = period === 'day' ? zonedTimeToUtcIso(todayDateString(), '23:59', DEFAULT_TIMEZONE) : null
+      await Promise.all(
+        validItems.map((item) =>
+          createTask({
+            title: item.text.trim(),
+            who: item.who,
+            due_date: dueDate,
+            due_timezone: DEFAULT_TIMEZONE,
+            created_by: me.id,
+          }),
+        ),
+      )
       onClose()
     } catch (err) {
       alert(err.message)
@@ -54,6 +85,7 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
   }
 
   const current = latest?.[period]
+  const lastLines = current?.body ? current.body.split('\n').filter((line) => line.trim()) : []
 
   return (
     <Modal onClose={onClose}>
@@ -76,22 +108,29 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
         {error && <p className="error">{error}</p>}
 
         {current && (
-          <p className="eod-report-meta">
-            Last set by <strong>{memberName(current.set_by)}</strong> — {formatDate(current.created_at)}
-          </p>
+          <div>
+            <p className="eod-report-meta">
+              Last set by <strong>{memberName(current.set_by)}</strong> — {formatDate(current.created_at)}
+            </p>
+            {lastLines.length > 0 && (
+              <ul className="priorities-last-set-list">
+                {lastLines.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
-        <label className="submission-field">
-          What are we prioritizing this {period}?
-          <textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
-        </label>
+        <span className="submission-field-label">What are we prioritizing this {period}?</span>
+        <PriorityItemsEditor items={items} onChange={setItems} defaultWho={defaultWho} />
 
         <div className="submission-actions">
           <button type="button" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="submission-save" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
+          <button type="submit" className="submission-save" disabled={saving || !items.some((i) => i.text.trim())}>
+            {saving ? 'Saving…' : 'Save & create tasks'}
           </button>
         </div>
       </form>
