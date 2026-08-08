@@ -204,6 +204,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     onUpdate: handleUpdate,
     onDelete: handleDelete,
     memberName,
+    meId: session.user.id,
     overlappingIds,
   }
 

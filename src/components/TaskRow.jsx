@@ -6,6 +6,7 @@ import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
+import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
@@ -36,6 +37,7 @@ export default function TaskRow({
   onUpdate,
   onDelete,
   memberName,
+  meId,
   defaultOpen = false,
   overlappingIds,
   hidePriorityDot = false,
@@ -55,6 +57,11 @@ export default function TaskRow({
   const creatorName = memberName(task.created_by)
   const checklist = task.checklist || []
   const checklistDone = checklist.filter((item) => item.done).length
+  const clarifications = task.clarifications || []
+  // A question directed at whoever's looking right now — an in-app
+  // reminder that doesn't depend on the push notification having been
+  // seen (or not dismissed).
+  const hasQuestionForMe = clarifications.some((c) => !c.answer && c.askedBy !== meId)
 
   function handleDelete(e) {
     e.stopPropagation()
@@ -66,6 +73,10 @@ export default function TaskRow({
   function handleChecklistItemChange(itemId, patch) {
     const updated = checklist.map((item) => (item.id === itemId ? { ...item, ...patch } : item))
     onUpdate(task.id, { checklist: updated })
+  }
+
+  async function handleClarificationsChange(updated) {
+    await onUpdate(task.id, { clarifications: updated })
   }
 
   function handleStatusToggle() {
@@ -151,6 +162,11 @@ export default function TaskRow({
             ☑ {checklistDone}/{checklist.length}
           </span>
         )}
+        {hasQuestionForMe && (
+          <span className="task-question-badge" title="Has a question for you">
+            ❓
+          </span>
+        )}
         {task.due_date && (
           <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{dueLabel(task)}</span>
         )}
@@ -178,6 +194,14 @@ export default function TaskRow({
           {!sourceLabel && !task.notes && !checklist.length && task.recurrence === 'none' && !creatorName && (
             <p className="task-notes-empty">No additional details.</p>
           )}
+
+          <TaskClarifications
+            clarifications={clarifications}
+            onChange={handleClarificationsChange}
+            meId={meId}
+            memberName={memberName}
+            taskTitle={task.title}
+          />
 
           <div className="task-row-actions">
             <button onClick={() => setEditing(true)}>Edit</button>

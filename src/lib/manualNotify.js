@@ -14,3 +14,17 @@ export async function sendNudge() {
   const { error } = await supabase.functions.invoke('manual-notify', { body: { kind: 'nudge' } })
   if (error) throw error
 }
+
+export async function sendClarificationAsked(taskTitle, question) {
+  const { error } = await supabase.functions.invoke('manual-notify', {
+    body: { kind: 'clarification_asked', taskTitle, question },
+  })
+  if (error) throw error
+}
+
+export async function sendClarificationAnswered(taskTitle, answer) {
+  const { error } = await supabase.functions.invoke('manual-notify', {
+    body: { kind: 'clarification_answered', taskTitle, answer },
+  })
+  if (error) throw error
+}

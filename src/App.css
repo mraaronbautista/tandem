@@ -1777,3 +1777,83 @@ label.new-task-checkbox-label {
 .vault-password-input-row input {
   flex: 1;
 }
+
+/* Task clarifications (ask-a-question thread) */
+
+.task-question-badge {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.clarifications {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.clarifications-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clarification-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+}
+
+.clarification-question,
+.clarification-answer {
+  font-size: 14px;
+}
+
+.clarification-waiting {
+  font-size: 13px;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.clarification-ask-row,
+.clarification-answer-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.clarification-ask-row textarea,
+.clarification-answer-row textarea {
+  flex: 1;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.clarification-ask-button,
+.clarification-answer-button {
+  flex: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clarification-ask-button:disabled,
+.clarification-answer-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

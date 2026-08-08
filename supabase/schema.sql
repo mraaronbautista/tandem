@@ -68,7 +68,16 @@ create table tasks (
   -- Set once the "about to start" push reminder has fired for this task,
   -- so the reminder cron job (runs every few minutes) doesn't re-notify
   -- on every subsequent pass. Null means not sent yet.
-  reminder_sent_at timestamptz
+  reminder_sent_at timestamptz,
+  -- Lightweight Q&A thread for clarifying a vague assignment — same
+  -- "doesn't need a child table" reasoning as checklist/
+  -- completion_attachments. A jsonb array of { id, askedBy, question,
+  -- answer, askedAt, answeredBy, answeredAt }; askedBy/answeredBy are
+  -- members.id, answer/answeredBy/answeredAt are null until answered. Purely
+  -- client-driven, no server-side logic — spawn_next_recurrence() doesn't
+  -- reference it, so a recurring task's next occurrence starts with an
+  -- empty thread rather than carrying forward a past occurrence's Q&A.
+  clarifications jsonb not null default '[]'::jsonb
 );
 
 create index tasks_status_idx on tasks (status);

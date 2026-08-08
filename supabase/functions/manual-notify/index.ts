@@ -48,5 +48,29 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  if (payload.kind === 'clarification_asked') {
+    const taskTitle = String(payload.taskTitle || '')
+    const question = String(payload.question || '').slice(0, 300)
+    if (!question.trim()) return new Response('Missing question', { status: 400, headers: corsHeaders })
+    await notifyMember(targetId, {
+      title: `${senderName} has a question`,
+      body: `${taskTitle}: ${question}`,
+      url: '/',
+    })
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  if (payload.kind === 'clarification_answered') {
+    const taskTitle = String(payload.taskTitle || '')
+    const answer = String(payload.answer || '').slice(0, 300)
+    if (!answer.trim()) return new Response('Missing answer', { status: 400, headers: corsHeaders })
+    await notifyMember(targetId, {
+      title: `${senderName} answered your question`,
+      body: `${taskTitle}: ${answer}`,
+      url: '/',
+    })
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   return new Response('Unknown kind', { status: 400, headers: corsHeaders })
 })
