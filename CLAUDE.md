@@ -84,6 +84,28 @@ A later submission within the same bucket doesn't insert a new row — it upsert
 
 `priorities` table — a shared planning note, unlike `eod_reports`: both Ada and Aaron can set it, since it's household planning rather than a personal log. Append-only: every save is a new row scoped to a `period` ('day'/'week'/'month'); "current" priorities for a period is just the most recent row for it (`fetchLatestPriorities()` in `src/lib/priorities.js`).
 
+Saving also creates a real task per bullet item (`PrioritiesForm.jsx` → `createTask()`), not just the note — the point is that priorities stop being easy to set and forget. Day-period items get `due_date` set to today (so an unfinished one can go overdue like any other task); week/month items become All Day tasks (`due_date: null`), sticking around until done. The previous save's items are shown read-only and are never pre-filled into the editable list you're about to submit — otherwise reopening the form and saving again would recreate a task for every old item, not just anything new.
+
+## Rentals (Awa Rentalz)
+
+A side-feature bolted onto the task board: `RentalsView.jsx` (off the "+" speed-dial) tracks occupancy and finances for Ada's furnished-rental business. Hardcoded to `company: 'awa'` throughout the frontend even though the `rental_company` enum also has `'azu'` (Ada's mom's separate, unrelated rental business) — `azu` was added to the schema so it wouldn't require a migration later, but no UI exists for it yet; it's deliberately out of scope. All the `rental_*` tables use the same `is_member()` RLS as everything else — mutual visibility, no per-row ownership.
+
+**Calendar** (`RentalCalendar.jsx`): shows one unit at a time via a dropdown, rendering a standard 7-column month grid — not a multi-unit Gantt-style timeline, which an earlier version tried and had to be scrapped (it needed a wider modal, which fought the mobile CSS reset and broke the layout on phones). `check_out` on `rental_bookings` is the *last occupied day, inclusive* — not a hotel-style departure day — so a single-day booking has `check_out = check_in`.
+
+Bookings carry a `status` (`pending`/`confirmed`): a pending request (e.g. an inbound Airbnb inquiry) still blocks the unit's dates against a double-booking and renders as a diagonal-striped cell instead of a solid one, but never counts toward revenue until explicitly confirmed.
+
+**Financials** (`RentalFinancials.jsx`): revenue is recognized by upfront charge cycle, not by calendar-day occupancy. `chargeDatesForBooking()` in `src/lib/rentals.js` models rent as paid roughly every 30 days starting at check-in (security-deposit/Airbnb-style upfront payment), so a guest who checked in Aug 15 doesn't generate a second month of "revenue" just for still being there in September. A later cycle only counts if there's an actual day of stay left beyond it — this fixes a real off-by-one where a 31-day stay could get billed twice (the next 30-day boundary landing exactly on `check_out`).
+
+**Savings goals** (`rental_savings_goal`): `saved_amount` is a plain, manually-edited number — not derived from bookings. Two earlier attempts at auto-computing it from booking revenue (a raw cumulative sum, then a full per-month approve/edit reconciliation flow) both turned out to be more machinery than a two-person household actually wants; editing the total directly, in the goal's own edit form, replaced both.
+
+## Password vault
+
+`VaultView.jsx` (also off the "+" speed-dial) stores credentials encrypted client-side — AES-GCM, key derived via PBKDF2 from a **shared** master password (known to both Ada and Aaron, consistent with everything else in this app being mutually visible) — before anything reaches Supabase. RLS on `vault_meta`/`vault_entries` governs who can read/write ciphertext, but it is *not* the security boundary for the passwords themselves; the encryption is, so a leaked service-role key or an RLS mistake only exposes unreadable ciphertext. The derived key lives only in React component state, never persisted to localStorage/sessionStorage, so it has to be re-entered every time the vault is reopened.
+
+There is no password-reset path by design — if the master password is forgotten, the only way out is "Reset vault" (wipes `vault_meta` and all `vault_entries`), gated behind typing a confirmation word rather than a plain `window.confirm`. That's the first typed-confirmation pattern in this codebase; the only other place it's used is the CSV export, since that's the one action that undoes the vault's whole security guarantee (it downloads every password as an unencrypted file).
+
+An entry's `loginMethod` field (e.g. "Google") is set instead of a password for accounts with no password of their own ("Sign in with Google") — `VaultEntryDetail.jsx` shows "Sign in via {loginMethod}" instead of a blank, confusing password row when it's set.
+
 ## Working status
 
 `members.working_since` — nullable `timestamptz`, doubling as the on/off flag (`is`/`is not` null) and giving "working since 2:15 PM" for free with no separate boolean that could drift out of sync. Aaron gets an actual toggle (`WorkingStatusToggle.jsx`); Ada only ever gets a read-only badge reflecting it, never the reverse — "I'm working" is inherently self-reported.
@@ -94,7 +116,7 @@ Optional per-task proof-of-completion: `completion_note` (text) + `completion_at
 
 ## UI structure
 
-The header holds only the working-status indicator and a single ⚙️ settings button (`SettingsMenu.jsx`: notifications toggle, theme, sign out) — deliberately minimal. Every other action (submit report, view reports, set priorities, nudge) lives behind the floating "+" button (`NewTaskForm.jsx`), which doubles as a speed-dial menu whenever an `extraActions` array is passed to it. That array is built and scoped per-viewer in `TaskBoard.jsx` (e.g. "Submit report" only appears for Aaron, "Nudge" only for Ada) — `NewTaskForm.jsx` itself has no opinion on who sees what.
+The header holds only the working-status indicator and a single ⚙️ settings button (`SettingsMenu.jsx`: notifications toggle, theme, sign out) — deliberately minimal. Every other action (priorities, vault, submit report, view reports, nudge, rentals) lives behind the floating "+" button (`NewTaskForm.jsx`), which doubles as a speed-dial menu whenever an `extraActions` array is passed to it. That array is built, ordered, and scoped per-viewer in `TaskBoard.jsx`'s `quickActions` (e.g. "Submit report" only appears for Aaron, "Nudge" only for Ada) — grouped so related actions stay adjacent (the two reporting actions) and the most tangential one (Rentals, a side business unrelated to daily task-board use) sits last. `NewTaskForm.jsx` itself has no opinion on who sees what or in what order.
 
 ## Deployment
 
