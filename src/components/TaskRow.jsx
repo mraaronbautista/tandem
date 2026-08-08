@@ -236,8 +236,8 @@ export default function TaskRow({
             <h2>Submission</h2>
             <label className="submission-field">
               Link, note, or details
-              <input
-                type="text"
+              <textarea
+                rows={4}
                 placeholder="Link, note, or details…"
                 value={noteDraft}
                 onChange={(e) => setNoteDraft(e.target.value)}

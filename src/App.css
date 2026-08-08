@@ -623,7 +623,8 @@
 }
 
 .submission-field input[type='text'],
-.submission-field input[type='number'] {
+.submission-field input[type='number'],
+.submission-field textarea {
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -631,6 +632,12 @@
   color: var(--text-h);
   font: inherit;
   font-size: 15px;
+}
+
+.submission-field textarea {
+  min-height: 90px;
+  resize: vertical;
+  width: 100%;
 }
 
 .hours-minutes-row {
