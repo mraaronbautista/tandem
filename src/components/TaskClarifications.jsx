@@ -28,22 +28,24 @@ function AnswerRow({ item, onChange, taskTitle }) {
     <div className="clarification-answer-row">
       <textarea
         rows={2}
-        placeholder="Type your answer…"
+        placeholder="Type your reply…"
         value={answerDraft}
         onChange={(e) => setAnswerDraft(e.target.value)}
       />
       <button type="button" className="clarification-answer-button" onClick={handleAnswer} disabled={sending}>
-        {sending ? 'Sending…' : 'Answer'}
+        {sending ? 'Sending…' : 'Reply'}
       </button>
     </div>
   )
 }
 
-// Lightweight Q&A thread for clarifying a vague assignment — either
-// person can ask, the other gets pinged; answering pings back. Writes
-// straight to Supabase via onChange (the full updated array), same
-// pattern as ChecklistEditor/ChecklistView. The push notification is
-// best-effort and never blocks saving the question/answer itself.
+// Lightweight thread for clarifying a vague assignment — a question, a
+// comment, a suggestion, whatever. Either person can send one on any
+// task regardless of who created or is assigned it; the other gets
+// pinged, and replying pings back. Writes straight to Supabase via
+// onChange (the full updated array), same pattern as ChecklistEditor/
+// ChecklistView. The push notification is best-effort and never blocks
+// saving the message itself.
 export default function TaskClarifications({ clarifications, onChange, meId, memberName, taskTitle }) {
   const [questionDraft, setQuestionDraft] = useState('')
   const [asking, setAsking] = useState(false)
@@ -94,7 +96,7 @@ export default function TaskClarifications({ clarifications, onChange, meId, mem
                   <strong>{memberName(item.answeredBy)}:</strong> {item.answer}
                 </p>
               ) : item.askedBy === meId ? (
-                <p className="clarification-waiting">Waiting for an answer…</p>
+                <p className="clarification-waiting">Waiting for a reply…</p>
               ) : (
                 <AnswerRow item={item} onChange={handleEntryAnswered} taskTitle={taskTitle} />
               )}
@@ -106,12 +108,12 @@ export default function TaskClarifications({ clarifications, onChange, meId, mem
       <div className="clarification-ask-row">
         <textarea
           rows={2}
-          placeholder="Ask a question about this task…"
+          placeholder="Ask a question or leave a comment…"
           value={questionDraft}
           onChange={(e) => setQuestionDraft(e.target.value)}
         />
         <button type="button" className="clarification-ask-button" onClick={handleAsk} disabled={asking}>
-          {asking ? 'Sending…' : 'Ask'}
+          {asking ? 'Sending…' : 'Send'}
         </button>
       </div>
     </div>

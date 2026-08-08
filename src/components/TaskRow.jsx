@@ -163,8 +163,8 @@ export default function TaskRow({
           </span>
         )}
         {hasQuestionForMe && (
-          <span className="task-question-badge" title="Has a question for you">
-            ❓
+          <span className="task-question-badge" title="Has something for you to reply to">
+            💬
           </span>
         )}
         {task.due_date && (
