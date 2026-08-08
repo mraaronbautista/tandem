@@ -11,17 +11,9 @@ function money(n) {
 // toward a down payment on a new property, not just knowing this month's
 // number. Multiple milestones (e.g. a $20k short-term goal, then $75k for
 // the actual down payment) can track the same growing pool of savings —
-// see cumulativeSavings() — auto-summed from confirmed-booking net cash
-// flow rather than a manually-kept ledger, so there's nothing to log.
-export default function RentalSavingsGoal({
-  company,
-  goals,
-  allBookings,
-  properties,
-  expenses,
-  adjustments,
-  onGoalsChanged,
-}) {
+// see cumulativeSavings(), which only counts months reconciled via
+// RentalSavingsMonths (approved or edited), never the raw computed figure.
+export default function RentalSavingsGoal({ company, goals, monthRecords, onGoalsChanged }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState(null)
 
@@ -38,7 +30,7 @@ export default function RentalSavingsGoal({
   return (
     <div className="rental-savings-list">
       {goals.map((goal) => {
-        const saved = cumulativeSavings(allBookings, properties, expenses, goal.tracking_start, adjustments)
+        const saved = cumulativeSavings(monthRecords, goal.tracking_start)
         const pct = Math.max(0, Math.min(100, (saved / Number(goal.target_amount)) * 100))
         return (
           <div key={goal.id} className="rental-savings">

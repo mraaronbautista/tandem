@@ -43,41 +43,52 @@ export function chargeDatesForBooking(booking) {
   return dates
 }
 
-// Net cash flow (confirmed-booking revenue minus overhead) summed for
-// every calendar month from trackingStart ('YYYY-MM-DD', always the 1st)
-// through the current real-world month — using today's date, not
-// whichever month the calendar happens to be showing, since a month that
-// hasn't happened yet can't have contributed savings. `bookings` should
-// be the company's full booking history (not month-scoped), since a
-// charge relevant to an early tracked month can come from a booking
-// whose check_in predates it.
-//
-// `adjustments` corrects the computed total for reality it can't see on
-// its own: a balance that already existed before trackingStart, or a
-// month where the computed surplus didn't actually get saved (spent
-// elsewhere instead) — see rental_savings_adjustment.
-export function cumulativeSavings(bookings, properties, expenses, trackingStart, adjustments = []) {
+// Computed ("potential") net cash flow for exactly one month — confirmed-
+// booking revenue minus fixed overhead. This is only ever a suggestion:
+// it doesn't count toward a goal until that month is reconciled via
+// rental_savings_month, since a computed surplus isn't necessarily money
+// that actually got saved (it might get spent on something else first).
+export function potentialSavingsForMonth(bookings, properties, expenses, monthDate) {
+  const { start, end } = monthRangeStrings(monthDate)
   const rentByProperty = new Map(properties.map((p) => [p.id, Number(p.monthly_rent)]))
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
-  const confirmed = bookings.filter((b) => b.status === 'confirmed')
+  let revenue = 0
+  for (const b of bookings.filter((b) => b.status === 'confirmed')) {
+    const count = chargeDatesForBooking(b).filter((d) => d >= start && d < end).length
+    revenue += count * (rentByProperty.get(b.property_id) || 0)
+  }
+  return revenue - overhead
+}
 
+// Every calendar month from trackingStart ('YYYY-MM-DD', always the 1st)
+// through the current real-world month, as Date objects — using today's
+// date, not whichever month the calendar happens to be showing, since a
+// month that hasn't happened yet can't have anything to reconcile.
+export function monthsFrom(trackingStart) {
   const now = new Date()
   const current = new Date(now.getFullYear(), now.getMonth(), 1)
   const [ty, tm] = trackingStart.split('-').map(Number)
   let month = new Date(ty, tm - 1, 1)
-
-  let total = 0
+  const months = []
   while (month <= current) {
-    const { start, end } = monthRangeStrings(month)
-    let revenue = 0
-    for (const b of confirmed) {
-      const count = chargeDatesForBooking(b).filter((d) => d >= start && d < end).length
-      revenue += count * (rentByProperty.get(b.property_id) || 0)
-    }
-    total += revenue - overhead
+    months.push(month)
     month = new Date(month.getFullYear(), month.getMonth() + 1, 1)
   }
-  return total + adjustments.reduce((sum, a) => sum + Number(a.amount), 0)
+  return months
+}
+
+// Sum of *approved* actual savings for months from trackingStart through
+// now — an unreconciled month contributes $0 until someone approves or
+// edits it (see rental_savings_month), so the total only ever reflects
+// money actually confirmed saved, never an assumption.
+export function cumulativeSavings(monthRecords, trackingStart) {
+  const byMonth = new Map(monthRecords.map((r) => [r.month, r]))
+  let total = 0
+  for (const month of monthsFrom(trackingStart)) {
+    const rec = byMonth.get(monthRangeStrings(month).start)
+    if (rec && rec.actual_amount != null) total += Number(rec.actual_amount)
+  }
+  return total
 }
 
 export async function fetchRentalProperties(company) {
@@ -167,29 +178,29 @@ export async function deleteSavingsGoal(id) {
   if (error) throw error
 }
 
-export async function fetchSavingsAdjustments(company) {
+export async function fetchSavingsMonths(company) {
   const { data, error } = await supabase
-    .from('rental_savings_adjustment')
-    .select('id, company, amount, note, created_at')
+    .from('rental_savings_month')
+    .select('id, company, month, actual_amount, approved_at, approved_by')
     .eq('company', company)
-    .order('created_at', { ascending: false })
   if (error) throw error
   return data
 }
 
-export async function createSavingsAdjustment(company, { amount, note, created_by }) {
+// Upserts the reconciled actual amount for a given month — used both for
+// "Approve" (actualAmount = the computed potential, taken as-is) and
+// "Edit" (actualAmount = whatever was typed in instead).
+export async function approveSavingsMonth(company, month, actualAmount, approvedBy) {
   const { data, error } = await supabase
-    .from('rental_savings_adjustment')
-    .insert({ company, amount, note, created_by })
-    .select('id, company, amount, note, created_at')
+    .from('rental_savings_month')
+    .upsert(
+      { company, month, actual_amount: actualAmount, approved_at: new Date().toISOString(), approved_by: approvedBy },
+      { onConflict: 'company,month' },
+    )
+    .select('id, company, month, actual_amount, approved_at, approved_by')
     .single()
   if (error) throw error
   return data
-}
-
-export async function deleteSavingsAdjustment(id) {
-  const { error } = await supabase.from('rental_savings_adjustment').delete().eq('id', id)
-  if (error) throw error
 }
 
 async function hasOverlappingBooking(propertyId, checkIn, checkOut) {

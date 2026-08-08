@@ -483,31 +483,34 @@ create policy "members can delete rental savings goals"
   on rental_savings_goal for delete
   using (is_member());
 
--- Manual corrections to the auto-computed running total — a pre-existing
--- balance from before tracking started, or a month where the computed
--- surplus didn't actually get saved (spent elsewhere instead). A signed
--- amount + a required note explaining why, rather than letting someone
--- silently overwrite the computed number — the adjustment stays visible
--- and reversible (delete it) instead of hiding the correction.
-create table rental_savings_adjustment (
+-- One row per (company, month): the reconciled actual amount saved that
+-- month. The computed revenue-minus-overhead figure is only ever a
+-- "potential" suggestion (derived live from bookings, never stored) —
+-- it doesn't count toward a goal's total until a month is approved here,
+-- either as-is or edited to a different actual figure (e.g. the surplus
+-- got spent instead of saved, or there was a pre-existing balance to
+-- fold in as an early month's "actual"). Replaces a running adjustments
+-- ledger: this grows one row per month, not one row per correction.
+create table rental_savings_month (
   id uuid primary key default gen_random_uuid(),
   company rental_company not null,
-  amount numeric(10, 2) not null,
-  note text not null,
-  created_by uuid not null references members (id),
-  created_at timestamptz not null default now()
+  month date not null,
+  actual_amount numeric(10, 2),
+  approved_at timestamptz,
+  approved_by uuid references members (id),
+  unique (company, month)
 );
 
-alter table rental_savings_adjustment enable row level security;
+alter table rental_savings_month enable row level security;
 
-create policy "members can read all rental savings adjustments"
-  on rental_savings_adjustment for select
+create policy "members can read all rental savings months"
+  on rental_savings_month for select
   using (is_member());
 
-create policy "members can insert rental savings adjustments"
-  on rental_savings_adjustment for insert
+create policy "members can insert rental savings months"
+  on rental_savings_month for insert
   with check (is_member());
 
-create policy "members can delete rental savings adjustments"
-  on rental_savings_adjustment for delete
+create policy "members can update rental savings months"
+  on rental_savings_month for update
   using (is_member());

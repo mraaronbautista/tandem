@@ -1,6 +1,6 @@
 import { chargeDatesForBooking, monthRangeStrings } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
-import RentalSavingsAdjustments from './RentalSavingsAdjustments'
+import RentalSavingsMonths from './RentalSavingsMonths'
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -23,8 +23,8 @@ export default function RentalFinancials({
   allBookings,
   goals,
   onGoalsChanged,
-  adjustments,
-  onAdjustmentsChanged,
+  monthRecords,
+  onMonthRecordsChanged,
   createdBy,
 }) {
   const { start, end } = monthRangeStrings(monthDate)
@@ -54,23 +54,27 @@ export default function RentalFinancials({
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const surplus = revenue - overhead
 
+  // The reconciliation list needs to reach back to whichever goal starts
+  // earliest, so every goal has the months it needs — goals arrives
+  // sorted by target_amount, not by tracking_start, so this can't just
+  // take the first one.
+  const earliestStart = goals.length
+    ? goals.reduce((min, g) => (g.tracking_start < min ? g.tracking_start : min), goals[0].tracking_start)
+    : null
+
   return (
     <div className="rental-financials">
-      <RentalSavingsGoal
+      <RentalSavingsGoal company={company} goals={goals} monthRecords={monthRecords} onGoalsChanged={onGoalsChanged} />
+
+      <RentalSavingsMonths
         company={company}
-        goals={goals}
+        earliestStart={earliestStart}
         allBookings={allBookings}
         properties={properties}
         expenses={expenses}
-        adjustments={adjustments}
-        onGoalsChanged={onGoalsChanged}
-      />
-
-      <RentalSavingsAdjustments
-        company={company}
-        adjustments={adjustments}
+        monthRecords={monthRecords}
         createdBy={createdBy}
-        onChanged={onAdjustmentsChanged}
+        onChanged={onMonthRecordsChanged}
       />
 
       <div className="rental-financials-summary">

@@ -1525,36 +1525,51 @@ label.new-task-checkbox-label {
   opacity: 0.8;
 }
 
-.rental-adjustments {
+.rental-savings-months {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
 }
 
-.rental-adjustment-row {
+.rental-savings-month-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   padding: 6px 0;
+  flex-wrap: wrap;
 }
 
-.rental-adjustment-date {
-  opacity: 0.6;
-}
-
-.rental-adjustment-delete {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--pill-bg);
+.rental-savings-month-label {
   color: var(--text-h);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
+  font-weight: 600;
+}
+
+.rental-savings-month-actions,
+.rental-savings-month-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rental-savings-month-approved {
+  color: #22c55e;
+}
+
+.rental-savings-month-potential {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.rental-savings-month-edit input {
+  width: 90px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
 }
 
 .rental-financials-summary {
