@@ -3,9 +3,7 @@ import {
   fetchRentalProperties,
   fetchRentalExpenses,
   fetchRentalBookings,
-  fetchAllRentalBookings,
   fetchSavingsGoals,
-  fetchSavingsMonths,
   monthRangeStrings,
 } from '../lib/rentals'
 import Modal from './Modal'
@@ -25,9 +23,7 @@ export default function RentalsView({ me, onClose }) {
   const [properties, setProperties] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [bookings, setBookings] = useState([])
-  const [allBookings, setAllBookings] = useState([])
   const [goals, setGoals] = useState([])
-  const [monthRecords, setMonthRecords] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -38,25 +34,11 @@ export default function RentalsView({ me, onClose }) {
       .then(setExpenses)
       .catch((err) => setError(err.message))
     reloadGoals()
-    reloadMonthRecords()
-    reloadAllBookings()
   }, [])
 
   function reloadGoals() {
     fetchSavingsGoals(COMPANY)
       .then(setGoals)
-      .catch((err) => setError(err.message))
-  }
-
-  function reloadMonthRecords() {
-    fetchSavingsMonths(COMPANY)
-      .then(setMonthRecords)
-      .catch((err) => setError(err.message))
-  }
-
-  function reloadAllBookings() {
-    fetchAllRentalBookings(COMPANY)
-      .then(setAllBookings)
       .catch((err) => setError(err.message))
   }
 
@@ -68,11 +50,6 @@ export default function RentalsView({ me, onClose }) {
   }
 
   useEffect(reloadBookings, [monthDate])
-
-  function handleBookingsChanged() {
-    reloadBookings()
-    reloadAllBookings()
-  }
 
   function shiftMonth(delta) {
     setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + delta, 1))
@@ -123,7 +100,7 @@ export default function RentalsView({ me, onClose }) {
               bookings={bookings}
               monthDate={monthDate}
               createdBy={me?.id}
-              onBookingsChanged={handleBookingsChanged}
+              onBookingsChanged={reloadBookings}
             />
           ) : (
             <RentalFinancials
@@ -132,12 +109,8 @@ export default function RentalsView({ me, onClose }) {
               bookings={bookings}
               expenses={expenses}
               monthDate={monthDate}
-              allBookings={allBookings}
               goals={goals}
               onGoalsChanged={reloadGoals}
-              monthRecords={monthRecords}
-              onMonthRecordsChanged={reloadMonthRecords}
-              createdBy={me?.id}
             />
           ))}
 

@@ -452,16 +452,19 @@ create policy "members can delete rental expenses"
 
 -- Multiple milestones against the same accumulating savings (e.g. a
 -- $20k short-term goal, then $75k for the actual down payment) rather
--- than one goal per company — tracking_start is duplicated per row
--- instead of factored out, so each milestone stays self-contained and
--- could in principle count from a different start date, though in
--- practice they'll usually share the same one.
+-- than one goal per company.
 create table rental_savings_goal (
   id uuid primary key default gen_random_uuid(),
   company rental_company not null,
   label text not null,
   target_amount numeric(10, 2) not null,
-  tracking_start date not null,
+  -- Plain manually-maintained running total, not derived from bookings —
+  -- tried auto-computing this from booking revenue (twice: a raw
+  -- cumulative sum, then a per-month approve/edit reconciliation flow)
+  -- and both were more machinery than the two-person reality of "check
+  -- the numbers, update the total" needed. Edited directly in the goal's
+  -- own edit form.
+  saved_amount numeric(10, 2) not null default 0,
   updated_at timestamptz not null default now()
 );
 
@@ -481,36 +484,4 @@ create policy "members can update rental savings goals"
 
 create policy "members can delete rental savings goals"
   on rental_savings_goal for delete
-  using (is_member());
-
--- One row per (company, month): the reconciled actual amount saved that
--- month. The computed revenue-minus-overhead figure is only ever a
--- "potential" suggestion (derived live from bookings, never stored) —
--- it doesn't count toward a goal's total until a month is approved here,
--- either as-is or edited to a different actual figure (e.g. the surplus
--- got spent instead of saved, or there was a pre-existing balance to
--- fold in as an early month's "actual"). Replaces a running adjustments
--- ledger: this grows one row per month, not one row per correction.
-create table rental_savings_month (
-  id uuid primary key default gen_random_uuid(),
-  company rental_company not null,
-  month date not null,
-  actual_amount numeric(10, 2),
-  approved_at timestamptz,
-  approved_by uuid references members (id),
-  unique (company, month)
-);
-
-alter table rental_savings_month enable row level security;
-
-create policy "members can read all rental savings months"
-  on rental_savings_month for select
-  using (is_member());
-
-create policy "members can insert rental savings months"
-  on rental_savings_month for insert
-  with check (is_member());
-
-create policy "members can update rental savings months"
-  on rental_savings_month for update
   using (is_member());

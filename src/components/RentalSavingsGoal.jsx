@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { cumulativeSavings } from '../lib/rentals'
 import RentalSavingsGoalForm from './RentalSavingsGoalForm'
 
 function money(n) {
@@ -11,9 +10,9 @@ function money(n) {
 // toward a down payment on a new property, not just knowing this month's
 // number. Multiple milestones (e.g. a $20k short-term goal, then $75k for
 // the actual down payment) can track the same growing pool of savings —
-// see cumulativeSavings(), which only counts months reconciled via
-// RentalSavingsMonths (approved or edited), never the raw computed figure.
-export default function RentalSavingsGoal({ company, goals, monthRecords, onGoalsChanged }) {
+// saved_amount is a plain manually-maintained figure edited directly in
+// the goal's own edit form, not derived from bookings.
+export default function RentalSavingsGoal({ company, goals, onGoalsChanged }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState(null)
 
@@ -30,7 +29,7 @@ export default function RentalSavingsGoal({ company, goals, monthRecords, onGoal
   return (
     <div className="rental-savings-list">
       {goals.map((goal) => {
-        const saved = cumulativeSavings(monthRecords, goal.tracking_start)
+        const saved = Number(goal.saved_amount)
         const pct = Math.max(0, Math.min(100, (saved / Number(goal.target_amount)) * 100))
         return (
           <div key={goal.id} className="rental-savings">

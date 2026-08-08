@@ -2,27 +2,22 @@ import { useState } from 'react'
 import { createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '../lib/rentals'
 import Modal from './Modal'
 
-function currentMonthStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
 export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved, onDeleted }) {
   const [label, setLabel] = useState(goal?.label || '')
   const [targetAmount, setTargetAmount] = useState(goal?.target_amount ?? '')
-  const [trackingStart, setTrackingStart] = useState(goal?.tracking_start?.slice(0, 7) || currentMonthStr())
+  const [savedAmount, setSavedAmount] = useState(goal?.saved_amount ?? 0)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!label.trim() || !targetAmount || !trackingStart) return
+    if (!label.trim() || !targetAmount || savedAmount === '') return
     setSaving(true)
     try {
       const payload = {
         label: label.trim(),
         target_amount: Number(targetAmount),
-        tracking_start: `${trackingStart}-01`,
+        saved_amount: Number(savedAmount),
       }
       const saved = goal ? await updateSavingsGoal(goal.id, payload) : await createSavingsGoal(company, payload)
       onSaved(saved)
@@ -75,8 +70,15 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
         </label>
 
         <label>
-          Start counting from
-          <input type="month" required value={trackingStart} onChange={(e) => setTrackingStart(e.target.value)} />
+          Saved so far
+          <input
+            type="number"
+            required
+            min="0"
+            step="1"
+            value={savedAmount}
+            onChange={(e) => setSavedAmount(e.target.value)}
+          />
         </label>
 
         <div className="submission-actions">

@@ -1,6 +1,5 @@
 import { chargeDatesForBooking, monthRangeStrings } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
-import RentalSavingsMonths from './RentalSavingsMonths'
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -14,19 +13,7 @@ function money(n) {
 // the visible month (see RentalsView's fetch), which is enough here since
 // any charge landing in this month implies the booking overlaps this
 // month too.
-export default function RentalFinancials({
-  company,
-  properties,
-  bookings,
-  expenses,
-  monthDate,
-  allBookings,
-  goals,
-  onGoalsChanged,
-  monthRecords,
-  onMonthRecordsChanged,
-  createdBy,
-}) {
+export default function RentalFinancials({ company, properties, bookings, expenses, monthDate, goals, onGoalsChanged }) {
   const { start, end } = monthRangeStrings(monthDate)
 
   const confirmedBookings = bookings.filter((b) => b.status === 'confirmed')
@@ -54,28 +41,9 @@ export default function RentalFinancials({
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const surplus = revenue - overhead
 
-  // The reconciliation list needs to reach back to whichever goal starts
-  // earliest, so every goal has the months it needs — goals arrives
-  // sorted by target_amount, not by tracking_start, so this can't just
-  // take the first one.
-  const earliestStart = goals.length
-    ? goals.reduce((min, g) => (g.tracking_start < min ? g.tracking_start : min), goals[0].tracking_start)
-    : null
-
   return (
     <div className="rental-financials">
-      <RentalSavingsGoal company={company} goals={goals} monthRecords={monthRecords} onGoalsChanged={onGoalsChanged} />
-
-      <RentalSavingsMonths
-        company={company}
-        earliestStart={earliestStart}
-        allBookings={allBookings}
-        properties={properties}
-        expenses={expenses}
-        monthRecords={monthRecords}
-        createdBy={createdBy}
-        onChanged={onMonthRecordsChanged}
-      />
+      <RentalSavingsGoal company={company} goals={goals} onGoalsChanged={onGoalsChanged} />
 
       <div className="rental-financials-summary">
         <div className="rental-financials-row">
