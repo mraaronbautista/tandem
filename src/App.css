@@ -104,7 +104,108 @@
 .task-board {
   max-width: 640px;
   margin: 0 auto;
-  padding: 24px 16px 80px;
+  /* Extra bottom padding clears the fixed bottom tab bar (mobile/tablet;
+     see .task-board-nav) so the last list item is never hidden under it. */
+  padding: 24px 16px 96px;
+}
+
+/* Today / Rentals / Reports — a fixed bottom bar below the desktop
+   breakpoint, a sticky left sidebar above it (see the min-width: 900px
+   block below). One nav, two layouts via CSS, same pattern Modal.jsx
+   already uses for its own mobile/desktop split. */
+.task-board-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+}
+
+.task-board-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.task-board-nav-item-active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.task-board-nav-icon {
+  font-size: 20px;
+}
+
+.task-board-content {
+  min-width: 0;
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 900px) {
+  .task-board {
+    max-width: 1100px;
+    display: flex;
+    align-items: flex-start;
+    gap: 28px;
+    padding: 24px 24px 24px;
+  }
+
+  .task-board-nav {
+    position: sticky;
+    top: 24px;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    flex: none;
+    width: 200px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    background: none;
+    border-top: none;
+    padding: 0;
+  }
+
+  .task-board-nav-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    font-size: 14px;
+  }
+
+  .task-board-nav-item-active {
+    background: var(--pill-bg);
+    border-color: var(--border);
+  }
+
+  .task-board-nav-icon {
+    font-size: 18px;
+  }
+
+  .task-board-content {
+    flex: 1;
+  }
 }
 
 .task-board-header {
@@ -970,12 +1071,21 @@ a.task-submission-file-link:hover {
 .quick-actions {
   position: fixed;
   right: 20px;
-  bottom: 24px;
+  /* Raised above .task-board-nav's fixed bottom bar (mobile/tablet) so the
+     FAB doesn't sit on top of it; reset to the corner on desktop below,
+     where the nav is a sidebar instead. */
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
   z-index: 40;
+}
+
+@media (min-width: 900px) {
+  .quick-actions {
+    bottom: 24px;
+  }
 }
 
 .fab-new-task {

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { fetchEodReports } from '../lib/eodReports'
-import Modal from './Modal'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -29,7 +28,8 @@ function monthLabel(key) {
 // not updated_at, which just determines sort order within a month) so the
 // list stays a handful of collapsible headers instead of growing forever —
 // one row per person per day/week/month otherwise still adds up over a year.
-export default function EodReportsList({ memberName, onClose }) {
+// Persistent tab content, not a modal — see RentalsView.jsx for why.
+export default function EodReportsList({ memberName }) {
   const [reports, setReports] = useState(null)
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState(() => new Set())
@@ -65,54 +65,42 @@ export default function EodReportsList({ memberName, onClose }) {
   }
 
   return (
-    <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Reports</h2>
+    <div className="tab-panel">
+      <h2>Reports</h2>
 
-        {error && <p className="error">{error}</p>}
-        {!error && !reports && <p className="loading">Loading…</p>}
-        {reports && !reports.length && <p className="task-notes-empty">No reports yet.</p>}
+      {error && <p className="error">{error}</p>}
+      {!error && !reports && <p className="loading">Loading…</p>}
+      {reports && !reports.length && <p className="task-notes-empty">No reports yet.</p>}
 
-        {groups.length > 0 && (
-          <div className="eod-reports-list">
-            {groups.map((group) => (
-              <div key={group.key} className="eod-report-month">
-                <button
-                  type="button"
-                  className="eod-report-month-header"
-                  onClick={() => toggleMonth(group.key)}
-                >
-                  <span>{monthLabel(group.key)}</span>
-                  <span className="eod-report-month-count">
-                    {group.items.length} {expanded.has(group.key) ? '▾' : '▸'}
-                  </span>
-                </button>
+      {groups.length > 0 && (
+        <div className="eod-reports-list">
+          {groups.map((group) => (
+            <div key={group.key} className="eod-report-month">
+              <button type="button" className="eod-report-month-header" onClick={() => toggleMonth(group.key)}>
+                <span>{monthLabel(group.key)}</span>
+                <span className="eod-report-month-count">
+                  {group.items.length} {expanded.has(group.key) ? '▾' : '▸'}
+                </span>
+              </button>
 
-                {expanded.has(group.key) && (
-                  <div className="eod-report-month-items">
-                    {group.items.map((r) => (
-                      <div className="eod-report-item" key={r.id}>
-                        <p className="eod-report-meta">
-                          <strong>{memberName(r.submitted_by)}</strong> — {r.period} — updated{' '}
-                          {formatDate(r.updated_at)}
-                          {r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}
-                        </p>
-                        <p className="task-submission-note-text">{r.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
+              {expanded.has(group.key) && (
+                <div className="eod-report-month-items">
+                  {group.items.map((r) => (
+                    <div className="eod-report-item" key={r.id}>
+                      <p className="eod-report-meta">
+                        <strong>{memberName(r.submitted_by)}</strong> — {r.period} — updated{' '}
+                        {formatDate(r.updated_at)}
+                        {r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}
+                      </p>
+                      <p className="task-submission-note-text">{r.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-      </div>
-    </Modal>
+      )}
+    </div>
   )
 }

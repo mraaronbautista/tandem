@@ -36,6 +36,16 @@ const WHO_TABS = [
   { key: 'assistant', label: WHO_LABEL.assistant },
 ]
 
+// Bottom bar on mobile, sidebar on wide screens (see .task-board-nav in
+// App.css) — the three sections that are actually places you go browse,
+// as opposed to the "+" menu's one-shot actions (New task, Priorities,
+// Submit report, Nudge, Vault).
+const TABS = [
+  { key: 'today', icon: '📋', label: 'Today' },
+  { key: 'rentals', icon: '🏠', label: 'Rentals' },
+  { key: 'reports', icon: '📄', label: 'Reports' },
+]
+
 function startOfDay(d) {
   const x = new Date(d)
   x.setHours(0, 0, 0, 0)
@@ -54,11 +64,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const [reportsListOpen, setReportsListOpen] = useState(false)
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [rentalsOpen, setRentalsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('today')
 
   // The quick-actions menu closes as soon as an item is picked (see
   // NewTaskForm), so there's no persistent button left to show a "sent"
@@ -210,104 +219,122 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   // Folded into the "+" FAB as a speed-dial rather than separate header
   // icons — that's what got cluttered as these got added one by one.
-  // Ordered so the reporting pair (Submit/View) stay adjacent instead of
-  // split apart, Priorities stays near the top (now spawns real tasks on
-  // save, not just a note), and Rentals — the most tangential to daily
-  // task-board use — sits last.
+  // Rentals and Reports moved out to the persistent tab bar/sidebar (see
+  // TABS above) since they're places you go browse, not one-shot actions
+  // like the ones still here.
   const quickActions = [
     { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
     { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
       : []),
-    { key: 'reports', icon: '📋', label: 'View reports', onSelect: () => setReportsListOpen(true) },
     ...(me?.display_name === 'Ada' ? [{ key: 'nudge', icon: '🚨', label: 'Nudge Aaron', onSelect: handleNudge }] : []),
-    { key: 'rentals', icon: '🏠', label: 'Rentals', onSelect: () => setRentalsOpen(true) },
   ]
 
   return (
     <div className="task-board">
-      <header className="task-board-header">
-        <h1>{timeOfDayGreeting(me?.display_name)}</h1>
-        <div className="header-actions">
-          <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
-          <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">
-            ⚙️
+      <nav className="task-board-nav">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={`task-board-nav-item${activeTab === tab.key ? ' task-board-nav-item-active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            <span className="task-board-nav-icon">{tab.icon}</span>
+            {tab.label}
           </button>
-        </div>
-      </header>
+        ))}
+      </nav>
 
-      <PullToRefresh onRefresh={reload}>
-        <DateStrip
-          selectedDate={selectedDate}
-          onSelect={setSelectedDate}
-          headerRight={
-            <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
-              {WHO_TABS.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          }
-        />
-
-        {error && <p className="error">{error}</p>}
-        {loading ? (
-          <p className="loading">Loading…</p>
-        ) : (
-          <div className="task-list">
-            {allDay.length > 0 && (
-            <section>
-              <h2 className="task-section-heading">All Day</h2>
-              <AllDayRow
-                tasks={allDay}
-                onSelect={(task) => setPeekTaskId(task.id)}
-                onStatusChange={handleStatusChange}
-              />
-            </section>
-          )}
-
-          {overdue.length > 0 && (
-            <section>
-              <h2 className="task-section-heading task-section-heading-overdue">Overdue</h2>
-              <div className="timeline-list">
-                {overdue.map((task, i) => (
-                  <TimelineRow
-                    key={task.id}
-                    task={task}
-                    time={task.due_date}
-                    isLast={i === overdue.length - 1}
-                    {...taskRowProps}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {dayTasks.length > 0 && (
-            <section>
-              {/* Only needed to disambiguate from the Overdue section above —
-                  on other days there's just one list, so no heading needed. */}
-              {isToday && overdue.length > 0 && <h2 className="task-section-heading">Today</h2>}
-              <div className="timeline-list">
-                {dayTasks.map((task, i) => (
-                  <TimelineRow
-                    key={task.id}
-                    task={task}
-                    time={task.status === 'done' ? task.completed_at : task.due_date}
-                    isLast={i === dayTasks.length - 1}
-                    {...taskRowProps}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {!allDay.length && !overdue.length && !dayTasks.length && <p className="empty">Nothing here.</p>}
+      <div className="task-board-content">
+        <header className="task-board-header">
+          <h1>{timeOfDayGreeting(me?.display_name)}</h1>
+          <div className="header-actions">
+            <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
+            <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">
+              ⚙️
+            </button>
           </div>
+        </header>
+
+        {activeTab === 'rentals' && <RentalsView me={me} />}
+        {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
+
+        {activeTab === 'today' && (
+          <PullToRefresh onRefresh={reload}>
+            <DateStrip
+              selectedDate={selectedDate}
+              onSelect={setSelectedDate}
+              headerRight={
+                <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
+                  {WHO_TABS.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              }
+            />
+
+            {error && <p className="error">{error}</p>}
+            {loading ? (
+              <p className="loading">Loading…</p>
+            ) : (
+              <div className="task-list">
+                {allDay.length > 0 && (
+                  <section>
+                    <h2 className="task-section-heading">All Day</h2>
+                    <AllDayRow
+                      tasks={allDay}
+                      onSelect={(task) => setPeekTaskId(task.id)}
+                      onStatusChange={handleStatusChange}
+                    />
+                  </section>
+                )}
+
+                {overdue.length > 0 && (
+                  <section>
+                    <h2 className="task-section-heading task-section-heading-overdue">Overdue</h2>
+                    <div className="timeline-list">
+                      {overdue.map((task, i) => (
+                        <TimelineRow
+                          key={task.id}
+                          task={task}
+                          time={task.due_date}
+                          isLast={i === overdue.length - 1}
+                          {...taskRowProps}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {dayTasks.length > 0 && (
+                  <section>
+                    {/* Only needed to disambiguate from the Overdue section above —
+                        on other days there's just one list, so no heading needed. */}
+                    {isToday && overdue.length > 0 && <h2 className="task-section-heading">Today</h2>}
+                    <div className="timeline-list">
+                      {dayTasks.map((task, i) => (
+                        <TimelineRow
+                          key={task.id}
+                          task={task}
+                          time={task.status === 'done' ? task.completed_at : task.due_date}
+                          isLast={i === dayTasks.length - 1}
+                          {...taskRowProps}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {!allDay.length && !overdue.length && !dayTasks.length && <p className="empty">Nothing here.</p>}
+              </div>
+            )}
+          </PullToRefresh>
         )}
-      </PullToRefresh>
+      </div>
 
       <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} extraActions={quickActions} />
 
@@ -321,13 +348,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} onClose={() => setReportOpen(false)} />}
 
-      {reportsListOpen && <EodReportsList memberName={memberName} onClose={() => setReportsListOpen(false)} />}
-
       {prioritiesOpen && (
         <PrioritiesForm me={me} memberName={memberName} onClose={() => setPrioritiesOpen(false)} />
       )}
-
-      {rentalsOpen && <RentalsView me={me} onClose={() => setRentalsOpen(false)} />}
 
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
 

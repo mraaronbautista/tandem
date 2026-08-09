@@ -6,14 +6,16 @@ import {
   fetchSavingsGoals,
   monthRangeStrings,
 } from '../lib/rentals'
-import Modal from './Modal'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 
 const COMPANY = 'awa'
 const COMPANY_LABEL = 'Awa Rentalz'
 
-export default function RentalsView({ me, onClose }) {
+// Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
+// screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
+// dismiss, you just switch tabs.
+export default function RentalsView({ me }) {
   const [view, setView] = useState('calendar')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
@@ -58,68 +60,60 @@ export default function RentalsView({ me, onClose }) {
   const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
 
   return (
-    <Modal onClose={onClose}>
-      <div className="submission-modal rental-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{COMPANY_LABEL}</h2>
+    <div className="tab-panel">
+      <h2>{COMPANY_LABEL}</h2>
 
-        <div className="period-tabs">
-          <button
-            type="button"
-            className={`period-tab${view === 'calendar' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('calendar')}
-          >
-            Calendar
-          </button>
-          <button
-            type="button"
-            className={`period-tab${view === 'financials' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('financials')}
-          >
-            Financials
-          </button>
-        </div>
-
-        <div className="rental-calendar-nav">
-          <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
-            ‹
-          </button>
-          <span className="rental-month-label">{monthLabel}</span>
-          <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
-            ›
-          </button>
-        </div>
-
-        {error && <p className="error">{error}</p>}
-
-        {!error && !properties && <p className="loading">Loading…</p>}
-
-        {properties &&
-          (view === 'calendar' ? (
-            <RentalCalendar
-              properties={properties}
-              bookings={bookings}
-              monthDate={monthDate}
-              createdBy={me?.id}
-              onBookingsChanged={reloadBookings}
-            />
-          ) : (
-            <RentalFinancials
-              company={COMPANY}
-              properties={properties}
-              bookings={bookings}
-              expenses={expenses}
-              monthDate={monthDate}
-              goals={goals}
-              onGoalsChanged={reloadGoals}
-            />
-          ))}
-
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-        </div>
+      <div className="period-tabs">
+        <button
+          type="button"
+          className={`period-tab${view === 'calendar' ? ' period-tab-active' : ''}`}
+          onClick={() => setView('calendar')}
+        >
+          Calendar
+        </button>
+        <button
+          type="button"
+          className={`period-tab${view === 'financials' ? ' period-tab-active' : ''}`}
+          onClick={() => setView('financials')}
+        >
+          Financials
+        </button>
       </div>
-    </Modal>
+
+      <div className="rental-calendar-nav">
+        <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+          ‹
+        </button>
+        <span className="rental-month-label">{monthLabel}</span>
+        <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+          ›
+        </button>
+      </div>
+
+      {error && <p className="error">{error}</p>}
+
+      {!error && !properties && <p className="loading">Loading…</p>}
+
+      {properties &&
+        (view === 'calendar' ? (
+          <RentalCalendar
+            properties={properties}
+            bookings={bookings}
+            monthDate={monthDate}
+            createdBy={me?.id}
+            onBookingsChanged={reloadBookings}
+          />
+        ) : (
+          <RentalFinancials
+            company={COMPANY}
+            properties={properties}
+            bookings={bookings}
+            expenses={expenses}
+            monthDate={monthDate}
+            goals={goals}
+            onGoalsChanged={reloadGoals}
+          />
+        ))}
+    </div>
   )
 }
