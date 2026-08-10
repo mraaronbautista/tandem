@@ -1023,12 +1023,14 @@ a.task-submission-file-link:hover {
   color: var(--overdue);
 }
 
+/* No max-height/overflow of its own — .submission-modal is already the
+   scroll container (max-height: 88vh on mobile, where it's a slide-up
+   sheet). A second nested scroll box here squeezed the section list into
+   a small cramped area instead of letting the sheet itself grow. */
 .how-to-guide-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 60vh;
-  overflow-y: auto;
 }
 
 .how-to-guide-section {
