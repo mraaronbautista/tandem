@@ -2001,27 +2001,35 @@ label.new-task-checkbox-label {
   font-size: 13px;
 }
 
-/* The desktop dashboard's RentalCalendar toolbar — RentalOverview
-   rendered inline with "+ Add booking" in place of the (hidden)
-   .rental-unit-tabs row, instead of its own section below the grid.
-   Horizontal and compact instead of the mobile Overview tab's vertical
-   list of full-width cards, to actually fit that row. */
-.rental-calendar-toolbar .rental-overview-list {
-  flex-direction: row;
-  flex-wrap: wrap;
-  flex: 1;
-  gap: 6px;
-}
-
-.rental-calendar-toolbar .rental-overview-item {
-  width: auto;
-  flex: 1 1 200px;
-  padding: 6px 10px;
-}
-
-.rental-calendar-toolbar .rental-overview-status {
+/* The desktop dashboard's RentalCalendar toolbar — a plain, muted
+   status line rendered inline with "+ Add booking" in place of the
+   (hidden) .rental-unit-tabs row (unit switching already happens via
+   the ‹ Unit › nav above, so this is read-only text, not more buttons).
+   flex-basis: 100% claims the whole toolbar row, same reasoning as
+   .rental-unit-tabs above, so "+ Add booking" drops to its own line. */
+.rentals-units-summary {
   flex-basis: 100%;
-  font-size: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.rentals-units-summary-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.rentals-units-summary-item .rental-unit-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.rentals-units-summary-sep {
+  opacity: 0.5;
+  margin: 0 2px;
 }
 
 .rental-overview-status-occupied {
