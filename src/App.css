@@ -2203,6 +2203,7 @@ label.new-task-checkbox-label {
 .cork-board-item-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
   margin-top: 8px;
 }
 
@@ -2214,4 +2215,15 @@ label.new-task-checkbox-label {
   color: var(--text-h);
   font-size: 12px;
   cursor: pointer;
+}
+
+.cork-board-item-actions button.cork-board-focus-today {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cork-board-focus-today:disabled {
+  opacity: 0.6;
+  cursor: default;
 }

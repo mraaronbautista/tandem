@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote } from '../lib/corkNotes'
+import { createTask } from '../lib/tasks'
+import { whoKeyForName } from '../lib/whoLabels'
+import { DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../lib/timezone'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+// 'YYYY-MM-DD' for today in the browser's own local timezone — matches
+// what zonedTimeToUtcIso expects as its date argument (same helper as
+// PrioritiesForm.jsx's day-period logic, which this mirrors).
+function todayDateString() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 // Persistent tab content, not a modal — see RentalsView.jsx for why.
@@ -19,6 +31,8 @@ export default function CorkBoardView({ me, memberName }) {
   const [body, setBody] = useState('')
   const [shared, setShared] = useState(false)
   const [posting, setPosting] = useState(false)
+  const [promotingId, setPromotingId] = useState(null)
+  const [promoted, setPromoted] = useState(() => new Set())
 
   function reload() {
     fetchCorkNotes()
@@ -73,6 +87,32 @@ export default function CorkBoardView({ me, memberName }) {
     }
   }
 
+  // Turns a pin into a real task due today, for "we're focusing on this
+  // now" — mirrors PrioritiesForm's day-period logic (due at 23:59 local
+  // so it can go overdue like any other task) rather than an All Day
+  // task, since "today" is the whole point of promoting it. Assigned to
+  // whoever does the promoting, not the pin's original author — claiming
+  // it is the point, and for a shared pin that's often the other person.
+  // The pin itself is left as-is; promoting doesn't unpin it.
+  async function handleFocusToday(note) {
+    if (!me) return
+    setPromotingId(note.id)
+    try {
+      await createTask({
+        title: note.body,
+        who: whoKeyForName(me.display_name) || 'yours',
+        due_date: zonedTimeToUtcIso(todayDateString(), '23:59', DEFAULT_TIMEZONE),
+        due_timezone: DEFAULT_TIMEZONE,
+        created_by: me.id,
+      })
+      setPromoted((prev) => new Set(prev).add(note.id))
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setPromotingId(null)
+    }
+  }
+
   return (
     <div className="tab-panel">
       <h2>Cork Board</h2>
@@ -115,16 +155,30 @@ export default function CorkBoardView({ me, memberName }) {
                     {note.shared ? 'Shared' : 'Only you'}
                   </span>
                 </div>
-                {isOwn && (
-                  <div className="cork-board-item-actions">
-                    <button type="button" onClick={() => handleToggleShare(note)}>
-                      {note.shared ? 'Make private' : 'Share'}
-                    </button>
-                    <button type="button" onClick={() => handleDelete(note)}>
-                      Unpin
-                    </button>
-                  </div>
-                )}
+                <div className="cork-board-item-actions">
+                  <button
+                    type="button"
+                    className="cork-board-focus-today"
+                    onClick={() => handleFocusToday(note)}
+                    disabled={promotingId === note.id || promoted.has(note.id)}
+                  >
+                    {promoted.has(note.id)
+                      ? '✓ Added to Today'
+                      : promotingId === note.id
+                        ? 'Adding…'
+                        : '🎯 Focus today'}
+                  </button>
+                  {isOwn && (
+                    <>
+                      <button type="button" onClick={() => handleToggleShare(note)}>
+                        {note.shared ? 'Make private' : 'Share'}
+                      </button>
+                      <button type="button" onClick={() => handleDelete(note)}>
+                        Unpin
+                      </button>
+                    </>
+                  )}
+                </div>
               </li>
             )
           })}
