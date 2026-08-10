@@ -21,10 +21,11 @@ const COMPANY = 'awa'
 //
 // Two genuinely different layouts, not one repositioned via CSS: mobile
 // keeps the original Calendar/Financials/Overview tabs (one panel at a
-// time), desktop is an always-mounted 3-column dashboard (unit list,
-// calendar, financials, all visible together, no tabs) — see
-// useMediaQuery.js for why that split happens in JS here instead of CSS
-// like everywhere else in the app.
+// time), desktop is an always-mounted 2-column dashboard (calendar +
+// unit list stacked in the main column, financials in its own column,
+// all visible together, no tabs) — see useMediaQuery.js for why that
+// split happens in JS here instead of CSS like everywhere else in the
+// app.
 export default function RentalsView({ me }) {
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [view, setView] = useState('calendar')
@@ -39,7 +40,7 @@ export default function RentalsView({ me }) {
   const [upcomingBookings, setUpcomingBookings] = useState([])
   const [goals, setGoals] = useState([])
   const [error, setError] = useState('')
-  // Lifted up from RentalCalendar.jsx so the desktop dashboard's sidebar
+  // Lifted up from RentalCalendar.jsx so the desktop dashboard's Overview
   // list and combined nav row can drive the same selection it does.
   const [selectedUnitId, setSelectedUnitId] = useState('')
 
@@ -125,16 +126,6 @@ export default function RentalsView({ me }) {
   if (isDesktop) {
     return (
       <div className="rentals-dashboard">
-        <div className="rentals-sidebar">
-          <RentalOverview
-            properties={properties}
-            bookings={upcomingBookings}
-            compact
-            selectedUnitId={selectedUnitId}
-            onSelectUnit={setSelectedUnitId}
-          />
-        </div>
-
         <div className="rentals-main">
           <div className="rentals-combined-nav">
             <div className="month-nav-row">
@@ -167,6 +158,23 @@ export default function RentalsView({ me }) {
             onSelectUnit={setSelectedUnitId}
             showUnitTabs={false}
           />
+
+          {/* Below the calendar, not its own sidebar column — the tight
+              `compact` treatment was built to look like a continuation of
+              the nav sidebar it used to sit beside; that reasoning goes
+              away once it's not next to one, and cramming it into a
+              narrow column read as cramped. Default (non-compact) card
+              styling instead, laid out as a grid now that it has the
+              calendar's full column width instead of ~220px to work with. */}
+          <div className="rentals-overview-section">
+            <h3>Units</h3>
+            <RentalOverview
+              properties={properties}
+              bookings={upcomingBookings}
+              selectedUnitId={selectedUnitId}
+              onSelectUnit={setSelectedUnitId}
+            />
+          </div>
         </div>
 
         <div className="rentals-financials-col">
