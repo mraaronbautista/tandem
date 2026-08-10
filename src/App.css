@@ -1708,22 +1708,16 @@ label.new-task-checkbox-label {
   border-bottom-right-radius: 8px;
 }
 
-/* On the mobile column everything here naturally fills the ~320-360px
-   viewport width. On the desktop sidebar layout the tab content area is
-   much wider (see .task-board-content) — capping just the calendar grid
-   left the period-tabs/month-nav rows above it spanning the full width
-   while the grid sat narrow underneath, a mismatched, lopsided look.
-   Capping the whole panel keeps every row (tabs, month nav, unit tabs,
-   grid, financials, overview) at one consistent, comfortable width
-   instead, the same way .rental-calendar alone did for just the grid. */
+/* Capping the whole panel (an earlier attempt) squeezed the unit-tabs
+   toolbar down to the same narrow width as the grid, which pushed the
+   four unit tabs onto two wrapped rows instead of sitting side by side.
+   Capping just the grid instead — like this — lets the toolbar above it
+   use the full desktop content width (room for every unit tab in one
+   row) while still keeping the day cells (aspect-ratio: 1) from
+   stretching into oversized squares. */
 @media (min-width: 900px) {
-  .rentals-panel {
-    max-width: 560px;
-    /* Capping width alone left the panel stuck against the left edge of
-       .task-board-content with a large empty gap on the right on a wide
-       screen — just as unbalanced as being uncapped. Centering it makes
-       the cap actually read as intentional. */
-    margin: 0 auto;
+  .rental-month-grid {
+    max-width: 420px;
   }
 }
 
