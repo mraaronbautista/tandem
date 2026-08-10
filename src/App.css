@@ -160,6 +160,17 @@
   gap: 12px;
 }
 
+/* A little extra breathing room between stacked sections on phones —
+   12px reads fine on a wide desktop layout with more surrounding
+   whitespace, but felt cramped once a tab's content (Rentals especially:
+   heading, period-tabs, month nav, unit tabs, price line, then the grid)
+   stacks several sections tightly on a narrow screen. */
+@media (max-width: 480px) {
+  .tab-panel {
+    gap: 16px;
+  }
+}
+
 @media (min-width: 900px) {
   .task-board {
     max-width: 1100px;
@@ -1655,17 +1666,31 @@ label.new-task-checkbox-label {
   justify-content: space-between;
 }
 
+/* auto-fit + minmax rather than flex-wrap — it packs as many equal-width
+   120px+ columns as actually fit, so 4 units settle into a neat 2x2 grid
+   on a narrow mobile toolbar (where flex-wrap previously stretched each
+   wrapped tab to the full row width, stacking 4 heavy full-width bars)
+   and spread evenly across the row on a wide desktop toolbar (where
+   flex-wrap previously left tabs hugging their own text width with
+   empty space after them) — one rule handles both without a breakpoint.
+   flex-basis: 100% always claims the whole toolbar row for itself —
+   sharing a row with "+ Add booking" (the flex-wrap default) made the
+   grid resolve its column count against whatever scraps of width were
+   left over, wrapping unit tabs unevenly. Forcing full width gives the
+   grid the same predictable width on every screen size, and drops
+   "+ Add booking" to its own line below rather than fighting for space. */
 .rental-unit-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 6px;
-  flex-wrap: wrap;
-  flex: 1;
+  flex-basis: 100%;
   min-width: 140px;
 }
 
 .rental-unit-tab {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 7px 10px;
   border-radius: 8px;

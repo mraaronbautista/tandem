@@ -122,6 +122,23 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
             if (isStart) classes.push('rental-month-day-start')
             if (isEnd) classes.push('rental-month-day-end')
 
+            // Whether the row-adjacent cell is the *same* booking (not just
+            // "also occupied") — used below to visually bridge the grid gap
+            // between them so a multi-day stay reads as one continuous bar
+            // instead of a checkerboard of separate tiles. Only checked
+            // within the row: a booking spanning a week boundary is
+            // supposed to break into a separate bar per row, same as
+            // isStart/isEnd already treat col 0/6 as edges regardless of
+            // the booking's real check-in/check-out.
+            const prevBooking = col > 0 && week[col - 1] ? bookingForDay(unitBookings, toDateStr(year, month, week[col - 1])) : null
+            const nextBooking = col < 6 && week[col + 1] ? bookingForDay(unitBookings, toDateStr(year, month, week[col + 1])) : null
+            const connectsLeft = !isStart && prevBooking?.id === booking.id
+            const connectsRight = !isEnd && nextBooking?.id === booking.id
+
+            const fill = isPending
+              ? `repeating-linear-gradient(45deg, ${unit.color}, ${unit.color} 4px, transparent 4px, transparent 8px)`
+              : unit.color
+
             return (
               <div
                 key={dateStr}
@@ -130,9 +147,16 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
                   // Pending requests get a diagonal stripe instead of a solid
                   // fill — still visible as "held" but distinct from a
                   // confirmed guest at a glance.
-                  background: isPending
-                    ? `repeating-linear-gradient(45deg, ${unit.color}, ${unit.color} 4px, transparent 4px, transparent 8px)`
-                    : unit.color,
+                  background: fill,
+                  // Paints over the grid's gap on the connecting side(s) with
+                  // the same fill — a pure paint effect (box-shadow doesn't
+                  // affect layout or text position), so it can't shift the
+                  // day number or resize the cell the way padding/margin
+                  // tricks would.
+                  boxShadow:
+                    [connectsLeft && `-4px 0 0 0 ${unit.color}`, connectsRight && `4px 0 0 0 ${unit.color}`]
+                      .filter(Boolean)
+                      .join(', ') || undefined,
                 }}
                 title={`${booking.guest_name}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
                 onClick={() => setSelectedBooking(booking)}
