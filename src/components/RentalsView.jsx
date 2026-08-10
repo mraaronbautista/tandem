@@ -106,11 +106,11 @@ export default function RentalsView({ me }) {
       </div>
 
       {view !== 'overview' && (
-        <div className="rental-calendar-nav">
+        <div className="month-nav-row">
           <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
             ‹
           </button>
-          <span className="rental-month-label">{monthLabel}</span>
+          <span className="month-nav-label">{monthLabel}</span>
           <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
             ›
           </button>

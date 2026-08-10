@@ -165,3 +165,51 @@ export function getTasksForDay(tasks, date) {
       return new Date(at) - new Date(bt)
     })
 }
+
+// `count` consecutive day-granularity Date objects starting at `date` —
+// the shared building block behind the Multi-Day (3) and Week (7) view
+// modes below.
+export function getDaysStartingAt(date, count) {
+  const days = []
+  for (let i = 0; i < count; i++) {
+    const d = new Date(date)
+    d.setDate(d.getDate() + i)
+    days.push(d)
+  }
+  return days
+}
+
+// The 7 days (Sun-Sat) of the calendar week containing `date` — same week
+// start as startOfPeriod('week') above and DateStrip's weekday order.
+export function getWeekDays(date) {
+  const start = new Date(date)
+  start.setDate(start.getDate() - start.getDay())
+  return getDaysStartingAt(start, 7)
+}
+
+// Every day (1st through last) in the calendar month containing `date`.
+export function getMonthDays(date) {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const numDays = new Date(year, month + 1, 0).getDate()
+  return Array.from({ length: numDays }, (_, i) => new Date(year, month, i + 1))
+}
+
+// Buckets tasks by the local day they belong to (same done/not-done rule
+// as getTasksForDay: done tasks by completed_at, others by due_date) into
+// a Map of 'YYYY-MM-DD' -> tasks[] — for rendering many days at once
+// (Month view) without re-scanning the whole task list once per day the
+// way calling getTasksForDay in a loop would. All Day tasks (due_date
+// null, never done via a specific day) naturally fall out of every
+// bucket, same as they're excluded from getTasksForDay.
+export function groupTasksByDay(tasks) {
+  const map = new Map()
+  for (const t of tasks) {
+    const at = t.status === 'done' ? t.completed_at : t.due_date
+    if (!at) continue
+    const key = localDayKey(new Date(at))
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(t)
+  }
+  return map
+}

@@ -8,6 +8,9 @@ import {
   getOverdueTasks,
   getTasksForDay,
   getOverlappingTaskIds,
+  getDaysStartingAt,
+  getWeekDays,
+  groupTasksByDay,
 } from '../lib/tasks'
 import { fetchMembers } from '../lib/members'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
@@ -30,6 +33,7 @@ import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
 import CorkBoardView from './CorkBoardView'
+import MonthView from './MonthView'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -37,15 +41,46 @@ const WHO_TABS = [
   { key: 'assistant', label: WHO_LABEL.assistant },
 ]
 
+const VIEW_MODES = [
+  { key: 'day', label: 'Day' },
+  { key: 'multiday', label: 'Multi-Day' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+]
+
+// Multi-Day is a short look-ahead window, not a full week — 3 days
+// (today + the next 2) rather than Structured's own default, which isn't
+// documented and isn't worth guessing at; this is a reasonable middle
+// ground between Day and Week.
+const MULTIDAY_COUNT = 3
+
+function isSameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+// "Today"/"Tomorrow" where they apply, otherwise a short weekday+date —
+// only used to label day-sections in Multi-Day/Week (Day mode's single
+// section keeps its own special-cased heading below, to preserve its
+// existing look).
+function daySectionLabel(day, today) {
+  if (isSameLocalDay(day, today)) return 'Today'
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (isSameLocalDay(day, tomorrow)) return 'Tomorrow'
+  return day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
 // Bottom bar on mobile, sidebar on wide screens (see .task-board-nav in
 // App.css) — the three sections that are actually places you go browse,
 // as opposed to the "+" menu's one-shot actions (New task, Priorities,
-// Submit report, Nudge, Vault).
+// Submit report, Nudge, Vault). Cork Board isn't in this list — it's a
+// toggled slide-in panel (see corkBoardOpen below), rendered as its own
+// nav-styled button right after this list so it keeps the same visual
+// slot without being a navigable destination itself.
 const TABS = [
   { key: 'today', icon: '📋', label: 'Today' },
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
   { key: 'reports', icon: '📄', label: 'Reports' },
-  { key: 'corkboard', icon: '📌', label: 'Cork Board' },
 ]
 
 function startOfDay(d) {
@@ -69,7 +104,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
+  const [corkBoardOpen, setCorkBoardOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
+  const [viewMode, setViewMode] = useState('day')
 
   // The quick-actions menu closes as soon as an item is picked (see
   // NewTaskForm), so there's no persistent button left to show a "sent"
@@ -175,7 +212,30 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // something that quietly disappears once you scroll away from today.
   const overdue = useMemo(() => (isToday ? getOverdueTasks(whoFiltered) : []), [whoFiltered, isToday])
 
-  const dayTasks = useMemo(() => getTasksForDay(whoFiltered, selectedDate), [whoFiltered, selectedDate])
+  // Day/Multi-Day/Week share one rendering path: a list of day-sections.
+  // Day mode is just that list with a single entry, so it doesn't need
+  // its own special case here — only its heading (below) differs.
+  // Month is a distinct grid, handled separately via tasksByDay.
+  const daysToShow = useMemo(() => {
+    if (viewMode === 'multiday') return getDaysStartingAt(selectedDate, MULTIDAY_COUNT)
+    if (viewMode === 'week') return getWeekDays(selectedDate)
+    return [selectedDate]
+  }, [viewMode, selectedDate])
+
+  const daySections = useMemo(
+    () => daysToShow.map((date) => ({ date, tasks: getTasksForDay(whoFiltered, date) })),
+    [daysToShow, whoFiltered],
+  )
+
+  // Grouped once for the whole visible month rather than calling
+  // getTasksForDay per day inside MonthView's render loop.
+  const tasksByDay = useMemo(() => groupTasksByDay(whoFiltered), [whoFiltered])
+
+  function shiftMonth(delta) {
+    setSelectedDate((d) => startOfDay(new Date(d.getFullYear(), d.getMonth() + delta, 1)))
+  }
+
+  const monthLabel = selectedDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
 
   // Computed across all tasks, not just whoFiltered — a conflict is real
   // regardless of which "who" tab you happen to be looking at.
@@ -247,11 +307,31 @@ export default function TaskBoard({ theme, toggleTheme }) {
             {tab.label}
           </button>
         ))}
+        <button
+          type="button"
+          className={`task-board-nav-item${corkBoardOpen ? ' task-board-nav-item-active' : ''}`}
+          onClick={() => setCorkBoardOpen(true)}
+        >
+          <span className="task-board-nav-icon">📌</span>
+          Cork Board
+        </button>
       </nav>
 
       <div className="task-board-content">
         <header className="task-board-header">
-          <h1>{timeOfDayGreeting(me?.display_name)}</h1>
+          {activeTab === 'today' ? (
+            <div className="month-nav-row">
+              <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+                ‹
+              </button>
+              <span className="month-nav-label">{monthLabel}</span>
+              <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+                ›
+              </button>
+            </div>
+          ) : (
+            <h1>{timeOfDayGreeting(me?.display_name)}</h1>
+          )}
           <div className="header-actions">
             <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
             <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">
@@ -262,27 +342,45 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
         {activeTab === 'rentals' && <RentalsView me={me} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
-        {activeTab === 'corkboard' && <CorkBoardView me={me} memberName={memberName} />}
 
         {activeTab === 'today' && (
           <PullToRefresh onRefresh={reload}>
-            <DateStrip
-              selectedDate={selectedDate}
-              onSelect={setSelectedDate}
-              headerRight={
-                <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
-                  {WHO_TABS.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              }
-            />
+            <div className="period-tabs">
+              {VIEW_MODES.map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  className={`period-tab${viewMode === m.key ? ' period-tab-active' : ''}`}
+                  onClick={() => setViewMode(m.key)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {viewMode !== 'month' && <DateStrip selectedDate={selectedDate} onSelect={setSelectedDate} />}
+
+            <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
+              {WHO_TABS.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
 
             {error && <p className="error">{error}</p>}
             {loading ? (
               <p className="loading">Loading…</p>
+            ) : viewMode === 'month' ? (
+              <MonthView
+                monthDate={selectedDate}
+                tasksByDay={tasksByDay}
+                selectedDate={selectedDate}
+                onSelectDay={(d) => {
+                  setSelectedDate(d)
+                  setViewMode('day')
+                }}
+              />
             ) : (
               <div className="task-list">
                 {allDay.length > 0 && (
@@ -313,26 +411,36 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   </section>
                 )}
 
-                {dayTasks.length > 0 && (
-                  <section>
-                    {/* Only needed to disambiguate from the Overdue section above —
-                        on other days there's just one list, so no heading needed. */}
-                    {isToday && overdue.length > 0 && <h2 className="task-section-heading">Today</h2>}
-                    <div className="timeline-list">
-                      {dayTasks.map((task, i) => (
-                        <TimelineRow
-                          key={task.id}
-                          task={task}
-                          time={task.status === 'done' ? task.completed_at : task.due_date}
-                          isLast={i === dayTasks.length - 1}
-                          {...taskRowProps}
-                        />
-                      ))}
-                    </div>
-                  </section>
+                {daySections.map(
+                  ({ date, tasks: dTasks }) =>
+                    dTasks.length > 0 && (
+                      <section key={date.toISOString()}>
+                        {viewMode === 'day' ? (
+                          // Only needed to disambiguate from the Overdue section
+                          // above — with just one day-section there's otherwise
+                          // no heading at all.
+                          isToday && overdue.length > 0 && <h2 className="task-section-heading">Today</h2>
+                        ) : (
+                          <h2 className="task-section-heading">{daySectionLabel(date, startOfDay(new Date()))}</h2>
+                        )}
+                        <div className="timeline-list">
+                          {dTasks.map((task, i) => (
+                            <TimelineRow
+                              key={task.id}
+                              task={task}
+                              time={task.status === 'done' ? task.completed_at : task.due_date}
+                              isLast={i === dTasks.length - 1}
+                              {...taskRowProps}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    ),
                 )}
 
-                {!allDay.length && !overdue.length && !dayTasks.length && <p className="empty">Nothing here.</p>}
+                {!allDay.length && !overdue.length && !daySections.some((s) => s.tasks.length) && (
+                  <p className="empty">Nothing here.</p>
+                )}
               </div>
             )}
           </PullToRefresh>
@@ -356,6 +464,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
       )}
 
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
+
+      {corkBoardOpen && (
+        <CorkBoardView me={me} memberName={memberName} onClose={() => setCorkBoardOpen(false)} />
+      )}
 
       {settingsOpen && (
         <SettingsMenu

@@ -12,7 +12,11 @@ function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
-export default function DateStrip({ selectedDate, onSelect, headerRight }) {
+// No header of its own — TaskBoard.jsx's persistent month/year header
+// (the "‹ August 2026 ›" row, always visible regardless of view mode)
+// already gives the surrounding context, so this is just the day-picker
+// strip on its own.
+export default function DateStrip({ selectedDate, onSelect }) {
   const scrollerRef = useRef(null)
   const today = startOfDay(new Date())
 
@@ -29,18 +33,8 @@ export default function DateStrip({ selectedDate, onSelect, headerRight }) {
     scrollerRef.current?.querySelector('.date-strip-day-selected')?.scrollIntoView({ inline: 'center', block: 'nearest' })
   }, [])
 
-  const headerLabel = selectedDate.toLocaleDateString([], {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  })
-
   return (
     <div className="date-strip">
-      <div className="date-strip-header-row">
-        <h2 className="date-strip-header">{headerLabel}</h2>
-        {headerRight}
-      </div>
       <div className="date-strip-scroller" ref={scrollerRef}>
         {days.map((d) => {
           const selected = isSameDay(d, selectedDate)
