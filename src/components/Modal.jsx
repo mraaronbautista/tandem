@@ -11,11 +11,7 @@ import { createPortal } from 'react-dom'
 // of on top of everything. A portal sidesteps that entirely: the DOM
 // node lands as a sibling of the app root, never inside another
 // modal's subtree.
-// `variant`, when given, adds a `modal-backdrop-<variant>` modifier class to
-// the backdrop — an opt-in escape hatch for a consumer that needs different
-// positioning than the default centered/bottom-sheet layout (e.g. a
-// slide-in side panel), without touching every other Modal consumer.
-export default function Modal({ onClose, children, variant }) {
+export default function Modal({ onClose, children }) {
   useEffect(() => {
     function handleKey(e) {
       if (e.key === 'Escape') onClose()
@@ -25,7 +21,7 @@ export default function Modal({ onClose, children, variant }) {
   }, [onClose])
 
   return createPortal(
-    <div className={`modal-backdrop${variant ? ` modal-backdrop-${variant}` : ''}`} onClick={onClose}>
+    <div className="modal-backdrop" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}>{children}</div>
     </div>,
     document.body,

@@ -8,7 +8,6 @@ import {
   getOverdueTasks,
   getTasksForDay,
   getOverlappingTaskIds,
-  getDaysStartingAt,
   getWeekDays,
   groupTasksByDay,
 } from '../lib/tasks'
@@ -43,23 +42,16 @@ const WHO_TABS = [
 
 const VIEW_MODES = [
   { key: 'day', label: 'Day' },
-  { key: 'multiday', label: 'Multi-Day' },
   { key: 'week', label: 'Week' },
   { key: 'month', label: 'Month' },
 ]
-
-// Multi-Day is a short look-ahead window, not a full week — 3 days
-// (today + the next 2) rather than Structured's own default, which isn't
-// documented and isn't worth guessing at; this is a reasonable middle
-// ground between Day and Week.
-const MULTIDAY_COUNT = 3
 
 function isSameLocalDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
 // "Today"/"Tomorrow" where they apply, otherwise a short weekday+date —
-// only used to label day-sections in Multi-Day/Week (Day mode's single
+// only used to label day-sections in Week mode (Day mode's single
 // section keeps its own special-cased heading below, to preserve its
 // existing look).
 function daySectionLabel(day, today) {
@@ -71,16 +63,14 @@ function daySectionLabel(day, today) {
 }
 
 // Bottom bar on mobile, sidebar on wide screens (see .task-board-nav in
-// App.css) — the three sections that are actually places you go browse,
+// App.css) — the four sections that are actually places you go browse,
 // as opposed to the "+" menu's one-shot actions (New task, Priorities,
-// Submit report, Nudge, Vault). Cork Board isn't in this list — it's a
-// toggled slide-in panel (see corkBoardOpen below), rendered as its own
-// nav-styled button right after this list so it keeps the same visual
-// slot without being a navigable destination itself.
+// Submit report, Nudge, Vault).
 const TABS = [
   { key: 'today', icon: '📋', label: 'Today' },
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
   { key: 'reports', icon: '📄', label: 'Reports' },
+  { key: 'corkboard', icon: '📌', label: 'Cork Board' },
 ]
 
 function startOfDay(d) {
@@ -104,7 +94,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
-  const [corkBoardOpen, setCorkBoardOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
   const [viewMode, setViewMode] = useState('day')
 
@@ -212,12 +201,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // something that quietly disappears once you scroll away from today.
   const overdue = useMemo(() => (isToday ? getOverdueTasks(whoFiltered) : []), [whoFiltered, isToday])
 
-  // Day/Multi-Day/Week share one rendering path: a list of day-sections.
-  // Day mode is just that list with a single entry, so it doesn't need
-  // its own special case here — only its heading (below) differs.
-  // Month is a distinct grid, handled separately via tasksByDay.
+  // Day/Week share one rendering path: a list of day-sections. Day mode
+  // is just that list with a single entry, so it doesn't need its own
+  // special case here — only its heading (below) differs. Month is a
+  // distinct grid, handled separately via tasksByDay.
   const daysToShow = useMemo(() => {
-    if (viewMode === 'multiday') return getDaysStartingAt(selectedDate, MULTIDAY_COUNT)
     if (viewMode === 'week') return getWeekDays(selectedDate)
     return [selectedDate]
   }, [viewMode, selectedDate])
@@ -307,14 +295,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
             {tab.label}
           </button>
         ))}
-        <button
-          type="button"
-          className={`task-board-nav-item${corkBoardOpen ? ' task-board-nav-item-active' : ''}`}
-          onClick={() => setCorkBoardOpen(true)}
-        >
-          <span className="task-board-nav-icon">📌</span>
-          Cork Board
-        </button>
       </nav>
 
       <div className="task-board-content">
@@ -342,31 +322,34 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
         {activeTab === 'rentals' && <RentalsView me={me} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
+        {activeTab === 'corkboard' && <CorkBoardView me={me} memberName={memberName} />}
 
         {activeTab === 'today' && (
           <PullToRefresh onRefresh={reload}>
-            <div className="period-tabs">
-              {VIEW_MODES.map((m) => (
-                <button
-                  key={m.key}
-                  type="button"
-                  className={`period-tab${viewMode === m.key ? ' period-tab-active' : ''}`}
-                  onClick={() => setViewMode(m.key)}
-                >
-                  {m.label}
-                </button>
-              ))}
+            <div className="view-mode-row">
+              <div className="period-tabs">
+                {VIEW_MODES.map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={`period-tab${viewMode === m.key ? ' period-tab-active' : ''}`}
+                    onClick={() => setViewMode(m.key)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
+                {WHO_TABS.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {viewMode !== 'month' && <DateStrip selectedDate={selectedDate} onSelect={setSelectedDate} />}
-
-            <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
-              {WHO_TABS.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
 
             {error && <p className="error">{error}</p>}
             {loading ? (
@@ -464,10 +447,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
       )}
 
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
-
-      {corkBoardOpen && (
-        <CorkBoardView me={me} memberName={memberName} onClose={() => setCorkBoardOpen(false)} />
-      )}
 
       {settingsOpen && (
         <SettingsMenu

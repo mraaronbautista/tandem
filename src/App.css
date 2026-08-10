@@ -362,13 +362,6 @@
 
 .who-select {
   flex: none;
-  /* Previously nested inside DateStrip's own header row (a flex row with
-     justify-content: space-between, which is what actually right-aligned
-     it) — now rendered directly as a .tab-panel child instead, so it
-     needs its own alignment to avoid stretching to the column's full
-     width (.tab-panel's default align-items: stretch) or falling back to
-     the left. */
-  align-self: flex-end;
   padding: 8px 26px 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -1033,6 +1026,20 @@ a.task-submission-file-link:hover {
 
 .task-submission-upload:hover {
   border-color: var(--accent);
+}
+
+/* Groups the Today tab's view-mode tabs with the who-filter — both
+   answer "what am I viewing" (time range vs. whose tasks), so they read
+   as one control cluster instead of the who-filter floating as its own
+   orphaned row with no visual relationship to anything around it. */
+.view-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-mode-row .period-tabs {
+  flex: 1;
 }
 
 .period-tabs {
@@ -2181,62 +2188,6 @@ label.new-task-checkbox-label {
 .clarification-answer-button:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-/* Cork Board — a slide-in panel (Modal's "panel" variant), not the
-   centered/bottom-sheet layout every other Modal consumer uses. The
-   backdrop anchors it to the left edge and stretches it full height
-   instead of centering a card, and the panel itself slides in with a
-   transform (matching the existing modal-slide-up keyframe's approach —
-   see App.css's mobile modal block — rather than animating a layout
-   property like max-height, which the rest of the app never does). */
-.modal-backdrop-panel {
-  justify-content: flex-start;
-  align-items: stretch;
-  padding: 0;
-}
-
-.modal-backdrop-panel .cork-panel {
-  width: 380px;
-  max-width: 100vw;
-  height: 100dvh;
-  margin: 0;
-  border-radius: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 18px;
-  overflow-y: auto;
-  background: var(--card-bg);
-  border-right: 1px solid var(--border);
-  animation: cork-panel-slide-in 0.2s ease-out;
-}
-
-@keyframes cork-panel-slide-in {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-/* Near-full width on phones instead of a fixed 380px, leaving just
-   enough backdrop visible on the right to tap-to-close. */
-@media (max-width: 480px) {
-  .modal-backdrop-panel .cork-panel {
-    width: calc(100vw - 40px);
-  }
-}
-
-.cork-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.cork-panel-close {
-  flex: none;
 }
 
 /* Cork Board */
