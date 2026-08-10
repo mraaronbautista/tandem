@@ -1135,6 +1135,12 @@ a.task-submission-file-link:hover {
   font-weight: 600;
 }
 
+.settings-menu-account {
+  margin-top: -6px;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
 .settings-menu-items {
   display: flex;
   flex-direction: column;

@@ -477,6 +477,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
           onTogglePush={handleTogglePush}
           onSignOut={signOut}
           onClose={() => setSettingsOpen(false)}
+          memberName={me?.display_name}
         />
       )}
     </div>

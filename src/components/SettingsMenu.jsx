@@ -14,6 +14,7 @@ export default function SettingsMenu({
   onTogglePush,
   onSignOut,
   onClose,
+  memberName,
 }) {
   const [guideOpen, setGuideOpen] = useState(false)
 
@@ -21,6 +22,11 @@ export default function SettingsMenu({
     <Modal onClose={onClose}>
       <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Settings</h2>
+
+        {/* Both accounts share the same device/browser sometimes — a quick
+            "which of us is actually signed in right now" check before
+            anyone assumes the wrong person's notifications toggle. */}
+        {memberName && <p className="settings-menu-account">Signed in as {memberName}</p>}
 
         <div className="settings-menu-items">
           {showPush && (
