@@ -15,7 +15,6 @@ import { fetchMembers } from '../lib/members'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
 import { useAuth } from '../lib/AuthContext'
-import { timeOfDayGreeting } from '../lib/greeting'
 import { WHO_LABEL, whoKeyForName } from '../lib/whoLabels'
 import TaskRow from './TaskRow'
 import TimelineRow from './TimelineRow'
@@ -299,7 +298,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       <div className="task-board-content">
         <header className="task-board-header">
-          {activeTab === 'today' ? (
+          {activeTab === 'today' && (
             <div className="month-nav-row">
               <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
                 ‹
@@ -309,8 +308,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 ›
               </button>
             </div>
-          ) : (
-            <h1>{timeOfDayGreeting(me?.display_name)}</h1>
           )}
           <div className="header-actions">
             <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />

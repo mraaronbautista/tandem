@@ -295,6 +295,11 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  /* Stays pinned right even with no sibling on the header's left side
+     (Rentals/Reports/Cork Board no longer render anything there) —
+     .task-board-header's justify-content: space-between only pushes
+     this right when there's another item to space against. */
+  margin-left: auto;
 }
 
 .working-toggle {
