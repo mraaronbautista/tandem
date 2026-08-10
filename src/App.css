@@ -699,13 +699,18 @@
    which encodes booking color/status that has no equivalent concept
    here. Full width (no max-width cap) and tall cells instead of square
    ones, since there's real content to fit now. */
+/* No overflow: hidden here — it was paired with border-radius purely to
+   clip the grid's own corners, but every ancestor of this grid
+   (.tab-panel, .task-board-content, .task-board, PullToRefresh's
+   wrapper) is otherwise unconstrained in height, so overflow: hidden on
+   the grid itself risked clipping actual weeks off a taller month
+   (5-6 rows) instead of just rounding a corner. Square corners, plain
+   border, no clipping risk. */
 .month-view-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
 }
 
 .month-view-weekday {
@@ -722,6 +727,12 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  /* Grid items default to a content-based automatic minimum width, which
+     can force a 1fr track wider than its fair share if a cell's content
+     (a long task title, say) can't otherwise shrink — min-width: 0 hands
+     that shrinking entirely to .month-view-task-title's own
+     overflow/ellipsis handling instead. */
+  min-width: 0;
   min-height: 96px;
   padding: 6px;
   gap: 3px;
