@@ -334,15 +334,20 @@ export default function TaskBoard({ theme, toggleTheme }) {
             </div>
           )}
           {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
-          {/* Merged into this same row on desktop instead of a separate
-              sidebar — date/title, then nav, then the account controls,
-              left to right in that order. */}
-          {isDesktop && <nav className="header-nav">{navButtons}</nav>}
-          <div className="header-actions">
-            <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
-            <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">
-              ⚙️
-            </button>
+          {/* Nav + account controls grouped together and pinned to the
+              header's right edge as one fixed unit (.header-right-group
+              has margin-left: auto, not the individual pieces) — nav's
+              position stays put regardless of how long the title/date on
+              the left happens to be, instead of drifting left and right
+              as you switch tabs. */}
+          <div className="header-right-group">
+            {isDesktop && <nav className="header-nav">{navButtons}</nav>}
+            <div className="header-actions">
+              <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
+              <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">
+                ⚙️
+              </button>
+            </div>
           </div>
         </header>
 

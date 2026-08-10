@@ -198,12 +198,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  /* Was space-between when .header-actions was the only other item —
-     now that .header-nav sits between the title and .header-actions too,
-     that would center .header-nav in the leftover space instead of
-     letting it sit right after the title. Left-to-right flow instead:
-     title, then nav, adjacent at the start; .header-actions still ends
-     up pinned to the far right on its own (margin-left: auto, below). */
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -211,6 +205,22 @@
 .task-board-header h1 {
   font-size: 22px;
   white-space: nowrap;
+}
+
+/* Nav + .header-actions pinned to the header's right edge as one fixed
+   unit, not each finding their own position independently — the title/
+   date on the left is the only thing that grows or shrinks with its own
+   content length, so this group's position relative to the right edge
+   never moves as you switch tabs (a plain justify-content: space-between
+   on .task-board-header, or two separate margin-left: auto items, would
+   both let a longer/shorter title reflow how far apart nav sits from the
+   title, or from .header-actions, which read as the nav visibly
+   drifting side to side). */
+.header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
 }
 
 .header-nav {
@@ -288,14 +298,6 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  /* .task-board-header no longer uses justify-content: space-between
-     (see its own comment — that would center .header-nav in the leftover
-     space instead of keeping it right after the title), so this is what
-     actually pins .header-actions to the far right now: it eats all the
-     row's remaining space itself, regardless of how many items sit
-     before it (title alone, title + nav, or — defensively — nothing at
-     all, if a tab is ever added without header content of its own). */
-  margin-left: auto;
 }
 
 .working-toggle {
