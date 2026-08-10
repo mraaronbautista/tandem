@@ -1708,14 +1708,17 @@ label.new-task-checkbox-label {
   border-bottom-right-radius: 8px;
 }
 
-/* On the mobile column .rental-calendar naturally fills the ~320-360px
+/* On the mobile column everything here naturally fills the ~320-360px
    viewport width. On the desktop sidebar layout the tab content area is
-   much wider (see .task-board-content), which stretched the day cells
-   (aspect-ratio: 1) into oversized squares with no real benefit — capping
-   the width here keeps the grid at a comfortable, phone-like cell size. */
+   much wider (see .task-board-content) — capping just the calendar grid
+   left the period-tabs/month-nav rows above it spanning the full width
+   while the grid sat narrow underneath, a mismatched, lopsided look.
+   Capping the whole panel keeps every row (tabs, month nav, unit tabs,
+   grid, financials, overview) at one consistent, comfortable width
+   instead, the same way .rental-calendar alone did for just the grid. */
 @media (min-width: 900px) {
-  .rental-calendar {
-    max-width: 420px;
+  .rentals-panel {
+    max-width: 560px;
   }
 }
 

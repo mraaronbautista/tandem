@@ -78,7 +78,7 @@ export default function RentalsView({ me }) {
   const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
 
   return (
-    <div className="tab-panel">
+    <div className="tab-panel rentals-panel">
       <h2>{COMPANY_LABEL}</h2>
 
       <div className="period-tabs">
