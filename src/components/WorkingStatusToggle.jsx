@@ -8,8 +8,9 @@ function formatSince(iso) {
 // Aaron gets an actual toggle for his own status; Ada gets a read-only
 // badge reflecting it — never the other way around, since "I'm working"
 // is inherently about yourself, not something to set on someone else's
-// behalf. Nothing renders on Ada's side when Aaron isn't working, rather
-// than showing a persistent "not working" badge that'd just be noise.
+// behalf. Always visible on Ada's side now, online or offline — it lives
+// in the shared header (.header-actions), so it's already on every tab
+// without any extra work here.
 export default function WorkingStatusToggle({ me, members, onChange }) {
   const [busy, setBusy] = useState(false)
 
@@ -41,11 +42,14 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
   }
 
   const aaron = members.find((m) => m.display_name === 'Aaron')
-  if (!aaron?.working_since) return null
+  const aaronOnline = Boolean(aaron?.working_since)
 
   return (
-    <span className="working-badge" title={`Online since ${formatSince(aaron.working_since)}`}>
-      🟢 Aaron is online
+    <span
+      className={`working-badge${aaronOnline ? ' working-badge-online' : ''}`}
+      title={aaronOnline ? `Online since ${formatSince(aaron.working_since)}` : 'Offline'}
+    >
+      {aaronOnline ? '🟢 Aaron is online' : '⚪ Aaron is offline'}
     </span>
   )
 }

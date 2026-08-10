@@ -316,8 +316,14 @@
 
 .working-badge {
   font-size: 13px;
-  color: #4caf7d;
+  color: var(--text);
+  opacity: 0.6;
   white-space: nowrap;
+}
+
+.working-badge-online {
+  color: #4caf7d;
+  opacity: 1;
 }
 
 .sign-out {
