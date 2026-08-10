@@ -57,25 +57,22 @@ const SECTIONS = [
   },
 ]
 
-// Collapsible so the guide stays scannable instead of one long wall of
-// text — same expand/collapse pattern as EodReportsList's month groups.
-// Nested inside SettingsMenu's own Modal; Modal.jsx renders via a portal,
-// so this works regardless of the outer modal's DOM position/transform.
+// Accordion — one section open at a time, opening another closes
+// whichever was open — instead of an independent expand/collapse per
+// section, so the guide stays scannable instead of one long wall of text
+// with several sections open at once. Nested inside SettingsMenu's own
+// Modal; Modal.jsx renders via a portal, so this works regardless of the
+// outer modal's DOM position/transform.
 export default function HowToGuide({ onClose }) {
-  const [expanded, setExpanded] = useState(() => new Set([SECTIONS[0].title]))
+  const [openTitle, setOpenTitle] = useState(SECTIONS[0].title)
 
   function toggle(title) {
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(title)) next.delete(title)
-      else next.add(title)
-      return next
-    })
+    setOpenTitle((prev) => (prev === title ? null : title))
   }
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="submission-modal how-to-guide-modal" onClick={(e) => e.stopPropagation()}>
         <h2>How this app works</h2>
 
         <div className="how-to-guide-list">
@@ -83,9 +80,9 @@ export default function HowToGuide({ onClose }) {
             <div key={section.title} className="how-to-guide-section">
               <button type="button" className="how-to-guide-header" onClick={() => toggle(section.title)}>
                 <span>{section.title}</span>
-                <span>{expanded.has(section.title) ? '▾' : '▸'}</span>
+                <span>{openTitle === section.title ? '▾' : '▸'}</span>
               </button>
-              {expanded.has(section.title) && (
+              {openTitle === section.title && (
                 <ul className="how-to-guide-items">
                   {section.items.map((item, i) => (
                     <li key={i}>{item}</li>

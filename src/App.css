@@ -1270,6 +1270,19 @@ a.task-submission-file-link:hover {
   }
 }
 
+/* Fixed size on desktop so the modal stays put as sections open/close —
+   .submission-modal otherwise sizes to its content, which visibly grew
+   and shrank the whole card on every accordion toggle. Below 640px it's
+   a slide-up sheet instead (see above), where sizing to content is the
+   more natural mobile pattern, so this only applies above that. */
+@media (min-width: 641px) {
+  .modal-backdrop .submission-modal.how-to-guide-modal {
+    width: 560px;
+    height: 640px;
+    max-height: 640px;
+  }
+}
+
 @keyframes modal-slide-up {
   from {
     transform: translateY(100%);
