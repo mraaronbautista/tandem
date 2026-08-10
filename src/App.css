@@ -295,10 +295,12 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  /* Stays pinned right even with no sibling on the header's left side
-     (Rentals/Reports/Cork Board no longer render anything there) —
-     .task-board-header's justify-content: space-between only pushes
-     this right when there's another item to space against. */
+  /* Defensive: every tab currently renders something on the header's
+     left side (month nav or a page title — see PAGE_LABELS in
+     TaskBoard.jsx), so .task-board-header's justify-content:
+     space-between already keeps this pinned right on its own. margin-
+     left: auto means it stays right-aligned even if that ever isn't
+     true (a tab added without a PAGE_LABELS entry, say). */
   margin-left: auto;
 }
 
@@ -2199,7 +2201,6 @@ label.new-task-checkbox-label {
 .cork-board-subtitle {
   opacity: 0.65;
   font-size: 13px;
-  margin-top: -6px;
 }
 
 .cork-board-compose {

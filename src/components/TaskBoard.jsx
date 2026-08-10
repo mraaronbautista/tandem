@@ -72,6 +72,16 @@ const TABS = [
   { key: 'corkboard', icon: '📌', label: 'Cork Board' },
 ]
 
+// The header's page title for every tab except Today (which shows the
+// month navigator instead) — "Awa Rentalz" rather than "Rentals" for the
+// company name shown inside RentalsView.jsx, so it doesn't just repeat
+// the nav item's own label.
+const PAGE_LABELS = {
+  rentals: 'Awa Rentalz',
+  reports: 'Reports',
+  corkboard: 'Cork Board',
+}
+
 function startOfDay(d) {
   const x = new Date(d)
   x.setHours(0, 0, 0, 0)
@@ -309,6 +319,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
               </button>
             </div>
           )}
+          {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
           <div className="header-actions">
             <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
             <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">

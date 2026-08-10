@@ -66,8 +66,6 @@ export default function EodReportsList({ memberName }) {
 
   return (
     <div className="tab-panel">
-      <h2>Reports</h2>
-
       {error && <p className="error">{error}</p>}
       {!error && !reports && <p className="loading">Loading…</p>}
       {reports && !reports.length && <p className="task-notes-empty">No reports yet.</p>}

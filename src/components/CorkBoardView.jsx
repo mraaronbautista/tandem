@@ -115,7 +115,6 @@ export default function CorkBoardView({ me, memberName }) {
 
   return (
     <div className="tab-panel">
-      <h2>Cork Board</h2>
       <p className="cork-board-subtitle">Pin something with no deadline, so it doesn't get lost.</p>
 
       <form className="cork-board-compose" onSubmit={handlePost}>

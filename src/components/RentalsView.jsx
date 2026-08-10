@@ -12,11 +12,11 @@ import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
 
 const COMPANY = 'awa'
-const COMPANY_LABEL = 'Awa Rentalz'
 
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
-// dismiss, you just switch tabs.
+// dismiss, you just switch tabs. The page title ("Awa Rentalz") lives in
+// TaskBoard.jsx's shared header now, not here — see PAGE_LABELS.
 export default function RentalsView({ me }) {
   const [view, setView] = useState('calendar')
   const [monthDate, setMonthDate] = useState(() => {
@@ -79,8 +79,6 @@ export default function RentalsView({ me }) {
 
   return (
     <div className="tab-panel">
-      <h2>{COMPANY_LABEL}</h2>
-
       <div className="period-tabs">
         <button
           type="button"
