@@ -12,6 +12,7 @@ import {
   groupTasksByDay,
 } from '../lib/tasks'
 import { fetchMembers } from '../lib/members'
+import { useMediaQuery } from '../lib/useMediaQuery'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
 import { useAuth } from '../lib/AuthContext'
@@ -61,9 +62,10 @@ function daySectionLabel(day, today) {
   return day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-// Bottom bar on mobile, sidebar on wide screens (see .task-board-nav in
-// App.css) — the four sections that are actually places you go browse,
-// as opposed to the "+" menu's one-shot actions (New task, Priorities,
+// Bottom bar on mobile, folded inline into the header row on wide
+// screens (`.header-nav` — see App.css and the isDesktop branch below)
+// — the four sections that are actually places you go browse, as
+// opposed to the "+" menu's one-shot actions (New task, Priorities,
 // Submit report, Nudge, Vault).
 const TABS = [
   { key: 'today', icon: '📋', label: 'Today' },
@@ -90,6 +92,7 @@ function startOfDay(d) {
 
 export default function TaskBoard({ theme, toggleTheme }) {
   const { session, signOut } = useAuth()
+  const isDesktop = useMediaQuery('(min-width: 900px)')
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState([])
   const [whoTab, setWhoTab] = useState('all')
@@ -301,21 +304,21 @@ export default function TaskBoard({ theme, toggleTheme }) {
     ...(me?.display_name === 'Ada' ? [{ key: 'nudge', icon: '🚨', label: 'Nudge Aaron', onSelect: handleNudge }] : []),
   ]
 
+  const navButtons = TABS.map((tab) => (
+    <button
+      key={tab.key}
+      type="button"
+      className={`task-board-nav-item${activeTab === tab.key ? ' task-board-nav-item-active' : ''}`}
+      onClick={() => setActiveTab(tab.key)}
+    >
+      <span className="task-board-nav-icon">{tab.icon}</span>
+      {tab.label}
+    </button>
+  ))
+
   return (
     <div className="task-board">
-      <nav className="task-board-nav">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            className={`task-board-nav-item${activeTab === tab.key ? ' task-board-nav-item-active' : ''}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            <span className="task-board-nav-icon">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      {!isDesktop && <nav className="task-board-nav">{navButtons}</nav>}
 
       <div className="task-board-content">
         <header className="task-board-header">
@@ -331,6 +334,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
             </div>
           )}
           {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
+          {/* Merged into this same row on desktop instead of a separate
+              sidebar — date/title, then nav, then the account controls,
+              left to right in that order. */}
+          {isDesktop && <nav className="header-nav">{navButtons}</nav>}
           <div className="header-actions">
             <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
             <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">

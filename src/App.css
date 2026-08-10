@@ -109,10 +109,14 @@
   padding: 24px 16px 96px;
 }
 
-/* Today / Rentals / Reports — a fixed bottom bar below the desktop
-   breakpoint, a sticky left sidebar above it (see the min-width: 900px
-   block below). One nav, two layouts via CSS, same pattern Modal.jsx
-   already uses for its own mobile/desktop split. */
+/* Today / Rentals / Reports / Cork Board — a fixed bottom bar, mobile
+   only now. Desktop used to mirror this as a sticky left sidebar (one
+   nav, two layouts via CSS, the pattern Modal.jsx still uses for its own
+   mobile/desktop split); it's since moved inline into .task-board-header
+   instead (.header-nav below), reusing these same .task-board-nav-item
+   buttons via a descendant selector rather than a parallel class, so
+   this block is mobile's rendering only — TaskBoard.jsx doesn't even
+   mount <nav className="task-board-nav"> above the 900px breakpoint. */
 .task-board-nav {
   position: fixed;
   left: 0;
@@ -171,51 +175,12 @@
   }
 }
 
+/* No sidebar to seat beside .task-board-content anymore (see .header-nav
+   below) — just a wider centered single column. */
 @media (min-width: 900px) {
   .task-board {
     max-width: 1100px;
-    display: flex;
-    align-items: flex-start;
-    gap: 28px;
     padding: 24px 24px 24px;
-  }
-
-  .task-board-nav {
-    position: sticky;
-    top: 24px;
-    left: auto;
-    right: auto;
-    bottom: auto;
-    flex: none;
-    width: 200px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-    background: none;
-    border-top: none;
-    padding: 0;
-  }
-
-  .task-board-nav-item {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 10px 12px;
-    border: 1px solid transparent;
-    font-size: 14px;
-  }
-
-  .task-board-nav-item-active {
-    background: var(--pill-bg);
-    border-color: var(--border);
-  }
-
-  .task-board-nav-icon {
-    font-size: 18px;
-  }
-
-  .task-board-content {
-    flex: 1;
   }
 
   /* On the narrow mobile column, spacing alone reads fine as a section
@@ -233,7 +198,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  /* Was space-between when .header-actions was the only other item —
+     now that .header-nav sits between the title and .header-actions too,
+     that would center .header-nav in the leftover space instead of
+     letting it sit right after the title. Left-to-right flow instead:
+     title, then nav, adjacent at the start; .header-actions still ends
+     up pinned to the far right on its own (margin-left: auto, below). */
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -241,6 +211,29 @@
 .task-board-header h1 {
   font-size: 22px;
   white-space: nowrap;
+}
+
+.header-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.header-nav .task-board-nav-item {
+  flex: none;
+  flex-direction: row;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  font-size: 14px;
+}
+
+.header-nav .task-board-nav-item-active {
+  background: var(--pill-bg);
+  border-color: var(--border);
+}
+
+.header-nav .task-board-nav-icon {
+  font-size: 16px;
 }
 
 .pull-to-refresh-indicator {
@@ -295,12 +288,13 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  /* Defensive: every tab currently renders something on the header's
-     left side (month nav or a page title — see PAGE_LABELS in
-     TaskBoard.jsx), so .task-board-header's justify-content:
-     space-between already keeps this pinned right on its own. margin-
-     left: auto means it stays right-aligned even if that ever isn't
-     true (a tab added without a PAGE_LABELS entry, say). */
+  /* .task-board-header no longer uses justify-content: space-between
+     (see its own comment — that would center .header-nav in the leftover
+     space instead of keeping it right after the title), so this is what
+     actually pins .header-actions to the far right now: it eats all the
+     row's remaining space itself, regardless of how many items sit
+     before it (title alone, title + nav, or — defensively — nothing at
+     all, if a tab is ever added without header content of its own). */
   margin-left: auto;
 }
 
