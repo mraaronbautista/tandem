@@ -692,14 +692,20 @@
   border-color: transparent;
 }
 
-/* Today tab's Month view mode (MonthView.jsx) — a plain dot per day with
-   tasks, not a mini agenda; deliberately not sharing classes with
-   RentalCalendar's month grid, which encodes booking color/status that
-   has no equivalent concept here. */
+/* Today tab's Month view mode (MonthView.jsx) — the whole point is a
+   bird's-eye view of what's coming up across the month, so each cell
+   previews actual task chips (title + time) rather than a plain dot;
+   deliberately not sharing classes with RentalCalendar's month grid,
+   which encodes booking color/status that has no equivalent concept
+   here. Full width (no max-width cap) and tall cells instead of square
+   ones, since there's real content to fit now. */
 .month-view-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .month-view-weekday {
@@ -707,22 +713,29 @@
   font-size: 11px;
   font-weight: 600;
   opacity: 0.55;
-  padding-bottom: 4px;
+  padding: 8px 0;
+  background: var(--pill-bg);
 }
 
 .month-view-day,
 .month-view-day-empty {
-  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  min-height: 96px;
+  padding: 6px;
   gap: 3px;
   font-size: 13px;
   color: var(--text-h);
+  text-align: left;
   border: none;
-  background: none;
-  border-radius: 8px;
+  /* Collapses into the grid's own 1px border on adjacent cells instead
+     of doubling up — a lightweight border-collapse substitute, since
+     CSS grid has no real equivalent for a plain <div> grid. */
+  outline: 1px solid var(--border);
+  outline-offset: -0.5px;
+  background: var(--card-bg);
+  border-radius: 0;
   cursor: pointer;
   font: inherit;
 }
@@ -732,25 +745,75 @@
   cursor: default;
 }
 
-.month-view-day-today {
+.month-view-day-number {
+  align-self: flex-start;
+  min-width: 20px;
+  padding: 1px 5px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.month-view-day-today .month-view-day-number {
   box-shadow: inset 0 0 0 2px var(--accent);
-  font-weight: 700;
 }
 
 .month-view-day-selected {
   background: var(--pill-bg);
 }
 
-.month-view-day-dot {
-  width: 5px;
-  height: 5px;
+.month-view-day-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.month-view-task-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--pill-bg);
+}
+
+.month-view-task-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--accent);
+}
+
+.month-view-task-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.month-view-task-time {
+  flex: none;
+  font-size: 10px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.month-view-day-more {
+  font-size: 11px;
+  opacity: 0.55;
+  padding: 0 5px;
 }
 
 @media (min-width: 900px) {
-  .month-view-grid {
-    max-width: 480px;
+  .month-view-day,
+  .month-view-day-empty {
+    min-height: 128px;
+    padding: 8px;
   }
 }
 

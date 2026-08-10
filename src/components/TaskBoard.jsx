@@ -106,6 +106,17 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [activeTab, setActiveTab] = useState('today')
   const [viewMode, setViewMode] = useState('day')
 
+  // Week always opens on the calendar week containing today, regardless
+  // of whatever selectedDate happened to be set to (e.g. from browsing
+  // around in Day mode first) — "how does this week's workload look"
+  // means starting from now, not wherever you last left the date strip.
+  // Day/Month don't get the same reset: Day mode's whole point is
+  // picking a specific day, and Month wasn't asked to reset.
+  function handleViewModeClick(key) {
+    if (key === 'week') setSelectedDate(startOfDay(new Date()))
+    setViewMode(key)
+  }
+
   // The quick-actions menu closes as soon as an item is picked (see
   // NewTaskForm), so there's no persistent button left to show a "sent"
   // state on — a quick confirmation alert is the feedback instead.
@@ -341,7 +352,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                     key={m.key}
                     type="button"
                     className={`period-tab${viewMode === m.key ? ' period-tab-active' : ''}`}
-                    onClick={() => setViewMode(m.key)}
+                    onClick={() => handleViewModeClick(m.key)}
                   >
                     {m.label}
                   </button>

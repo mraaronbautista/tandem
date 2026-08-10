@@ -1,4 +1,11 @@
+import { PRIORITY_COLOR } from '../lib/priorityColors'
+
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+// However many chips reliably fit a cell before "+N more" reads better
+// than a cramped fourth line — matches how tall .month-view-day ends up
+// at typical desktop widths.
+const MAX_VISIBLE_TASKS = 3
 
 function pad(n) {
   return String(n).padStart(2, '0')
@@ -12,7 +19,7 @@ function toDateStr(year, month, day) {
 // after the month's last day — same grid-building approach as
 // RentalCalendar.jsx's buildWeeks(), duplicated rather than shared since
 // the two calendars otherwise have nothing in common (bookings vs. task
-// counts, colored bars vs. a plain dot).
+// previews, colored bars vs. task chips).
 function buildWeeks(year, month) {
   const numDays = new Date(year, month + 1, 0).getDate()
   const startWeekday = new Date(year, month, 1).getDay()
@@ -23,11 +30,21 @@ function buildWeeks(year, month) {
   return weeks
 }
 
-// The Month view mode's calendar — a plain dot per day with any tasks,
-// not a mini agenda (that's what Day/Multi-Day/Week are for). Clicking a
-// day both selects it and drops back to Day mode, the standard
-// drill-down pattern: Month is for orienting "what does this month look
-// like," not for reading task titles.
+// The time a task's chip shows — whichever field actually placed it on
+// this day (see groupTasksByDay in tasks.js): completed_at for done
+// tasks, due_date otherwise. Always present, since groupTasksByDay
+// already drops anything with neither.
+function timeLabel(task) {
+  const at = task.status === 'done' ? task.completed_at : task.due_date
+  return new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+// The whole point of Month is a bird's-eye view of what's coming up
+// across the month, not just "which days have anything at all" — so
+// each cell previews actual task chips (title + time, capped at
+// MAX_VISIBLE_TASKS with a "+N more" overflow) rather than a plain dot.
+// Clicking a day (anywhere in its cell, not per-chip) both selects it
+// and drops back to Day mode, the standard drill-down pattern.
 export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelectDay }) {
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -48,12 +65,15 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
           if (day === null) return <div key={`${weekIndex}-${col}`} className="month-view-day-empty" />
 
           const dateStr = toDateStr(year, month, day)
-          const count = tasksByDay.get(dateStr)?.length || 0
+          const dayTasks = tasksByDay.get(dateStr) || []
           const isToday = dateStr === todayStr
           const isSelected = dateStr === selectedStr
           const classes = ['month-view-day']
           if (isToday) classes.push('month-view-day-today')
           if (isSelected) classes.push('month-view-day-selected')
+
+          const visible = dayTasks.slice(0, MAX_VISIBLE_TASKS)
+          const hiddenCount = dayTasks.length - visible.length
 
           return (
             <button
@@ -62,8 +82,20 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
               className={classes.join(' ')}
               onClick={() => onSelectDay(new Date(year, month, day))}
             >
-              <span>{day}</span>
-              {count > 0 && <span className="month-view-day-dot" />}
+              <span className="month-view-day-number">{day}</span>
+
+              {visible.length > 0 && (
+                <div className="month-view-day-tasks">
+                  {visible.map((task) => (
+                    <span key={task.id} className="month-view-task-chip">
+                      <span className="month-view-task-dot" style={{ background: PRIORITY_COLOR[task.priority] }} />
+                      <span className="month-view-task-title">{task.title}</span>
+                      <span className="month-view-task-time">{timeLabel(task)}</span>
+                    </span>
+                  ))}
+                  {hiddenCount > 0 && <span className="month-view-day-more">{hiddenCount} more</span>}
+                </div>
+              )}
             </button>
           )
         }),
