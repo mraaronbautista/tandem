@@ -1719,6 +1719,11 @@ label.new-task-checkbox-label {
 @media (min-width: 900px) {
   .rentals-panel {
     max-width: 560px;
+    /* Capping width alone left the panel stuck against the left edge of
+       .task-board-content with a large empty gap on the right on a wide
+       screen — just as unbalanced as being uncapped. Centering it makes
+       the cap actually read as intentional. */
+    margin: 0 auto;
   }
 }
 
