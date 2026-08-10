@@ -206,6 +206,16 @@
   .task-board-content {
     flex: 1;
   }
+
+  /* On the narrow mobile column, spacing alone reads fine as a section
+     break. The wide desktop content area makes plain spacing look like
+     the sections just trail off, so add a hairline rule between them —
+     skipped on the first section, same reasoning as the margin-top reset
+     above. */
+  .task-list > section:not(:first-child) {
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+  }
 }
 
 .task-board-header {
@@ -1013,6 +1023,46 @@ a.task-submission-file-link:hover {
   color: var(--overdue);
 }
 
+.how-to-guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.how-to-guide-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.how-to-guide-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: none;
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.how-to-guide-items {
+  margin: 0;
+  padding: 10px 16px 12px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 .submission-actions {
   display: flex;
   justify-content: flex-end;
@@ -1529,17 +1579,36 @@ label.new-task-checkbox-label {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
-.rental-unit-select {
+.rental-unit-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
   flex: 1;
   min-width: 140px;
-  padding: 8px 12px;
+}
+
+.rental-unit-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--pill-bg);
   color: var(--text-h);
   font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.rental-unit-tab-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .rental-add-booking {
@@ -1622,6 +1691,53 @@ label.new-task-checkbox-label {
 .rental-month-day-end {
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;
+}
+
+/* On the mobile column .rental-calendar naturally fills the ~320-360px
+   viewport width. On the desktop sidebar layout the tab content area is
+   much wider (see .task-board-content), which stretched the day cells
+   (aspect-ratio: 1) into oversized squares with no real benefit — capping
+   the width here keeps the grid at a comfortable, phone-like cell size. */
+@media (min-width: 900px) {
+  .rental-calendar {
+    max-width: 420px;
+  }
+}
+
+.rental-overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rental-overview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.rental-overview-name {
+  font-weight: 600;
+  color: var(--text-h);
+  margin-right: 4px;
+}
+
+.rental-overview-status {
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.rental-overview-status-occupied {
+  opacity: 1;
+  color: var(--text-h);
+}
+
+.rental-overview-status-vacant {
+  opacity: 0.5;
 }
 
 .rental-financials {
@@ -1966,4 +2082,118 @@ label.new-task-checkbox-label {
 .clarification-answer-button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* Cork Board */
+.cork-board-subtitle {
+  opacity: 0.65;
+  font-size: 13px;
+  margin-top: -6px;
+}
+
+.cork-board-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cork-board-compose textarea {
+  min-height: 70px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 15px;
+}
+
+.cork-board-compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cork-board-share-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.cork-board-compose-actions button[type='submit'] {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cork-board-compose-actions button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cork-board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cork-board-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--card-bg);
+}
+
+.cork-board-item-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 8px;
+}
+
+.cork-board-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.cork-board-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.cork-board-badge-shared {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cork-board-item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cork-board-item-actions button {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font-size: 12px;
+  cursor: pointer;
 }

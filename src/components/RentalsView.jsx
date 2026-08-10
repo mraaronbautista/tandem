@@ -3,11 +3,13 @@ import {
   fetchRentalProperties,
   fetchRentalExpenses,
   fetchRentalBookings,
+  fetchUpcomingRentalBookings,
   fetchSavingsGoals,
   monthRangeStrings,
 } from '../lib/rentals'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
+import RentalOverview from './RentalOverview'
 
 const COMPANY = 'awa'
 const COMPANY_LABEL = 'Awa Rentalz'
@@ -25,6 +27,7 @@ export default function RentalsView({ me }) {
   const [properties, setProperties] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [bookings, setBookings] = useState([])
+  const [upcomingBookings, setUpcomingBookings] = useState([])
   const [goals, setGoals] = useState([])
   const [error, setError] = useState('')
 
@@ -36,6 +39,7 @@ export default function RentalsView({ me }) {
       .then(setExpenses)
       .catch((err) => setError(err.message))
     reloadGoals()
+    reloadUpcoming()
   }, [])
 
   function reloadGoals() {
@@ -49,6 +53,20 @@ export default function RentalsView({ me }) {
     fetchRentalBookings(COMPANY, start, end)
       .then(setBookings)
       .catch((err) => setError(err.message))
+  }
+
+  // Separate from the month-scoped `bookings` above — the Overview tab
+  // needs a unit's real occupied-through date even when it runs past the
+  // currently browsed month.
+  function reloadUpcoming() {
+    fetchUpcomingRentalBookings(COMPANY)
+      .then(setUpcomingBookings)
+      .catch((err) => setError(err.message))
+  }
+
+  function handleBookingsChanged() {
+    reloadBookings()
+    reloadUpcoming()
   }
 
   useEffect(reloadBookings, [monthDate])
@@ -78,42 +96,54 @@ export default function RentalsView({ me }) {
         >
           Financials
         </button>
+        <button
+          type="button"
+          className={`period-tab${view === 'overview' ? ' period-tab-active' : ''}`}
+          onClick={() => setView('overview')}
+        >
+          Overview
+        </button>
       </div>
 
-      <div className="rental-calendar-nav">
-        <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
-          ‹
-        </button>
-        <span className="rental-month-label">{monthLabel}</span>
-        <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
-          ›
-        </button>
-      </div>
+      {view !== 'overview' && (
+        <div className="rental-calendar-nav">
+          <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+            ‹
+          </button>
+          <span className="rental-month-label">{monthLabel}</span>
+          <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+            ›
+          </button>
+        </div>
+      )}
 
       {error && <p className="error">{error}</p>}
 
       {!error && !properties && <p className="loading">Loading…</p>}
 
-      {properties &&
-        (view === 'calendar' ? (
-          <RentalCalendar
-            properties={properties}
-            bookings={bookings}
-            monthDate={monthDate}
-            createdBy={me?.id}
-            onBookingsChanged={reloadBookings}
-          />
-        ) : (
-          <RentalFinancials
-            company={COMPANY}
-            properties={properties}
-            bookings={bookings}
-            expenses={expenses}
-            monthDate={monthDate}
-            goals={goals}
-            onGoalsChanged={reloadGoals}
-          />
-        ))}
+      {properties && view === 'calendar' && (
+        <RentalCalendar
+          properties={properties}
+          bookings={bookings}
+          monthDate={monthDate}
+          createdBy={me?.id}
+          onBookingsChanged={handleBookingsChanged}
+        />
+      )}
+
+      {properties && view === 'financials' && (
+        <RentalFinancials
+          company={COMPANY}
+          properties={properties}
+          bookings={bookings}
+          expenses={expenses}
+          monthDate={monthDate}
+          goals={goals}
+          onGoalsChanged={reloadGoals}
+        />
+      )}
+
+      {properties && view === 'overview' && <RentalOverview properties={properties} bookings={upcomingBookings} />}
     </div>
   )
 }

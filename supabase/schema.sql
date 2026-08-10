@@ -561,3 +561,36 @@ create policy "members can update vault entries"
 create policy "members can delete vault entries"
   on vault_entries for delete
   using (is_member());
+
+-- Cork Board: quick pins with no due date, no timeline — the opposite of
+-- a task, which is deliberately scheduled. This is the one place in the
+-- app where visibility is NOT automatically mutual: `shared` decides
+-- whether the other member can see a given pin at all, not just whether
+-- they can edit it, so the select policy (not just insert/update/delete)
+-- checks it. Only the author can edit or delete their own pin, even once
+-- shared — the other person can see it, not manage it.
+create table cork_notes (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references members (id),
+  body text not null,
+  shared boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table cork_notes enable row level security;
+
+create policy "members can read own or shared cork notes"
+  on cork_notes for select
+  using (is_member() and (shared or author_id = auth.uid()));
+
+create policy "members can insert own cork notes"
+  on cork_notes for insert
+  with check (is_member() and author_id = auth.uid());
+
+create policy "members can update own cork notes"
+  on cork_notes for update
+  using (is_member() and author_id = auth.uid());
+
+create policy "members can delete own cork notes"
+  on cork_notes for delete
+  using (is_member() and author_id = auth.uid());

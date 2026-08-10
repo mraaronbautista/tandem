@@ -29,6 +29,7 @@ import PrioritiesForm from './PrioritiesForm'
 import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
+import CorkBoardView from './CorkBoardView'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -44,6 +45,7 @@ const TABS = [
   { key: 'today', icon: '📋', label: 'Today' },
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
   { key: 'reports', icon: '📄', label: 'Reports' },
+  { key: 'corkboard', icon: '📌', label: 'Cork Board' },
 ]
 
 function startOfDay(d) {
@@ -260,6 +262,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
         {activeTab === 'rentals' && <RentalsView me={me} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
+        {activeTab === 'corkboard' && <CorkBoardView me={me} memberName={memberName} />}
 
         {activeTab === 'today' && (
           <PullToRefresh onRefresh={reload}>

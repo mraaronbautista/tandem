@@ -38,11 +38,14 @@ function buildWeeks(year, month) {
   return weeks
 }
 
-// One unit's calendar at a time (picked via dropdown) rather than all
-// units in one wide grid — a single 7-column month grid fits comfortably
-// on a phone screen with no horizontal scrolling, unlike a multi-unit
-// timeline where every extra unit needs another scrollable row of narrow
-// day cells.
+// One unit's calendar at a time (picked via a row of unit tabs) rather
+// than all units in one wide grid — a single 7-column month grid fits
+// comfortably on a phone screen with no horizontal scrolling, unlike a
+// multi-unit timeline where every extra unit needs another scrollable
+// row of narrow day cells. Tabs instead of a <select> so switching units
+// is a single click on desktop rather than open-scroll-choose; see
+// RentalOverview.jsx for the separate "all units at once" view this
+// doesn't try to replace.
 export default function RentalCalendar({ properties, bookings, monthDate, createdBy, onBookingsChanged }) {
   const [selectedUnitId, setSelectedUnitId] = useState(properties[0]?.id || '')
   const [formOpen, setFormOpen] = useState(false)
@@ -64,25 +67,26 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
   return (
     <div className="rental-calendar">
       <div className="rental-calendar-toolbar">
-        <select
-          className="rental-unit-select"
-          value={selectedUnitId}
-          onChange={(e) => setSelectedUnitId(e.target.value)}
-        >
+        <div className="rental-unit-tabs">
           {properties.map((p) => (
-            <option key={p.id} value={p.id}>
+            <button
+              key={p.id}
+              type="button"
+              className={`rental-unit-tab${p.id === selectedUnitId ? ' rental-unit-tab-active' : ''}`}
+              onClick={() => setSelectedUnitId(p.id)}
+            >
+              <span className="rental-unit-dot" style={{ background: p.color }} />
               {p.unit_name}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
         <button type="button" className="rental-add-booking" onClick={() => setFormOpen(true)}>
           + Add booking
         </button>
       </div>
 
       <div className="rental-unit-header">
-        <span className="rental-unit-dot" style={{ background: unit.color }} />
-        {unit.unit_name} — ${Number(unit.monthly_rent).toLocaleString()}/mo
+        ${Number(unit.monthly_rent).toLocaleString()}/mo
       </div>
 
       <div className="rental-month-grid">

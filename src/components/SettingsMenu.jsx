@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import Modal from './Modal'
+import HowToGuide from './HowToGuide'
 
 // Notifications, theme, and sign out — all "set once, rarely touched
 // again" — folded into one settings sheet instead of three permanent
@@ -13,6 +15,8 @@ export default function SettingsMenu({
   onSignOut,
   onClose,
 }) {
+  const [guideOpen, setGuideOpen] = useState(false)
+
   return (
     <Modal onClose={onClose}>
       <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
@@ -31,6 +35,11 @@ export default function SettingsMenu({
             {theme === 'dark' ? 'Dark mode' : 'Light mode'}
           </button>
 
+          <button type="button" className="settings-menu-item" onClick={() => setGuideOpen(true)}>
+            <span className="settings-menu-icon">❓</span>
+            How to use this app
+          </button>
+
           <button type="button" className="settings-menu-item settings-menu-item-danger" onClick={onSignOut}>
             <span className="settings-menu-icon">🚪</span>
             Sign out
@@ -43,6 +52,8 @@ export default function SettingsMenu({
           </button>
         </div>
       </div>
+
+      {guideOpen && <HowToGuide onClose={() => setGuideOpen(false)} />}
     </Modal>
   )
 }
