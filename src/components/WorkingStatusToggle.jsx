@@ -33,9 +33,9 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
         className={`working-toggle${isWorking ? ' working-toggle-on' : ''}`}
         onClick={handleClick}
         disabled={busy}
-        title={isWorking ? `Working since ${formatSince(me.working_since)} — tap to stop` : 'Start working'}
+        title={isWorking ? `Online since ${formatSince(me.working_since)} — tap to go offline` : 'Go online'}
       >
-        {isWorking ? '🟢 Working' : '⚪ Not working'}
+        {isWorking ? '🟢 Online' : '⚪ Offline'}
       </button>
     )
   }
@@ -44,8 +44,8 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
   if (!aaron?.working_since) return null
 
   return (
-    <span className="working-badge" title={`Working since ${formatSince(aaron.working_since)}`}>
-      🟢 Aaron is working
+    <span className="working-badge" title={`Online since ${formatSince(aaron.working_since)}`}>
+      🟢 Aaron is online
     </span>
   )
 }
