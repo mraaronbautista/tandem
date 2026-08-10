@@ -9,14 +9,16 @@ import { formatDateStr, unitOccupancyStatus } from '../lib/rentals'
 // end still shows its real through-date instead of cutting off at the
 // 30th/31st.
 //
-// Two contexts share this component, both default card-row styling:
-// mobile's Overview tab, and the desktop dashboard's Overview section
-// below the calendar (laid out as a grid there via a CSS override on
-// .rental-overview-list, not a prop here — see .rentals-overview-section
-// in App.css). `selectedUnitId`/`onSelectUnit`, when given, make each
-// row clickable and highlight the active one — primary navigation in the
-// desktop dashboard, a handy bonus on mobile too (priming which unit the
-// Calendar tab opens to next).
+// Two contexts share this component: mobile's Overview tab (its own
+// vertical list) and the desktop dashboard's RentalCalendar toolbar,
+// rendered inline with "+ Add booking" in place of the (hidden)
+// unit-tabs row — a CSS override on .rental-overview-list scoped by an
+// ancestor class handles that layout difference, not a prop here.
+// `selectedUnitId`/`onSelectUnit`, when given, make each row clickable
+// and highlight the active one — in the desktop toolbar this is the only
+// way to switch units now that the plain unit-tabs are hidden there; on
+// mobile it's a handy bonus (priming which unit the Calendar tab opens
+// to next).
 export default function RentalOverview({ properties, bookings, selectedUnitId, onSelectUnit }) {
   if (properties.length === 0) {
     return <p className="task-notes-empty">No units yet.</p>
@@ -33,6 +35,7 @@ export default function RentalOverview({ properties, bookings, selectedUnitId, o
           <>
             <span className="rental-unit-dot" style={{ background: p.color }} />
             <span className="rental-overview-name">{p.unit_name}</span>
+            <span className="rental-overview-price">${Number(p.monthly_rent).toLocaleString()}/mo</span>
             {status.occupied ? (
               <span className="rental-overview-status rental-overview-status-occupied">
                 Occupied through {formatDateStr(status.through)} — {status.guest}

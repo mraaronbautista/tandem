@@ -49,11 +49,12 @@ function buildWeeks(year, month) {
 //
 // selectedUnitId/onSelectUnit are controlled by the caller (not owned
 // here) — RentalsView.jsx's desktop dashboard also drives unit selection
-// from a sidebar list and a prev/next nav row, so a single source of
-// truth has to live above this component. showUnitTabs lets that same
-// desktop dashboard suppress this component's own unit-tabs toolbar
-// (replaced there by that combined nav row) while the mobile tabbed
-// layout keeps it (the default).
+// from a RentalOverview list and a prev/next nav row, so a single source
+// of truth has to live above this component. showUnitTabs lets that same
+// desktop dashboard suppress this component's own unit-tabs toolbar,
+// with unitTabsReplacement rendered in that exact slot instead (the
+// RentalOverview list, in the dashboard's case) — the mobile tabbed
+// layout keeps the plain unit-tabs (both props default accordingly).
 export default function RentalCalendar({
   properties,
   bookings,
@@ -63,6 +64,7 @@ export default function RentalCalendar({
   selectedUnitId,
   onSelectUnit,
   showUnitTabs = true,
+  unitTabsReplacement = null,
 }) {
   const [formOpen, setFormOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
@@ -83,7 +85,7 @@ export default function RentalCalendar({
   return (
     <div className="rental-calendar">
       <div className="rental-calendar-toolbar">
-        {showUnitTabs && (
+        {showUnitTabs ? (
           <div className="rental-unit-tabs">
             {properties.map((p) => (
               <button
@@ -97,6 +99,8 @@ export default function RentalCalendar({
               </button>
             ))}
           </div>
+        ) : (
+          unitTabsReplacement
         )}
         <button type="button" className="rental-add-booking" onClick={() => setFormOpen(true)}>
           + Add booking

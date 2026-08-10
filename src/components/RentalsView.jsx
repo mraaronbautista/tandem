@@ -148,6 +148,11 @@ export default function RentalsView({ me }) {
             </div>
           </div>
 
+          {/* Units render in place of the (hidden) unit-tabs toolbar row,
+              alongside "+ Add booking" — each one already carries most of
+              the context you'd want (status, now also price) and doubles
+              as the way you switch which unit's calendar this is, so a
+              separate section below the grid was redundant with it. */}
           <RentalCalendar
             properties={properties}
             bookings={bookings}
@@ -157,30 +162,19 @@ export default function RentalsView({ me }) {
             selectedUnitId={selectedUnitId}
             onSelectUnit={setSelectedUnitId}
             showUnitTabs={false}
+            unitTabsReplacement={
+              <RentalOverview
+                properties={properties}
+                bookings={upcomingBookings}
+                selectedUnitId={selectedUnitId}
+                onSelectUnit={setSelectedUnitId}
+              />
+            }
           />
-
-          {/* Below the calendar, not its own sidebar column — the tight
-              `compact` treatment was built to look like a continuation of
-              the nav sidebar it used to sit beside; that reasoning goes
-              away once it's not next to one, and cramming it into a
-              narrow column read as cramped. Default (non-compact) card
-              styling instead, laid out as a grid now that it has the
-              calendar's full column width instead of ~220px to work with. */}
-          <div className="rentals-overview-section">
-            <h3>Units</h3>
-            <RentalOverview
-              properties={properties}
-              bookings={upcomingBookings}
-              selectedUnitId={selectedUnitId}
-              onSelectUnit={setSelectedUnitId}
-            />
-          </div>
         </div>
 
         <div className="rentals-financials-col">
-          {selectedUnit && (
-            <div className="rental-unit-header">${Number(selectedUnit.monthly_rent).toLocaleString()}/mo</div>
-          )}
+          <h3 className="task-section-heading">Financials</h3>
           <RentalFinancials
             company={COMPANY}
             properties={properties}

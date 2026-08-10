@@ -1952,35 +1952,14 @@ label.new-task-checkbox-label {
   gap: 12px;
 }
 
-/* Overview, below the calendar in the dashboard's main column — a small
-   heading (nothing implied its purpose here the way sitting next to the
-   nav sidebar used to) above a responsive grid of unit-status cards,
-   using RentalOverview's default (non-compact) card styling since it now
-   has the calendar's full column width to work with instead of a
-   cramped ~220px sidebar. */
-.rentals-overview-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rentals-overview-section h3 {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.6;
-}
-
-.rentals-overview-section .rental-overview-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 8px;
-}
-
 .rental-overview-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* <li> normally still gets a marker box even inside a flex/grid
+     parent — blockification changes layout mode, not marker
+     generation — so this needs to be explicit rather than assumed. */
+  list-style: none;
 }
 
 /* .rental-overview-item is a <button> whenever RentalOverview.jsx gets
@@ -2010,12 +1989,39 @@ label.new-task-checkbox-label {
 .rental-overview-name {
   font-weight: 600;
   color: var(--text-h);
-  margin-right: 4px;
+}
+
+.rental-overview-price {
+  opacity: 0.6;
+  font-size: 12px;
 }
 
 .rental-overview-status {
   opacity: 0.75;
   font-size: 13px;
+}
+
+/* The desktop dashboard's RentalCalendar toolbar — RentalOverview
+   rendered inline with "+ Add booking" in place of the (hidden)
+   .rental-unit-tabs row, instead of its own section below the grid.
+   Horizontal and compact instead of the mobile Overview tab's vertical
+   list of full-width cards, to actually fit that row. */
+.rental-calendar-toolbar .rental-overview-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  flex: 1;
+  gap: 6px;
+}
+
+.rental-calendar-toolbar .rental-overview-item {
+  width: auto;
+  flex: 1 1 200px;
+  padding: 6px 10px;
+}
+
+.rental-calendar-toolbar .rental-overview-status {
+  flex-basis: 100%;
+  font-size: 11px;
 }
 
 .rental-overview-status-occupied {
