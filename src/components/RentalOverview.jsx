@@ -8,17 +8,28 @@ import { formatDateStr, unitOccupancyStatus } from '../lib/rentals'
 // a separate "still relevant" fetch so a unit occupied past this month's
 // end still shows its real through-date instead of cutting off at the
 // 30th/31st.
-export default function RentalOverview({ properties, bookings }) {
+//
+// Two contexts share this component: mobile's Overview tab (default
+// card-row styling) and the desktop dashboard's sidebar unit list
+// (`compact` — tighter spacing, no card border, matching the mockup that
+// drove the dashboard). `selectedUnitId`/`onSelectUnit`, when given,
+// make each row clickable and highlight the active one — primary
+// navigation on the desktop sidebar, a handy bonus on mobile too
+// (priming which unit the Calendar tab opens to next).
+export default function RentalOverview({ properties, bookings, compact = false, selectedUnitId, onSelectUnit }) {
   if (properties.length === 0) {
     return <p className="task-notes-empty">No units yet.</p>
   }
 
   return (
-    <ul className="rental-overview-list">
+    <ul className={`rental-overview-list${compact ? ' rental-overview-list-compact' : ''}`}>
       {properties.map((p) => {
         const status = unitOccupancyStatus(bookings, p.id)
-        return (
-          <li key={p.id} className="rental-overview-item">
+        const itemClasses = ['rental-overview-item']
+        if (p.id === selectedUnitId) itemClasses.push('rental-overview-item-selected')
+
+        const content = (
+          <>
             <span className="rental-unit-dot" style={{ background: p.color }} />
             <span className="rental-overview-name">{p.unit_name}</span>
             {status.occupied ? (
@@ -31,6 +42,18 @@ export default function RentalOverview({ properties, bookings }) {
               </span>
             ) : (
               <span className="rental-overview-status rental-overview-status-vacant">Vacant</span>
+            )}
+          </>
+        )
+
+        return (
+          <li key={p.id}>
+            {onSelectUnit ? (
+              <button type="button" className={itemClasses.join(' ')} onClick={() => onSelectUnit(p.id)}>
+                {content}
+              </button>
+            ) : (
+              <div className={itemClasses.join(' ')}>{content}</div>
             )}
           </li>
         )

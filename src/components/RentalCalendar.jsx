@@ -46,8 +46,24 @@ function buildWeeks(year, month) {
 // is a single click on desktop rather than open-scroll-choose; see
 // RentalOverview.jsx for the separate "all units at once" view this
 // doesn't try to replace.
-export default function RentalCalendar({ properties, bookings, monthDate, createdBy, onBookingsChanged }) {
-  const [selectedUnitId, setSelectedUnitId] = useState(properties[0]?.id || '')
+//
+// selectedUnitId/onSelectUnit are controlled by the caller (not owned
+// here) — RentalsView.jsx's desktop dashboard also drives unit selection
+// from a sidebar list and a prev/next nav row, so a single source of
+// truth has to live above this component. showUnitTabs lets that same
+// desktop dashboard suppress this component's own unit-tabs toolbar
+// (replaced there by that combined nav row) while the mobile tabbed
+// layout keeps it (the default).
+export default function RentalCalendar({
+  properties,
+  bookings,
+  monthDate,
+  createdBy,
+  onBookingsChanged,
+  selectedUnitId,
+  onSelectUnit,
+  showUnitTabs = true,
+}) {
   const [formOpen, setFormOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
 
@@ -67,19 +83,21 @@ export default function RentalCalendar({ properties, bookings, monthDate, create
   return (
     <div className="rental-calendar">
       <div className="rental-calendar-toolbar">
-        <div className="rental-unit-tabs">
-          {properties.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`rental-unit-tab${p.id === selectedUnitId ? ' rental-unit-tab-active' : ''}`}
-              onClick={() => setSelectedUnitId(p.id)}
-            >
-              <span className="rental-unit-dot" style={{ background: p.color }} />
-              {p.unit_name}
-            </button>
-          ))}
-        </div>
+        {showUnitTabs && (
+          <div className="rental-unit-tabs">
+            {properties.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`rental-unit-tab${p.id === selectedUnitId ? ' rental-unit-tab-active' : ''}`}
+                onClick={() => onSelectUnit(p.id)}
+              >
+                <span className="rental-unit-dot" style={{ background: p.color }} />
+                {p.unit_name}
+              </button>
+            ))}
+          </div>
+        )}
         <button type="button" className="rental-add-booking" onClick={() => setFormOpen(true)}>
           + Add booking
         </button>

@@ -7,6 +7,7 @@ import {
   fetchSavingsGoals,
   monthRangeStrings,
 } from '../lib/rentals'
+import { useMediaQuery } from '../lib/useMediaQuery'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
@@ -17,7 +18,15 @@ const COMPANY = 'awa'
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
 // dismiss, you just switch tabs. The page title ("Awa Rentalz") lives in
 // TaskBoard.jsx's shared header now, not here — see PAGE_LABELS.
+//
+// Two genuinely different layouts, not one repositioned via CSS: mobile
+// keeps the original Calendar/Financials/Overview tabs (one panel at a
+// time), desktop is an always-mounted 3-column dashboard (unit list,
+// calendar, financials, all visible together, no tabs) — see
+// useMediaQuery.js for why that split happens in JS here instead of CSS
+// like everywhere else in the app.
 export default function RentalsView({ me }) {
+  const isDesktop = useMediaQuery('(min-width: 900px)')
   const [view, setView] = useState('calendar')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
@@ -30,6 +39,9 @@ export default function RentalsView({ me }) {
   const [upcomingBookings, setUpcomingBookings] = useState([])
   const [goals, setGoals] = useState([])
   const [error, setError] = useState('')
+  // Lifted up from RentalCalendar.jsx so the desktop dashboard's sidebar
+  // list and combined nav row can drive the same selection it does.
+  const [selectedUnitId, setSelectedUnitId] = useState('')
 
   useEffect(() => {
     fetchRentalProperties(COMPANY)
@@ -41,6 +53,12 @@ export default function RentalsView({ me }) {
     reloadGoals()
     reloadUpcoming()
   }, [])
+
+  // Defaults to the first unit once properties actually load — can't be
+  // the useState initializer above since properties starts out null.
+  useEffect(() => {
+    if (properties?.length && !selectedUnitId) setSelectedUnitId(properties[0].id)
+  }, [properties, selectedUnitId])
 
   function reloadGoals() {
     fetchSavingsGoals(COMPANY)
@@ -75,7 +93,99 @@ export default function RentalsView({ me }) {
     setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + delta, 1))
   }
 
+  // Cycles the desktop dashboard's unit nav through `properties` by
+  // index, wrapping at both ends — same "no visible bounds" feel as
+  // shiftMonth above.
+  function shiftUnit(delta) {
+    if (!properties?.length) return
+    const idx = properties.findIndex((p) => p.id === selectedUnitId)
+    const nextIdx = (idx + delta + properties.length) % properties.length
+    setSelectedUnitId(properties[nextIdx].id)
+  }
+
   const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
+  const selectedUnit = properties?.find((p) => p.id === selectedUnitId)
+
+  if (error) {
+    return (
+      <div className="tab-panel">
+        <p className="error">{error}</p>
+      </div>
+    )
+  }
+
+  if (!properties) {
+    return (
+      <div className="tab-panel">
+        <p className="loading">Loading…</p>
+      </div>
+    )
+  }
+
+  if (isDesktop) {
+    return (
+      <div className="rentals-dashboard">
+        <div className="rentals-sidebar">
+          <RentalOverview
+            properties={properties}
+            bookings={upcomingBookings}
+            compact
+            selectedUnitId={selectedUnitId}
+            onSelectUnit={setSelectedUnitId}
+          />
+        </div>
+
+        <div className="rentals-main">
+          <div className="rentals-combined-nav">
+            <div className="month-nav-row">
+              <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+                ‹
+              </button>
+              <span className="month-nav-label">{monthLabel}</span>
+              <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+                ›
+              </button>
+            </div>
+            <div className="month-nav-row">
+              <button type="button" className="icon-button" onClick={() => shiftUnit(-1)} title="Previous unit">
+                ‹
+              </button>
+              <span className="month-nav-label">{selectedUnit?.unit_name}</span>
+              <button type="button" className="icon-button" onClick={() => shiftUnit(1)} title="Next unit">
+                ›
+              </button>
+            </div>
+          </div>
+
+          <RentalCalendar
+            properties={properties}
+            bookings={bookings}
+            monthDate={monthDate}
+            createdBy={me?.id}
+            onBookingsChanged={handleBookingsChanged}
+            selectedUnitId={selectedUnitId}
+            onSelectUnit={setSelectedUnitId}
+            showUnitTabs={false}
+          />
+        </div>
+
+        <div className="rentals-financials-col">
+          {selectedUnit && (
+            <div className="rental-unit-header">${Number(selectedUnit.monthly_rent).toLocaleString()}/mo</div>
+          )}
+          <RentalFinancials
+            company={COMPANY}
+            properties={properties}
+            bookings={bookings}
+            expenses={expenses}
+            monthDate={monthDate}
+            goals={goals}
+            onGoalsChanged={reloadGoals}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="tab-panel">
@@ -115,21 +225,19 @@ export default function RentalsView({ me }) {
         </div>
       )}
 
-      {error && <p className="error">{error}</p>}
-
-      {!error && !properties && <p className="loading">Loading…</p>}
-
-      {properties && view === 'calendar' && (
+      {view === 'calendar' && (
         <RentalCalendar
           properties={properties}
           bookings={bookings}
           monthDate={monthDate}
           createdBy={me?.id}
           onBookingsChanged={handleBookingsChanged}
+          selectedUnitId={selectedUnitId}
+          onSelectUnit={setSelectedUnitId}
         />
       )}
 
-      {properties && view === 'financials' && (
+      {view === 'financials' && (
         <RentalFinancials
           company={COMPANY}
           properties={properties}
@@ -141,7 +249,14 @@ export default function RentalsView({ me }) {
         />
       )}
 
-      {properties && view === 'overview' && <RentalOverview properties={properties} bookings={upcomingBookings} />}
+      {view === 'overview' && (
+        <RentalOverview
+          properties={properties}
+          bookings={upcomingBookings}
+          selectedUnitId={selectedUnitId}
+          onSelectUnit={setSelectedUnitId}
+        />
+      )}
     </div>
   )
 }

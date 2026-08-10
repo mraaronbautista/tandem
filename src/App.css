@@ -1722,6 +1722,29 @@ label.new-task-checkbox-label {
   color: #fff;
 }
 
+/* As small as this can reasonably go — this row only ever renders on
+   mobile now (the desktop dashboard suppresses it entirely via
+   showUnitTabs={false}, replaced there by the sidebar list + combined
+   nav row), so there's no wide-screen case to keep it legible for. */
+@media (max-width: 899px) {
+  .rental-unit-tabs {
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    gap: 4px;
+  }
+
+  .rental-unit-tab {
+    padding: 4px 6px;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .rental-unit-tab .rental-unit-dot {
+    width: 6px;
+    height: 6px;
+    margin-right: 0;
+  }
+}
+
 .rental-add-booking {
   padding: 8px 14px;
   border-radius: 8px;
@@ -1804,17 +1827,52 @@ label.new-task-checkbox-label {
   border-bottom-right-radius: 8px;
 }
 
-/* Capping the whole panel (an earlier attempt) squeezed the unit-tabs
-   toolbar down to the same narrow width as the grid, which pushed the
-   four unit tabs onto two wrapped rows instead of sitting side by side.
-   Capping just the grid instead — like this — lets the toolbar above it
-   use the full desktop content width (room for every unit tab in one
-   row) while still keeping the day cells (aspect-ratio: 1) from
-   stretching into oversized squares. */
-@media (min-width: 900px) {
-  .rental-month-grid {
-    max-width: 420px;
-  }
+/* No desktop max-width override here anymore — that used to fight
+   RentalsView.jsx's single-column layout stretching this grid across the
+   full page width. Now that RentalsView renders a genuine 3-column
+   dashboard at this breakpoint (see .rentals-dashboard below), the
+   middle column's own width already keeps the grid a comfortable size,
+   with no arbitrary flat cap needed. Mobile (below the breakpoint) was
+   never affected by this rule either way. */
+
+/* Rentals desktop dashboard (RentalsView.jsx, only ever rendered once
+   useMediaQuery('(min-width: 900px)') is true — see useMediaQuery.js —
+   so this isn't wrapped in its own media query, the JS gating already
+   handles that). Unit list, calendar, and financials all mounted and
+   visible together, no tab-switching. */
+.rentals-dashboard {
+  display: grid;
+  grid-template-columns: 220px 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.rentals-sidebar {
+  position: sticky;
+  top: 0;
+}
+
+.rentals-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Two independent prev/next .month-nav-row blocks side by side — month
+   on the left, unit on the right — replacing the separate unit-tabs row
+   the mobile layout still uses. */
+.rentals-combined-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.rentals-financials-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .rental-overview-list {
@@ -1823,14 +1881,28 @@ label.new-task-checkbox-label {
   gap: 8px;
 }
 
+/* .rental-overview-item is a <button> whenever RentalOverview.jsx gets
+   an onSelectUnit (both contexts now), a plain <div> otherwise — reset
+   button chrome so either renders identically. */
 .rental-overview-item {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rental-overview-item-selected {
+  border-color: var(--accent);
+  background: var(--pill-bg);
 }
 
 .rental-overview-name {
@@ -1851,6 +1923,28 @@ label.new-task-checkbox-label {
 
 .rental-overview-status-vacant {
   opacity: 0.5;
+}
+
+/* The desktop dashboard's sidebar unit list (RentalOverview compact=true)
+   — no card border so it reads as a continuation of the nav sidebar
+   beside it, tighter spacing, and the status line forced onto its own
+   row (flex-basis: 100%, exploiting the existing flex-wrap on
+   .rental-overview-item) so it sits under the name instead of trying to
+   share the first line with it. */
+.rental-overview-list-compact {
+  gap: 2px;
+}
+
+.rental-overview-list-compact .rental-overview-item {
+  padding: 8px 6px;
+  border: none;
+  border-radius: 8px;
+}
+
+.rental-overview-list-compact .rental-overview-status {
+  flex-basis: 100%;
+  margin-left: 15px;
+  font-size: 12px;
 }
 
 .rental-financials {
