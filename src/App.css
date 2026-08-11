@@ -1279,10 +1279,12 @@ a.task-submission-file-link:hover {
   font-weight: 600;
 }
 
+/* No margin-top here anymore — this now renders inside
+   .clarification-compose-left (see TaskClarifications.jsx's extraActions
+   prop) alongside the Attach button, not as its own block below. */
 .task-row-actions {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
 }
 
 .task-row-actions button {
@@ -2525,6 +2527,17 @@ label.new-task-checkbox-label {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Groups the Attach button with the task's own Edit/Delete (etc.)
+   actions — passed in as extraActions from TaskRow.jsx — on the left
+   side of the row, Send pinned right via the parent's space-between. */
+.clarification-compose-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .clarification-compose-actions .task-submission-upload {

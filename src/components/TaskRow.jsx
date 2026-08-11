@@ -208,22 +208,23 @@ export default function TaskRow({
             memberName={memberName}
             taskTitle={task.title}
             taskId={task.id}
+            extraActions={
+              <div className="task-row-actions">
+                <button onClick={() => setEditing(true)} title="Edit">
+                  <EditIcon width={15} height={15} />
+                </button>
+                {task.status === 'done' && hasSubmission && (
+                  <button onClick={() => setViewSubmissionOpen(true)}>View submission</button>
+                )}
+                {task.status === 'done' && (
+                  <button onClick={() => setSubmitOpen(true)}>{hasSubmission ? 'Edit submission' : 'Submit'}</button>
+                )}
+                <button className="task-delete" onClick={handleDelete}>
+                  Delete
+                </button>
+              </div>
+            }
           />
-
-          <div className="task-row-actions">
-            <button onClick={() => setEditing(true)} title="Edit">
-              <EditIcon width={15} height={15} />
-            </button>
-            {task.status === 'done' && hasSubmission && (
-              <button onClick={() => setViewSubmissionOpen(true)}>View submission</button>
-            )}
-            {task.status === 'done' && (
-              <button onClick={() => setSubmitOpen(true)}>{hasSubmission ? 'Edit submission' : 'Submit'}</button>
-            )}
-            <button className="task-delete" onClick={handleDelete}>
-              Delete
-            </button>
-          </div>
         </div>
       )}
 

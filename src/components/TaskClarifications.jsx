@@ -86,7 +86,15 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
 // onChange (the full updated array), same pattern as ChecklistEditor/
 // ChecklistView. The push notification is best-effort and never blocks
 // saving the message itself.
-export default function TaskClarifications({ clarifications, onChange, meId, memberName, taskTitle, taskId }) {
+export default function TaskClarifications({
+  clarifications,
+  onChange,
+  meId,
+  memberName,
+  taskTitle,
+  taskId,
+  extraActions,
+}) {
   const [questionDraft, setQuestionDraft] = useState('')
   const [questionAttachments, setQuestionAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -187,10 +195,13 @@ export default function TaskClarifications({ clarifications, onChange, meId, mem
           onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
         />
         <div className="clarification-compose-actions">
-          <label className="task-submission-upload" title="Attach files">
-            {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
-            <input type="file" multiple onChange={handleAttachmentUpload} hidden />
-          </label>
+          <div className="clarification-compose-left">
+            <label className="task-submission-upload" title="Attach files">
+              {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
+              <input type="file" multiple onChange={handleAttachmentUpload} hidden />
+            </label>
+            {extraActions}
+          </div>
           <button type="button" className="clarification-ask-button" onClick={handleAsk} disabled={asking || uploading}>
             {asking ? 'Sending…' : 'Send'}
           </button>
