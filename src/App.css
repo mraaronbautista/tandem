@@ -1441,6 +1441,16 @@ a.task-submission-file-link:hover {
   opacity: 0.85;
 }
 
+/* A practical tip, distinct from the plain how-to/context bullets around
+   it — a custom string marker (widely supported, no absolute-position
+   hack needed) swaps the bullet for 💡, and the accent color carries the
+   same weight it already has elsewhere in the app (buttons, the month-
+   nav caret) rather than introducing a new meaning for it here. */
+.how-to-guide-tip {
+  list-style: '💡 ';
+  color: var(--accent);
+}
+
 .submission-actions {
   display: flex;
   flex-wrap: wrap;
