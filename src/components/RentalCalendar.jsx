@@ -73,6 +73,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
 ) {
   const [formOpen, setFormOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
+  const [editingBooking, setEditingBooking] = useState(null)
 
   // Lets the desktop dashboard trigger the add-booking form from a button
   // it renders itself (beside the unit nav), while the form's open/close
@@ -205,14 +206,19 @@ const RentalCalendar = forwardRef(function RentalCalendar(
         )}
       </div>
 
-      {formOpen && (
+      {(formOpen || editingBooking) && (
         <RentalBookingForm
           properties={properties}
           defaultPropertyId={selectedUnitId}
+          booking={editingBooking}
           createdBy={createdBy}
-          onClose={() => setFormOpen(false)}
-          onCreated={() => {
+          onClose={() => {
             setFormOpen(false)
+            setEditingBooking(null)
+          }}
+          onSaved={() => {
+            setFormOpen(false)
+            setEditingBooking(null)
             onBookingsChanged()
           }}
         />
@@ -222,6 +228,10 @@ const RentalCalendar = forwardRef(function RentalCalendar(
         <RentalBookingDetail
           booking={selectedBooking}
           onClose={() => setSelectedBooking(null)}
+          onEdit={(booking) => {
+            setSelectedBooking(null)
+            setEditingBooking(booking)
+          }}
           onDeleted={() => {
             setSelectedBooking(null)
             onBookingsChanged()

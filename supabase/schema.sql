@@ -408,6 +408,10 @@ create table rental_bookings (
   -- Only meaningful when source = 'other' — same "free-text detail for
   -- the miscellaneous option" pattern as tasks.source_note.
   source_note text,
+  -- General free-form notes about the booking (e.g. "requested early
+  -- check-in", "paid via Venmo") — distinct from source_note, which is
+  -- specifically the detail for an 'other' source.
+  notes text,
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
   constraint rental_bookings_dates_check check (check_out >= check_in)

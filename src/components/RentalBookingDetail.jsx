@@ -12,7 +12,7 @@ function formatDateStr(dateStr) {
 // Viewing a booking and deleting it are separate deliberate steps —
 // tapping a highlighted calendar day used to prompt for deletion
 // immediately, which was too easy to trigger by an exploratory tap.
-export default function RentalBookingDetail({ booking, onClose, onDeleted, onConfirmed }) {
+export default function RentalBookingDetail({ booking, onClose, onDeleted, onConfirmed, onEdit }) {
   const [deleting, setDeleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const isPending = booking.status === 'pending'
@@ -57,10 +57,14 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
             {booking.source === 'other' && booking.source_note ? ` — ${booking.source_note}` : ''}
           </p>
         )}
+        {booking.notes && <p className="rental-booking-detail-notes">{booking.notes}</p>}
 
         <div className="submission-actions">
           <button type="button" onClick={onClose}>
             Close
+          </button>
+          <button type="button" onClick={() => onEdit(booking)}>
+            Edit
           </button>
           <button type="button" className="rental-delete-booking" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting…' : isPending ? 'Decline' : 'Delete booking'}

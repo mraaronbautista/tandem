@@ -97,7 +97,9 @@ export async function fetchRentalExpenses(company) {
 export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
   const { data, error } = await supabase
     .from('rental_bookings')
-    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, rental_properties!inner(company)')
+    .select(
+      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, rental_properties!inner(company)',
+    )
     .eq('rental_properties.company', company)
     .lt('check_in', rangeEnd)
     .gte('check_out', rangeStart)
@@ -112,7 +114,9 @@ export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
 export async function fetchUpcomingRentalBookings(company) {
   const { data, error } = await supabase
     .from('rental_bookings')
-    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, rental_properties!inner(company)')
+    .select(
+      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, rental_properties!inner(company)',
+    )
     .eq('rental_properties.company', company)
     .gte('check_out', todayDateStr())
     .order('check_in', { ascending: true })
@@ -178,14 +182,17 @@ export async function deleteSavingsGoal(id) {
   if (error) throw error
 }
 
-async function hasOverlappingBooking(propertyId, checkIn, checkOut) {
-  const { data, error } = await supabase
+// excludeId lets an edit check the dates against every OTHER booking
+// without the booking's own (unchanged) row always matching itself.
+async function hasOverlappingBooking(propertyId, checkIn, checkOut, excludeId) {
+  let query = supabase
     .from('rental_bookings')
     .select('id')
     .eq('property_id', propertyId)
     .lte('check_in', checkOut)
     .gte('check_out', checkIn)
-    .limit(1)
+  if (excludeId) query = query.neq('id', excludeId)
+  const { data, error } = await query.limit(1)
   if (error) throw error
   return data.length > 0
 }
@@ -198,6 +205,7 @@ export async function createRentalBooking({
   status,
   source,
   source_note,
+  notes,
   created_by,
 }) {
   // A unit can't be held for two guests at once — check before inserting
@@ -218,9 +226,36 @@ export async function createRentalBooking({
       status: status || 'confirmed',
       source: source || null,
       source_note: source === 'other' ? source_note || null : null,
+      notes: notes || null,
       created_by,
     })
-    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note')
+    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, notes')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateRentalBooking(
+  id,
+  { property_id, guest_name, check_in, check_out, status, source, source_note, notes },
+) {
+  if (await hasOverlappingBooking(property_id, check_in, check_out, id)) {
+    throw new Error('This unit already has a booking that overlaps those dates.')
+  }
+  const { data, error } = await supabase
+    .from('rental_bookings')
+    .update({
+      property_id,
+      guest_name,
+      check_in,
+      check_out,
+      status: status || 'confirmed',
+      source: source || null,
+      source_note: source === 'other' ? source_note || null : null,
+      notes: notes || null,
+    })
+    .eq('id', id)
+    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, notes')
     .single()
   if (error) throw error
   return data

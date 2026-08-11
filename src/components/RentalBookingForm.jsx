@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createRentalBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
+import { createRentalBooking, updateRentalBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import Modal from './Modal'
 
 // 'unspecified' is display-only (see BOOKING_SOURCE_LABEL) — not a real
@@ -14,14 +14,21 @@ function todayDateString() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-export default function RentalBookingForm({ properties, defaultPropertyId, createdBy, onClose, onCreated }) {
-  const [propertyId, setPropertyId] = useState(defaultPropertyId || properties[0]?.id || '')
-  const [guestName, setGuestName] = useState('')
-  const [checkIn, setCheckIn] = useState(todayDateString())
-  const [checkOut, setCheckOut] = useState('')
-  const [status, setStatus] = useState('confirmed')
-  const [source, setSource] = useState('')
-  const [sourceNote, setSourceNote] = useState('')
+// Doubles as the Add-booking and Edit-booking form — passing an existing
+// `booking` prefills every field and switches the submit path to
+// updateRentalBooking instead of createRentalBooking, same "one form,
+// initialValues decide create vs. edit" pattern TaskForm.jsx already
+// uses. This is also the only way to retroactively set a source (e.g.
+// booking source) on a booking created before that field existed.
+export default function RentalBookingForm({ properties, defaultPropertyId, booking, createdBy, onClose, onSaved }) {
+  const [propertyId, setPropertyId] = useState(booking?.property_id || defaultPropertyId || properties[0]?.id || '')
+  const [guestName, setGuestName] = useState(booking?.guest_name || '')
+  const [checkIn, setCheckIn] = useState(booking?.check_in || todayDateString())
+  const [checkOut, setCheckOut] = useState(booking?.check_out || '')
+  const [status, setStatus] = useState(booking?.status || 'confirmed')
+  const [source, setSource] = useState(booking?.source || '')
+  const [sourceNote, setSourceNote] = useState(booking?.source_note || '')
+  const [notes, setNotes] = useState(booking?.notes || '')
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e) {
@@ -29,7 +36,7 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
     if (!propertyId || !guestName.trim() || !checkIn || !checkOut) return
     setSaving(true)
     try {
-      const booking = await createRentalBooking({
+      const payload = {
         property_id: propertyId,
         guest_name: guestName.trim(),
         check_in: checkIn,
@@ -37,9 +44,12 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
         status,
         source: source || null,
         source_note: sourceNote.trim(),
-        created_by: createdBy,
-      })
-      onCreated(booking)
+        notes: notes.trim(),
+      }
+      const saved = booking
+        ? await updateRentalBooking(booking.id, payload)
+        : await createRentalBooking({ ...payload, created_by: createdBy })
+      onSaved(saved)
     } catch (err) {
       alert(err.message)
     } finally {
@@ -50,7 +60,7 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
   return (
     <Modal onClose={onClose}>
       <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <h2>Add booking</h2>
+        <h2>{booking ? 'Edit booking' : 'Add booking'}</h2>
 
         <label>
           Unit
@@ -115,12 +125,22 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
           </label>
         )}
 
+        <label>
+          Notes
+          <textarea
+            rows={3}
+            placeholder="Anything else worth remembering about this booking…"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </label>
+
         <div className="submission-actions">
           <button type="button" onClick={onClose}>
             Cancel
           </button>
           <button type="submit" className="submission-save" disabled={saving}>
-            {saving ? 'Saving…' : 'Add booking'}
+            {saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}
           </button>
         </div>
       </form>
