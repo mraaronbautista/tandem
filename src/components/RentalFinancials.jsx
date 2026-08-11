@@ -1,4 +1,4 @@
-import { chargeDatesForBooking, monthRangeStrings } from '../lib/rentals'
+import { chargeDatesForBooking, monthRangeStrings, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 
 function money(n) {
@@ -41,6 +41,26 @@ export default function RentalFinancials({ company, properties, bookings, expens
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const surplus = revenue - overhead
 
+  // Which channel is actually landing (billed) tenants, not just which
+  // has the most bookings on file — a pending or never-charged booking
+  // this month tells you nothing about a platform's real return. Grouped
+  // by revenue like the rest of this component, so the "most effective"
+  // platform reads as the top row without needing to eyeball it.
+  const propertyById = new Map(properties.map((p) => [p.id, p]))
+  const sourceBreakdown = new Map()
+  for (const b of confirmedBookings) {
+    const property = propertyById.get(b.property_id)
+    if (!property) continue
+    const count = chargeDatesForBooking(b).filter((d) => d >= start && d < end).length
+    if (count === 0) continue
+    const key = b.source || 'unspecified'
+    const entry = sourceBreakdown.get(key) || { count: 0, revenue: 0 }
+    entry.count += 1
+    entry.revenue += count * Number(property.monthly_rent)
+    sourceBreakdown.set(key, entry)
+  }
+  const sourceRows = [...sourceBreakdown.entries()].sort((a, b) => b[1].revenue - a[1].revenue)
+
   return (
     <div className="rental-financials">
       <RentalSavingsGoal company={company} goals={goals} onGoalsChanged={onGoalsChanged} />
@@ -63,6 +83,20 @@ export default function RentalFinancials({ company, properties, bookings, expens
           <span>{surplus >= 0 ? money(surplus) : `-${money(Math.abs(surplus))}`}</span>
         </div>
       </div>
+
+      {sourceRows.length > 0 && (
+        <>
+          <h3 className="rental-financials-subheading">Bookings by source</h3>
+          {sourceRows.map(([key, { count, revenue: sourceRevenue }]) => (
+            <div key={key} className="rental-financials-row">
+              <span>{BOOKING_SOURCE_LABEL[key]}</span>
+              <span>
+                {count} {count === 1 ? 'booking' : 'bookings'} — {money(sourceRevenue)}
+              </span>
+            </div>
+          ))}
+        </>
+      )}
 
       <h3 className="rental-financials-subheading">Overhead breakdown</h3>
       {expenses.map((e) => (

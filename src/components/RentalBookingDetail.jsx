@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { deleteRentalBooking, confirmRentalBooking } from '../lib/rentals'
+import { deleteRentalBooking, confirmRentalBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import Modal from './Modal'
 
 function formatDateStr(dateStr) {
@@ -51,6 +51,12 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
         <p className="rental-booking-detail-dates">
           {formatDateStr(booking.check_in)} – {formatDateStr(booking.check_out)}
         </p>
+        {booking.source && (
+          <p className="rental-booking-detail-source">
+            Source: {BOOKING_SOURCE_LABEL[booking.source]}
+            {booking.source === 'other' && booking.source_note ? ` — ${booking.source_note}` : ''}
+          </p>
+        )}
 
         <div className="submission-actions">
           <button type="button" onClick={onClose}>

@@ -1,5 +1,18 @@
 import { supabase } from './supabaseClient'
 
+// Display labels for rental_bookings.source — 'unspecified' isn't a real
+// enum value, it's the fallback for bookings that predate this column or
+// simply never had a source set.
+export const BOOKING_SOURCE_LABEL = {
+  airbnb: 'Airbnb',
+  furnished_finder: 'Furnished Finder',
+  rotating_room: 'RotatingRoom',
+  zillow: 'Zillow',
+  referral: 'Referral',
+  other: 'Other',
+  unspecified: 'Not set',
+}
+
 function pad(n) {
   return String(n).padStart(2, '0')
 }
@@ -84,7 +97,7 @@ export async function fetchRentalExpenses(company) {
 export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
   const { data, error } = await supabase
     .from('rental_bookings')
-    .select('id, property_id, guest_name, check_in, check_out, status, rental_properties!inner(company)')
+    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, rental_properties!inner(company)')
     .eq('rental_properties.company', company)
     .lt('check_in', rangeEnd)
     .gte('check_out', rangeStart)
@@ -99,7 +112,7 @@ export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
 export async function fetchUpcomingRentalBookings(company) {
   const { data, error } = await supabase
     .from('rental_bookings')
-    .select('id, property_id, guest_name, check_in, check_out, status, rental_properties!inner(company)')
+    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, rental_properties!inner(company)')
     .eq('rental_properties.company', company)
     .gte('check_out', todayDateStr())
     .order('check_in', { ascending: true })
@@ -177,7 +190,16 @@ async function hasOverlappingBooking(propertyId, checkIn, checkOut) {
   return data.length > 0
 }
 
-export async function createRentalBooking({ property_id, guest_name, check_in, check_out, status, created_by }) {
+export async function createRentalBooking({
+  property_id,
+  guest_name,
+  check_in,
+  check_out,
+  status,
+  source,
+  source_note,
+  created_by,
+}) {
   // A unit can't be held for two guests at once — check before inserting
   // rather than relying on a DB constraint, so the error message can name
   // the actual problem instead of a generic conflict. A pending request
@@ -188,8 +210,17 @@ export async function createRentalBooking({ property_id, guest_name, check_in, c
   }
   const { data, error } = await supabase
     .from('rental_bookings')
-    .insert({ property_id, guest_name, check_in, check_out, status: status || 'confirmed', created_by })
-    .select('id, property_id, guest_name, check_in, check_out, status')
+    .insert({
+      property_id,
+      guest_name,
+      check_in,
+      check_out,
+      status: status || 'confirmed',
+      source: source || null,
+      source_note: source === 'other' ? source_note || null : null,
+      created_by,
+    })
+    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note')
     .single()
   if (error) throw error
   return data

@@ -368,6 +368,12 @@ create type rental_company as enum ('awa', 'azu');
 -- not yet accepted — still blocks the dates against a double-booking,
 -- but isn't counted as revenue in Financials until confirmed.
 create type rental_booking_status as enum ('pending', 'confirmed');
+-- Where the tenant/guest actually came from — tracked so it's possible
+-- to tell which listing platform is worth the effort. Nullable: optional
+-- at booking time, and existing bookings predate this column entirely.
+create type rental_booking_source as enum (
+  'airbnb', 'furnished_finder', 'rotating_room', 'zillow', 'referral', 'other'
+);
 
 create table rental_properties (
   id uuid primary key default gen_random_uuid(),
@@ -398,6 +404,10 @@ create table rental_bookings (
   -- single-day booking has check_out = check_in.
   check_out date not null,
   status rental_booking_status not null default 'confirmed',
+  source rental_booking_source,
+  -- Only meaningful when source = 'other' — same "free-text detail for
+  -- the miscellaneous option" pattern as tasks.source_note.
+  source_note text,
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
   constraint rental_bookings_dates_check check (check_out >= check_in)

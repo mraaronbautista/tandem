@@ -2483,6 +2483,11 @@ label.new-task-checkbox-label {
   opacity: 0.75;
 }
 
+.rental-booking-detail-source {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
 .submission-actions button.rental-delete-booking {
   background: #dc2626;
   border-color: #dc2626;

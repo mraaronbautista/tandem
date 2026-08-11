@@ -1,6 +1,10 @@
 import { useState } from 'react'
-import { createRentalBooking } from '../lib/rentals'
+import { createRentalBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import Modal from './Modal'
+
+// 'unspecified' is display-only (see BOOKING_SOURCE_LABEL) — not a real
+// choice here, so it's excluded from the picker itself.
+const SOURCE_OPTIONS = Object.entries(BOOKING_SOURCE_LABEL).filter(([value]) => value !== 'unspecified')
 
 // 'YYYY-MM-DD' for today in the browser's own local timezone — matches
 // what the native date input expects.
@@ -16,6 +20,8 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
   const [checkIn, setCheckIn] = useState(todayDateString())
   const [checkOut, setCheckOut] = useState('')
   const [status, setStatus] = useState('confirmed')
+  const [source, setSource] = useState('')
+  const [sourceNote, setSourceNote] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e) {
@@ -29,6 +35,8 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
         check_in: checkIn,
         check_out: checkOut,
         status,
+        source: source || null,
+        source_note: sourceNote.trim(),
         created_by: createdBy,
       })
       onCreated(booking)
@@ -83,6 +91,29 @@ export default function RentalBookingForm({ properties, defaultPropertyId, creat
             <option value="pending">Pending request</option>
           </select>
         </label>
+
+        <label>
+          Source
+          <select value={source} onChange={(e) => setSource(e.target.value)}>
+            <option value="">— Not set —</option>
+            {SOURCE_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {source === 'other' && (
+          <label>
+            Source details
+            <input
+              placeholder="e.g. neighbor referral, Craigslist"
+              value={sourceNote}
+              onChange={(e) => setSourceNote(e.target.value)}
+            />
+          </label>
+        )}
 
         <div className="submission-actions">
           <button type="button" onClick={onClose}>
