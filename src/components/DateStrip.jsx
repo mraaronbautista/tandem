@@ -13,18 +13,20 @@ function isSameDay(a, b) {
 }
 
 // No header of its own — TaskBoard.jsx's persistent month/year header
-// (the "‹ August 2026 ›" row, always visible regardless of view mode)
+// (the "[August 2026 ⌄] ‹›" row, always visible regardless of view mode)
 // already gives the surrounding context, so this is just the day-picker
 // strip on its own.
 //
-// Always the 7 days (Sun-Sat) of the real current week — fixed, not tied
-// to `selectedDate`/whatever's being browsed elsewhere (Month nav, a task
-// landing on a future date, etc.). Picking a day outside this week still
-// works via those other paths (MonthView, the month nav header); this
-// strip just doesn't try to follow along and re-scope itself to match.
+// Shows the 7 days (Sun-Sat) of the week containing `selectedDate`, not
+// necessarily the real current week. This keeps it in sync with the
+// header's ‹/› week-step arrows and with picking a day in
+// DatePickerModal — both of those change `selectedDate`, and the strip
+// re-scopes itself to match so the visible week always reflects what's
+// actually selected. `today` is still tracked separately, only to
+// highlight the current day when it happens to fall in the displayed week.
 export default function DateStrip({ selectedDate, onSelect }) {
   const today = startOfDay(new Date())
-  const days = getWeekDays(today)
+  const days = getWeekDays(selectedDate)
 
   return (
     <div className="date-strip">

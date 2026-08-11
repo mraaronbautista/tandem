@@ -1783,6 +1783,15 @@ label.new-task-checkbox-label {
   opacity: 0.6;
 }
 
+/* Groups the header's ‹/› week-step arrows as one adjacent pair after the
+   label, tighter than .month-nav-row's own 14px gap so they read as a
+   single paired control rather than flanking the label on both sides. */
+.month-nav-arrows {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .date-picker-modal-header {
   display: flex;
   align-items: center;

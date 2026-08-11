@@ -345,9 +345,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <header className="task-board-header">
           {activeTab === 'today' && (
             <div className="month-nav-row">
-              <button type="button" className="icon-button" onClick={() => shiftWeek(-1)} title="Previous week">
-                ‹
-              </button>
               <button
                 type="button"
                 className="month-nav-label month-nav-label-button"
@@ -356,9 +353,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
               >
                 {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '︿' : '﹀'}</span>
               </button>
-              <button type="button" className="icon-button" onClick={() => shiftWeek(1)} title="Next week">
-                ›
-              </button>
+              <div className="month-nav-arrows">
+                <button type="button" className="icon-button" onClick={() => shiftWeek(-1)} title="Previous week">
+                  ‹
+                </button>
+                <button type="button" className="icon-button" onClick={() => shiftWeek(1)} title="Next week">
+                  ›
+                </button>
+              </div>
             </div>
           )}
           {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
