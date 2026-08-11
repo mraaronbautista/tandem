@@ -14,6 +14,21 @@ export const TIMEZONE_OPTIONS = [
 
 export const DEFAULT_TIMEZONE = 'America/New_York'
 
+// The device's own IANA zone, mapped to the matching TIMEZONE_OPTIONS
+// entry if there is one, else DEFAULT_TIMEZONE. Used to seed a new task's
+// due_timezone so a lazily-created task (nobody touched the Time/
+// Timezone fields) lands at "9 AM" for whoever's actually creating it —
+// previously this defaulted to Eastern unconditionally, so a task Aaron
+// created in the Philippines (UTC+8, ~12-13h ahead of Eastern) landed at
+// 9 AM Eastern, which displays as ~9 PM in his own local time. The same
+// bug pushed PrioritiesForm.jsx/CorkBoardView.jsx's "due today 23:59"
+// auto-dates into tomorrow morning for him, defeating the point of that
+// field (so it can go overdue today, like any other task).
+export function detectDefaultTimezone() {
+  const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return TIMEZONE_OPTIONS.some((tz) => tz.value === deviceZone) ? deviceZone : DEFAULT_TIMEZONE
+}
+
 function partsToMap(parts) {
   const map = {}
   for (const p of parts) if (p.type !== 'literal') map[p.type] = p.value

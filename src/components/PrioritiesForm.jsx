@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPriorities, fetchLatestPriorities } from '../lib/priorities'
 import { createTask } from '../lib/tasks'
 import { whoKeyForName } from '../lib/whoLabels'
-import { DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../lib/timezone'
+import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
 import PriorityItemsEditor from './PriorityItemsEditor'
 
@@ -63,15 +63,18 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
       // Day priorities land on today (so an unfinished one can go
       // overdue, same as any other daily task); week/month priorities
       // become All Day tasks — no specific date, they just stick around
-      // until done.
-      const dueDate = period === 'day' ? zonedTimeToUtcIso(todayDateString(), '23:59', DEFAULT_TIMEZONE) : null
+      // until done. Zoned to whoever's actually saving this, not always
+      // Eastern — that mismatch used to push "today 23:59" into tomorrow
+      // morning for Aaron (Philippines, ~12-13h ahead of Eastern).
+      const zone = detectDefaultTimezone()
+      const dueDate = period === 'day' ? zonedTimeToUtcIso(todayDateString(), '23:59', zone) : null
       await Promise.all(
         validItems.map((item) =>
           createTask({
             title: item.text.trim(),
             who: item.who,
             due_date: dueDate,
-            due_timezone: DEFAULT_TIMEZONE,
+            due_timezone: zone,
             created_by: me.id,
           }),
         ),

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
 import { whoKeyForName } from '../lib/whoLabels'
-import { DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../lib/timezone'
+import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
@@ -98,11 +98,15 @@ export default function CorkBoardView({ me, memberName }) {
     if (!me) return
     setPromotingId(note.id)
     try {
+      // Zoned to whoever's actually promoting this, not always Eastern —
+      // that mismatch used to push "today 23:59" into tomorrow morning
+      // for Aaron (Philippines, ~12-13h ahead of Eastern).
+      const zone = detectDefaultTimezone()
       await createTask({
         title: note.body,
         who: whoKeyForName(me.display_name) || 'yours',
-        due_date: zonedTimeToUtcIso(todayDateString(), '23:59', DEFAULT_TIMEZONE),
-        due_timezone: DEFAULT_TIMEZONE,
+        due_date: zonedTimeToUtcIso(todayDateString(), '23:59', zone),
+        due_timezone: zone,
         created_by: me.id,
       })
       setPromoted((prev) => new Set(prev).add(note.id))

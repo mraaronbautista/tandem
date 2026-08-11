@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { WHO_LABEL } from '../lib/whoLabels'
-import { TIMEZONE_OPTIONS, DEFAULT_TIMEZONE, zonedTimeToUtcIso } from '../lib/timezone'
+import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
 import ChecklistEditor from './ChecklistEditor'
 import ScrollSelect from './ScrollSelect'
 
+// due_date/due_time aren't set here — a brand-new task defaults to
+// roughly "now" (see defaultDueDateTime below), computed fresh each time
+// the form actually opens rather than a fixed value baked into this
+// module-level object.
 export const emptyTaskForm = {
   title: '',
   who: 'yours',
   priority: 'med',
-  due_date: '',
-  due_time: '09:00',
-  due_timezone: DEFAULT_TIMEZONE,
+  due_timezone: detectDefaultTimezone(),
   duration_minutes: '',
   source: 'none',
   source_note: '',
@@ -50,12 +52,25 @@ export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value, label }
 })
 
-// "YYYY-MM-DD" for today in the browser's own local timezone — matches
-// what the native date input expects and what's stored in due_date.
-function todayDateString() {
+// A brand-new task's default due date/time — "now," rounded up to the
+// next half-hour mark (matching TIME_OPTIONS' own granularity), rather
+// than an arbitrary fixed hour (previously always 9 AM regardless of
+// when the task was actually created). Rounds up, never down: a default
+// already in the past would make a just-created task read as immediately
+// overdue. Computed together, not as two independent defaults, so
+// rounding up past midnight correctly rolls the date forward too.
+function defaultDueDateTime() {
   const d = new Date()
+  const remainder = d.getMinutes() % 30
+  if (remainder !== 0 || d.getSeconds() > 0 || d.getMilliseconds() > 0) {
+    d.setMinutes(d.getMinutes() + (30 - remainder))
+  }
+  d.setSeconds(0, 0)
   const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  return {
+    due_date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    due_time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  }
 }
 
 function timeToMinutes(t) {
@@ -97,14 +112,20 @@ function buildEndTimeOptions(startTime) {
 export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true }) {
   // source_note/notes are nullable in the database — coalesce to '' so
   // editing a task that never had them doesn't hand a controlled input a
-  // null value.
-  const [form, setForm] = useState({
-    ...emptyTaskForm,
-    ...initialValues,
-    due_date: initialValues?.due_date || todayDateString(),
-    source_note: initialValues?.source_note ?? '',
-    notes: initialValues?.notes ?? '',
-    duration_minutes: initialValues?.duration_minutes != null ? String(initialValues.duration_minutes) : '',
+  // null value. Lazy initializer (not a plain object) so "now" is read
+  // once, when the form actually mounts, rather than recomputed and
+  // discarded on every render.
+  const [form, setForm] = useState(() => {
+    const defaultDateTime = defaultDueDateTime()
+    return {
+      ...emptyTaskForm,
+      ...initialValues,
+      due_date: initialValues?.due_date || defaultDateTime.due_date,
+      due_time: initialValues?.due_time || defaultDateTime.due_time,
+      source_note: initialValues?.source_note ?? '',
+      notes: initialValues?.notes ?? '',
+      duration_minutes: initialValues?.duration_minutes != null ? String(initialValues.duration_minutes) : '',
+    }
   })
   const [saving, setSaving] = useState(false)
   // Distinct from "the date field happens to be blank" — that ambiguity
