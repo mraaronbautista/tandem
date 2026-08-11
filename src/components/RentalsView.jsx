@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   fetchRentalProperties,
   fetchRentalExpenses,
@@ -45,6 +45,10 @@ export default function RentalsView({ me }) {
   // Lifted up from RentalCalendar.jsx so the desktop dashboard's Overview
   // list and combined nav row can drive the same selection it does.
   const [selectedUnitId, setSelectedUnitId] = useState('')
+  // Lets the "+ Add booking" button that lives in the combined nav row
+  // (beside the unit name, not in RentalCalendar's own toolbar on the
+  // desktop dashboard) trigger the form RentalCalendar still owns.
+  const calendarRef = useRef(null)
 
   useEffect(() => {
     fetchRentalProperties(COMPANY)
@@ -147,14 +151,25 @@ export default function RentalsView({ me }) {
               <button type="button" className="icon-button" onClick={() => shiftUnit(1)} title="Next unit">
                 ›
               </button>
+              <button
+                type="button"
+                className="rental-add-booking"
+                onClick={() => calendarRef.current?.openAddBooking()}
+              >
+                + Add booking
+              </button>
             </div>
           </div>
 
-          {/* A subtle one-line summary renders in place of the (hidden)
-              unit-tabs toolbar row, alongside "+ Add booking" — unit
-              switching already happens via the ‹ Unit › nav above, so this
-              is read-only status text, not another set of buttons. */}
+          {/* A subtle per-unit status list renders in place of the
+              (hidden) unit-tabs toolbar row — unit switching already
+              happens via the ‹ Unit › nav above, so this is read-only
+              status text, not another set of buttons. The bold $/mo unit
+              header and the toolbar's own "+ Add booking" are both
+              suppressed here too — this list already shows each unit's
+              price, and the button moved up beside the unit nav. */}
           <RentalCalendar
+            ref={calendarRef}
             properties={properties}
             bookings={bookings}
             monthDate={monthDate}
@@ -163,9 +178,11 @@ export default function RentalsView({ me }) {
             selectedUnitId={selectedUnitId}
             onSelectUnit={setSelectedUnitId}
             showUnitTabs={false}
+            showAddBooking={false}
+            showUnitHeader={false}
             unitTabsReplacement={
               <p className="rentals-units-summary">
-                {properties.map((p, i) => {
+                {properties.map((p) => {
                   const status = unitOccupancyStatus(upcomingBookings, p.id)
                   const statusText = status.occupied
                     ? `Occupied through ${formatDateStr(status.through)} — ${status.guest}`
@@ -176,7 +193,6 @@ export default function RentalsView({ me }) {
                     <span key={p.id} className="rentals-units-summary-item">
                       <span className="rental-unit-dot" style={{ background: p.color }} />
                       {p.unit_name} ${Number(p.monthly_rent).toLocaleString()}/mo: {statusText}
-                      {i < properties.length - 1 ? <span className="rentals-units-summary-sep"> | </span> : null}
                     </span>
                   )
                 })}

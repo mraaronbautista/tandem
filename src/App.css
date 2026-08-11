@@ -2002,34 +2002,29 @@ label.new-task-checkbox-label {
 }
 
 /* The desktop dashboard's RentalCalendar toolbar — a plain, muted
-   status line rendered inline with "+ Add booking" in place of the
-   (hidden) .rental-unit-tabs row (unit switching already happens via
-   the ‹ Unit › nav above, so this is read-only text, not more buttons).
-   flex-basis: 100% claims the whole toolbar row, same reasoning as
-   .rental-unit-tabs above, so "+ Add booking" drops to its own line. */
+   status line (one unit per row) rendered in place of the (hidden)
+   .rental-unit-tabs row — "+ Add booking" moved up beside the unit nav,
+   so this no longer shares the row with it. flex-basis: 100% still
+   claims the whole toolbar width, same reasoning as .rental-unit-tabs
+   above. */
 .rentals-units-summary {
   flex-basis: 100%;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 4px;
   font-size: 12px;
   opacity: 0.7;
 }
 
 .rentals-units-summary-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
 }
 
 .rentals-units-summary-item .rental-unit-dot {
   width: 7px;
   height: 7px;
-}
-
-.rentals-units-summary-sep {
-  opacity: 0.5;
-  margin: 0 2px;
+  flex-shrink: 0;
 }
 
 .rental-overview-status-occupied {

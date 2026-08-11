@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import RentalBookingForm from './RentalBookingForm'
 import RentalBookingDetail from './RentalBookingDetail'
 
@@ -55,19 +55,30 @@ function buildWeeks(year, month) {
 // with unitTabsReplacement rendered in that exact slot instead (the
 // RentalOverview list, in the dashboard's case) — the mobile tabbed
 // layout keeps the plain unit-tabs (both props default accordingly).
-export default function RentalCalendar({
-  properties,
-  bookings,
-  monthDate,
-  createdBy,
-  onBookingsChanged,
-  selectedUnitId,
-  onSelectUnit,
-  showUnitTabs = true,
-  unitTabsReplacement = null,
-}) {
+const RentalCalendar = forwardRef(function RentalCalendar(
+  {
+    properties,
+    bookings,
+    monthDate,
+    createdBy,
+    onBookingsChanged,
+    selectedUnitId,
+    onSelectUnit,
+    showUnitTabs = true,
+    unitTabsReplacement = null,
+    showAddBooking = true,
+    showUnitHeader = true,
+  },
+  ref,
+) {
   const [formOpen, setFormOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
+
+  // Lets the desktop dashboard trigger the add-booking form from a button
+  // it renders itself (beside the unit nav), while the form's open/close
+  // state still lives here — same "controlled selection, owned state"
+  // split the rest of this component already uses for selectedUnitId.
+  useImperativeHandle(ref, () => ({ openAddBooking: () => setFormOpen(true) }))
 
   const unit = properties.find((p) => p.id === selectedUnitId) || properties[0]
   const unitBookings = unit ? bookings.filter((b) => b.property_id === unit.id) : []
@@ -102,14 +113,18 @@ export default function RentalCalendar({
         ) : (
           unitTabsReplacement
         )}
-        <button type="button" className="rental-add-booking" onClick={() => setFormOpen(true)}>
-          + Add booking
-        </button>
+        {showAddBooking && (
+          <button type="button" className="rental-add-booking" onClick={() => setFormOpen(true)}>
+            + Add booking
+          </button>
+        )}
       </div>
 
-      <div className="rental-unit-header">
-        ${Number(unit.monthly_rent).toLocaleString()}/mo
-      </div>
+      {showUnitHeader && (
+        <div className="rental-unit-header">
+          ${Number(unit.monthly_rent).toLocaleString()}/mo
+        </div>
+      )}
 
       <div className="rental-month-grid">
         {WEEKDAY_LABELS.map((label) => (
@@ -219,4 +234,6 @@ export default function RentalCalendar({
       )}
     </div>
   )
-}
+})
+
+export default RentalCalendar
