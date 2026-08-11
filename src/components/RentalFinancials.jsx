@@ -27,6 +27,10 @@ export default function RentalFinancials({
 }) {
   const [expenseFormOpen, setExpenseFormOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
+  // Open by default — collapsing is for once the Financials column gets
+  // long, not to hide this from a first-time view.
+  const [sourceOpen, setSourceOpen] = useState(true)
+  const [overheadOpen, setOverheadOpen] = useState(true)
 
   function openNewExpense() {
     setEditingExpense(null)
@@ -110,28 +114,52 @@ export default function RentalFinancials({
 
       {sourceRows.length > 0 && (
         <>
-          <h3 className="rental-financials-subheading">Bookings by source</h3>
-          {sourceRows.map(([key, { count, revenue: sourceRevenue }]) => (
-            <div key={key} className="rental-financials-row">
-              <span>{BOOKING_SOURCE_LABEL[key]}</span>
-              <span>
-                {count} {count === 1 ? 'booking' : 'bookings'} — {money(sourceRevenue)}
-              </span>
-            </div>
-          ))}
+          <button
+            type="button"
+            className="rental-financials-subheading rental-financials-subheading-toggle"
+            onClick={() => setSourceOpen((v) => !v)}
+          >
+            Bookings by source
+            <span className="rental-financials-subheading-chevron">{sourceOpen ? '▾' : '▸'}</span>
+          </button>
+          {sourceOpen &&
+            sourceRows.map(([key, { count, revenue: sourceRevenue }]) => (
+              <div key={key} className="rental-financials-row">
+                <span>{BOOKING_SOURCE_LABEL[key]}</span>
+                <span>
+                  {count} {count === 1 ? 'booking' : 'bookings'} — {money(sourceRevenue)}
+                </span>
+              </div>
+            ))}
         </>
       )}
 
-      <h3 className="rental-financials-subheading">Overhead breakdown</h3>
-      {expenses.map((e) => (
-        <button type="button" key={e.id} className="rental-expense-row rental-expense-row-editable" onClick={() => openEditExpense(e)}>
-          <span>{e.label}</span>
-          <span>{money(e.amount)}</span>
-        </button>
-      ))}
-      <button type="button" className="rental-add-booking" onClick={openNewExpense}>
-        + Add overhead
+      <button
+        type="button"
+        className="rental-financials-subheading rental-financials-subheading-toggle"
+        onClick={() => setOverheadOpen((v) => !v)}
+      >
+        Overhead breakdown
+        <span className="rental-financials-subheading-chevron">{overheadOpen ? '▾' : '▸'}</span>
       </button>
+      {overheadOpen && (
+        <>
+          {expenses.map((e) => (
+            <button
+              type="button"
+              key={e.id}
+              className="rental-expense-row rental-expense-row-editable"
+              onClick={() => openEditExpense(e)}
+            >
+              <span>{e.label}</span>
+              <span>{money(e.amount)}</span>
+            </button>
+          ))}
+          <button type="button" className="rental-add-booking" onClick={openNewExpense}>
+            + Add overhead
+          </button>
+        </>
+      )}
 
       {expenseFormOpen && (
         <RentalExpenseForm

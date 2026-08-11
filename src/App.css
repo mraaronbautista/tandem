@@ -2510,6 +2510,25 @@ label.new-task-checkbox-label {
   margin: 4px 0 -4px;
 }
 
+/* "Bookings by source"/"Overhead breakdown" — a <button> (collapsible)
+   rather than the plain <h3> "Units" still uses — reset chrome and lay
+   the chevron out on the same line as the title. */
+.rental-financials-subheading-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rental-financials-subheading-chevron {
+  font-size: 11px;
+}
+
 .rental-expense-row,
 .rental-unit-status-row {
   display: flex;
