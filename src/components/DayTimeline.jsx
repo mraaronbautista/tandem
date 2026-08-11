@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { isAllDayTask } from '../lib/tasks'
+import { isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import AllDayRow from './AllDayRow'
@@ -10,15 +10,17 @@ const PX_PER_MINUTE = 1.2
 // not what getOverlappingTaskIds uses to decide the "⚠ Overlap" badge.
 const POINT_TASK_MINUTES = 30
 const MIN_BLOCK_HEIGHT = 34
-// Half an hour of breathing room before the first task / after the last,
-// so a block isn't flush against the timeline's own top/bottom edge.
-const PAD_MINUTES = 30
-
-function roundDownToHour(date) {
-  const d = new Date(date)
-  d.setMinutes(0, 0, 0)
-  return d
-}
+// Breathing room added around each busy window (see buildWindows below)
+// so a block isn't flush against the window's own top/bottom edge.
+const PAD_MINUTES = 20
+// A real gap between tasks shorter than this still renders at the normal
+// proportional scale (a 20-40min gap between two tasks is normal daily
+// texture, not something worth collapsing). Anything longer collapses
+// into a fixed-height marker instead — otherwise a single early-morning
+// task and a single evening one would force a mostly-empty multi-hour
+// scroll between them, burying whatever's on the other side of the gap.
+const GAP_THRESHOLD_MINUTES = 90
+const GAP_MARKER_HEIGHT = 30
 
 function roundUpToHour(date) {
   const d = new Date(date)
@@ -71,6 +73,25 @@ function assignColumns(items) {
   return result
 }
 
+// Merges task intervals into "busy windows" — any two tasks (or an
+// already-merged window and the next task) less than GAP_THRESHOLD_
+// MINUTES apart join the same window; anything further apart starts a
+// new one. What's left between windows is exactly the gaps worth
+// collapsing.
+function buildWindows(items) {
+  const sorted = [...items].sort((a, b) => a.start - b.start)
+  const windows = []
+  for (const item of sorted) {
+    const last = windows[windows.length - 1]
+    if (last && (item.start.getTime() - last.end.getTime()) / 60000 <= GAP_THRESHOLD_MINUTES) {
+      if (item.end > last.end) last.end = item.end
+    } else {
+      windows.push({ start: item.start, end: item.end })
+    }
+  }
+  return windows
+}
+
 // Day mode's task list, drawn as a real time-scaled timeline rather than
 // a flat stack of rows (see TimelineRow.jsx, still used for Overdue and
 // for Week mode's day-sections) — tasks are positioned by actual start
@@ -86,11 +107,14 @@ function assignColumns(items) {
 // page's actual All Day section, just a different subset of tasks: these
 // still have a real due_date, All Day's don't).
 //
-// Auto-fits the scale to this day's own earliest start / latest end
-// (rounded out to the hour, plus half an hour of padding) rather than a
-// fixed midnight-to-midnight axis — a typical daytime-only schedule
-// would otherwise be a small cluster of blocks lost in a mostly-empty
-// 24-hour column.
+// The scale isn't one continuous line from the first task to the last —
+// long empty stretches (see GAP_THRESHOLD_MINUTES) collapse into a fixed-
+// height "X gap" marker instead of taking up their real proportional
+// height, which otherwise buried a later task at the bottom of a long,
+// mostly-empty scroll whenever the day had a big hole in it (e.g. one
+// task at 12:15 AM and the next at 11 PM). Busy stretches still lay out
+// at the normal per-minute scale; only the empty space between them
+// compresses.
 //
 // Tapping a block opens the peek modal (onSelect) rather than expanding
 // details inline the way TaskRow normally does — a block's height is
@@ -109,29 +133,60 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
       return { task, start, end }
     })
 
-    const earliestStart = new Date(Math.min(...items.map((i) => i.start.getTime())))
-    const latestEnd = new Date(Math.max(...items.map((i) => i.end.getTime())))
-    const scaleStart = roundDownToHour(new Date(earliestStart.getTime() - PAD_MINUTES * 60000))
-    const scaleEnd = roundUpToHour(new Date(latestEnd.getTime() + PAD_MINUTES * 60000))
-    const totalMinutes = (scaleEnd.getTime() - scaleStart.getTime()) / 60000
+    // Windows merge based on the tasks' own real start/end times, before
+    // any padding is added — padding is cosmetic and shouldn't influence
+    // whether two tasks count as "close together."
+    const windows = buildWindows(items).map((w) => ({
+      start: new Date(w.start.getTime() - PAD_MINUTES * 60000),
+      end: new Date(w.end.getTime() + PAD_MINUTES * 60000),
+    }))
+
+    // Lays out windows and the collapsed-gap markers between them along
+    // one pixel axis, then timeToPx maps any real Date within a window
+    // back to its position on that axis — every task's start/end always
+    // falls inside some window since windows were built from exactly
+    // those times, so this never needs a fallback case.
+    let cursor = 0
+    const windowLayouts = []
+    const gapMarkers = []
+    windows.forEach((w, i) => {
+      const durationMin = (w.end.getTime() - w.start.getTime()) / 60000
+      windowLayouts.push({ start: w.start, end: w.end, pxStart: cursor })
+      cursor += durationMin * PX_PER_MINUTE
+
+      const next = windows[i + 1]
+      if (next) {
+        const gapMinutes = (next.start.getTime() - w.end.getTime()) / 60000
+        if (gapMinutes > 0) {
+          gapMarkers.push({ top: cursor, minutes: gapMinutes })
+          cursor += GAP_MARKER_HEIGHT
+        }
+      }
+    })
+    const totalHeight = cursor
+
+    function timeToPx(date) {
+      const t = date.getTime()
+      const w = windowLayouts.find((win) => t >= win.start.getTime() && t <= win.end.getTime())
+      return w.pxStart + ((t - w.start.getTime()) / 60000) * PX_PER_MINUTE
+    }
 
     const positioned = assignColumns(items).map(({ task, start, end, col, totalCols }) => ({
       task,
       col,
       totalCols,
-      top: ((start.getTime() - scaleStart.getTime()) / 60000) * PX_PER_MINUTE,
-      height: Math.max(MIN_BLOCK_HEIGHT, ((end.getTime() - start.getTime()) / 60000) * PX_PER_MINUTE),
+      top: timeToPx(start),
+      height: Math.max(MIN_BLOCK_HEIGHT, timeToPx(end) - timeToPx(start)),
     }))
 
     const hourMarks = []
-    for (let m = 0; m <= totalMinutes; m += 60) {
-      hourMarks.push({
-        top: m * PX_PER_MINUTE,
-        label: new Date(scaleStart.getTime() + m * 60000).toLocaleTimeString([], { hour: 'numeric' }),
-      })
+    for (const w of windowLayouts) {
+      for (let h = roundUpToHour(w.start); h <= w.end; h = new Date(h.getTime() + 60 * 60000)) {
+        hourMarks.push({ top: timeToPx(h), label: h.toLocaleTimeString([], { hour: 'numeric' }) })
+      }
     }
 
-    return { positioned, hourMarks, height: totalMinutes * PX_PER_MINUTE }
+    return { positioned, hourMarks, gapMarkers, height: totalHeight }
   }, [timed])
 
   return (
@@ -151,6 +206,14 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
           <div className="day-timeline-track">
             {layout.hourMarks.map((h) => (
               <span key={h.top} className="day-timeline-hour-line" style={{ top: h.top }} />
+            ))}
+
+            {layout.gapMarkers.map((g) => (
+              <div key={g.top} className="day-timeline-gap" style={{ top: g.top, height: GAP_MARKER_HEIGHT }}>
+                <span className="day-timeline-gap-line" />
+                <span className="day-timeline-gap-label">{formatDuration(Math.round(g.minutes))} gap</span>
+                <span className="day-timeline-gap-line" />
+              </div>
             ))}
 
             {layout.positioned.map(({ task, top, height, col, totalCols }) => {

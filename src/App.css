@@ -625,6 +625,32 @@
   background: var(--border);
 }
 
+/* A collapsed empty stretch (see GAP_THRESHOLD_MINUTES in
+   DayTimeline.jsx) — a fixed-height marker instead of the gap's real
+   proportional height, so a big hole in the day doesn't bury whatever
+   comes after it at the bottom of a long empty scroll. */
+.day-timeline-gap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-timeline-gap-line {
+  flex: 1;
+  height: 0;
+  border-top: 1px dashed var(--border);
+}
+
+.day-timeline-gap-label {
+  flex: none;
+  font-size: 11px;
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
 .day-timeline-block {
   position: absolute;
   box-sizing: border-box;
