@@ -4,6 +4,7 @@ import { PRIORITY_COLOR } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
+import { EditIcon, PaperclipIcon } from './icons'
 import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -210,7 +211,9 @@ export default function TaskRow({
           />
 
           <div className="task-row-actions">
-            <button onClick={() => setEditing(true)}>Edit</button>
+            <button onClick={() => setEditing(true)} title="Edit">
+              <EditIcon width={15} height={15} />
+            </button>
             {task.status === 'done' && hasSubmission && (
               <button onClick={() => setViewSubmissionOpen(true)}>View submission</button>
             )}
@@ -312,8 +315,8 @@ export default function TaskRow({
                 </div>
               )}
 
-              <label className="task-submission-upload">
-                {uploading ? 'Uploading…' : '+ Attach files'}
+              <label className="task-submission-upload" title="Attach files">
+                {uploading ? 'Uploading…' : <PaperclipIcon width={16} height={16} />}
                 <input type="file" multiple onChange={handleAttachmentUpload} hidden />
               </label>
             </div>

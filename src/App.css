@@ -1120,7 +1120,13 @@ a.task-submission-file-link:hover {
 }
 
 .task-submission-upload {
-  display: inline-block;
+  /* inline-flex + centering rather than inline-block — the idle state is
+     now just an icon (see PaperclipIcon in icons.jsx), and an inline SVG
+     otherwise sits on the text baseline with a few px of descender gap
+     below it instead of actually centering in the padded box. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   align-self: flex-start;
   margin-top: 4px;
   padding: 8px 14px;

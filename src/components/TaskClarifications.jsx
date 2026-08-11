@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { sendClarificationAsked, sendClarificationAnswered } from '../lib/manualNotify'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
+import { PaperclipIcon } from './icons'
 
 // Shared between a not-yet-sent draft (has onRemove, so each attachment
 // gets a ✕ to back out of before sending) and an already-sent message
@@ -106,8 +107,8 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
         onRemove={(i) => setAnswerAttachments((prev) => prev.filter((_, idx) => idx !== i))}
       />
       <div className="clarification-compose-actions">
-        <label className="task-submission-upload">
-          {uploading ? 'Uploading…' : '+ Attach files'}
+        <label className="task-submission-upload" title="Attach files">
+          {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
           <input type="file" multiple onChange={handleAttachmentUpload} hidden />
         </label>
         <button
@@ -231,8 +232,8 @@ export default function TaskClarifications({ clarifications, onChange, meId, mem
           onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
         />
         <div className="clarification-compose-actions">
-          <label className="task-submission-upload">
-            {uploading ? 'Uploading…' : '+ Attach files'}
+          <label className="task-submission-upload" title="Attach files">
+            {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
             <input type="file" multiple onChange={handleAttachmentUpload} hidden />
           </label>
           <button type="button" className="clarification-ask-button" onClick={handleAsk} disabled={asking || uploading}>
