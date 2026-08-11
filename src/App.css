@@ -300,6 +300,15 @@
   gap: 12px;
 }
 
+/* Tightened alongside the .month-nav-row trims below — the header's two
+   halves were overflowing onto separate lines on narrow phones, and this
+   side needs to give up a little width too, not just the nav side. */
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+}
+
 .working-toggle {
   padding: 6px 12px;
   border-radius: 999px;
@@ -1806,6 +1815,37 @@ label.new-task-checkbox-label {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* On a narrow phone, the header row's two halves — "August 2026 ⌄ ‹›" on
+   the left, the working-status badge + settings gear on the right — no
+   longer fit on one line together, so .task-board-header's flex-wrap
+   drops the whole right half to its own row. .month-nav-label's fixed
+   150px min-width and the full-size 32px icon-buttons were both sized for
+   the old flanking ‹ [label] › layout / desktop, and neither actually
+   needs to be that wide now: the label's min-width existed to keep
+   arrows from shifting when they sat on both sides of it (no longer true,
+   they're grouped after it), and the arrows themselves read fine smaller.
+   Trimming both, plus the row's own gap, reclaims enough width to keep
+   the header on one line on most phones. */
+@media (max-width: 480px) {
+  .month-nav-row {
+    gap: 10px;
+  }
+
+  .month-nav-label {
+    min-width: 0;
+  }
+
+  .month-nav-arrows {
+    gap: 4px;
+  }
+
+  .month-nav-arrows .icon-button {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
 }
 
 .date-picker-modal-header {
