@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { getWeekDays } from '../lib/tasks'
 
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -16,32 +16,23 @@ function isSameDay(a, b) {
 // (the "‹ August 2026 ›" row, always visible regardless of view mode)
 // already gives the surrounding context, so this is just the day-picker
 // strip on its own.
+//
+// Always the 7 days (Sun-Sat) of the week containing `selectedDate` —
+// same getWeekDays() Week mode already uses, so the strip and the Week
+// list never disagree about which week "current" means. This replaces an
+// earlier version that scrolled through a much longer fixed window of
+// days centered on today: since the days shown here track the selection
+// rather than a hardcoded window around today, jumping selectedDate
+// forward (e.g. picking a day in MonthView, or TaskBoard.jsx navigating
+// here right after creating a future-dated task) brings that day's whole
+// week into view automatically, no manual scrolling required to find it.
 export default function DateStrip({ selectedDate, onSelect }) {
-  const scrollerRef = useRef(null)
   const today = startOfDay(new Date())
-
-  // A generous scrollable window — a month of history to browse back
-  // through, a full year ahead to plan against (not truly endless, but
-  // far enough out that hitting the edge scrolling forward isn't a
-  // realistic concern for a two-person household planner).
-  const days = []
-  for (let i = -30; i <= 365; i++) {
-    const d = new Date(today)
-    d.setDate(d.getDate() + i)
-    days.push(d)
-  }
-
-  // Anchors on today, not whatever's selected — the strip should always
-  // open with today at the left edge (ready to scroll forward into the
-  // year ahead) rather than centering around a selection that may be
-  // days away, which used to leave today off-screen.
-  useEffect(() => {
-    scrollerRef.current?.querySelector('.date-strip-day-today')?.scrollIntoView({ inline: 'start', block: 'nearest' })
-  }, [])
+  const days = getWeekDays(selectedDate)
 
   return (
     <div className="date-strip">
-      <div className="date-strip-scroller" ref={scrollerRef}>
+      <div className="date-strip-scroller">
         {days.map((d) => {
           const selected = isSameDay(d, selectedDate)
           const isToday = isSameDay(d, today)

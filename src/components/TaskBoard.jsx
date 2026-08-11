@@ -260,9 +260,21 @@ export default function TaskBoard({ theme, toggleTheme }) {
     if (peekTaskId && !tasks.find((t) => t.id === peekTaskId)) setPeekTaskId(null)
   }, [tasks, peekTaskId])
 
+  // Navigates to wherever the new task actually landed — otherwise a
+  // future-dated task (e.g. added while browsing Rentals, or just further
+  // out than whatever day/week is currently shown) saves successfully but
+  // never becomes visible anywhere without the person hunting it down
+  // manually via Month view. All Day tasks don't need the date/viewMode
+  // jump (that bucket shows regardless of selectedDate) but still land on
+  // the Today tab so the task is at least on-screen.
   async function handleCreate(task) {
     const created = await createTask({ ...task, created_by: session.user.id })
     setTasks((prev) => [created, ...prev])
+    setActiveTab('today')
+    if (created.due_date) {
+      setSelectedDate(startOfDay(new Date(created.due_date)))
+      setViewMode('day')
+    }
   }
 
   async function handleStatusChange(id, status) {
