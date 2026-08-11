@@ -2519,6 +2519,24 @@ label.new-task-checkbox-label {
   padding: 4px 0;
 }
 
+/* .rental-expense-row is a <button> (opens RentalExpenseForm to edit)
+   rather than a plain <div> — reset button chrome so it reads
+   identically, same reasoning as .rental-overview-item. */
+.rental-expense-row-editable {
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.rental-expense-row-editable:hover {
+  background: var(--pill-bg);
+}
+
 .rental-unit-badge {
   font-size: 13px;
 }

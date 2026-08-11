@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { chargeDatesForBooking, monthRangeStrings, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
+import RentalExpenseForm from './RentalExpenseForm'
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -13,7 +15,29 @@ function money(n) {
 // the visible month (see RentalsView's fetch), which is enough here since
 // any charge landing in this month implies the booking overlaps this
 // month too.
-export default function RentalFinancials({ company, properties, bookings, expenses, monthDate, goals, onGoalsChanged }) {
+export default function RentalFinancials({
+  company,
+  properties,
+  bookings,
+  expenses,
+  monthDate,
+  goals,
+  onGoalsChanged,
+  onExpensesChanged,
+}) {
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false)
+  const [editingExpense, setEditingExpense] = useState(null)
+
+  function openNewExpense() {
+    setEditingExpense(null)
+    setExpenseFormOpen(true)
+  }
+
+  function openEditExpense(expense) {
+    setEditingExpense(expense)
+    setExpenseFormOpen(true)
+  }
+
   const { start, end } = monthRangeStrings(monthDate)
 
   const confirmedBookings = bookings.filter((b) => b.status === 'confirmed')
@@ -100,11 +124,30 @@ export default function RentalFinancials({ company, properties, bookings, expens
 
       <h3 className="rental-financials-subheading">Overhead breakdown</h3>
       {expenses.map((e) => (
-        <div key={e.id} className="rental-expense-row">
+        <button type="button" key={e.id} className="rental-expense-row rental-expense-row-editable" onClick={() => openEditExpense(e)}>
           <span>{e.label}</span>
           <span>{money(e.amount)}</span>
-        </div>
+        </button>
       ))}
+      <button type="button" className="rental-add-booking" onClick={openNewExpense}>
+        + Add overhead
+      </button>
+
+      {expenseFormOpen && (
+        <RentalExpenseForm
+          company={company}
+          expense={editingExpense}
+          onClose={() => setExpenseFormOpen(false)}
+          onSaved={() => {
+            setExpenseFormOpen(false)
+            onExpensesChanged()
+          }}
+          onDeleted={() => {
+            setExpenseFormOpen(false)
+            onExpensesChanged()
+          }}
+        />
+      )}
 
       <h3 className="rental-financials-subheading">Units</h3>
       {billed.map((p) => {

@@ -90,6 +90,32 @@ export async function fetchRentalExpenses(company) {
   return data
 }
 
+export async function createRentalExpense(company, { label, amount }) {
+  const { data, error } = await supabase
+    .from('rental_expenses')
+    .insert({ company, label, amount })
+    .select('id, company, label, amount')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateRentalExpense(id, { label, amount }) {
+  const { data, error } = await supabase
+    .from('rental_expenses')
+    .update({ label, amount })
+    .eq('id', id)
+    .select('id, company, label, amount')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteRentalExpense(id) {
+  const { error } = await supabase.from('rental_expenses').delete().eq('id', id)
+  if (error) throw error
+}
+
 // rangeStart/rangeEnd are 'YYYY-MM-DD' strings; returns bookings that
 // overlap [rangeStart, rangeEnd) at all, i.e. check_in < rangeEnd and
 // check_out >= rangeStart. check_out is the last occupied day (inclusive),

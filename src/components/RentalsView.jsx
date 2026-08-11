@@ -54,12 +54,16 @@ export default function RentalsView({ me }) {
     fetchRentalProperties(COMPANY)
       .then(setProperties)
       .catch((err) => setError(err.message))
-    fetchRentalExpenses(COMPANY)
-      .then(setExpenses)
-      .catch((err) => setError(err.message))
+    reloadExpenses()
     reloadGoals()
     reloadUpcoming()
   }, [])
+
+  function reloadExpenses() {
+    fetchRentalExpenses(COMPANY)
+      .then(setExpenses)
+      .catch((err) => setError(err.message))
+  }
 
   // Defaults to the first unit once properties actually load — can't be
   // the useState initializer above since properties starts out null.
@@ -211,6 +215,7 @@ export default function RentalsView({ me }) {
             monthDate={monthDate}
             goals={goals}
             onGoalsChanged={reloadGoals}
+            onExpensesChanged={reloadExpenses}
           />
         </div>
       </div>
@@ -276,6 +281,7 @@ export default function RentalsView({ me }) {
           monthDate={monthDate}
           goals={goals}
           onGoalsChanged={reloadGoals}
+          onExpensesChanged={reloadExpenses}
         />
       )}
 
