@@ -1,3 +1,4 @@
+import { isAllDayTask } from '../lib/tasks'
 import { PRIORITY_COLOR } from '../lib/priorityColors'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -33,8 +34,12 @@ function buildWeeks(year, month) {
 // The time a task's chip shows — whichever field actually placed it on
 // this day (see groupTasksByDay in tasks.js): completed_at for done
 // tasks, due_date otherwise. Always present, since groupTasksByDay
-// already drops anything with neither.
+// already drops anything with neither. A still-open All Day task pinned
+// to this date (see isAllDayTask) shows "All day" instead of the literal
+// midnight it's stored at; once done, the real completed_at time is more
+// useful than that placeholder, so only the not-done case gets it.
 function timeLabel(task) {
+  if (task.status !== 'done' && isAllDayTask(task)) return 'All day'
   const at = task.status === 'done' ? task.completed_at : task.due_date
   return new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }

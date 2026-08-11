@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { splitDueDateInZone, DEFAULT_TIMEZONE } from './timezone'
 
 const TASK_COLUMNS =
   'id, title, who, status, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications'
@@ -76,8 +77,32 @@ export function getOverlappingTaskIds(tasks) {
   return overlapping
 }
 
+// A task created via TaskForm's "All day" checkbox with a specific date
+// still gets a real due_date (so it lands in that day's own list via
+// getTasksForDay/groupTasksByDay below, rather than floating in the
+// separate dateless All Day bucket TaskBoard.jsx renders) — stored at
+// exactly midnight in the zone it was set in, with no duration, the one
+// combination a genuinely timed task would never intentionally produce.
+// There's no dedicated column for this (a deliberate frontend-only
+// heuristic, not a schema change), so display code checks this instead of
+// rendering a literal "12:00 AM". Checked against due_timezone — the zone
+// it was actually set in — rather than the viewer's own local zone, so it
+// reads the same for both Ada and Aaron regardless of who's looking; a
+// viewer-local check would misfire since their timezones differ by half a
+// day. The one accepted tradeoff: a task genuinely, deliberately due at
+// exactly midnight with no duration would also read as "All day".
+export function isAllDayTask(task) {
+  if (!task.due_date || task.duration_minutes) return false
+  const { due_time } = splitDueDateInZone(task.due_date, task.due_timezone || DEFAULT_TIMEZONE)
+  return due_time === '00:00'
+}
+
 export function isOverdue(task) {
   if (!task.due_date || task.status === 'done') return false
+  // An All Day task is due sometime that whole day, not at the literal
+  // midnight instant it's stored at — without this it'd read as overdue
+  // for nearly 24 hours a day, almost as soon as it's created.
+  if (isAllDayTask(task)) return new Date(task.due_date).getTime() + 24 * 60 * 60 * 1000 <= Date.now()
   return new Date(task.due_date).getTime() < Date.now()
 }
 

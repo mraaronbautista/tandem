@@ -23,6 +23,7 @@ import AllDayRow from './AllDayRow'
 import NewTaskForm from './NewTaskForm'
 import Modal from './Modal'
 import DateStrip from './DateStrip'
+import DatePickerModal from './DatePickerModal'
 import PullToRefresh from './PullToRefresh'
 import WorkingStatusToggle from './WorkingStatusToggle'
 import EndOfDayReportForm from './EndOfDayReportForm'
@@ -108,6 +109,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [vaultOpen, setVaultOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
   const [viewMode, setViewMode] = useState('day')
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
 
   // Week always opens on the calendar week containing today, regardless
   // of whatever selectedDate happened to be set to (e.g. from browsing
@@ -242,8 +244,15 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // getTasksForDay per day inside MonthView's render loop.
   const tasksByDay = useMemo(() => groupTasksByDay(whoFiltered), [whoFiltered])
 
-  function shiftMonth(delta) {
-    setSelectedDate((d) => startOfDay(new Date(d.getFullYear(), d.getMonth() + delta, 1)))
+  // The header's ‹ › arrows step by week, not month — jumping to an
+  // arbitrary month is what the date-picker popover (opened by clicking
+  // the label itself) is for now; see datePickerOpen below.
+  function shiftWeek(delta) {
+    setSelectedDate((d) => {
+      const next = new Date(d)
+      next.setDate(next.getDate() + delta * 7)
+      return startOfDay(next)
+    })
   }
 
   const monthLabel = selectedDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
@@ -336,11 +345,18 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <header className="task-board-header">
           {activeTab === 'today' && (
             <div className="month-nav-row">
-              <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+              <button type="button" className="icon-button" onClick={() => shiftWeek(-1)} title="Previous week">
                 ‹
               </button>
-              <span className="month-nav-label">{monthLabel}</span>
-              <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+              <button
+                type="button"
+                className="month-nav-label month-nav-label-button"
+                onClick={() => setDatePickerOpen(true)}
+                title="Jump to a date"
+              >
+                {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '︿' : '﹀'}</span>
+              </button>
+              <button type="button" className="icon-button" onClick={() => shiftWeek(1)} title="Next week">
                 ›
               </button>
             </div>
@@ -474,6 +490,18 @@ export default function TaskBoard({ theme, toggleTheme }) {
       </div>
 
       <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} extraActions={quickActions} />
+
+      {datePickerOpen && (
+        <DatePickerModal
+          selectedDate={selectedDate}
+          onSelect={(d) => {
+            setSelectedDate(startOfDay(d))
+            setViewMode('week')
+            setDatePickerOpen(false)
+          }}
+          onClose={() => setDatePickerOpen(false)}
+        />
+      )}
 
       {peekTask && (
         <Modal onClose={() => setPeekTaskId(null)}>

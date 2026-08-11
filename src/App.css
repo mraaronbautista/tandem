@@ -642,21 +642,21 @@
   margin-bottom: 18px;
 }
 
+/* A fixed 7-day (Sun-Sat) week now, not a longer scrollable list — grid
+   with equal-width columns instead of the old flex row of fixed-42px
+   cells, so the strip stretches to fill the row's full width rather than
+   sitting packed to the left with empty space after it. */
 .date-strip-scroller {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   gap: 4px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
 }
 
 .date-strip-day {
-  flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 42px;
   padding: 6px 0;
   border: none;
   background: none;
@@ -1441,6 +1441,14 @@ a.task-submission-file-link:hover {
     height: 640px;
     max-height: 640px;
   }
+
+  /* Same reasoning as .how-to-guide-modal above — a 7-column day grid
+     doesn't need the shared .submission-modal family's 560px cap, so
+     narrow it down, scoped to desktop only so the mobile slide-up sheet
+     still gets its usual full width. */
+  .modal-backdrop .submission-modal.date-picker-modal {
+    width: 340px;
+  }
 }
 
 @keyframes modal-slide-up {
@@ -1752,6 +1760,76 @@ label.new-task-checkbox-label {
   display: inline-block;
   min-width: 150px;
   text-align: center;
+}
+
+/* TaskBoard.jsx's header label is a real <button> (opens DatePickerModal)
+   rather than the plain <span> this class started as (still used as-is
+   by RentalsView's nav rows) — reset button chrome so it reads identically. */
+.month-nav-label-button {
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.month-nav-caret {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.date-picker-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.date-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.date-picker-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.55;
+  padding-bottom: 4px;
+}
+
+.date-picker-day,
+.date-picker-day-empty {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  color: var(--text-h);
+  font: inherit;
+  cursor: pointer;
+}
+
+.date-picker-day-empty {
+  visibility: hidden;
+}
+
+.date-picker-day-today {
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 700;
+}
+
+.date-picker-day-selected {
+  background: var(--accent);
+  color: #fff;
 }
 
 .rental-calendar-toolbar {

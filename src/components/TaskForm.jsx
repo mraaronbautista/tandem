@@ -112,11 +112,21 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
   // today's date the moment it was edited (splitDueDateInZone(null, tz)
   // returns due_date: '', which then defaulted to today above). Whether a
   // due_date key was present in initialValues at all is what tells apart
-  // "editing an existing All Day task" from "a brand-new task."
-  const [allDay, setAllDay] = useState(() => {
-    const hasDueDateKey = initialValues && Object.prototype.hasOwnProperty.call(initialValues, 'due_date')
-    return Boolean(hasDueDateKey && !initialValues.due_date)
-  })
+  // "editing an existing All Day task" from "a brand-new task." A
+  // due_date that IS present but lands on midnight with no duration is
+  // still All Day — a specific-date one (see isAllDayTask in lib/tasks.js
+  // for why that combination, not a due_date key, is what's checked).
+  const hasDueDateKey = initialValues && Object.prototype.hasOwnProperty.call(initialValues, 'due_date')
+  const initialAllDayDate =
+    hasDueDateKey && initialValues.due_date && initialValues.due_time === '00:00' && !initialValues.duration_minutes
+      ? initialValues.due_date
+      : ''
+  const [allDay, setAllDay] = useState(() => Boolean(hasDueDateKey && (!initialValues.due_date || initialAllDayDate)))
+  // Tracked separately from form.due_date (which defaults to today's date
+  // for every new task, All Day or not — see below) rather than reusing
+  // it, so checking "All day" defaults to genuinely no date, not silently
+  // today, unless a date is deliberately typed in here.
+  const [allDayDate, setAllDayDate] = useState(initialAllDayDate)
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -138,8 +148,14 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
       const { due_time, ...rest } = form
       await onSubmit({
         ...rest,
-        due_date: allDay || !form.due_date ? null : zonedTimeToUtcIso(form.due_date, due_time, form.due_timezone),
-        duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
+        due_date: allDay
+          ? allDayDate
+            ? zonedTimeToUtcIso(allDayDate, '00:00', form.due_timezone)
+            : null
+          : !form.due_date
+            ? null
+            : zonedTimeToUtcIso(form.due_date, due_time, form.due_timezone),
+        duration_minutes: allDay || !form.duration_minutes ? null : Number(form.duration_minutes),
         source_note: form.source_note || null,
         notes: form.notes || null,
         checklist: form.checklist.filter((item) => item.text.trim()),
@@ -179,10 +195,15 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
 
         <label className="new-task-checkbox-label">
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-          All day (no due date)
+          All day
         </label>
 
-        {!allDay && (
+        {allDay ? (
+          <label>
+            Date (optional)
+            <input type="date" value={allDayDate} onChange={(e) => setAllDayDate(e.target.value)} />
+          </label>
+        ) : (
           <>
             <label>
               Date

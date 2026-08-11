@@ -17,18 +17,14 @@ function isSameDay(a, b) {
 // already gives the surrounding context, so this is just the day-picker
 // strip on its own.
 //
-// Always the 7 days (Sun-Sat) of the week containing `selectedDate` —
-// same getWeekDays() Week mode already uses, so the strip and the Week
-// list never disagree about which week "current" means. This replaces an
-// earlier version that scrolled through a much longer fixed window of
-// days centered on today: since the days shown here track the selection
-// rather than a hardcoded window around today, jumping selectedDate
-// forward (e.g. picking a day in MonthView, or TaskBoard.jsx navigating
-// here right after creating a future-dated task) brings that day's whole
-// week into view automatically, no manual scrolling required to find it.
+// Always the 7 days (Sun-Sat) of the real current week — fixed, not tied
+// to `selectedDate`/whatever's being browsed elsewhere (Month nav, a task
+// landing on a future date, etc.). Picking a day outside this week still
+// works via those other paths (MonthView, the month nav header); this
+// strip just doesn't try to follow along and re-scope itself to match.
 export default function DateStrip({ selectedDate, onSelect }) {
   const today = startOfDay(new Date())
-  const days = getWeekDays(selectedDate)
+  const days = getWeekDays(today)
 
   return (
     <div className="date-strip">

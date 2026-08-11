@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { isOverdue, formatDuration } from '../lib/tasks'
+import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
@@ -23,8 +23,13 @@ function localLabel(isoString) {
 }
 
 // "Jul 23, 5:30 – 6:10 PM (40 min)" when a duration is set, otherwise just
-// the point-in-time label as before.
+// the point-in-time label as before. An All Day task pinned to a specific
+// date (see isAllDayTask) shows that date with "All day" instead of the
+// literal midnight it's actually stored at.
 function dueLabel(task) {
+  if (isAllDayTask(task)) {
+    return `${new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })}, All day`
+  }
   const start = localLabel(task.due_date)
   if (!task.duration_minutes) return start
   const end = new Date(new Date(task.due_date).getTime() + task.duration_minutes * 60000)
