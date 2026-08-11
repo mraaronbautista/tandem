@@ -502,6 +502,19 @@
   font-size: 12px;
   opacity: 0.7;
   white-space: nowrap;
+  /* Column now, not a single line — a task with a real duration shows an
+     end time below the start time (see .timeline-time-end), matching
+     .timeline-rail's own start-dot/span/end-dot on the same row. */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Lines up with .timeline-dot-end below — both this margin and the
+   connector's height are the same 28px, so the two independently-flowing
+   columns (time labels, rail dots) land at a matching vertical offset
+   for the end point without needing to share layout machinery. */
+.timeline-time-end {
+  margin-top: 28px;
 }
 
 .timeline-rail {
@@ -519,6 +532,21 @@
   border-radius: 50%;
   /* background set inline per-task from PRIORITY_COLOR */
   margin-top: 15px;
+}
+
+/* Follows directly after .timeline-span-connector, which already
+   supplies the vertical gap — the 15px .timeline-dot margin above only
+   exists to offset the *first* dot down from the row's top edge. */
+.timeline-dot-end {
+  margin-top: 0;
+}
+
+.timeline-span-connector {
+  flex: none;
+  width: 2px;
+  height: 28px;
+  background: var(--border);
+  margin-top: 3px;
 }
 
 .timeline-connector {
