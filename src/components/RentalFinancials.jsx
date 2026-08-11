@@ -27,10 +27,12 @@ export default function RentalFinancials({
 }) {
   const [expenseFormOpen, setExpenseFormOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
-  // Open by default — collapsing is for once the Financials column gets
-  // long, not to hide this from a first-time view.
-  const [sourceOpen, setSourceOpen] = useState(true)
-  const [overheadOpen, setOverheadOpen] = useState(true)
+  // Collapsed by default — the Financials column already stacks goals,
+  // summary, source breakdown, overhead, and units, so starting these
+  // two closed keeps the common case (glancing at the top summary)
+  // short instead of scrolling past a full breakdown every time.
+  const [sourceOpen, setSourceOpen] = useState(false)
+  const [overheadOpen, setOverheadOpen] = useState(false)
 
   function openNewExpense() {
     setEditingExpense(null)
