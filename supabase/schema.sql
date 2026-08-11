@@ -72,11 +72,15 @@ create table tasks (
   -- Lightweight Q&A thread for clarifying a vague assignment — same
   -- "doesn't need a child table" reasoning as checklist/
   -- completion_attachments. A jsonb array of { id, askedBy, question,
-  -- answer, askedAt, answeredBy, answeredAt }; askedBy/answeredBy are
-  -- members.id, answer/answeredBy/answeredAt are null until answered. Purely
-  -- client-driven, no server-side logic — spawn_next_recurrence() doesn't
-  -- reference it, so a recurring task's next occurrence starts with an
-  -- empty thread rather than carrying forward a past occurrence's Q&A.
+  -- questionAttachments, answer, answerAttachments, askedAt, answeredBy,
+  -- answeredAt }; askedBy/answeredBy are members.id, answer/answeredBy/
+  -- answeredAt are null until answered. questionAttachments/
+  -- answerAttachments are [{url, name}] arrays, same shape and bucket as
+  -- completion_attachments — either message can be attachment-only, with
+  -- its text left '' rather than required. Purely client-driven, no
+  -- server-side logic — spawn_next_recurrence() doesn't reference it, so
+  -- a recurring task's next occurrence starts with an empty thread rather
+  -- than carrying forward a past occurrence's Q&A.
   clarifications jsonb not null default '[]'::jsonb
 );
 

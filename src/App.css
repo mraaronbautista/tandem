@@ -2476,6 +2476,10 @@ label.new-task-checkbox-label {
 .clarification-question,
 .clarification-answer {
   font-size: 14px;
+  /* A plain <p> otherwise collapses newlines — a long typed comment with
+     its own paragraph breaks was rendering as one dense run-on block. */
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .clarification-waiting {
@@ -2484,16 +2488,20 @@ label.new-task-checkbox-label {
   font-style: italic;
 }
 
+/* Column now, not a row — a draft can carry attachments too (see
+   AttachmentList in TaskClarifications.jsx), so the textarea, any
+   attached files, and the upload/send controls each need their own row
+   instead of one wide flex line. */
 .clarification-ask-row,
 .clarification-answer-row {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: flex-start;
 }
 
 .clarification-ask-row textarea,
 .clarification-answer-row textarea {
-  flex: 1;
+  width: 100%;
   padding: 7px 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -2502,6 +2510,21 @@ label.new-task-checkbox-label {
   font: inherit;
   font-size: 13px;
   resize: vertical;
+}
+
+/* The "+ Attach files" upload label and the Send/Reply button, on
+   opposite ends of their own row below the textarea. */
+.clarification-compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.clarification-compose-actions .task-submission-upload {
+  margin-top: 0;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .clarification-ask-button,
@@ -2521,6 +2544,14 @@ label.new-task-checkbox-label {
 .clarification-answer-button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* Attachments reuse TaskRow.jsx's .task-submission-* classes as-is (same
+   {url, name} shape as completion_attachments), just capped shorter here
+   — a 280px-tall image preview (that context's size) would dominate an
+   otherwise-compact comment thread. */
+.clarification-item .task-submission-attachment-image img {
+  max-height: 160px;
 }
 
 /* Cork Board */

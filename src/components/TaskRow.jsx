@@ -206,6 +206,7 @@ export default function TaskRow({
             meId={meId}
             memberName={memberName}
             taskTitle={task.title}
+            taskId={task.id}
           />
 
           <div className="task-row-actions">
