@@ -19,6 +19,7 @@ import { useAuth } from '../lib/AuthContext'
 import { WHO_LABEL, whoKeyForName } from '../lib/whoLabels'
 import TaskRow from './TaskRow'
 import TimelineRow from './TimelineRow'
+import DayTimeline from './DayTimeline'
 import AllDayRow from './AllDayRow'
 import NewTaskForm from './NewTaskForm'
 import Modal from './Modal'
@@ -467,17 +468,26 @@ export default function TaskBoard({ theme, toggleTheme }) {
                         ) : (
                           <h2 className="task-section-heading">{daySectionLabel(date, startOfDay(new Date()))}</h2>
                         )}
-                        <div className="timeline-list">
-                          {dTasks.map((task, i) => (
-                            <TimelineRow
-                              key={task.id}
-                              task={task}
-                              time={task.status === 'done' ? task.completed_at : task.due_date}
-                              isLast={i === dTasks.length - 1}
-                              {...taskRowProps}
-                            />
-                          ))}
-                        </div>
+                        {viewMode === 'day' ? (
+                          <DayTimeline
+                            tasks={dTasks}
+                            onSelect={(task) => setPeekTaskId(task.id)}
+                            onStatusChange={handleStatusChange}
+                            overlappingIds={overlappingIds}
+                          />
+                        ) : (
+                          <div className="timeline-list">
+                            {dTasks.map((task, i) => (
+                              <TimelineRow
+                                key={task.id}
+                                task={task}
+                                time={task.status === 'done' ? task.completed_at : task.due_date}
+                                isLast={i === dTasks.length - 1}
+                                {...taskRowProps}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </section>
                     ),
                 )}
