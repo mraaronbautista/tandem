@@ -735,7 +735,10 @@
      that shrinking entirely to .month-view-task-title's own
      overflow/ellipsis handling instead. */
   min-width: 0;
-  min-height: 96px;
+  /* Shorter than desktop's chip-stacked cells — mobile only ever shows a
+     day number plus one small count line now, so 96px left a lot of
+     empty space under nearly every day. */
+  min-height: 56px;
   padding: 6px;
   gap: 3px;
   font-size: 13px;
@@ -820,6 +823,19 @@
   font-size: 11px;
   opacity: 0.55;
   padding: 0 5px;
+}
+
+/* Mobile's stand-in for the whole .month-view-day-tasks chip stack — just
+   how many tasks that day has, no titles/times (see MonthView.jsx for
+   why: a chip's text had no real room in a ~50px-wide column). */
+.month-view-day-count {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--pill-bg);
 }
 
 @media (min-width: 900px) {

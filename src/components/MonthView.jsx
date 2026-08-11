@@ -1,5 +1,6 @@
 import { isAllDayTask } from '../lib/tasks'
 import { PRIORITY_COLOR } from '../lib/priorityColors'
+import { useMediaQuery } from '../lib/useMediaQuery'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -45,12 +46,20 @@ function timeLabel(task) {
 }
 
 // The whole point of Month is a bird's-eye view of what's coming up
-// across the month, not just "which days have anything at all" — so
-// each cell previews actual task chips (title + time, capped at
-// MAX_VISIBLE_TASKS with a "+N more" overflow) rather than a plain dot.
-// Clicking a day (anywhere in its cell, not per-chip) both selects it
-// and drops back to Day mode, the standard drill-down pattern.
+// across the month, not just "which days have anything at all" — so on
+// desktop, where a day cell actually has room, each cell previews real
+// task chips (title + time, capped at MAX_VISIBLE_TASKS with a "+N more"
+// overflow) rather than a plain dot. Mobile's cells are far too narrow
+// for that: a chip's title/time text was shrinking to an unreadable
+// sliver (or nothing at all) once squeezed into a ~50px-wide column, so
+// below the 900px breakpoint this falls back to just a task count per
+// day instead — still answers "is this day busy," without pretending
+// there's room to preview which tasks. Clicking a day (anywhere in its
+// cell) both selects it and drops back to Day mode either way, the
+// standard drill-down pattern, so the actual task list is never more
+// than one tap away.
 export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelectDay }) {
+  const isDesktop = useMediaQuery('(min-width: 900px)')
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
   const weeks = buildWeeks(year, month)
@@ -89,17 +98,25 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
             >
               <span className="month-view-day-number">{day}</span>
 
-              {visible.length > 0 && (
-                <div className="month-view-day-tasks">
-                  {visible.map((task) => (
-                    <span key={task.id} className="month-view-task-chip">
-                      <span className="month-view-task-dot" style={{ background: PRIORITY_COLOR[task.priority] }} />
-                      <span className="month-view-task-title">{task.title}</span>
-                      <span className="month-view-task-time">{timeLabel(task)}</span>
-                    </span>
-                  ))}
-                  {hiddenCount > 0 && <span className="month-view-day-more">{hiddenCount} more</span>}
-                </div>
+              {isDesktop ? (
+                visible.length > 0 && (
+                  <div className="month-view-day-tasks">
+                    {visible.map((task) => (
+                      <span key={task.id} className="month-view-task-chip">
+                        <span className="month-view-task-dot" style={{ background: PRIORITY_COLOR[task.priority] }} />
+                        <span className="month-view-task-title">{task.title}</span>
+                        <span className="month-view-task-time">{timeLabel(task)}</span>
+                      </span>
+                    ))}
+                    {hiddenCount > 0 && <span className="month-view-day-more">{hiddenCount} more</span>}
+                  </div>
+                )
+              ) : (
+                dayTasks.length > 0 && (
+                  <span className="month-view-day-count">
+                    {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
+                  </span>
+                )
               )}
             </button>
           )
