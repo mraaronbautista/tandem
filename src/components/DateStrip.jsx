@@ -21,16 +21,22 @@ export default function DateStrip({ selectedDate, onSelect }) {
   const today = startOfDay(new Date())
 
   // A generous scrollable window — a month of history to browse back
-  // through, two weeks ahead to preview what's coming.
+  // through, a full year ahead to plan against (not truly endless, but
+  // far enough out that hitting the edge scrolling forward isn't a
+  // realistic concern for a two-person household planner).
   const days = []
-  for (let i = -30; i <= 14; i++) {
+  for (let i = -30; i <= 365; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() + i)
     days.push(d)
   }
 
+  // Anchors on today, not whatever's selected — the strip should always
+  // open with today at the left edge (ready to scroll forward into the
+  // year ahead) rather than centering around a selection that may be
+  // days away, which used to leave today off-screen.
   useEffect(() => {
-    scrollerRef.current?.querySelector('.date-strip-day-selected')?.scrollIntoView({ inline: 'center', block: 'nearest' })
+    scrollerRef.current?.querySelector('.date-strip-day-today')?.scrollIntoView({ inline: 'start', block: 'nearest' })
   }, [])
 
   return (
