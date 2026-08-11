@@ -268,6 +268,13 @@ create table eod_reports (
   -- something this app tallies itself.
   minutes_logged integer,
   body text not null,
+  -- Snapshot of completion_attachments pulled from whichever tasks this
+  -- submission's tally covered, [{taskTitle, url, name}] — a denormalized
+  -- copy rather than a live reference to tasks.id, same "doesn't need a
+  -- foreign key, just carry what you need" reasoning as checklist/
+  -- clarifications elsewhere. Appends on each submission (see
+  -- upsert_eod_report below), same as body, rather than being overwritten.
+  attachments jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   -- Bumped on every append — this is the "since my last submission"
   -- boundary the report form uses to avoid re-listing already-reported
@@ -302,7 +309,8 @@ create or replace function upsert_eod_report(
   p_period report_period,
   p_report_date date,
   p_body_chunk text,
-  p_minutes_logged integer
+  p_minutes_logged integer,
+  p_attachments jsonb default '[]'::jsonb
 ) returns eod_reports
 language plpgsql
 security invoker
@@ -310,14 +318,15 @@ as $$
 declare
   result eod_reports;
 begin
-  insert into eod_reports (submitted_by, period, report_date, minutes_logged, body, updated_at)
-  values (auth.uid(), p_period, p_report_date, p_minutes_logged, coalesce(p_body_chunk, ''), now())
+  insert into eod_reports (submitted_by, period, report_date, minutes_logged, body, attachments, updated_at)
+  values (auth.uid(), p_period, p_report_date, p_minutes_logged, coalesce(p_body_chunk, ''), coalesce(p_attachments, '[]'::jsonb), now())
   on conflict (submitted_by, period, report_date)
   do update set
     body = case
       when p_body_chunk is null or btrim(p_body_chunk) = '' then eod_reports.body
       else eod_reports.body || E'\n\n---\n' || p_body_chunk
     end,
+    attachments = eod_reports.attachments || coalesce(p_attachments, '[]'::jsonb),
     minutes_logged = coalesce(p_minutes_logged, eod_reports.minutes_logged),
     updated_at = now()
   returning * into result;
@@ -325,7 +334,7 @@ begin
 end;
 $$;
 
-grant execute on function upsert_eod_report(report_period, date, text, integer) to authenticated;
+grant execute on function upsert_eod_report(report_period, date, text, integer, jsonb) to authenticated;
 
 -- Priorities for the upcoming day/week/month — a shared planning note,
 -- not a personal log like eod_reports, so both members can set it (unlike

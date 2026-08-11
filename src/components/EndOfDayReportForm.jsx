@@ -3,6 +3,7 @@ import { getCompletedInPeriod, getCompletedSince, reportDateForPeriod } from '..
 import { whoKeyForName } from '../lib/whoLabels'
 import { submitEodReport, fetchOwnEodReport } from '../lib/eodReports'
 import { sendEodReportNotification } from '../lib/manualNotify'
+import AttachmentList from './AttachmentList'
 import Modal from './Modal'
 
 const PERIODS = [
@@ -13,12 +14,36 @@ const PERIODS = [
 
 const MINUTE_OPTIONS = ['00', '15', '30', '45']
 
+// Same "since last submission" vs. "whole period" branch the draft body
+// and the actual attachment snapshot both need — factored out so they
+// can't quietly disagree about which tasks this submission covers.
+function getRelevantCompletedTasks(tasks, whoKey, period, existingReport) {
+  return existingReport
+    ? getCompletedSince(tasks, whoKey, new Date(existingReport.updated_at))
+    : getCompletedInPeriod(tasks, whoKey, period)
+}
+
+// Flattens completion_attachments off whichever tasks this submission's
+// tally covers into the [{taskTitle, url, name}] shape eod_reports.
+// attachments stores — a denormalized snapshot at submit time, not a
+// live reference (see the column comment in schema.sql).
+function collectAttachments(completedTasks) {
+  return completedTasks.flatMap((t) =>
+    (t.completion_attachments || []).map((a) => ({ taskTitle: t.title, url: a.url, name: a.name })),
+  )
+}
+
 function buildDraft(completedTasks, period, isAppend) {
   if (!completedTasks.length) {
     return isAppend ? 'Nothing new completed since your last update.' : `Nothing completed this ${period}.`
   }
   const heading = isAppend ? 'Completed since your last update' : `Completed this ${period}`
-  return `${heading}:\n${completedTasks.map((t) => `- ${t.title}`).join('\n')}`
+  const lines = completedTasks.map((t) => {
+    const count = t.completion_attachments?.length || 0
+    const suffix = count > 0 ? ` (📎 ${count} file${count > 1 ? 's' : ''})` : ''
+    return `- ${t.title}${suffix}`
+  })
+  return `${heading}:\n${lines.join('\n')}`
 }
 
 function formatTimeNow() {
@@ -52,7 +77,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
         setExistingReport(existing)
 
         if (existing) {
-          setBody(buildDraft(getCompletedSince(tasks, whoKey, new Date(existing.updated_at)), period, true))
+          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, existing), period, true))
           if (existing.minutes_logged != null) {
             setHoursInput(String(Math.floor(existing.minutes_logged / 60)))
             setMinutesInput(String(existing.minutes_logged % 60).padStart(2, '0'))
@@ -61,7 +86,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
             setMinutesInput('')
           }
         } else {
-          setBody(buildDraft(getCompletedInPeriod(tasks, whoKey, period), period, false))
+          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, null), period, false))
           setHoursInput('')
           setMinutesInput('')
         }
@@ -84,8 +109,12 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
       const bodyChunk = existingReport && body.trim() ? `${formatTimeNow()}\n${body}` : body
       const minutesLogged =
         hoursInput === '' && minutesInput === '' ? null : Number(hoursInput || 0) * 60 + Number(minutesInput || 0)
+      // Re-derived at submit time rather than reused from the initial
+      // draft state — matches whichever tasks are actually completed
+      // right now, not a stale snapshot from when the form was opened.
+      const attachments = collectAttachments(getRelevantCompletedTasks(tasks, whoKey, period, existingReport))
 
-      await submitEodReport(period, reportDateForPeriod(period), { bodyChunk, minutesLogged })
+      await submitEodReport(period, reportDateForPeriod(period), { bodyChunk, minutesLogged, attachments })
 
       const hoursText =
         minutesLogged != null ? `${Math.floor(minutesLogged / 60)}h ${minutesLogged % 60}m logged — ` : ''
@@ -124,6 +153,9 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
           <div className="submission-field">
             <span className="submission-field-label">Already logged this {period}</span>
             <p className="task-submission-note-text eod-report-existing">{existingReport.body}</p>
+            <AttachmentList
+              attachments={existingReport.attachments?.map((a) => ({ url: a.url, name: `${a.taskTitle}: ${a.name}` }))}
+            />
           </div>
         )}
 

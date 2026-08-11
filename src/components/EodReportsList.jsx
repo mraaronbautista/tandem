@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchEodReports } from '../lib/eodReports'
+import AttachmentList from './AttachmentList'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -91,6 +92,9 @@ export default function EodReportsList({ memberName }) {
                         {r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}
                       </p>
                       <p className="task-submission-note-text">{r.body}</p>
+                      <AttachmentList
+                        attachments={r.attachments?.map((a) => ({ url: a.url, name: `${a.taskTitle}: ${a.name}` }))}
+                      />
                     </div>
                   ))}
                 </div>
