@@ -66,8 +66,10 @@ export default function TaskRow({
   const clarifications = task.clarifications || []
   // A question directed at whoever's looking right now — an in-app
   // reminder that doesn't depend on the push notification having been
-  // seen (or not dismissed).
-  const hasQuestionForMe = clarifications.some((c) => !c.answer && c.askedBy !== meId)
+  // seen (or not dismissed). Excludes anything marked resolved (a plain
+  // comment someone decided doesn't need a reply) — otherwise those would
+  // flag this badge forever, since `answer` never gets set for them.
+  const hasQuestionForMe = clarifications.some((c) => !c.answer && !c.resolved && c.askedBy !== meId)
 
   function handleDelete(e) {
     e.stopPropagation()

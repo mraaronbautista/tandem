@@ -4,6 +4,8 @@ import { WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 
 const ANSWERED_WINDOW_DAYS = 14
 
+const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
+
 function formatWhen(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
@@ -14,7 +16,7 @@ function personBadge(personId, memberName) {
   return { name, color: whoKey ? WHO_COLOR[whoKey] : undefined }
 }
 
-function InboxItem({ item, kind, task, memberName, unread, onSelectTask }) {
+function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResolve }) {
   const { name, color } = personBadge(item.otherPersonId, memberName)
   return (
     <li
@@ -26,9 +28,23 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask }) {
         <span className="inbox-item-when">{formatWhen(item.at)}</span>
       </div>
       <p className="inbox-item-text">{item.text}</p>
-      <span className="task-who-badge" style={{ background: color }}>
-        {name} {kind === 'question' ? 'asked' : 'answered'}
-      </span>
+      <div className="inbox-item-footer">
+        <span className="task-who-badge" style={{ background: color }}>
+          {name} {KIND_LABEL[kind]}
+        </span>
+        {onResolve && (
+          <button
+            type="button"
+            className="inbox-item-resolve-button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onResolve()
+            }}
+          >
+            Not needed
+          </button>
+        )}
+      </div>
     </li>
   )
 }
@@ -46,7 +62,7 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask }) {
 // Frozen into local state on mount so it stays stable for this visit,
 // rather than flipping every item to "read" mid-visit once TaskBoard bumps
 // it for next time.
-export default function InboxView({ tasks, meId, memberName, onSelectTask, lastViewedAt }) {
+export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpdate, lastViewedAt }) {
   const [frozenLastViewedAt] = useState(() => lastViewedAt)
 
   const cutoff = Date.now() - ANSWERED_WINDOW_DAYS * 24 * 60 * 60 * 1000
@@ -55,25 +71,44 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, lastV
   )
   const questions = items.filter((item) => item.kind === 'question')
   const answers = items.filter((item) => item.kind === 'answer')
+  const finished = items.filter((item) => item.kind === 'finished')
+
+  // Same "not every clarification is a question" reasoning as
+  // TaskClarifications.jsx's own handleResolve — this is the quick path
+  // for dismissing a plain FYI comment right from the Inbox, without
+  // having to open the task first.
+  async function handleResolve(item, task) {
+    if (!task) return
+    const updated = task.clarifications.map((c) =>
+      c.id === item.clarificationId
+        ? { ...c, resolved: true, resolvedBy: meId, resolvedAt: new Date().toISOString() }
+        : c,
+    )
+    await onUpdate(task.id, { clarifications: updated })
+  }
 
   function renderItem(item, kind) {
+    const task = tasks.find((t) => t.id === item.taskId)
     const unread = kind === 'answer' && (!frozenLastViewedAt || new Date(item.at) > new Date(frozenLastViewedAt))
     return (
       <InboxItem
         key={item.clarificationId}
         item={item}
         kind={kind}
-        task={tasks.find((t) => t.id === item.taskId)}
+        task={task}
         memberName={memberName}
         unread={unread}
         onSelectTask={onSelectTask}
+        onResolve={kind === 'question' ? () => handleResolve(item, task) : undefined}
       />
     )
   }
 
   return (
     <div className="tab-panel">
-      {questions.length === 0 && answers.length === 0 && <p className="task-notes-empty">Nothing waiting on you.</p>}
+      {questions.length === 0 && answers.length === 0 && finished.length === 0 && (
+        <p className="task-notes-empty">Nothing waiting on you.</p>
+      )}
 
       {questions.length > 0 && (
         <section>
@@ -86,6 +121,13 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, lastV
         <section>
           <h3 className="task-section-heading">Answered</h3>
           <ul className="inbox-list">{answers.map((item) => renderItem(item, 'answer'))}</ul>
+        </section>
+      )}
+
+      {finished.length > 0 && (
+        <section>
+          <h3 className="task-section-heading">Finished</h3>
+          <ul className="inbox-list">{finished.map((item) => renderItem(item, 'finished'))}</ul>
         </section>
       )}
     </div>

@@ -2859,6 +2859,23 @@ label.new-task-checkbox-label {
   font-style: italic;
 }
 
+.clarification-finished {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.clarification-resolve-button {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Column now, not a row — a draft can carry attachments too (see
    AttachmentList in TaskClarifications.jsx), so the textarea, any
    attached files, and the upload/send controls each need their own row
@@ -3096,6 +3113,10 @@ label.new-task-checkbox-label {
   opacity: 0.65;
 }
 
+.inbox-item-finished {
+  opacity: 0.7;
+}
+
 .inbox-item-top {
   display: flex;
   align-items: baseline;
@@ -3122,4 +3143,23 @@ label.new-task-checkbox-label {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.inbox-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inbox-item-resolve-button {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
 }

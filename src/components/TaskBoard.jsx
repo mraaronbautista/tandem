@@ -416,6 +416,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
             meId={session.user.id}
             memberName={memberName}
             onSelectTask={(task) => setPeekTaskId(task.id)}
+            onUpdate={handleUpdate}
             lastViewedAt={inboxLastViewedAt}
           />
         )}

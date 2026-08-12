@@ -225,19 +225,39 @@ export function getMonthDays(date) {
 // both stay in sync without importing each other.
 export const INBOX_LAST_VIEWED_KEY = 'inbox-last-viewed-at'
 
+// Priority for sorting getInboxItems below — needs-a-reply first (most
+// actionable), then answered, then finished (already resolved, lowest
+// priority — closer to an archive than an inbox).
+const INBOX_KIND_ORDER = { question: 0, answer: 1, finished: 2 }
+
 // Flattens every task's clarifications jsonb into a single list of things
 // worth surfacing to `meId` in the Inbox tab: questions directed at them
-// (not yet answered) and answers to questions they themselves asked. The
-// `question` condition matches TaskRow.jsx's own hasQuestionForMe exactly
-// — it's inherently self-clearing (disappears once answered), same as
-// that row-level badge, so it needs no separate read/seen tracking.
-// "Needs your reply" sorts first as the more actionable half; within each
-// half, newest first.
+// (not yet answered or resolved), answers to questions they themselves
+// asked, and their own questions someone else marked resolved without
+// answering (a plain comment that didn't need a reply — see
+// TaskClarifications.jsx's handleResolve). The `question` condition
+// matches TaskRow.jsx's own hasQuestionForMe exactly — both `question`
+// and `finished` are inherently self-clearing (a question stops being
+// "pending" the moment it's answered or resolved), so neither needs
+// separate read/seen tracking; only `answer` does (see
+// hasUnseenInboxItems below).
 export function getInboxItems(tasks, meId) {
   const items = []
   for (const task of tasks) {
     for (const c of task.clarifications || []) {
-      if (!c.answer && c.askedBy !== meId) {
+      if (c.resolved) {
+        if (c.askedBy === meId) {
+          items.push({
+            kind: 'finished',
+            taskId: task.id,
+            taskTitle: task.title,
+            clarificationId: c.id,
+            text: c.question,
+            otherPersonId: c.resolvedBy,
+            at: c.resolvedAt,
+          })
+        }
+      } else if (!c.answer && c.askedBy !== meId) {
         items.push({
           kind: 'question',
           taskId: task.id,
@@ -260,16 +280,25 @@ export function getInboxItems(tasks, meId) {
       }
     }
   }
-  items.sort((a, b) => (a.kind === b.kind ? new Date(b.at) - new Date(a.at) : a.kind === 'question' ? -1 : 1))
+  items.sort((a, b) => {
+    const order = INBOX_KIND_ORDER[a.kind] - INBOX_KIND_ORDER[b.kind]
+    return order !== 0 ? order : new Date(b.at) - new Date(a.at)
+  })
   return items
 }
 
 // Whether the Inbox nav item should show its unread dot: any pending
-// question (always "unseen" until answered), or any answer newer than the
-// last time the Inbox tab itself was open.
+// question (always "unseen" until answered or resolved), or any answer
+// newer than the last time the Inbox tab itself was open. `finished`
+// items deliberately don't count — resolving a comment is a quiet action
+// (see handleResolve), not something worth flagging back to whoever
+// asked it, the same reasoning the resolve action itself skips a push
+// notification for.
 export function hasUnseenInboxItems(tasks, meId, lastViewedAt) {
   return getInboxItems(tasks, meId).some(
-    (item) => item.kind === 'question' || !lastViewedAt || new Date(item.at) > new Date(lastViewedAt),
+    (item) =>
+      item.kind === 'question' ||
+      (item.kind === 'answer' && (!lastViewedAt || new Date(item.at) > new Date(lastViewedAt))),
   )
 }
 

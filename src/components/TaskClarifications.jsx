@@ -131,6 +131,9 @@ export default function TaskClarifications({
       askedAt: new Date().toISOString(),
       answeredBy: null,
       answeredAt: null,
+      resolved: false,
+      resolvedBy: null,
+      resolvedAt: null,
     }
     await onChange([...clarifications, entry])
     setQuestionDraft('')
@@ -148,6 +151,19 @@ export default function TaskClarifications({
     await onChange(
       clarifications.map((c) =>
         c.id === updatedEntry.id ? { ...updatedEntry, answeredBy: meId } : c,
+      ),
+    )
+  }
+
+  // Not every clarification is actually a question — a plain FYI comment
+  // has nothing to answer, and without this it would sit in "needs a
+  // reply" forever since `answer` would never get set. No push
+  // notification here, unlike asking/answering — dismissing something as
+  // not needing a reply isn't news the other person needs pinged about.
+  async function handleResolve(item) {
+    await onChange(
+      clarifications.map((c) =>
+        c.id === item.id ? { ...c, resolved: true, resolvedBy: meId, resolvedAt: new Date().toISOString() } : c,
       ),
     )
   }
@@ -171,12 +187,19 @@ export default function TaskClarifications({
                   </p>
                   <AttachmentList attachments={item.answerAttachments} />
                 </>
+              ) : item.resolved ? (
+                <p className="clarification-finished">✓ {memberName(item.resolvedBy)} marked this finished — no reply needed</p>
               ) : item.answerAttachments?.length > 0 ? (
                 <AttachmentList attachments={item.answerAttachments} />
               ) : item.askedBy === meId ? (
                 <p className="clarification-waiting">Waiting for a reply…</p>
               ) : (
-                <AnswerRow item={item} onChange={handleEntryAnswered} taskTitle={taskTitle} taskId={taskId} />
+                <>
+                  <AnswerRow item={item} onChange={handleEntryAnswered} taskTitle={taskTitle} taskId={taskId} />
+                  <button type="button" className="clarification-resolve-button" onClick={() => handleResolve(item)}>
+                    No reply needed
+                  </button>
+                </>
               )}
             </div>
           ))}
