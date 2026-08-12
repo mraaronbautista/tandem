@@ -79,7 +79,7 @@ const SECTIONS = [
     items: [
       'Toggle push notifications from this settings menu.',
       'Tip: on iPhone, push only works after adding this app to your Home Screen — a regular Safari tab can\'t receive push at all, no matter what\'s toggled here.',
-      'Assignment pings are asymmetric on purpose: Aaron is notified the moment Ada assigns him something, but Ada isn\'t pinged when Aaron assigns her tasks — so Aaron queuing up a bunch of chores for her doesn\'t spam her phone. Completion pings go both ways.',
+      'Assignment pings are symmetric: whoever gets assigned a task by the other person is notified right away, either direction — assigning yourself a task doesn\'t ping you, since you already know. Completion pings go both ways too.',
       'The green/gray badge next to Settings shows whether Aaron\'s currently working — Aaron can toggle it himself; Ada\'s version is read-only since it\'s self-reported.',
     ],
   },
