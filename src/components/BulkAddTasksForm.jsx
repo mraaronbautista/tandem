@@ -1,9 +1,20 @@
 import { useMemo, useState } from 'react'
 import { parseBulkSchedule } from '../lib/bulkTasks'
 import { createTask } from '../lib/tasks'
-import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
+import { TIMEZONE_OPTIONS, zonedTimeToUtcIso } from '../lib/timezone'
 import { WHO_LABEL } from '../lib/whoLabels'
 import Modal from './Modal'
+
+// A bulk paste is often one person entering the OTHER person's schedule
+// (e.g. Aaron, in the Philippines, pasting in Ada's US shift times) —
+// defaulting the zone to whoever's device is filling out the form
+// (detectDefaultTimezone, same as the regular task form) would silently
+// read those times in the wrong zone. Defaulting to the selected
+// person's own known zone instead — same hardcoded two-person mapping
+// whoLabels.js already uses for names — gets it right by default in the
+// common case, while still leaving the picker open for the "actually,
+// this batch is in a different zone" exception.
+const WHO_DEFAULT_ZONE = { yours: 'America/New_York', assistant: 'Asia/Manila' }
 
 const PLACEHOLDER = `Aug 21
 Texas 12a-4a
@@ -39,8 +50,19 @@ function formatPreviewDate(dateStr) {
 export default function BulkAddTasksForm({ me, defaultWho, onClose, onCreated }) {
   const [text, setText] = useState('')
   const [who, setWho] = useState(defaultWho || 'yours')
+  const [zone, setZone] = useState(WHO_DEFAULT_ZONE[defaultWho || 'yours'])
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState('')
+
+  // Re-defaults the zone to the newly-selected person's own — see
+  // WHO_DEFAULT_ZONE above. If they'd already picked a different zone on
+  // purpose they can just re-pick it after switching; silently keeping a
+  // stale zone selected across a Who switch would risk the exact mistake
+  // this default exists to avoid.
+  function handleWhoChange(nextWho) {
+    setWho(nextWho)
+    setZone(WHO_DEFAULT_ZONE[nextWho])
+  }
 
   const { tasks, errors } = useMemo(() => parseBulkSchedule(text), [text])
 
@@ -50,7 +72,6 @@ export default function BulkAddTasksForm({ me, defaultWho, onClose, onCreated })
     setSaving(true)
     setSubmitError('')
     try {
-      const zone = detectDefaultTimezone()
       await Promise.all(
         tasks.map((t) =>
           createTask({
@@ -81,9 +102,20 @@ export default function BulkAddTasksForm({ me, defaultWho, onClose, onCreated })
 
         <label>
           Who
-          <select value={who} onChange={(e) => setWho(e.target.value)}>
+          <select value={who} onChange={(e) => handleWhoChange(e.target.value)}>
             <option value="yours">{WHO_LABEL.yours}</option>
             <option value="assistant">{WHO_LABEL.assistant}</option>
+          </select>
+        </label>
+
+        <label>
+          Time zone
+          <select value={zone} onChange={(e) => setZone(e.target.value)}>
+            {TIMEZONE_OPTIONS.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
           </select>
         </label>
 
