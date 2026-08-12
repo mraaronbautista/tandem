@@ -33,16 +33,13 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
           {name} {KIND_LABEL[kind]}
         </span>
         {onResolve && (
-          <button
-            type="button"
-            className="inbox-item-resolve-button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onResolve()
-            }}
-          >
-            Not needed
-          </button>
+          <input
+            type="checkbox"
+            className="task-done-checkbox"
+            title="Mark as handled — no reply needed"
+            onClick={(e) => e.stopPropagation()}
+            onChange={onResolve}
+          />
         )}
       </div>
     </li>

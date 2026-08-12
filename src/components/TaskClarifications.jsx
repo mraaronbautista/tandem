@@ -196,9 +196,12 @@ export default function TaskClarifications({
               ) : (
                 <>
                   <AnswerRow item={item} onChange={handleEntryAnswered} taskTitle={taskTitle} taskId={taskId} />
-                  <button type="button" className="clarification-resolve-button" onClick={() => handleResolve(item)}>
-                    No reply needed
-                  </button>
+                  <input
+                    type="checkbox"
+                    className="task-done-checkbox clarification-resolve-check"
+                    title="Mark as handled — no reply needed"
+                    onChange={() => handleResolve(item)}
+                  />
                 </>
               )}
             </div>

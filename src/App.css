@@ -2864,16 +2864,8 @@ label.new-task-checkbox-label {
   opacity: 0.7;
 }
 
-.clarification-resolve-button {
+.clarification-resolve-check {
   align-self: flex-start;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--text);
-  opacity: 0.6;
-  font-size: 12px;
-  text-decoration: underline;
-  cursor: pointer;
 }
 
 /* Column now, not a row — a draft can carry attachments too (see
@@ -3152,14 +3144,6 @@ label.new-task-checkbox-label {
   gap: 8px;
 }
 
-.inbox-item-resolve-button {
+.inbox-item-footer .task-done-checkbox {
   flex: none;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--text);
-  opacity: 0.6;
-  font-size: 12px;
-  text-decoration: underline;
-  cursor: pointer;
 }
