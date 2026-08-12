@@ -31,8 +31,9 @@ function parseDateHeader(line) {
   return `${year}-${pad(monthIdx + 1)}-${pad(day)}`
 }
 
-// '4', '4:30' + 'a'/'p' -> minutes since midnight, 12-hour-clock rules
-// (12a is midnight, 12p is noon).
+// '4', '4:30' + 'a'/'p' (from 'a'/'am'/'a.m.'/'p'/'pm'/'p.m.' — see
+// SHIFT_RE, which only ever captures the leading letter) -> minutes
+// since midnight, 12-hour-clock rules (12a is midnight, 12p is noon).
 function toMinutes(numPart, ampm) {
   let [h, m] = numPart.split(':').map(Number)
   m = m || 0
@@ -44,12 +45,19 @@ function toMinutes(numPart, ampm) {
   return h * 60 + m
 }
 
-// A shift line: title, then a trailing time range like "12a-4a" or
-// "2:30p-5p". Whatever's before the time range — "Texas", "Washington
-// 2a-5a" minus its own range — becomes the task title verbatim, so a
-// line can usually be pasted straight out of a schedule tool's own
-// display ("Texas 12a-4a") with no reformatting.
-const SHIFT_RE = /^(.+?)\s+(\d{1,2}(?::\d{2})?)([ap])\s*-\s*(\d{1,2}(?::\d{2})?)([ap])$/i
+// A shift line: title, then a trailing time range. Whatever's before the
+// range — "Texas", "Washington 2a-5a" minus its own range — becomes the
+// task title verbatim. Deliberately forgiving on the range itself: "am"/
+// "pm"/"a.m."/"a" are all accepted (only the leading a/p is captured,
+// letting "12am to 4am" and "12a-4a" both work), the separator can be a
+// hyphen/en dash/em dash or the word "to"/"until", and a trailing "next
+// day"/"(+1 day)" is accepted and ignored — crossing midnight is already
+// detected from the times themselves (see below), so that annotation is
+// only ever for the human reading it back, not something the parser
+// needs. This is intentionally more permissive than the one example
+// shown in the form's hint text, since real pasted schedules vary.
+const SHIFT_RE =
+  /^(.+?)\s+(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—|to|until)\s*(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?(?:\s*,?\s*(?:next\s*day|\(?\+\s*1\s*day\)?))?\.?$/i
 
 function parseShiftLine(line) {
   const m = line.match(SHIFT_RE)
