@@ -1,5 +1,14 @@
 const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
+// A bare 'Aug 21' with no year that's already in the past only rolls
+// forward to next year once it's more than this many days stale. Without
+// a grace window, a schedule whose first date section is "yesterday"
+// (e.g. pasted the morning after, still covering an overnight shift that
+// started the day before) got silently pushed a full year out — a
+// "successful" parse with no error, just filed under the wrong year, so
+// the task looked like it had vanished from the batch entirely.
+const YEAR_ROLLOVER_GRACE_DAYS = 7
+
 function pad(n) {
   return String(n).padStart(2, '0')
 }
@@ -10,7 +19,9 @@ function pad(n) {
 // schedule tools actually print dates, so a line can often be pasted
 // close to verbatim rather than needing to be retyped as ISO. A bare
 // 'Aug 21' with no year assumes the current year, or next year if that
-// date already passed — the common "planning into next year" case.
+// date is more than YEAR_ROLLOVER_GRACE_DAYS in the past — the common
+// "planning into next year" case, without misfiring on a schedule that
+// starts a day or two ago.
 function parseDateHeader(line) {
   let m = line.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (m) return `${m[1]}-${m[2]}-${m[3]}`
@@ -21,9 +32,11 @@ function parseDateHeader(line) {
   if (monthIdx === -1) return null
   const day = Number(m[2])
   const today = new Date()
+  const todayAtMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   let year = m[3] ? Number(m[3]) : today.getFullYear()
   let candidate = new Date(year, monthIdx, day)
-  if (!m[3] && candidate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+  const daysPast = (todayAtMidnight - candidate) / (24 * 60 * 60 * 1000)
+  if (!m[3] && daysPast > YEAR_ROLLOVER_GRACE_DAYS) {
     year += 1
     candidate = new Date(year, monthIdx, day)
   }

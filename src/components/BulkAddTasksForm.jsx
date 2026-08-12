@@ -35,9 +35,17 @@ function formatPreviewTime(dueTime, durationMinutes) {
   return `${fmt(start)} – ${fmt(end)}`
 }
 
+// Includes the year only when it's not the current one — a bulk paste is
+// almost always same-year, so spelling it out every row would just be
+// noise, but the one time a line lands in an unexpected year (e.g. the
+// no-year-given date-header heuristic in bulkTasks.js rolling a stale
+// date into next year) is exactly when it needs to be visible here.
 function formatPreviewDate(dateStr) {
   const [y, mo, d] = dateStr.split('-').map(Number)
-  return new Date(y, mo - 1, d).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+  const date = new Date(y, mo - 1, d)
+  const opts = { weekday: 'short', month: 'short', day: 'numeric' }
+  if (y !== new Date().getFullYear()) opts.year = 'numeric'
+  return date.toLocaleDateString([], opts)
 }
 
 // A whole schedule at once — a date line followed by one shift per line
