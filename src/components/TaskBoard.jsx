@@ -10,6 +10,8 @@ import {
   getOverlappingTaskIds,
   getWeekDays,
   groupTasksByDay,
+  hasUnseenInboxItems,
+  INBOX_LAST_VIEWED_KEY,
 } from '../lib/tasks'
 import { fetchMembers } from '../lib/members'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -35,6 +37,7 @@ import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
 import CorkBoardView from './CorkBoardView'
+import InboxView from './InboxView'
 import MonthView from './MonthView'
 
 const WHO_TABS = [
@@ -75,6 +78,7 @@ const TABS = [
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
   { key: 'reports', icon: '📄', label: 'Reports' },
   { key: 'corkboard', icon: '📌', label: 'Cork Board' },
+  { key: 'inbox', icon: '📥', label: 'Inbox' },
 ]
 
 // The header's page title for every tab except Today (which shows the
@@ -85,6 +89,7 @@ const PAGE_LABELS = {
   rentals: 'Awa Rentalz',
   reports: 'Reports',
   corkboard: 'Cork Board',
+  inbox: 'Inbox',
 }
 
 function startOfDay(d) {
@@ -113,6 +118,18 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [activeTab, setActiveTab] = useState('today')
   const [viewMode, setViewMode] = useState('day')
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [inboxLastViewedAt, setInboxLastViewedAt] = useState(() => localStorage.getItem(INBOX_LAST_VIEWED_KEY) || '')
+
+  // Bumping this on every visit (not just once ever) is what lets the nav
+  // badge clear as soon as you open the tab, and what lets InboxView know
+  // which answers are new since the *previous* visit rather than the very
+  // first one.
+  useEffect(() => {
+    if (activeTab !== 'inbox') return
+    const now = new Date().toISOString()
+    localStorage.setItem(INBOX_LAST_VIEWED_KEY, now)
+    setInboxLastViewedAt(now)
+  }, [activeTab])
 
   // Week always opens on the calendar week containing today, regardless
   // of whatever selectedDate happened to be set to (e.g. from browsing
@@ -314,6 +331,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
     overlappingIds,
   }
 
+  const hasUnseenInbox = hasUnseenInboxItems(tasks, session.user.id, inboxLastViewedAt)
+
   // Folded into the "+" FAB as a speed-dial rather than separate header
   // icons — that's what got cluttered as these got added one by one.
   // Rentals and Reports moved out to the persistent tab bar/sidebar (see
@@ -336,7 +355,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
       className={`task-board-nav-item${activeTab === tab.key ? ' task-board-nav-item-active' : ''}`}
       onClick={() => setActiveTab(tab.key)}
     >
-      <span className="task-board-nav-icon">{tab.icon}</span>
+      <span className="task-board-nav-icon">
+        {tab.icon}
+        {tab.key === 'inbox' && hasUnseenInbox && <span className="task-board-nav-item-badge" />}
+      </span>
       {tab.label}
     </button>
   ))
@@ -388,6 +410,15 @@ export default function TaskBoard({ theme, toggleTheme }) {
         {activeTab === 'rentals' && <RentalsView me={me} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
         {activeTab === 'corkboard' && <CorkBoardView me={me} memberName={memberName} />}
+        {activeTab === 'inbox' && (
+          <InboxView
+            tasks={tasks}
+            meId={session.user.id}
+            memberName={memberName}
+            onSelectTask={(task) => setPeekTaskId(task.id)}
+            lastViewedAt={inboxLastViewedAt}
+          />
+        )}
 
         {activeTab === 'today' && (
           <PullToRefresh onRefresh={reload}>

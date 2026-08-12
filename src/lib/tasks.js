@@ -220,6 +220,59 @@ export function getMonthDays(date) {
   return Array.from({ length: numDays }, (_, i) => new Date(year, month, i + 1))
 }
 
+// Shared with InboxView.jsx (which writes to it) and TaskBoard.jsx's nav
+// badge (which reads it via hasUnseenInboxItems below) — a single key so
+// both stay in sync without importing each other.
+export const INBOX_LAST_VIEWED_KEY = 'inbox-last-viewed-at'
+
+// Flattens every task's clarifications jsonb into a single list of things
+// worth surfacing to `meId` in the Inbox tab: questions directed at them
+// (not yet answered) and answers to questions they themselves asked. The
+// `question` condition matches TaskRow.jsx's own hasQuestionForMe exactly
+// — it's inherently self-clearing (disappears once answered), same as
+// that row-level badge, so it needs no separate read/seen tracking.
+// "Needs your reply" sorts first as the more actionable half; within each
+// half, newest first.
+export function getInboxItems(tasks, meId) {
+  const items = []
+  for (const task of tasks) {
+    for (const c of task.clarifications || []) {
+      if (!c.answer && c.askedBy !== meId) {
+        items.push({
+          kind: 'question',
+          taskId: task.id,
+          taskTitle: task.title,
+          clarificationId: c.id,
+          text: c.question,
+          otherPersonId: c.askedBy,
+          at: c.askedAt,
+        })
+      } else if (c.answer && c.askedBy === meId) {
+        items.push({
+          kind: 'answer',
+          taskId: task.id,
+          taskTitle: task.title,
+          clarificationId: c.id,
+          text: c.answer,
+          otherPersonId: c.answeredBy,
+          at: c.answeredAt,
+        })
+      }
+    }
+  }
+  items.sort((a, b) => (a.kind === b.kind ? new Date(b.at) - new Date(a.at) : a.kind === 'question' ? -1 : 1))
+  return items
+}
+
+// Whether the Inbox nav item should show its unread dot: any pending
+// question (always "unseen" until answered), or any answer newer than the
+// last time the Inbox tab itself was open.
+export function hasUnseenInboxItems(tasks, meId, lastViewedAt) {
+  return getInboxItems(tasks, meId).some(
+    (item) => item.kind === 'question' || !lastViewedAt || new Date(item.at) > new Date(lastViewedAt),
+  )
+}
+
 // Buckets tasks by the local day they belong to (same done/not-done rule
 // as getTasksForDay: done tasks by completed_at, others by due_date) into
 // a Map of 'YYYY-MM-DD' -> tasks[] — for rendering many days at once
