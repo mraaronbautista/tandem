@@ -45,7 +45,7 @@ export default function SettingsMenu({
           </button>
 
           {onChangeDefaultTimezone && (
-            <label className="settings-menu-item settings-menu-item-select">
+            <div className="settings-menu-item settings-menu-item-select">
               <span className="settings-menu-icon">🌐</span>
               <span className="settings-menu-item-label">Default timezone</span>
               <select
@@ -59,7 +59,7 @@ export default function SettingsMenu({
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
           )}
 
           <button type="button" className="settings-menu-item" onClick={() => setGuideOpen(true)}>
