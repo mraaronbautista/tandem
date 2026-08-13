@@ -31,7 +31,7 @@ create table tasks (
   -- "3:00 PM" while this is 'America/New_York' means 3pm Eastern, not 3pm
   -- in whichever timezone the browser that created it happened to be in).
   -- Needed to redisplay the same intended time consistently for both of you.
-  due_timezone text not null default 'America/New_York',
+  due_timezone text not null default 'America/Chicago',
   -- How long the task is expected to take, in minutes, starting at
   -- due_date — null means it's just a point-in-time/deadline with no
   -- span. Drives the "7:45–8:45 PM" range display; the end time is always

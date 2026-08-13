@@ -1,9 +1,9 @@
-// Common zones for a 2-person, 2-continent household — Ada travels around
-// the US (Cincinnati is Eastern, same as her usual EST/EDT, so it doesn't
-// need its own entry), Aaron is fixed in the Philippines. This picker is
-// only used when setting a task's time, so you can target Ada's zone
-// precisely regardless of your own device's timezone — display elsewhere
-// always converts to whoever is actually looking, in their own local time.
+// Common zones for a 2-person, 2-continent household — Ada's usual zone is
+// Central, but she travels around the US (the other US entries below cover
+// that), Aaron is fixed in the Philippines. This picker is only used when
+// setting a task's time, so you can target Ada's zone precisely regardless
+// of your own device's timezone — display elsewhere always converts to
+// whoever is actually looking, in their own local time.
 export const TIMEZONE_OPTIONS = [
   { value: 'America/New_York', label: 'Eastern (ET)' },
   { value: 'America/Chicago', label: 'Central (CT)' },
@@ -12,7 +12,7 @@ export const TIMEZONE_OPTIONS = [
   { value: 'Asia/Manila', label: 'Philippines (PHT)' },
 ]
 
-export const DEFAULT_TIMEZONE = 'America/New_York'
+export const DEFAULT_TIMEZONE = 'America/Chicago'
 
 // The device's own IANA zone, mapped to the matching TIMEZONE_OPTIONS
 // entry if there is one, else DEFAULT_TIMEZONE. Used to seed a new task's

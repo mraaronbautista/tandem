@@ -14,7 +14,7 @@ import Modal from './Modal'
 // whoLabels.js already uses for names — gets it right by default in the
 // common case, while still leaving the picker open for the "actually,
 // this batch is in a different zone" exception.
-const WHO_DEFAULT_ZONE = { yours: 'America/New_York', assistant: 'Asia/Manila' }
+const WHO_DEFAULT_ZONE = { yours: 'America/Chicago', assistant: 'Asia/Manila' }
 
 const PLACEHOLDER = `Aug 21
 Texas 12a-4a
