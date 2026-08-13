@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { getInboxItems } from '../lib/tasks'
 import { WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 
-const ANSWERED_WINDOW_DAYS = 14
-
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
 
 function formatWhen(iso) {
@@ -62,10 +60,10 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
 export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpdate, lastViewedAt }) {
   const [frozenLastViewedAt] = useState(() => lastViewedAt)
 
-  const cutoff = Date.now() - ANSWERED_WINDOW_DAYS * 24 * 60 * 60 * 1000
-  const items = getInboxItems(tasks, meId).filter(
-    (item) => item.kind === 'question' || new Date(item.at).getTime() >= cutoff,
-  )
+  // Full history, not just recent activity — a completed task's
+  // conversation should stay findable here, not age out just because the
+  // work itself is long done.
+  const items = getInboxItems(tasks, meId)
   const questions = items.filter((item) => item.kind === 'question')
   const answers = items.filter((item) => item.kind === 'answer')
   const finished = items.filter((item) => item.kind === 'finished')
