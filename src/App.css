@@ -1802,6 +1802,16 @@ a.task-submission-file-link:hover {
   .modal-backdrop .submission-modal.date-picker-modal {
     width: 340px;
   }
+
+  /* Wider than the shared 560px cap — the Default timezone row (icon +
+     label + select) was wrapping onto its own centered lines at that
+     width once the label text and a longer zone name (e.g. "Philippines
+     (PHT)") were both in play. Scoped to desktop only, same as the two
+     rules above — the mobile slide-up sheet is already full viewport
+     width, nothing to widen there. */
+  .modal-backdrop .submission-modal.settings-modal {
+    width: 640px;
+  }
 }
 
 @keyframes modal-slide-up {

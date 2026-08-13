@@ -23,7 +23,7 @@ export default function SettingsMenu({
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="submission-modal settings-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Settings</h2>
 
         {/* Both accounts share the same device/browser sometimes — a quick
