@@ -14,8 +14,23 @@ export const TIMEZONE_OPTIONS = [
 
 export const DEFAULT_TIMEZONE = 'America/Chicago'
 
-// The device's own IANA zone, mapped to the matching TIMEZONE_OPTIONS
-// entry if there is one, else DEFAULT_TIMEZONE. Used to seed a new task's
+// The signed-in member's own explicit choice (SettingsMenu.jsx, persisted
+// to members.default_timezone) — set once on load/change by TaskBoard.jsx
+// via setPreferredTimezone. A plain module-level variable rather than
+// something threaded through props, since detectDefaultTimezone() is
+// called from plenty of places (TaskForm.jsx's emptyTaskForm,
+// CorkBoardView.jsx, PrioritiesForm.jsx) that would otherwise all need
+// `me`/`members` piped in just for this. Null until members have loaded
+// and the signed-in member's row is known.
+let preferredTimezone = null
+
+export function setPreferredTimezone(timezone) {
+  preferredTimezone = timezone || null
+}
+
+// The signed-in member's explicit preference if they've set one, else the
+// device's own IANA zone (mapped to the matching TIMEZONE_OPTIONS entry if
+// there is one), else DEFAULT_TIMEZONE. Used to seed a new task's
 // due_timezone so a lazily-created task (nobody touched the Time/
 // Timezone fields) lands at "9 AM" for whoever's actually creating it —
 // previously this defaulted to Eastern unconditionally, so a task Aaron
@@ -25,6 +40,7 @@ export const DEFAULT_TIMEZONE = 'America/Chicago'
 // auto-dates into tomorrow morning for him, defeating the point of that
 // field (so it can go overdue today, like any other task).
 export function detectDefaultTimezone() {
+  if (preferredTimezone) return preferredTimezone
   const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   return TIMEZONE_OPTIONS.some((tz) => tz.value === deviceZone) ? deviceZone : DEFAULT_TIMEZONE
 }

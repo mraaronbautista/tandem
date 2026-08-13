@@ -1498,6 +1498,27 @@ a.task-submission-file-link:hover {
   font-size: 17px;
 }
 
+.settings-menu-item-select {
+  justify-content: space-between;
+  cursor: default;
+}
+
+.settings-menu-item-label {
+  flex: 1;
+}
+
+.settings-menu-select {
+  flex: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .settings-menu-item-danger {
   color: var(--overdue);
 }

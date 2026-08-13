@@ -13,7 +13,8 @@ import {
   hasUnseenInboxItems,
   INBOX_LAST_VIEWED_KEY,
 } from '../lib/tasks'
-import { fetchMembers } from '../lib/members'
+import { fetchMembers, updateDefaultTimezone } from '../lib/members'
+import { setPreferredTimezone } from '../lib/timezone'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
@@ -225,6 +226,21 @@ export default function TaskBoard({ theme, toggleTheme }) {
   useEffect(() => {
     if (me) setWhoTab(whoKeyForName(me.display_name) || 'all')
   }, [me])
+
+  // Keeps timezone.js's detectDefaultTimezone() in sync with whatever the
+  // signed-in member has saved in Settings, so every call site that
+  // already relies on that function (TaskForm's emptyTaskForm,
+  // CorkBoardView, PrioritiesForm) picks it up without each needing
+  // `me`/`members` threaded through as props.
+  useEffect(() => {
+    setPreferredTimezone(me?.default_timezone)
+  }, [me?.default_timezone])
+
+  async function handleChangeDefaultTimezone(timezone) {
+    if (!me) return
+    await updateDefaultTimezone(me.id, timezone)
+    reloadMembers()
+  }
 
   // Whichever "who" filter is active becomes the default for a new task —
   // viewing Ada's list and tapping + New task assumes it's for Ada. On the
@@ -567,6 +583,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       {bulkAddOpen && (
         <BulkAddTasksForm
           me={me}
+          members={members}
           defaultWho={defaultWho}
           onClose={() => setBulkAddOpen(false)}
           onCreated={() => {
@@ -589,6 +606,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
           onSignOut={signOut}
           onClose={() => setSettingsOpen(false)}
           memberName={me?.display_name}
+          defaultTimezone={me?.default_timezone}
+          onChangeDefaultTimezone={handleChangeDefaultTimezone}
         />
       )}
     </div>

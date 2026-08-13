@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { TIMEZONE_OPTIONS, detectDefaultTimezone } from '../lib/timezone'
 import Modal from './Modal'
 import HowToGuide from './HowToGuide'
 
@@ -15,6 +16,8 @@ export default function SettingsMenu({
   onSignOut,
   onClose,
   memberName,
+  defaultTimezone,
+  onChangeDefaultTimezone,
 }) {
   const [guideOpen, setGuideOpen] = useState(false)
 
@@ -40,6 +43,24 @@ export default function SettingsMenu({
             <span className="settings-menu-icon">{theme === 'dark' ? '🌙' : '☀️'}</span>
             {theme === 'dark' ? 'Dark mode' : 'Light mode'}
           </button>
+
+          {onChangeDefaultTimezone && (
+            <label className="settings-menu-item settings-menu-item-select">
+              <span className="settings-menu-icon">🌐</span>
+              <span className="settings-menu-item-label">Default timezone</span>
+              <select
+                className="settings-menu-select"
+                value={defaultTimezone || detectDefaultTimezone()}
+                onChange={(e) => onChangeDefaultTimezone(e.target.value)}
+              >
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <button type="button" className="settings-menu-item" onClick={() => setGuideOpen(true)}>
             <span className="settings-menu-icon">❓</span>

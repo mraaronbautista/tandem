@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { parseBulkSchedule } from '../lib/bulkTasks'
 import { createTask } from '../lib/tasks'
 import { TIMEZONE_OPTIONS, zonedTimeToUtcIso } from '../lib/timezone'
-import { WHO_LABEL } from '../lib/whoLabels'
+import { WHO_LABEL, whoKeyForName } from '../lib/whoLabels'
 import Modal from './Modal'
 
 // A bulk paste is often one person entering the OTHER person's schedule
@@ -13,7 +13,9 @@ import Modal from './Modal'
 // person's own known zone instead — same hardcoded two-person mapping
 // whoLabels.js already uses for names — gets it right by default in the
 // common case, while still leaving the picker open for the "actually,
-// this batch is in a different zone" exception.
+// this batch is in a different zone" exception. Used only as a fallback
+// when that person hasn't set an explicit default_timezone in Settings
+// (see zoneForWho below) — this hardcoded guess predates that setting.
 const WHO_DEFAULT_ZONE = { yours: 'America/Chicago', assistant: 'Asia/Manila' }
 
 const PLACEHOLDER = `Aug 21
@@ -55,21 +57,30 @@ function formatPreviewDate(dateStr) {
 // is normally all one person's shifts. See lib/bulkTasks.js for the
 // actual parsing rules and why a line can usually be pasted close to
 // verbatim out of a schedule tool's own display.
-export default function BulkAddTasksForm({ me, defaultWho, onClose, onCreated }) {
+export default function BulkAddTasksForm({ me, members, defaultWho, onClose, onCreated }) {
   const [text, setText] = useState('')
   const [who, setWho] = useState(defaultWho || 'yours')
-  const [zone, setZone] = useState(WHO_DEFAULT_ZONE[defaultWho || 'yours'])
+
+  // That person's own saved preference (Settings) if they've set one,
+  // else the hardcoded guess above. Looked up by `who` rather than a
+  // fixed member id since either "yours" or "assistant" can be selected.
+  function zoneForWho(w) {
+    const member = members?.find((m) => whoKeyForName(m.display_name) === w)
+    return member?.default_timezone || WHO_DEFAULT_ZONE[w]
+  }
+
+  const [zone, setZone] = useState(() => zoneForWho(defaultWho || 'yours'))
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
   // Re-defaults the zone to the newly-selected person's own — see
-  // WHO_DEFAULT_ZONE above. If they'd already picked a different zone on
+  // zoneForWho above. If they'd already picked a different zone on
   // purpose they can just re-pick it after switching; silently keeping a
   // stale zone selected across a Who switch would risk the exact mistake
   // this default exists to avoid.
   function handleWhoChange(nextWho) {
     setWho(nextWho)
-    setZone(WHO_DEFAULT_ZONE[nextWho])
+    setZone(zoneForWho(nextWho))
   }
 
   const { tasks, errors } = useMemo(() => parseBulkSchedule(text), [text])

@@ -5,15 +5,17 @@ import { formatDuration } from '../lib/tasks'
 import ChecklistEditor from './ChecklistEditor'
 import ScrollSelect from './ScrollSelect'
 
-// due_date/due_time aren't set here — a brand-new task defaults to
-// roughly "now" (see defaultDueDateTime below), computed fresh each time
-// the form actually opens rather than a fixed value baked into this
-// module-level object.
+// due_date/due_time/due_timezone aren't set here — a brand-new task
+// defaults to roughly "now", in whoever's creating it own zone (see
+// defaultDueDateTime/detectDefaultTimezone below), computed fresh each
+// time the form actually opens rather than a fixed value baked into this
+// module-level object at import time (detectDefaultTimezone can change
+// mid-session, e.g. right after loading the signed-in member's saved
+// preference).
 export const emptyTaskForm = {
   title: '',
   who: 'yours',
   priority: 'med',
-  due_timezone: detectDefaultTimezone(),
   duration_minutes: '',
   source: 'none',
   source_note: '',
@@ -119,6 +121,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
     const defaultDateTime = defaultDueDateTime()
     return {
       ...emptyTaskForm,
+      due_timezone: detectDefaultTimezone(),
       ...initialValues,
       due_date: initialValues?.due_date || defaultDateTime.due_date,
       due_time: initialValues?.due_time || defaultDateTime.due_time,

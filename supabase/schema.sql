@@ -17,7 +17,14 @@ create table members (
   -- Nullable timestamp rather than a plain boolean: doubles as the on/off
   -- flag (is/isn't null) and lets the UI show "working since 2:15 PM" for
   -- free, with no second column that could drift out of sync.
-  working_since timestamptz
+  working_since timestamptz,
+  -- IANA zone this person's own tasks/schedules should default to (set via
+  -- SettingsMenu.jsx) — null means "not set yet", falling back to
+  -- timezone.js's device-detection/hardcoded default, same as before this
+  -- column existed. Lives here rather than a per-device localStorage value
+  -- (like theme) because it has to be mutually visible — the other person
+  -- needs to see it too when bulk-adding *your* schedule for you.
+  default_timezone text
 );
 
 create table tasks (
