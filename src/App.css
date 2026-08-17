@@ -2626,6 +2626,14 @@ label.new-task-checkbox-label {
 .rental-calendar-toolbar .rental-overview-list {
   flex-basis: 100%;
   display: flex;
+  /* The base .rental-overview-list rule sets flex-direction: column
+     (right for the plain vertical list this becomes everywhere else) —
+     nothing here was overriding it back to row, so this whole block
+     was silently laying out top-to-bottom the entire time. That also
+     explains why align-items: flex-start below produced content-width
+     cards instead of two-per-row: in a column container, align-items
+     controls the horizontal/cross axis, not row-sharing. */
+  flex-direction: row;
   flex-wrap: wrap;
   /* Each card only takes its own content height — without this, every
      card on a shared row stretches (flex's default align-items) to
