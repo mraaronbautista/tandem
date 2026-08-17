@@ -21,6 +21,12 @@ export default function VaultView({ me, onClose }) {
   const [masterPassword, setMasterPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [unlocking, setUnlocking] = useState(false)
+  // A typo here is unrecoverable — there's no reset-and-recover path,
+  // just "Reset vault" wiping everything — so unlike most password
+  // fields, being able to double-check it visually actually matters.
+  // One shared toggle since setup's and unlock's password fields never
+  // render at the same time.
+  const [showMasterPassword, setShowMasterPassword] = useState(false)
 
   const [showReset, setShowReset] = useState(false)
   const [resetConfirmText, setResetConfirmText] = useState('')
@@ -132,18 +138,23 @@ export default function VaultView({ me, onClose }) {
             </p>
             <label>
               Master password
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={masterPassword}
-                onChange={(e) => setMasterPassword(e.target.value)}
-              />
+              <div className="vault-password-input-row">
+                <input
+                  type={showMasterPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  value={masterPassword}
+                  onChange={(e) => setMasterPassword(e.target.value)}
+                />
+                <button type="button" className="vault-copy" onClick={() => setShowMasterPassword((v) => !v)}>
+                  {showMasterPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </label>
             <label>
               Confirm master password
               <input
-                type="password"
+                type={showMasterPassword ? 'text' : 'password'}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -164,13 +175,18 @@ export default function VaultView({ me, onClose }) {
           <form onSubmit={handleUnlock}>
             <label>
               Master password
-              <input
-                type="password"
-                required
-                autoFocus
-                value={masterPassword}
-                onChange={(e) => setMasterPassword(e.target.value)}
-              />
+              <div className="vault-password-input-row">
+                <input
+                  type={showMasterPassword ? 'text' : 'password'}
+                  required
+                  autoFocus
+                  value={masterPassword}
+                  onChange={(e) => setMasterPassword(e.target.value)}
+                />
+                <button type="button" className="vault-copy" onClick={() => setShowMasterPassword((v) => !v)}>
+                  {showMasterPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </label>
             <div className="submission-actions">
               <button type="button" onClick={onClose}>

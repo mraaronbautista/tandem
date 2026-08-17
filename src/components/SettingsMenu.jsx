@@ -33,7 +33,7 @@ export default function SettingsMenu({
         {memberName && <p className="settings-menu-account">Signed in as {memberName}</p>}
 
         <div className="settings-menu-items">
-          {showPush && (
+          {showPush ? (
             <>
               <button type="button" className="settings-menu-item" onClick={onTogglePush} disabled={pushBusy}>
                 <span className="settings-menu-icon">{pushEnabled ? '🔔' : '🔕'}</span>
@@ -41,6 +41,20 @@ export default function SettingsMenu({
               </button>
               {pushError && <p className="error settings-menu-error">{pushError}</p>}
             </>
+          ) : (
+            // Omitting this row entirely (the old behavior) left "why am I
+            // not getting notified" with nothing to find — most commonly
+            // hit on iOS Safari outside a Home Screen install, which can't
+            // receive push at all (a platform limit, not fixable here).
+            <div className="settings-menu-item settings-menu-item-disabled">
+              <span className="settings-menu-icon">🔕</span>
+              <span className="settings-menu-item-label">
+                Notifications not supported
+                <span className="settings-menu-item-caption">
+                  On iPhone, add this app to your Home Screen first.
+                </span>
+              </span>
+            </div>
           )}
 
           <button type="button" className="settings-menu-item" onClick={toggleTheme}>
@@ -51,7 +65,10 @@ export default function SettingsMenu({
           {onChangeDefaultTimezone && (
             <div className="settings-menu-item settings-menu-item-select">
               <span className="settings-menu-icon">🌐</span>
-              <span className="settings-menu-item-label">Default timezone</span>
+              <span className="settings-menu-item-label">
+                Default timezone
+                <span className="settings-menu-item-caption">Used when creating new items.</span>
+              </span>
               <select
                 className="settings-menu-select"
                 value={defaultTimezone || detectDefaultTimezone()}
