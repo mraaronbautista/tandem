@@ -340,6 +340,16 @@
   .header-actions {
     gap: 8px;
   }
+
+  /* Bumped toward the ~44px touch-target guideline on the phone width
+     these actually get tapped on — left alone on desktop, where the
+     32px circle is mouse-driven and the extra size would just crowd the
+     header row for no benefit. */
+  .push-toggle,
+  .icon-button {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .working-toggle {
@@ -2328,6 +2338,7 @@ label.new-task-checkbox-label {
   }
 
   .rental-unit-tab {
+    min-height: 40px;
     padding: 4px 6px;
     gap: 4px;
     font-size: 11px;
@@ -2862,6 +2873,16 @@ label.new-task-checkbox-label {
   color: var(--text-h);
   font-size: 12px;
   cursor: pointer;
+}
+
+/* Show/Copy get tapped often enough (checking or copying a stored
+   credential) that the compact desktop sizing feels cramped on a phone
+   — taller tap area on mobile only, visual size otherwise unchanged. */
+@media (max-width: 480px) {
+  .vault-copy {
+    min-height: 40px;
+    padding: 4px 14px;
+  }
 }
 
 .vault-password-input-row {
