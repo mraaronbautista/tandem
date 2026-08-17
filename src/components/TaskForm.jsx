@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { WHO_LABEL } from '../lib/whoLabels'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
@@ -112,6 +112,11 @@ function buildEndTimeOptions(startTime) {
 }
 
 export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true }) {
+  // Multiple TaskForm instances can be mounted at once (each TaskRow
+  // owns its own `editing` state independently), so the title/notes
+  // label ids below need to be unique per instance, not a fixed string.
+  const titleFieldId = useId()
+  const notesFieldId = useId()
   // source_note/notes are nullable in the database — coalesce to '' so
   // editing a task that never had them doesn't hand a controlled input a
   // null value. Lazy initializer (not a plain object) so "now" is read
@@ -191,7 +196,11 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
 
   return (
     <form className="new-task-form" onSubmit={handleSubmit}>
+      <label className="visually-hidden" htmlFor={titleFieldId}>
+        Title
+      </label>
       <input
+        id={titleFieldId}
         autoFocus={autoFocus}
         required
         placeholder="What needs to happen?"
@@ -315,7 +324,11 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         )}
       </div>
 
+      <label className="visually-hidden" htmlFor={notesFieldId}>
+        Notes
+      </label>
       <textarea
+        id={notesFieldId}
         placeholder="Optional details…"
         value={form.notes}
         onChange={(e) => set('notes', e.target.value)}

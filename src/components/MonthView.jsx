@@ -1,5 +1,5 @@
 import { isAllDayTask } from '../lib/tasks'
-import { PRIORITY_COLOR } from '../lib/priorityColors'
+import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { useMediaQuery } from '../lib/useMediaQuery'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -103,7 +103,11 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
                   <div className="month-view-day-tasks">
                     {visible.map((task) => (
                       <span key={task.id} className="month-view-task-chip">
-                        <span className="month-view-task-dot" style={{ background: PRIORITY_COLOR[task.priority] }} />
+                        <span
+                          className="month-view-task-dot"
+                          style={{ background: PRIORITY_COLOR[task.priority] }}
+                          title={PRIORITY_LABEL[task.priority]}
+                        />
                         <span className="month-view-task-title">{task.title}</span>
                         <span className="month-view-task-time">{timeLabel(task)}</span>
                       </span>

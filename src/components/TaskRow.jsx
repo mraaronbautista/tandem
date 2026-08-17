@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
-import { PRIORITY_COLOR } from '../lib/priorityColors'
+import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
@@ -155,7 +155,11 @@ export default function TaskRow({
           onChange={handleStatusToggle}
         />
         {!hidePriorityDot && (
-          <span className="task-priority-dot" style={{ background: PRIORITY_COLOR[task.priority] }} />
+          <span
+            className="task-priority-dot"
+            style={{ background: PRIORITY_COLOR[task.priority] }}
+            title={PRIORITY_LABEL[task.priority]}
+          />
         )}
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}

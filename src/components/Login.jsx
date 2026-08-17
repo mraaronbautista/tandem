@@ -15,11 +15,17 @@ export default function Login({ theme, toggleTheme }) {
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('idle') // idle | sending | sent | error
   const [error, setError] = useState('')
+  // Separate from `status` — status is transient (flips through
+  // 'sending' again on a resend), but once a link has been sent once the
+  // "check your email" screen should stay up rather than the form
+  // reappearing mid-resend.
+  const [magicLinkSent, setMagicLinkSent] = useState(false)
 
   function switchMode() {
     setMode((m) => (m === 'password' ? 'magic-link' : 'password'))
     setStatus('idle')
     setError('')
+    setMagicLinkSent(false)
   }
 
   async function handlePasswordSubmit(e) {
@@ -39,8 +45,7 @@ export default function Login({ theme, toggleTheme }) {
     // picks up the new session and swaps the login screen out on its own.
   }
 
-  async function handleMagicLinkSubmit(e) {
-    e.preventDefault()
+  async function sendMagicLink() {
     setStatus('sending')
     setError('')
 
@@ -56,6 +61,12 @@ export default function Login({ theme, toggleTheme }) {
     }
 
     setStatus('sent')
+    setMagicLinkSent(true)
+  }
+
+  function handleMagicLinkSubmit(e) {
+    e.preventDefault()
+    sendMagicLink()
   }
 
   return (
@@ -68,16 +79,26 @@ export default function Login({ theme, toggleTheme }) {
 
       {mode === 'password' && (
         <form onSubmit={handlePasswordSubmit} className="login-form">
+          <label className="visually-hidden" htmlFor="login-email">
+            Email
+          </label>
           <input
+            id="login-email"
             type="email"
             required
+            autoComplete="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          <label className="visually-hidden" htmlFor="login-password">
+            Password
+          </label>
           <input
+            id="login-password"
             type="password"
             required
+            autoComplete="current-password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -90,13 +111,24 @@ export default function Login({ theme, toggleTheme }) {
       )}
 
       {mode === 'magic-link' &&
-        (status === 'sent' ? (
-          <p className="login-sent">Check {email} for a sign-in link.</p>
+        (magicLinkSent ? (
+          <div className="login-form">
+            <p className="login-sent">Check {email} for a sign-in link.</p>
+            <button type="button" onClick={sendMagicLink} disabled={status === 'sending'}>
+              {status === 'sending' ? 'Resending…' : 'Resend link'}
+            </button>
+            {status === 'error' && <p className="login-error">{error}</p>}
+          </div>
         ) : (
           <form onSubmit={handleMagicLinkSubmit} className="login-form">
+            <label className="visually-hidden" htmlFor="login-email">
+              Email
+            </label>
             <input
+              id="login-email"
               type="email"
               required
+              autoComplete="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

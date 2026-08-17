@@ -1,5 +1,5 @@
 import { isAllDayTask } from '../lib/tasks'
-import { PRIORITY_COLOR } from '../lib/priorityColors'
+import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import TaskRow from './TaskRow'
 
 export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
@@ -18,6 +18,7 @@ export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
   // the task has, and an All Day task has no duration by definition (see
   // isAllDayTask), so neither case has a real span to show.
   const dotColor = PRIORITY_COLOR[task.priority]
+  const dotTitle = PRIORITY_LABEL[task.priority]
   const hasSpan = task.status !== 'done' && !isAllDay && task.duration_minutes
   const endLabel = hasSpan
     ? new Date(new Date(time).getTime() + task.duration_minutes * 60000).toLocaleTimeString([], {
@@ -33,11 +34,11 @@ export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
         {hasSpan && <span className="timeline-time-end">{endLabel}</span>}
       </div>
       <div className="timeline-rail">
-        <span className="timeline-dot" style={{ background: dotColor }} />
+        <span className="timeline-dot" style={{ background: dotColor }} title={dotTitle} />
         {hasSpan && (
           <>
             <span className="timeline-span-connector" />
-            <span className="timeline-dot timeline-dot-end" style={{ background: dotColor }} />
+            <span className="timeline-dot timeline-dot-end" style={{ background: dotColor }} title={dotTitle} />
           </>
         )}
         {!isLast && <span className="timeline-connector" />}
