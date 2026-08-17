@@ -80,6 +80,36 @@ export async function fetchRentalProperties(company) {
   return data
 }
 
+export async function createRentalProperty(company, { unit_name, address, monthly_rent, color }) {
+  const { data, error } = await supabase
+    .from('rental_properties')
+    .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color })
+    .select('id, company, unit_name, address, monthly_rent, color, active')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateRentalProperty(id, { unit_name, address, monthly_rent, color }) {
+  const { data, error } = await supabase
+    .from('rental_properties')
+    .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color })
+    .eq('id', id)
+    .select('id, company, unit_name, address, monthly_rent, color, active')
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Soft-hide, not a hard delete (there's a delete RLS policy, but this
+// deliberately doesn't use it) — matches the `active` column's own
+// comment in schema.sql: a unit taken off the market should keep its
+// booking history intact, not cascade-delete it.
+export async function archiveRentalProperty(id) {
+  const { error } = await supabase.from('rental_properties').update({ active: false }).eq('id', id)
+  if (error) throw error
+}
+
 export async function fetchRentalExpenses(company) {
   const { data, error } = await supabase
     .from('rental_expenses')

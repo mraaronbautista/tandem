@@ -12,6 +12,7 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
+import RentalPropertyForm from './RentalPropertyForm'
 
 const COMPANY = 'awa'
 
@@ -48,6 +49,26 @@ export default function RentalsView({ me }) {
   // (beside the unit name, not in RentalCalendar's own toolbar on the
   // desktop dashboard) trigger the form RentalCalendar still owns.
   const calendarRef = useRef(null)
+  // Property add/edit lives at this level (not inside RentalCalendar,
+  // which only ever deals with bookings) — properties/COMPANY are
+  // already owned here, and both layouts need to reach it.
+  const [propertyFormOpen, setPropertyFormOpen] = useState(false)
+  const [editingProperty, setEditingProperty] = useState(null)
+
+  function openNewProperty() {
+    setEditingProperty(null)
+    setPropertyFormOpen(true)
+  }
+
+  function openEditProperty(property) {
+    setEditingProperty(property)
+    setPropertyFormOpen(true)
+  }
+
+  function closePropertyForm() {
+    setPropertyFormOpen(false)
+    setEditingProperty(null)
+  }
 
   useEffect(() => {
     reloadProperties()
@@ -213,6 +234,17 @@ export default function RentalsView({ me }) {
               >
                 + Add booking
               </button>
+              <button
+                type="button"
+                className="rental-add-booking"
+                onClick={() => openEditProperty(selectedUnit)}
+                disabled={!selectedUnit}
+              >
+                Edit unit
+              </button>
+              <button type="button" className="rental-add-booking" onClick={openNewProperty}>
+                + Add unit
+              </button>
             </div>
           </div>
 
@@ -260,6 +292,22 @@ export default function RentalsView({ me }) {
             onExpensesChanged={reloadExpenses}
           />
         </div>
+
+        {propertyFormOpen && (
+          <RentalPropertyForm
+            company={COMPANY}
+            property={editingProperty}
+            onClose={closePropertyForm}
+            onSaved={() => {
+              closePropertyForm()
+              reloadProperties()
+            }}
+            onArchived={() => {
+              closePropertyForm()
+              reloadProperties()
+            }}
+          />
+        )}
       </div>
     )
   }
@@ -340,11 +388,33 @@ export default function RentalsView({ me }) {
       )}
 
       {view === 'overview' && (
-        <RentalOverview
-          properties={properties}
-          bookings={upcomingBookings}
-          selectedUnitId={selectedUnitId}
-          onSelectUnit={setSelectedUnitId}
+        <>
+          <RentalOverview
+            properties={properties}
+            bookings={upcomingBookings}
+            selectedUnitId={selectedUnitId}
+            onSelectUnit={setSelectedUnitId}
+            onEditUnit={openEditProperty}
+          />
+          <button type="button" className="rental-add-booking" onClick={openNewProperty}>
+            + Add unit
+          </button>
+        </>
+      )}
+
+      {propertyFormOpen && (
+        <RentalPropertyForm
+          company={COMPANY}
+          property={editingProperty}
+          onClose={closePropertyForm}
+          onSaved={() => {
+            closePropertyForm()
+            reloadProperties()
+          }}
+          onArchived={() => {
+            closePropertyForm()
+            reloadProperties()
+          }}
         />
       )}
     </div>

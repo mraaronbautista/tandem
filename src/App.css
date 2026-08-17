@@ -1138,6 +1138,20 @@
   opacity: 0.85;
 }
 
+/* Overrides .submission-modal label's default flex-stretch (every other
+   field in these forms wants full-width, but a full-width color swatch
+   would read as an odd stretched bar rather than a compact picker). */
+.rental-property-color-input {
+  align-self: flex-start;
+  width: 60px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
 .submission-field input[type='text'],
 .submission-field input[type='number'],
 .submission-field textarea {
@@ -2502,13 +2516,16 @@ label.new-task-checkbox-label {
 
 /* .rental-overview-item is a <button> whenever RentalOverview.jsx gets
    an onSelectUnit (both contexts now), a plain <div> otherwise — reset
-   button chrome so either renders identically. */
+   button chrome so either renders identically. flex: 1 (not width:
+   100%) so it still fills the row when a sibling Edit button is present
+   (see .rental-overview-row) without needing a second variant. */
 .rental-overview-item {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -2517,6 +2534,14 @@ label.new-task-checkbox-label {
   color: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+/* Only present on mobile's standalone Overview tab, where each unit row
+   also gets an Edit button beside it — see RentalOverview.jsx. */
+.rental-overview-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
 }
 
 .rental-overview-item-selected {

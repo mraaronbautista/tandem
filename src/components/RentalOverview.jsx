@@ -19,7 +19,7 @@ import { formatDateStr, unitOccupancyStatus } from '../lib/rentals'
 // way to switch units now that the plain unit-tabs are hidden there; on
 // mobile it's a handy bonus (priming which unit the Calendar tab opens
 // to next).
-export default function RentalOverview({ properties, bookings, selectedUnitId, onSelectUnit }) {
+export default function RentalOverview({ properties, bookings, selectedUnitId, onSelectUnit, onEditUnit }) {
   if (properties.length === 0) {
     return <p className="task-notes-empty">No units yet.</p>
   }
@@ -51,13 +51,22 @@ export default function RentalOverview({ properties, bookings, selectedUnitId, o
         )
 
         return (
-          <li key={p.id}>
+          // onEditUnit is only ever passed from mobile's standalone
+          // Overview tab (see RentalsView.jsx) — the desktop toolbar
+          // reuse of this same list stays exactly as compact as before,
+          // no extra button crowding that row.
+          <li key={p.id} className={onEditUnit ? 'rental-overview-row' : undefined}>
             {onSelectUnit ? (
               <button type="button" className={itemClasses.join(' ')} onClick={() => onSelectUnit(p.id)}>
                 {content}
               </button>
             ) : (
               <div className={itemClasses.join(' ')}>{content}</div>
+            )}
+            {onEditUnit && (
+              <button type="button" className="rental-savings-edit" onClick={() => onEditUnit(p)}>
+                Edit
+              </button>
             )}
           </li>
         )
