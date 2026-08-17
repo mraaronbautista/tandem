@@ -29,12 +29,18 @@ Texas 12a-4a
 Washington 2a-5a
 Texas 4a-7a`
 
+// parseShiftLine's own midnight-wraparound (endMin += 24*60 when the end
+// clock-time is <= the start) caps a single shift under 24h, so this
+// never needs more than "(+1 day)" — same reasoning as TaskForm.jsx's
+// end-time picker labeling a span that crosses midnight, just bounded
+// here by the line format itself rather than a picker's own range.
 function formatPreviewTime(dueTime, durationMinutes) {
   const [h, m] = dueTime.split(':').map(Number)
   const start = new Date(2000, 0, 1, h, m)
   const end = new Date(start.getTime() + durationMinutes * 60000)
   const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  return `${fmt(start)} – ${fmt(end)}`
+  const crossesDay = end.getDate() !== start.getDate()
+  return `${fmt(start)} – ${fmt(end)}${crossesDay ? ' (+1 day)' : ''}`
 }
 
 // Includes the year only when it's not the current one — a bulk paste is
