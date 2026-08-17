@@ -617,7 +617,14 @@ create table cork_notes (
   author_id uuid not null references members (id),
   body text not null,
   shared boolean not null default false,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Flat, append-only thread — { id, authorId, body, createdAt } — no
+  -- reply-to-reply nesting, same "doesn't need a child table" reasoning
+  -- as tasks.clarifications/checklist. Written via add_cork_note_comment()
+  -- below rather than a plain update(), since the update RLS policy is
+  -- author-only (see below) and a comment needs to come from *either*
+  -- member on a shared pin.
+  comments jsonb not null default '[]'::jsonb
 );
 
 alter table cork_notes enable row level security;
@@ -637,3 +644,44 @@ create policy "members can update own cork notes"
 create policy "members can delete own cork notes"
   on cork_notes for delete
   using (is_member() and author_id = auth.uid());
+
+-- Appends one comment to a note's thread. security definer so it can
+-- write to a row the caller doesn't own (the plain update RLS policy
+-- above is author-only, deliberately, so it can't be reused here) — the
+-- visibility check inline below re-implements the select policy's own
+-- rule (own or shared) so a member still can't comment on a pin they
+-- can't see. Only ever touches the comments column, never body/shared,
+-- so this can't be used to work around the author-only edit restriction.
+create or replace function add_cork_note_comment(p_note_id uuid, p_body text)
+returns cork_notes
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result cork_notes;
+begin
+  if not is_member() then
+    raise exception 'not a member';
+  end if;
+
+  update cork_notes
+  set comments = comments || jsonb_build_object(
+    'id', gen_random_uuid(),
+    'authorId', auth.uid(),
+    'body', p_body,
+    'createdAt', now()
+  )
+  where id = p_note_id
+    and (shared or author_id = auth.uid())
+  returning * into result;
+
+  if result.id is null then
+    raise exception 'note not found or not visible';
+  end if;
+
+  return result;
+end;
+$$;
+
+grant execute on function add_cork_note_comment(uuid, text) to authenticated;

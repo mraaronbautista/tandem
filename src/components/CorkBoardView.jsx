@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote } from '../lib/corkNotes'
+import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
 import { whoKeyForName } from '../lib/whoLabels'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
@@ -36,6 +36,10 @@ export default function CorkBoardView({ me, memberName }) {
   const [editingId, setEditingId] = useState(null)
   const [editDraft, setEditDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  // Keyed by note id, not a single shared string — commenting on two
+  // different pins shouldn't clobber each other's in-progress draft.
+  const [commentDrafts, setCommentDrafts] = useState({})
+  const [postingCommentId, setPostingCommentId] = useState(null)
 
   function reload() {
     fetchCorkNotes()
@@ -112,6 +116,24 @@ export default function CorkBoardView({ me, memberName }) {
       alert(err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Silent by design, same reasoning as posting/sharing a pin — Cork
+  // Board is a scratchpad, not an assignment, so no manual-notify call
+  // here unlike task clarifications' ask/answer.
+  async function handleAddComment(note) {
+    const text = (commentDrafts[note.id] || '').trim()
+    if (!text) return
+    setPostingCommentId(note.id)
+    try {
+      await addCorkNoteComment(note.id, text)
+      setCommentDrafts((prev) => ({ ...prev, [note.id]: '' }))
+      reload()
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setPostingCommentId(null)
     }
   }
 
@@ -243,6 +265,41 @@ export default function CorkBoardView({ me, memberName }) {
                     </>
                   )}
                 </div>
+                {!isEditing && (
+                  <div className="cork-board-comments">
+                    {note.comments?.length > 0 && (
+                      <ul className="cork-board-comment-list">
+                        {note.comments.map((c) => (
+                          <li key={c.id} className="cork-board-comment">
+                            <span className="cork-board-comment-author">{memberName(c.authorId)}</span>
+                            <span className="cork-board-comment-body">{c.body}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <form
+                      className="cork-board-comment-form"
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        handleAddComment(note)
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={commentDrafts[note.id] || ''}
+                        onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [note.id]: e.target.value }))}
+                        placeholder="Add a thought…"
+                        maxLength={2000}
+                      />
+                      <button
+                        type="submit"
+                        disabled={postingCommentId === note.id || !(commentDrafts[note.id] || '').trim()}
+                      >
+                        {postingCommentId === note.id ? '…' : 'Add'}
+                      </button>
+                    </form>
+                  </div>
+                )}
               </li>
             )
           })}

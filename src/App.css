@@ -3105,6 +3105,75 @@ label.new-task-checkbox-label {
   cursor: default;
 }
 
+.cork-board-comments {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cork-board-comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cork-board-comment {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  align-items: baseline;
+}
+
+.cork-board-comment-author {
+  flex: none;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.cork-board-comment-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cork-board-comment-form {
+  display: flex;
+  gap: 8px;
+}
+
+.cork-board-comment-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 13px;
+}
+
+.cork-board-comment-form button {
+  flex: none;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cork-board-comment-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .inbox-section-heading-question {
   color: var(--overdue);
   opacity: 1;
