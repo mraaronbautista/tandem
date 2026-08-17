@@ -284,6 +284,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
             <option value="none">Never</option>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
+            <option value="biweekly">Every 2 weeks</option>
             <option value="monthly">Monthly</option>
           </select>
         </label>
