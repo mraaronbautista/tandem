@@ -2627,11 +2627,31 @@ label.new-task-checkbox-label {
   flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
+  /* Each card only takes its own content height — without this, every
+     card on a shared row stretches (flex's default align-items) to
+     match whichever one happens to be tallest, even when its own two
+     lines of text didn't need the extra space. */
+  align-items: flex-start;
   gap: 8px;
 }
 
+/* The actual flex item here is the <li> (a plain, unstyled element in
+   this context — .rental-overview-row only gets applied when
+   RentalOverview.jsx also renders a per-row Edit button, which this
+   desktop toolbar case doesn't), not .rental-overview-item — putting
+   the sizing on the item class alone had no effect, since it isn't a
+   direct child of the flex container. calc(50% - 4px) (half the row,
+   minus half the 8px gap) locks this to exactly two cards per row
+   rather than however many a fixed px basis happens to fit; flex-grow
+   still lets a lone leftover card on the final row stretch to fill the
+   full width instead of sitting stranded at half width. */
+.rental-calendar-toolbar .rental-overview-list > li {
+  flex: 1 1 calc(50% - 4px);
+  min-width: 0;
+}
+
 .rental-calendar-toolbar .rental-overview-item {
-  flex: 1 1 230px;
+  width: 100%;
   padding: 8px 10px;
   font-size: 12px;
 }
