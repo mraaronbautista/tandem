@@ -138,7 +138,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
         {showAddBooking && (
           <button
             type="button"
-            className="rental-add-booking"
+            className="rental-add-booking rental-add-booking-primary"
             onClick={() => {
               setPrefillCheckIn(null)
               setFormOpen(true)

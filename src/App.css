@@ -2376,6 +2376,18 @@ label.new-task-checkbox-label {
   white-space: nowrap;
 }
 
+/* .rental-add-booking is reused for several plain actions in this
+   toolbar (Edit unit, + Add unit, Export…) — this modifier singles out
+   "+ Add booking" specifically, the one actually used every time this
+   view is opened, with the same filled-accent look .submission-save
+   already uses for a form's primary action. */
+.rental-add-booking-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
 .rental-unit-header {
   display: flex;
   align-items: center;
