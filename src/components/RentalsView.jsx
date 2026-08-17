@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import {
   fetchRentalProperties,
   fetchRentalExpenses,
@@ -49,13 +50,41 @@ export default function RentalsView({ me }) {
   const calendarRef = useRef(null)
 
   useEffect(() => {
-    fetchRentalProperties(COMPANY)
-      .then(setProperties)
-      .catch((err) => setError(err.message))
+    reloadProperties()
     reloadExpenses()
     reloadGoals()
     reloadUpcoming()
   }, [])
+
+  // Rentals didn't get the same live-update treatment tasks/members/Cork
+  // Board already have (see TaskBoard.jsx/CorkBoardView.jsx) — without
+  // this, Ada adding a booking from her phone wouldn't show up for Aaron
+  // until something else forced a refetch (e.g. changing months). One
+  // channel covers every rental_* table this view reads; re-subscribed
+  // on monthDate change so the bookings handler always refetches the
+  // month actually being browsed, not whatever it was on mount.
+  useEffect(() => {
+    const channel = supabase
+      .channel('rentals-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_properties' }, reloadProperties)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_bookings' }, handleBookingsChanged)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_expenses' }, reloadExpenses)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_savings_goal' }, reloadGoals)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+    // Deliberately not listing reload*/handleBookingsChanged — they're
+    // plain functions redefined every render, not memoized, so listing
+    // them would resubscribe this channel on every render instead of
+    // just on the month changes that actually require a fresh range.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthDate])
+
+  function reloadProperties() {
+    fetchRentalProperties(COMPANY)
+      .then(setProperties)
+      .catch((err) => setError(err.message))
+  }
 
   function reloadExpenses() {
     fetchRentalExpenses(COMPANY)
