@@ -7,7 +7,10 @@ create type task_status as enum ('to_do', 'in_progress', 'done');
 create type task_who as enum ('yours', 'assistant');
 create type task_priority as enum ('low', 'med', 'high');
 create type task_source as enum ('teams', 'email', 'none');
-create type task_recurrence as enum ('none', 'daily', 'weekly', 'biweekly', 'monthly');
+create type task_recurrence as enum (
+  'none', 'daily', 'weekly', 'biweekly', 'every_3_weeks', 'monthly',
+  'every_2_months', 'quarterly', 'every_6_months', 'annually'
+);
 
 -- Allowlist of the exactly-two accounts permitted to use the app.
 -- Populate this manually after inviting each account via Supabase Auth.
@@ -126,7 +129,12 @@ begin
       when 'daily' then coalesce(new.due_date, now()) + interval '1 day'
       when 'weekly' then coalesce(new.due_date, now()) + interval '7 days'
       when 'biweekly' then coalesce(new.due_date, now()) + interval '14 days'
+      when 'every_3_weeks' then coalesce(new.due_date, now()) + interval '21 days'
       when 'monthly' then coalesce(new.due_date, now()) + interval '1 month'
+      when 'every_2_months' then coalesce(new.due_date, now()) + interval '2 months'
+      when 'quarterly' then coalesce(new.due_date, now()) + interval '3 months'
+      when 'every_6_months' then coalesce(new.due_date, now()) + interval '6 months'
+      when 'annually' then coalesce(new.due_date, now()) + interval '1 year'
     end;
 
     -- Carry over checklist item text to the next occurrence, but unchecked —

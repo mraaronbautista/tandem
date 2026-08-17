@@ -285,7 +285,12 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="biweekly">Every 2 weeks</option>
+            <option value="every_3_weeks">Every 3 weeks</option>
             <option value="monthly">Monthly</option>
+            <option value="every_2_months">Every 2 months</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="every_6_months">Every 6 months</option>
+            <option value="annually">Annually</option>
           </select>
         </label>
       </div>
