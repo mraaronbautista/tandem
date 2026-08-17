@@ -2541,12 +2541,16 @@ label.new-task-checkbox-label {
    an onSelectUnit (both contexts now), a plain <div> otherwise — reset
    button chrome so either renders identically. flex: 1 (not width:
    100%) so it still fills the row when a sibling Edit button is present
-   (see .rental-overview-row) without needing a second variant. */
+   (see .rental-overview-row) without needing a second variant. Column,
+   not a single wrapping row — name+price (.rental-overview-top) sit
+   above status, so the card doesn't need one unbroken line wide enough
+   to fit "Healthcare Haven $2,100/mo Occupied through Aug 30 — Abdul"
+   before it can share a row with another unit's card. */
 .rental-overview-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   flex: 1;
   min-width: 0;
   padding: 10px 12px;
@@ -2557,6 +2561,13 @@ label.new-task-checkbox-label {
   color: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.rental-overview-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 /* Only present on mobile's standalone Overview tab, where each unit row
@@ -2590,22 +2601,29 @@ label.new-task-checkbox-label {
 /* The desktop dashboard's RentalCalendar toolbar reuses
    RentalOverview.jsx's list (via unitTabsReplacement) in place of the
    (hidden) .rental-unit-tabs row, so unit switching still works the same
-   way it does on mobile's Overview tab. Its default vertical layout
-   doesn't fit a toolbar row, so this lays it out as a horizontal
-   wrapping row instead — same "+ Add booking" reasoning as
-   .rental-unit-tabs above (moved up beside the unit nav, so this no
-   longer shares the row with it; flex-basis: 100% still claims the
-   whole toolbar width). */
+   way it does on mobile's Overview tab. Its default single-column list
+   doesn't fit a toolbar row, so this lays it out as a card grid instead
+   — same "+ Add booking" reasoning as .rental-unit-tabs above (moved up
+   beside the unit nav, so this no longer shares the row with it;
+   flex-basis: 100% still claims the whole toolbar width). A flex row
+   was tried first (flex-wrap, width: auto per item) but every card's
+   natural content width — name, price, and a full status line all
+   fighting to fit on one line — was already close to the toolbar's own
+   width, so nothing ever actually landed two-per-row; it just wrapped
+   one card per line, same as the plain list it replaced. Grid with a
+   minmax track fixes that by giving each card a real ceiling width
+   instead of letting content dictate it, and pairs with
+   .rental-overview-top now splitting name/price from status onto their
+   own line inside the card so a narrower card still reads cleanly. */
 .rental-calendar-toolbar .rental-overview-list {
   flex-basis: 100%;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
 }
 
 .rental-calendar-toolbar .rental-overview-item {
-  width: auto;
-  padding: 4px 8px;
+  padding: 8px 10px;
   font-size: 12px;
 }
 

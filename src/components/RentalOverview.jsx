@@ -31,11 +31,20 @@ export default function RentalOverview({ properties, bookings, selectedUnitId, o
         const itemClasses = ['rental-overview-item']
         if (p.id === selectedUnitId) itemClasses.push('rental-overview-item-selected')
 
+        // Two lines, not one long run of inline spans — name+price up
+        // top, status below. Reads cleanly as a compact card at any
+        // width instead of demanding one unbroken line long enough to
+        // fit "Healthcare Haven $2,100/mo Occupied through Aug 30 —
+        // Abdul" (which is what forced every card onto its own row in
+        // the toolbar's grid, single-column, no matter how much
+        // horizontal room was actually available).
         const content = (
           <>
-            <span className="rental-unit-dot" style={{ background: p.color }} />
-            <span className="rental-overview-name">{p.unit_name}</span>
-            <span className="rental-overview-price">${Number(p.monthly_rent).toLocaleString()}/mo</span>
+            <span className="rental-overview-top">
+              <span className="rental-unit-dot" style={{ background: p.color }} />
+              <span className="rental-overview-name">{p.unit_name}</span>
+              <span className="rental-overview-price">${Number(p.monthly_rent).toLocaleString()}/mo</span>
+            </span>
             {status.occupied ? (
               <span className="rental-overview-status rental-overview-status-occupied">
                 Occupied through {formatDateStr(status.through)} — {status.guest}
