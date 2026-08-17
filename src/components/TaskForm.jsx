@@ -43,6 +43,10 @@ export const DURATION_OPTIONS = [
   { value: '480', label: '8 hr' },
   { value: '600', label: '10 hr' },
   { value: '720', label: '12 hr' },
+  { value: '1440', label: '1 day' },
+  { value: '2880', label: '2 days' },
+  { value: '4320', label: '3 days' },
+  { value: '10080', label: '1 week' },
 ]
 
 // Half-hour increments across the day, e.g. "09:00" -> "9:00 AM".
@@ -87,19 +91,23 @@ function minutesToTimeLabel(mins) {
 }
 
 // End-time picker for a given start: 15-minute steps for the first 2
-// hours (fine control for short tasks), then 30-minute steps out to a
-// 48-hour cap — long enough for a task that spans into the day after
-// next. Rendered through ScrollSelect rather than a native <select>, so a
-// long list here is fine: it shows a handful of rows at a time and
-// scrolls, rather than dumping everything into an unstylable native
-// popover. Every Duration preset still lands on an exact tick, so the two
-// stay interchangeable. Spans crossing midnight are labeled "(+1 day)" /
+// hours (fine control for short tasks), 30-minute steps out to 2 days
+// (still fine enough to matter for same-week tasks), then hourly out to
+// a 1-week cap — long enough for a genuinely multi-day task (e.g. a
+// multi-day processing/turnaround time) without the list growing
+// unreasonably long at 30-minute granularity the whole way out.
+// Rendered through ScrollSelect rather than a native <select>, so a long
+// list here is fine: it shows a handful of rows at a time and scrolls,
+// rather than dumping everything into an unstylable native popover.
+// Every Duration preset still lands on an exact tick, so the two stay
+// interchangeable. Spans crossing midnight are labeled "(+1 day)" /
 // "(+2 days)".
 function buildEndTimeOptions(startTime) {
   const startMinutes = timeToMinutes(startTime)
   const offsets = []
   for (let offset = 15; offset <= 120; offset += 15) offsets.push(offset)
   for (let offset = 150; offset <= 48 * 60; offset += 30) offsets.push(offset)
+  for (let offset = 48 * 60 + 60; offset <= 7 * 24 * 60; offset += 60) offsets.push(offset)
 
   const options = [{ value: '', label: 'None' }]
   for (const offset of offsets) {

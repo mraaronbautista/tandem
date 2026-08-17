@@ -37,9 +37,18 @@ export async function deleteTask(id) {
   if (error) throw error
 }
 
-// Human label for a task's duration, e.g. 90 -> "1.5 hr", 45 -> "45 min".
+// Human label for a task's duration, e.g. 90 -> "1.5 hr", 45 -> "45 min",
+// 4320 -> "3 days". A day-plus span reads as days (+ a leftover hr/min
+// remainder, if any) rather than e.g. "72 hr" — clearer once durations
+// can run multi-day (see TaskForm.jsx's DURATION_OPTIONS/end-time cap).
 export function formatDuration(minutes) {
   if (!minutes) return ''
+  if (minutes >= 1440) {
+    const days = Math.floor(minutes / 1440)
+    const remainder = minutes % 1440
+    const dayLabel = `${days} day${days > 1 ? 's' : ''}`
+    return remainder ? `${dayLabel} ${formatDuration(remainder)}` : dayLabel
+  }
   if (minutes % 60 === 0) return `${minutes / 60} hr`
   if (minutes > 60) return `${(minutes / 60).toFixed(1)} hr`
   return `${minutes} min`

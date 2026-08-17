@@ -20,12 +20,17 @@ export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
   const dotColor = PRIORITY_COLOR[task.priority]
   const dotTitle = PRIORITY_LABEL[task.priority]
   const hasSpan = task.status !== 'done' && !isAllDay && task.duration_minutes
-  const endLabel = hasSpan
-    ? new Date(new Date(time).getTime() + task.duration_minutes * 60000).toLocaleTimeString([], {
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    : null
+  // A duration long enough to land on a different calendar day than the
+  // start (now possible up to a week — see TaskForm.jsx) needs its date
+  // shown too, not just a bare time — two same-looking clock times with
+  // no date would misread as same-day for a multi-day span.
+  const spanEnd = hasSpan ? new Date(new Date(time).getTime() + task.duration_minutes * 60000) : null
+  const spansDays = hasSpan && new Date(time).toDateString() !== spanEnd.toDateString()
+  const endTimeLabel = hasSpan ? spanEnd.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null
+  const endLabel =
+    hasSpan && spansDays
+      ? `${spanEnd.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${endTimeLabel}`
+      : endTimeLabel
 
   return (
     <div className="timeline-row">
