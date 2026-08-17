@@ -79,6 +79,27 @@ function defaultDueDateTime() {
   }
 }
 
+// Local-calendar-day arithmetic on plain "YYYY-MM-DD" strings — the All
+// Day end-date field needs to add/diff whole days without any of the
+// timezone-conversion machinery zonedTimeToUtcIso/splitDueDateInZone
+// exist for, since an All Day date is already timezone-agnostic (it's
+// just "which calendar day," not an instant). new Date(y, m-1, d) (not
+// new Date(dateStr), which parses as UTC midnight and can land on the
+// wrong local day depending on the viewer's own offset) keeps this
+// unambiguous.
+function addDaysToDateStr(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d + days)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function daysBetweenDateStrs(startStr, endStr) {
+  const [y1, m1, d1] = startStr.split('-').map(Number)
+  const [y2, m2, d2] = endStr.split('-').map(Number)
+  return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / (24 * 60 * 60 * 1000))
+}
+
 function timeToMinutes(t) {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
@@ -154,8 +175,15 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
   // still All Day — a specific-date one (see isAllDayTask in lib/tasks.js
   // for why that combination, not a due_date key, is what's checked).
   const hasDueDateKey = initialValues && Object.prototype.hasOwnProperty.call(initialValues, 'due_date')
+  // A whole-day-multiple duration (1440, 2880, ...) still counts as All
+  // Day — see isAllDayTask in lib/tasks.js for why that's the check
+  // (not, say, a separate flag): it's what lets a multi-day All Day task
+  // re-open as All Day rather than as a plain timed task when edited.
   const initialAllDayDate =
-    hasDueDateKey && initialValues.due_date && initialValues.due_time === '00:00' && !initialValues.duration_minutes
+    hasDueDateKey &&
+    initialValues.due_date &&
+    initialValues.due_time === '00:00' &&
+    (!initialValues.duration_minutes || initialValues.duration_minutes % 1440 === 0)
       ? initialValues.due_date
       : ''
   const [allDay, setAllDay] = useState(() => Boolean(hasDueDateKey && (!initialValues.due_date || initialAllDayDate)))
@@ -164,6 +192,14 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
   // it, so checking "All day" defaults to genuinely no date, not silently
   // today, unless a date is deliberately typed in here.
   const [allDayDate, setAllDayDate] = useState(initialAllDayDate)
+  // Only meaningful once allDayDate is set — a multi-day span needs a
+  // start to span from. Reconstructed from the initial duration (a whole
+  // number of days) when editing an existing multi-day All Day task.
+  const [allDayEndDate, setAllDayEndDate] = useState(() =>
+    initialAllDayDate && initialValues?.duration_minutes
+      ? addDaysToDateStr(initialAllDayDate, initialValues.duration_minutes / 1440)
+      : '',
+  )
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -192,7 +228,13 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           : !form.due_date
             ? null
             : zonedTimeToUtcIso(form.due_date, due_time, form.due_timezone),
-        duration_minutes: allDay || !form.duration_minutes ? null : Number(form.duration_minutes),
+        duration_minutes: allDay
+          ? allDayDate && allDayEndDate && allDayEndDate > allDayDate
+            ? daysBetweenDateStrs(allDayDate, allDayEndDate) * 1440
+            : null
+          : !form.duration_minutes
+            ? null
+            : Number(form.duration_minutes),
         source_note: form.source_note || null,
         notes: form.notes || null,
         checklist: form.checklist.filter((item) => item.text.trim()),
@@ -240,10 +282,33 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         </label>
 
         {allDay ? (
-          <label>
-            Date (optional)
-            <input type="date" value={allDayDate} onChange={(e) => setAllDayDate(e.target.value)} />
-          </label>
+          <>
+            <label>
+              Date (optional)
+              <input
+                type="date"
+                value={allDayDate}
+                onChange={(e) => {
+                  setAllDayDate(e.target.value)
+                  // A cleared or moved-earlier start date can otherwise
+                  // leave a stale end date sitting before it.
+                  if (e.target.value && allDayEndDate && allDayEndDate < e.target.value) setAllDayEndDate('')
+                  if (!e.target.value) setAllDayEndDate('')
+                }}
+              />
+            </label>
+            {allDayDate && (
+              <label>
+                End date (optional — spans multiple days)
+                <input
+                  type="date"
+                  min={allDayDate}
+                  value={allDayEndDate}
+                  onChange={(e) => setAllDayEndDate(e.target.value)}
+                />
+              </label>
+            )}
+          </>
         ) : (
           <>
             <label>

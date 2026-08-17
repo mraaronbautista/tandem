@@ -62,7 +62,11 @@ export function formatDuration(minutes) {
 // Scoped per-person (`who`), not per currently-viewed tab, since two
 // different people having tasks at the same time isn't a real conflict.
 export function getOverlappingTaskIds(tasks) {
-  const timed = tasks.filter((t) => t.status !== 'done' && t.due_date && t.duration_minutes)
+  // isAllDayTask() excluded explicitly — a multi-day All Day task now
+  // also has a (whole-day-multiple) duration, but a date range isn't a
+  // scheduled block the way a timed task's span is, so it shouldn't
+  // trip overlap detection against anything.
+  const timed = tasks.filter((t) => t.status !== 'done' && t.due_date && t.duration_minutes && !isAllDayTask(t))
   const overlapping = new Set()
 
   for (let i = 0; i < timed.length; i++) {
@@ -100,18 +104,30 @@ export function getOverlappingTaskIds(tasks) {
 // viewer-local check would misfire since their timezones differ by half a
 // day. The one accepted tradeoff: a task genuinely, deliberately due at
 // exactly midnight with no duration would also read as "All day".
+//
+// A whole-day-multiple duration (1440, 2880, ...) also still counts as
+// All Day — TaskForm.jsx's End date field sets exactly that (see
+// daysBetweenDateStrs there) for a task spanning multiple days, e.g. a
+// 3-day span with no specific time. A genuinely timed task starting at
+// midnight would essentially never land on an exact multiple of a full
+// day, so this doesn't meaningfully widen the existing "accepted
+// tradeoff" above.
 export function isAllDayTask(task) {
-  if (!task.due_date || task.duration_minutes) return false
+  if (!task.due_date) return false
+  if (task.duration_minutes && task.duration_minutes % 1440 !== 0) return false
   const { due_time } = splitDueDateInZone(task.due_date, task.due_timezone || DEFAULT_TIMEZONE)
   return due_time === '00:00'
 }
 
 export function isOverdue(task) {
   if (!task.due_date || task.status === 'done') return false
-  // An All Day task is due sometime that whole day, not at the literal
-  // midnight instant it's stored at — without this it'd read as overdue
-  // for nearly 24 hours a day, almost as soon as it's created.
-  if (isAllDayTask(task)) return new Date(task.due_date).getTime() + 24 * 60 * 60 * 1000 <= Date.now()
+  // An All Day task is due sometime that whole day (or, now, its whole
+  // span), not at the literal midnight instant it's stored at — without
+  // this it'd read as overdue for nearly 24 hours a day, almost as soon
+  // as it's created. duration_minutes (already a multiple of a day, or
+  // absent) extends that grace to cover a multi-day span's actual length
+  // instead of just one flat day regardless of how many it spans.
+  if (isAllDayTask(task)) return new Date(task.due_date).getTime() + (task.duration_minutes || 1440) * 60000 <= Date.now()
   return new Date(task.due_date).getTime() < Date.now()
 }
 

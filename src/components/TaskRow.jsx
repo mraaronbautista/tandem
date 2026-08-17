@@ -33,7 +33,15 @@ function localLabel(isoString) {
 // multi-day span.
 function dueLabel(task) {
   if (isAllDayTask(task)) {
-    return `${new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })}, All day`
+    const startLabel = new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })
+    // A multi-day All Day task (see TaskForm.jsx's End date field) still
+    // only appears once, on its start day (same as a multi-day *timed*
+    // task doesn't repeat across every day it spans either) — the range
+    // is what tells the two apart in the label.
+    if (!task.duration_minutes) return `${startLabel}, All day`
+    const endDate = new Date(new Date(task.due_date).getTime() + task.duration_minutes * 60000)
+    const endLabel = endDate.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    return `${startLabel} – ${endLabel}, All day`
   }
   const start = localLabel(task.due_date)
   if (!task.duration_minutes) return start
