@@ -35,6 +35,7 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
             type="checkbox"
             className="task-done-checkbox"
             title="Mark as handled — no reply needed"
+            aria-label="Mark as handled — no reply needed"
             onClick={(e) => e.stopPropagation()}
             onChange={onResolve}
           />

@@ -121,6 +121,7 @@ export default function TaskRow({
 
   function handleRemoveAttachment(e, index) {
     e.stopPropagation()
+    if (!window.confirm('Remove this attachment?')) return
     onUpdate(task.id, { completion_attachments: attachments.filter((_, i) => i !== index) })
   }
 
@@ -218,7 +219,7 @@ export default function TaskRow({
             taskId={task.id}
             extraActions={
               <div className="task-row-actions">
-                <button onClick={() => setEditing(true)} title="Edit">
+                <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
                   <EditIcon width={15} height={15} />
                 </button>
                 {task.status === 'done' && hasSubmission && (
@@ -300,6 +301,7 @@ export default function TaskRow({
                           className="task-submission-remove"
                           onClick={(e) => handleRemoveAttachment(e, i)}
                           title="Remove"
+                          aria-label="Remove attachment"
                         >
                           ✕
                         </button>
@@ -315,6 +317,7 @@ export default function TaskRow({
                           className="task-submission-remove"
                           onClick={(e) => handleRemoveAttachment(e, i)}
                           title="Remove"
+                          aria-label="Remove attachment"
                         >
                           ✕
                         </button>
@@ -326,7 +329,7 @@ export default function TaskRow({
 
               <label className="task-submission-upload" title="Attach files">
                 {uploading ? 'Uploading…' : <PaperclipIcon width={16} height={16} />}
-                <input type="file" multiple onChange={handleAttachmentUpload} hidden />
+                <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
               </label>
               {uploadError && <p className="error">{uploadError}</p>}
             </div>

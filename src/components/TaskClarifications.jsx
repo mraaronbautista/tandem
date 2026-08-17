@@ -67,7 +67,7 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
       <div className="clarification-compose-actions">
         <label className="task-submission-upload" title="Attach files">
           {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
-          <input type="file" multiple onChange={handleAttachmentUpload} hidden />
+          <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
         </label>
         <button
           type="button"
@@ -205,6 +205,7 @@ export default function TaskClarifications({
                     type="checkbox"
                     className="task-done-checkbox clarification-resolve-check"
                     title="Mark as handled — no reply needed"
+                    aria-label="Mark as handled — no reply needed"
                     onChange={() => handleResolve(item)}
                   />
                 </>
@@ -230,7 +231,7 @@ export default function TaskClarifications({
           <div className="clarification-compose-left">
             <label className="task-submission-upload" title="Attach files">
               {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
-              <input type="file" multiple onChange={handleAttachmentUpload} hidden />
+              <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
             </label>
             {extraActions}
           </div>

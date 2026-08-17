@@ -137,20 +137,44 @@ export default function RentalsView({ me }) {
         <div className="rentals-main">
           <div className="rentals-combined-nav">
             <div className="month-nav-row">
-              <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => shiftMonth(-1)}
+                title="Previous month"
+                aria-label="Previous month"
+              >
                 ‹
               </button>
               <span className="month-nav-label">{monthLabel}</span>
-              <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => shiftMonth(1)}
+                title="Next month"
+                aria-label="Next month"
+              >
                 ›
               </button>
             </div>
             <div className="month-nav-row">
-              <button type="button" className="icon-button" onClick={() => shiftUnit(-1)} title="Previous unit">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => shiftUnit(-1)}
+                title="Previous unit"
+                aria-label="Previous unit"
+              >
                 ‹
               </button>
               <span className="month-nav-label">{selectedUnit?.unit_name}</span>
-              <button type="button" className="icon-button" onClick={() => shiftUnit(1)} title="Next unit">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => shiftUnit(1)}
+                title="Next unit"
+                aria-label="Next unit"
+              >
                 ›
               </button>
               <button
@@ -239,11 +263,23 @@ export default function RentalsView({ me }) {
 
       {view !== 'overview' && (
         <div className="month-nav-row">
-          <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => shiftMonth(-1)}
+            title="Previous month"
+            aria-label="Previous month"
+          >
             ‹
           </button>
           <span className="month-nav-label">{monthLabel}</span>
-          <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => shiftMonth(1)}
+            title="Next month"
+            aria-label="Next month"
+          >
             ›
           </button>
         </div>

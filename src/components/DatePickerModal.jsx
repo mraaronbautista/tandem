@@ -46,15 +46,33 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
       <div className="submission-modal date-picker-modal">
         <div className="date-picker-modal-header">
           <div className="month-nav-row">
-            <button type="button" className="icon-button" onClick={() => shiftMonth(-1)} title="Previous month">
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => shiftMonth(-1)}
+              title="Previous month"
+              aria-label="Previous month"
+            >
               ‹
             </button>
             <span className="month-nav-label">{label}</span>
-            <button type="button" className="icon-button" onClick={() => shiftMonth(1)} title="Next month">
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => shiftMonth(1)}
+              title="Next month"
+              aria-label="Next month"
+            >
               ›
             </button>
           </div>
-          <button type="button" className="icon-button date-picker-close" onClick={onClose} title="Close">
+          <button
+            type="button"
+            className="icon-button date-picker-close"
+            onClick={onClose}
+            title="Close"
+            aria-label="Close"
+          >
             ×
           </button>
         </div>

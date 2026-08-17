@@ -405,10 +405,22 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '︿' : '﹀'}</span>
               </button>
               <div className="month-nav-arrows">
-                <button type="button" className="icon-button" onClick={() => shiftWeek(-1)} title="Previous week">
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => shiftWeek(-1)}
+                  title="Previous week"
+                  aria-label="Previous week"
+                >
                   ‹
                 </button>
-                <button type="button" className="icon-button" onClick={() => shiftWeek(1)} title="Next week">
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => shiftWeek(1)}
+                  title="Next week"
+                  aria-label="Next week"
+                >
                   ›
                 </button>
               </div>
@@ -425,7 +437,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
             {isDesktop && <nav className="header-nav">{navButtons}</nav>}
             <div className="header-actions">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
-              <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings">
+              <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
                 ⚙️
               </button>
             </div>

@@ -16,7 +16,13 @@ export default function AttachmentList({ attachments, onRemove }) {
           <div className="task-submission-attachment task-submission-attachment-image" key={i}>
             <img src={a.url} alt={a.name || 'Attachment'} />
             {onRemove && (
-              <button type="button" className="task-submission-remove" onClick={() => onRemove(i)} title="Remove">
+              <button
+                type="button"
+                className="task-submission-remove"
+                onClick={() => onRemove(i)}
+                title="Remove"
+                aria-label="Remove attachment"
+              >
                 ✕
               </button>
             )}
@@ -27,7 +33,13 @@ export default function AttachmentList({ attachments, onRemove }) {
               <span className="task-submission-file-icon">📎</span>
               <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
             </a>
-            <button type="button" className="task-submission-remove" onClick={() => onRemove(i)} title="Remove">
+            <button
+              type="button"
+              className="task-submission-remove"
+              onClick={() => onRemove(i)}
+              title="Remove"
+              aria-label="Remove attachment"
+            >
               ✕
             </button>
           </div>
