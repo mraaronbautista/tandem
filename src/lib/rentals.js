@@ -210,7 +210,10 @@ export async function deleteSavingsGoal(id) {
 
 // excludeId lets an edit check the dates against every OTHER booking
 // without the booking's own (unchanged) row always matching itself.
-async function hasOverlappingBooking(propertyId, checkIn, checkOut, excludeId) {
+// Exported so RentalBookingForm.jsx can run the same check live, as
+// soon as both dates are picked, instead of only finding out about a
+// conflict after filling out the rest of the form and hitting submit.
+export async function hasOverlappingBooking(propertyId, checkIn, checkOut, excludeId) {
   let query = supabase
     .from('rental_bookings')
     .select('id')

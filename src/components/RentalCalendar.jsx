@@ -74,12 +74,33 @@ const RentalCalendar = forwardRef(function RentalCalendar(
   const [formOpen, setFormOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [editingBooking, setEditingBooking] = useState(null)
+  // Set when the form is opened by clicking a specific vacant day, so
+  // that day becomes the default check-in instead of today — null for
+  // every other way of opening the form (toolbar/nav "+ Add booking"),
+  // which keep defaulting to today.
+  const [prefillCheckIn, setPrefillCheckIn] = useState(null)
 
   // Lets the desktop dashboard trigger the add-booking form from a button
   // it renders itself (beside the unit nav), while the form's open/close
   // state still lives here — same "controlled selection, owned state"
   // split the rest of this component already uses for selectedUnitId.
-  useImperativeHandle(ref, () => ({ openAddBooking: () => setFormOpen(true) }))
+  useImperativeHandle(ref, () => ({
+    openAddBooking: () => {
+      setPrefillCheckIn(null)
+      setFormOpen(true)
+    },
+  }))
+
+  function closeForm() {
+    setFormOpen(false)
+    setEditingBooking(null)
+    setPrefillCheckIn(null)
+  }
+
+  function handleVacantDayClick(dateStr) {
+    setPrefillCheckIn(dateStr)
+    setFormOpen(true)
+  }
 
   const unit = properties.find((p) => p.id === selectedUnitId) || properties[0]
   const unitBookings = unit ? bookings.filter((b) => b.property_id === unit.id) : []
@@ -115,7 +136,14 @@ const RentalCalendar = forwardRef(function RentalCalendar(
           unitTabsReplacement
         )}
         {showAddBooking && (
-          <button type="button" className="rental-add-booking" onClick={() => setFormOpen(true)}>
+          <button
+            type="button"
+            className="rental-add-booking"
+            onClick={() => {
+              setPrefillCheckIn(null)
+              setFormOpen(true)
+            }}
+          >
             + Add booking
           </button>
         )}
@@ -146,9 +174,16 @@ const RentalCalendar = forwardRef(function RentalCalendar(
 
             if (!booking) {
               return (
-                <div key={dateStr} className={classes.join(' ')}>
+                <button
+                  key={dateStr}
+                  type="button"
+                  className={classes.join(' ')}
+                  title={`Add booking for ${formatDateStr(dateStr)}`}
+                  aria-label={`Add booking for ${formatDateStr(dateStr)}`}
+                  onClick={() => handleVacantDayClick(dateStr)}
+                >
                   {day}
-                </div>
+                </button>
               )
             }
 
@@ -178,8 +213,9 @@ const RentalCalendar = forwardRef(function RentalCalendar(
               : unit.color
 
             return (
-              <div
+              <button
                 key={dateStr}
+                type="button"
                 className={classes.join(' ')}
                 style={{
                   // Pending requests get a diagonal stripe instead of a solid
@@ -197,10 +233,11 @@ const RentalCalendar = forwardRef(function RentalCalendar(
                       .join(', ') || undefined,
                 }}
                 title={`${booking.guest_name}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
+                aria-label={`${booking.guest_name}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
                 onClick={() => setSelectedBooking(booking)}
               >
                 {day}
-              </div>
+              </button>
             )
           }),
         )}
@@ -210,15 +247,12 @@ const RentalCalendar = forwardRef(function RentalCalendar(
         <RentalBookingForm
           properties={properties}
           defaultPropertyId={selectedUnitId}
+          defaultCheckIn={prefillCheckIn}
           booking={editingBooking}
           createdBy={createdBy}
-          onClose={() => {
-            setFormOpen(false)
-            setEditingBooking(null)
-          }}
+          onClose={closeForm}
           onSaved={() => {
-            setFormOpen(false)
-            setEditingBooking(null)
+            closeForm()
             onBookingsChanged()
           }}
         />

@@ -2403,6 +2403,20 @@ label.new-task-checkbox-label {
   color: var(--text-h);
 }
 
+/* Day cells are <button>s now (vacant days open Add booking pre-filled
+   with that date, occupied days open the booking detail — both need to
+   be reachable and activatable by keyboard, not just mouse), so the
+   default button chrome needs resetting back to the plain-div look
+   these had before. */
+.rental-month-day {
+  border: none;
+  background: none;
+  padding: 0;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+}
+
 .rental-month-day-empty {
   visibility: hidden;
 }

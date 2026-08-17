@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { createRentalBooking, updateRentalBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
+import { useEffect, useState } from 'react'
+import { createRentalBooking, updateRentalBooking, hasOverlappingBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import Modal from './Modal'
 
 // 'unspecified' is display-only (see BOOKING_SOURCE_LABEL) — not a real
@@ -14,23 +14,70 @@ function todayDateString() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+// Parsed as local y/m/d components, not the date string directly — a
+// bare 'YYYY-MM-DD' handed straight to `new Date()` is parsed as UTC
+// midnight, which can shift a day depending on the browser's timezone
+// offset.
+function addDays(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const result = new Date(y, m - 1, d + days)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${result.getFullYear()}-${pad(result.getMonth() + 1)}-${pad(result.getDate())}`
+}
+
 // Doubles as the Add-booking and Edit-booking form — passing an existing
 // `booking` prefills every field and switches the submit path to
 // updateRentalBooking instead of createRentalBooking, same "one form,
 // initialValues decide create vs. edit" pattern TaskForm.jsx already
 // uses. This is also the only way to retroactively set a source (e.g.
 // booking source) on a booking created before that field existed.
-export default function RentalBookingForm({ properties, defaultPropertyId, booking, createdBy, onClose, onSaved }) {
+export default function RentalBookingForm({
+  properties,
+  defaultPropertyId,
+  defaultCheckIn,
+  booking,
+  createdBy,
+  onClose,
+  onSaved,
+}) {
   const [propertyId, setPropertyId] = useState(booking?.property_id || defaultPropertyId || properties[0]?.id || '')
   const [guestName, setGuestName] = useState(booking?.guest_name || '')
-  const [checkIn, setCheckIn] = useState(booking?.check_in || todayDateString())
-  const [checkOut, setCheckOut] = useState(booking?.check_out || '')
+  // defaultCheckIn comes from clicking a specific vacant calendar day —
+  // takes priority over today's date, but an existing booking's own
+  // check_in (editing) always wins over both.
+  const [checkIn, setCheckIn] = useState(booking?.check_in || defaultCheckIn || todayDateString())
+  // Rent is charged in ~30-day cycles (see chargeDatesForBooking in
+  // rentals.js) — pre-filling checkout at check-in + 29 days matches the
+  // common case and saves a step; still fully editable, and an existing
+  // booking's real checkout always wins over this default.
+  const [checkOut, setCheckOut] = useState(
+    booking?.check_out || addDays(booking?.check_in || defaultCheckIn || todayDateString(), 29),
+  )
   const [status, setStatus] = useState(booking?.status || 'confirmed')
   const [source, setSource] = useState(booking?.source || '')
   const [sourceNote, setSourceNote] = useState(booking?.source_note || '')
   const [notes, setNotes] = useState(booking?.notes || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // A heads-up as soon as both dates are picked, not just a submit-time
+  // alert() after guest name/source/notes are already filled in — the
+  // real, authoritative check still runs again on submit (see
+  // createRentalBooking/updateRentalBooking), this is purely advisory.
+  const [dateConflict, setDateConflict] = useState(false)
+
+  useEffect(() => {
+    if (!propertyId || !checkIn || !checkOut || checkOut < checkIn) {
+      setDateConflict(false)
+      return
+    }
+    let cancelled = false
+    hasOverlappingBooking(propertyId, checkIn, checkOut, booking?.id).then((overlaps) => {
+      if (!cancelled) setDateConflict(overlaps)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [propertyId, checkIn, checkOut, booking?.id])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -97,6 +144,10 @@ export default function RentalBookingForm({ properties, defaultPropertyId, booki
           Last day
           <input type="date" required min={checkIn} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
         </label>
+
+        {dateConflict && (
+          <p className="error">This unit already has a booking that overlaps those dates.</p>
+        )}
 
         <label>
           Status
