@@ -11,7 +11,7 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!label.trim() || !targetAmount || savedAmount === '') return
+    if (!label.trim() || !(Number(targetAmount) > 0) || savedAmount === '') return
     setSaving(true)
     try {
       const payload = {
@@ -61,7 +61,7 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
           <input
             type="number"
             required
-            min="0"
+            min="1"
             step="1"
             placeholder="e.g. 50000"
             value={targetAmount}
