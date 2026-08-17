@@ -2531,9 +2531,15 @@ label.new-task-checkbox-label {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin: 0;
   /* <li> normally still gets a marker box even inside a flex/grid
      parent — blockification changes layout mode, not marker
-     generation — so this needs to be explicit rather than assumed. */
+     generation — so this needs to be explicit rather than assumed.
+     list-style: none removes the marker glyph itself but not a <ul>'s
+     default ~40px padding-left reserved to make room for it — without
+     zeroing that out too, every card sits 40px right of anything else
+     sharing its column that isn't also a <ul>. */
+  padding: 0;
   list-style: none;
 }
 
