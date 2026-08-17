@@ -5,20 +5,28 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined) // undefined = loading, null = signed out
+  const [authError, setAuthError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    setAuthError(null)
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch((err) => setAuthError(err))
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [])
+  }, [retryCount])
 
   const value = {
     session,
-    loading: session === undefined,
+    loading: session === undefined && !authError,
+    authError,
+    retry: () => setRetryCount((n) => n + 1),
     signOut: () => supabase.auth.signOut(),
   }
 
