@@ -195,10 +195,9 @@ export default function RentalsView({ me }) {
             >
               ›
             </button>
-            <span className="month-nav-label rentals-combined-nav-unit">{selectedUnit?.unit_name}</span>
             <button
               type="button"
-              className="rental-add-booking rental-add-booking-primary"
+              className="rental-add-booking rental-add-booking-primary rentals-combined-nav-unit"
               onClick={() => calendarRef.current?.openAddBooking()}
             >
               + Add booking

@@ -2513,6 +2513,10 @@ label.new-task-checkbox-label {
   flex-wrap: wrap;
 }
 
+/* A small gap between the month nav and the unit-scoped actions that
+   follow it — the unit name label used to sit here and carry this
+   margin, but was dropped as redundant (the selected unit is already
+   clear from the highlighted row in the unit list below). */
 .rentals-combined-nav-unit {
   margin-left: 10px;
 }
