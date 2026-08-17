@@ -3353,6 +3353,28 @@ label.new-task-checkbox-label {
   opacity: 1;
 }
 
+.inbox-section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inbox-section-heading-row .task-section-heading {
+  margin: 0;
+}
+
+.inbox-mark-read {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-h);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .inbox-list {
   list-style: none;
   margin: 0;
