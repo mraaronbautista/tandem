@@ -111,6 +111,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [peekTaskId, setPeekTaskId] = useState(null)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState('')
   const [reportOpen, setReportOpen] = useState(false)
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
   const [bulkAddOpen, setBulkAddOpen] = useState(false)
@@ -161,6 +162,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   async function handleTogglePush() {
     setPushBusy(true)
+    setPushError('')
     try {
       if (pushEnabled) {
         await unsubscribeFromPush()
@@ -169,8 +171,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
         await subscribeToPush(session.user.id)
         setPushEnabled(true)
       }
-    } catch (err) {
-      alert(err.message)
+    } catch {
+      // The browser/OS's own push registration error (e.g. permission
+      // blocked, no push service available) isn't meant for an end user
+      // to read verbatim — show one plain, actionable sentence instead.
+      setPushError("Couldn't update notifications — check your browser's notification permission for this site.")
     } finally {
       setPushBusy(false)
     }
@@ -602,9 +607,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
           showPush={pushSupported()}
           pushEnabled={pushEnabled}
           pushBusy={pushBusy}
+          pushError={pushError}
           onTogglePush={handleTogglePush}
           onSignOut={signOut}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            setSettingsOpen(false)
+            setPushError('')
+          }}
           memberName={me?.display_name}
           defaultTimezone={me?.default_timezone}
           onChangeDefaultTimezone={handleChangeDefaultTimezone}

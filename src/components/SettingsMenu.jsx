@@ -12,6 +12,7 @@ export default function SettingsMenu({
   showPush,
   pushEnabled,
   pushBusy,
+  pushError,
   onTogglePush,
   onSignOut,
   onClose,
@@ -33,10 +34,13 @@ export default function SettingsMenu({
 
         <div className="settings-menu-items">
           {showPush && (
-            <button type="button" className="settings-menu-item" onClick={onTogglePush} disabled={pushBusy}>
-              <span className="settings-menu-icon">{pushEnabled ? '🔔' : '🔕'}</span>
-              {pushEnabled ? 'Notifications on' : 'Notifications off'}
-            </button>
+            <>
+              <button type="button" className="settings-menu-item" onClick={onTogglePush} disabled={pushBusy}>
+                <span className="settings-menu-icon">{pushEnabled ? '🔔' : '🔕'}</span>
+                {pushEnabled ? 'Notifications on' : 'Notifications off'}
+              </button>
+              {pushError && <p className="error settings-menu-error">{pushError}</p>}
+            </>
           )}
 
           <button type="button" className="settings-menu-item" onClick={toggleTheme}>
