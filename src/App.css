@@ -2615,14 +2615,23 @@ label.new-task-checkbox-label {
    instead of letting content dictate it, and pairs with
    .rental-overview-top now splitting name/price from status onto their
    own line inside the card so a narrower card still reads cleanly. */
+/* flexbox, not grid: a grid's auto-fit columns leave the leftover
+   track empty when the item count doesn't divide evenly (a 4th card
+   stranded alone in its own row, with two dead column-widths of blank
+   space beside it) — flex-wrap items with a real flex-grow instead
+   stretch to fill whatever's left on a partial last row. 230px basis
+   (up from an earlier 200px) is wide enough that a typical unit name +
+   price ("Healthcare Haven $1,250/mo") sits on one line instead of the
+   name itself wrapping mid-word. */
 .rental-calendar-toolbar .rental-overview-list {
   flex-basis: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .rental-calendar-toolbar .rental-overview-item {
+  flex: 1 1 230px;
   padding: 8px 10px;
   font-size: 12px;
 }
