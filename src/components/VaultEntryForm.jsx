@@ -12,6 +12,29 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // A freshly generated password (or any other edit) is gone for good if
+  // this closes without saving — unlike the rest of the app, the vault
+  // has no reset-and-recover path, just "Reset vault" wiping everything.
+  // Guards every way this modal can close (backdrop click, Escape, and
+  // the Cancel button all route through Modal's onClose) rather than
+  // just the click-outside case, since a stray Escape or a misclicked
+  // Cancel loses the draft exactly the same way.
+  function hasUnsavedChanges() {
+    return (
+      label !== (entry?.label || '') ||
+      username !== (entry?.username || '') ||
+      loginMethod !== (entry?.loginMethod || '') ||
+      password !== (entry?.password || '') ||
+      url !== (entry?.url || '') ||
+      notes !== (entry?.notes || '')
+    )
+  }
+
+  function handleClose() {
+    if (hasUnsavedChanges() && !window.confirm('Discard unsaved changes to this entry?')) return
+    onClose()
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!label.trim()) return
@@ -38,7 +61,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
   }
 
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={handleClose}>
       <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{entry ? 'Edit entry' : 'New entry'}</h2>
 
@@ -95,7 +118,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
         </label>
 
         <div className="submission-actions">
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={handleClose}>
             Cancel
           </button>
           <button type="submit" className="submission-save" disabled={saving}>
