@@ -8,11 +8,13 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
   const [savedAmount, setSavedAmount] = useState(goal?.saved_amount ?? 0)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!label.trim() || !(Number(targetAmount) > 0) || savedAmount === '') return
     setSaving(true)
+    setError('')
     try {
       const payload = {
         label: label.trim(),
@@ -22,7 +24,7 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
       const saved = goal ? await updateSavingsGoal(goal.id, payload) : await createSavingsGoal(company, payload)
       onSaved(saved)
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setSaving(false)
     }
@@ -31,11 +33,12 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
   async function handleDelete() {
     if (!window.confirm(`Delete the "${goal.label}" goal? This can't be undone.`)) return
     setDeleting(true)
+    setError('')
     try {
       await deleteSavingsGoal(goal.id)
       onDeleted()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
       setDeleting(false)
     }
   }
@@ -44,6 +47,8 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
     <Modal onClose={onClose}>
       <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{goal ? 'Edit savings goal' : 'New savings goal'}</h2>
+
+        {error && <p className="error">{error}</p>}
 
         <label>
           Label

@@ -30,11 +30,13 @@ export default function RentalBookingForm({ properties, defaultPropertyId, booki
   const [sourceNote, setSourceNote] = useState(booking?.source_note || '')
   const [notes, setNotes] = useState(booking?.notes || '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!propertyId || !guestName.trim() || !checkIn || !checkOut) return
     setSaving(true)
+    setError('')
     try {
       const payload = {
         property_id: propertyId,
@@ -51,7 +53,7 @@ export default function RentalBookingForm({ properties, defaultPropertyId, booki
         : await createRentalBooking({ ...payload, created_by: createdBy })
       onSaved(saved)
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setSaving(false)
     }
@@ -61,6 +63,8 @@ export default function RentalBookingForm({ properties, defaultPropertyId, booki
     <Modal onClose={onClose}>
       <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{booking ? 'Edit booking' : 'Add booking'}</h2>
+
+        {error && <p className="error">{error}</p>}
 
         <label>
           Unit

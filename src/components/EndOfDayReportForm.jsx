@@ -105,6 +105,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
+    setError('')
     try {
       const bodyChunk = existingReport && body.trim() ? `${formatTimeNow()}\n${body}` : body
       const minutesLogged =
@@ -121,7 +122,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
       await sendEodReportNotification(`${hoursText}${existingReport ? 'updated' : 'submitted'} ${period} report.`)
       onClose()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setSubmitting(false)
     }

@@ -11,6 +11,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
   const [notes, setNotes] = useState(entry?.notes || '')
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   // A freshly generated password (or any other edit) is gone for good if
   // this closes without saving — unlike the rest of the app, the vault
@@ -39,6 +40,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
     e.preventDefault()
     if (!label.trim()) return
     setSaving(true)
+    setError('')
     try {
       const value = {
         label: label.trim(),
@@ -54,7 +56,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
         : await createVaultEntry({ ciphertext, iv, created_by: createdBy })
       onSaved({ ...value, id: saved.id })
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setSaving(false)
     }
@@ -64,6 +66,8 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
     <Modal onClose={handleClose}>
       <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{entry ? 'Edit entry' : 'New entry'}</h2>
+
+        {error && <p className="error">{error}</p>}
 
         <label>
           Label

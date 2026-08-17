@@ -151,8 +151,12 @@ export default function TaskBoard({ theme, toggleTheme }) {
     try {
       await sendNudge()
       alert('Nudge sent to Aaron.')
-    } catch (err) {
-      alert(err.message)
+    } catch {
+      // No persistent surface to show this inline on — the quick-actions
+      // menu is already closed by the time this fires (see comment
+      // above) — so alert() is the only option, but the raw Supabase
+      // error text isn't meant for a person to read.
+      alert("Couldn't send the nudge — try again.")
     }
   }
 

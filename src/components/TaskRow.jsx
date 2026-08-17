@@ -54,6 +54,7 @@ export default function TaskRow({
   const [viewSubmissionOpen, setViewSubmissionOpen] = useState(false)
   const [noteDraft, setNoteDraft] = useState(task.completion_note || '')
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const attachments = task.completion_attachments || []
   const hasSubmission = Boolean(task.completion_note || attachments.length)
   const overdue = isOverdue(task)
@@ -104,13 +105,14 @@ export default function TaskRow({
     const files = Array.from(e.target.files || [])
     if (!files.length) return
     setUploading(true)
+    setUploadError('')
     try {
       const uploaded = await Promise.all(
         files.map(async (file) => ({ url: await uploadCompletionAttachment(task.id, file), name: file.name })),
       )
       await onUpdate(task.id, { completion_attachments: [...attachments, ...uploaded] })
     } catch (err) {
-      alert(err.message)
+      setUploadError(err.message)
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -322,6 +324,7 @@ export default function TaskRow({
                 {uploading ? 'Uploading…' : <PaperclipIcon width={16} height={16} />}
                 <input type="file" multiple onChange={handleAttachmentUpload} hidden />
               </label>
+              {uploadError && <p className="error">{uploadError}</p>}
             </div>
 
             <div className="submission-actions">
@@ -329,6 +332,7 @@ export default function TaskRow({
                 type="button"
                 onClick={() => {
                   setNoteDraft(task.completion_note || '')
+                  setUploadError('')
                   setSubmitOpen(false)
                 }}
               >

@@ -69,7 +69,7 @@ export default function CorkBoardView({ me, memberName }) {
       setShared(false)
       reload()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setPosting(false)
     }
@@ -80,7 +80,7 @@ export default function CorkBoardView({ me, memberName }) {
       await updateCorkNote(note.id, { shared: !note.shared })
       reload()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     }
   }
 
@@ -90,7 +90,7 @@ export default function CorkBoardView({ me, memberName }) {
       await deleteCorkNote(note.id)
       reload()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     }
   }
 
@@ -113,7 +113,7 @@ export default function CorkBoardView({ me, memberName }) {
       setEditingId(null)
       reload()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setSaving(false)
     }
@@ -131,7 +131,7 @@ export default function CorkBoardView({ me, memberName }) {
       setCommentDrafts((prev) => ({ ...prev, [note.id]: '' }))
       reload()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setPostingCommentId(null)
     }
@@ -161,7 +161,7 @@ export default function CorkBoardView({ me, memberName }) {
       })
       setPromoted((prev) => new Set(prev).add(note.id))
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setPromotingId(null)
     }

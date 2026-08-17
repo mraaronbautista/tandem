@@ -2,29 +2,38 @@ import { useState } from 'react'
 import { deleteVaultEntry } from '../lib/vault'
 import Modal from './Modal'
 
-async function copyToClipboard(text) {
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    alert('Could not copy — your browser may be blocking clipboard access.')
-  }
-}
-
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
 // something a stray tap on the list can trigger.
 export default function VaultEntryDetail({ entry, onClose, onEdit, onDeleted }) {
   const [revealed, setRevealed] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+  // Which field's Copy button most recently succeeded, so it can flash
+  // "Copied" briefly — a successful copy otherwise gave no feedback at
+  // all, making it easy to double-tap unsure whether the first click
+  // registered.
+  const [copiedField, setCopiedField] = useState('')
+
+  async function handleCopy(field, text) {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField((f) => (f === field ? '' : f)), 1500)
+    } catch {
+      setError('Could not copy — your browser may be blocking clipboard access.')
+    }
+  }
 
   async function handleDelete() {
     if (!window.confirm(`Delete "${entry.label}"? This can't be undone.`)) return
     setDeleting(true)
+    setError('')
     try {
       await deleteVaultEntry(entry.id)
       onDeleted()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
       setDeleting(false)
     }
   }
@@ -34,12 +43,14 @@ export default function VaultEntryDetail({ entry, onClose, onEdit, onDeleted }) 
       <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
         <h2>{entry.label}</h2>
 
+        {error && <p className="error">{error}</p>}
+
         {entry.username && (
           <div className="vault-field-row">
             <span className="vault-field-label">Username</span>
             <span className="vault-field-value">{entry.username}</span>
-            <button type="button" className="vault-copy" onClick={() => copyToClipboard(entry.username)}>
-              Copy
+            <button type="button" className="vault-copy" onClick={() => handleCopy('username', entry.username)}>
+              {copiedField === 'username' ? 'Copied' : 'Copy'}
             </button>
           </div>
         )}
@@ -56,8 +67,8 @@ export default function VaultEntryDetail({ entry, onClose, onEdit, onDeleted }) 
             <button type="button" className="vault-copy" onClick={() => setRevealed((v) => !v)}>
               {revealed ? 'Hide' : 'Reveal'}
             </button>
-            <button type="button" className="vault-copy" onClick={() => copyToClipboard(entry.password)}>
-              Copy
+            <button type="button" className="vault-copy" onClick={() => handleCopy('password', entry.password)}>
+              {copiedField === 'password' ? 'Copied' : 'Copy'}
             </button>
           </div>
         )}

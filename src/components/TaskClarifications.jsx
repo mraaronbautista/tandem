@@ -11,19 +11,21 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
   const [answerDraft, setAnswerDraft] = useState('')
   const [answerAttachments, setAnswerAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [sending, setSending] = useState(false)
 
   async function handleAttachmentUpload(e) {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
     setUploading(true)
+    setUploadError('')
     try {
       const uploaded = await Promise.all(
         files.map(async (file) => ({ url: await uploadCompletionAttachment(taskId, file), name: file.name })),
       )
       setAnswerAttachments((prev) => [...prev, ...uploaded])
     } catch (err) {
-      alert(err.message)
+      setUploadError(err.message)
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -61,6 +63,7 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
         attachments={answerAttachments}
         onRemove={(i) => setAnswerAttachments((prev) => prev.filter((_, idx) => idx !== i))}
       />
+      {uploadError && <p className="error">{uploadError}</p>}
       <div className="clarification-compose-actions">
         <label className="task-submission-upload" title="Attach files">
           {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
@@ -98,19 +101,21 @@ export default function TaskClarifications({
   const [questionDraft, setQuestionDraft] = useState('')
   const [questionAttachments, setQuestionAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [asking, setAsking] = useState(false)
 
   async function handleAttachmentUpload(e) {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
     setUploading(true)
+    setUploadError('')
     try {
       const uploaded = await Promise.all(
         files.map(async (file) => ({ url: await uploadCompletionAttachment(taskId, file), name: file.name })),
       )
       setQuestionAttachments((prev) => [...prev, ...uploaded])
     } catch (err) {
-      alert(err.message)
+      setUploadError(err.message)
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -220,6 +225,7 @@ export default function TaskClarifications({
           attachments={questionAttachments}
           onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
         />
+        {uploadError && <p className="error">{uploadError}</p>}
         <div className="clarification-compose-actions">
           <div className="clarification-compose-left">
             <label className="task-submission-upload" title="Attach files">

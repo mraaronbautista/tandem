@@ -58,6 +58,7 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
     const validItems = items.filter((i) => i.text.trim())
     if (!validItems.length) return
     setSaving(true)
+    setError('')
     try {
       const body = validItems.map((i) => i.text.trim()).join('\n')
       const saved = await createPriorities(me.id, period, body)
@@ -84,7 +85,7 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
       )
       onClose()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setSaving(false)
     }

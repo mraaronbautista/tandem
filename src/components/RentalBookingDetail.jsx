@@ -15,28 +15,31 @@ function formatDateStr(dateStr) {
 export default function RentalBookingDetail({ booking, onClose, onDeleted, onConfirmed, onEdit }) {
   const [deleting, setDeleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState('')
   const isPending = booking.status === 'pending'
 
   async function handleDelete() {
     const verb = isPending ? 'Decline' : 'Delete'
     if (!window.confirm(`${verb} booking for ${booking.guest_name}? This can't be undone.`)) return
     setDeleting(true)
+    setError('')
     try {
       await deleteRentalBooking(booking.id)
       onDeleted()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
       setDeleting(false)
     }
   }
 
   async function handleConfirm() {
     setConfirming(true)
+    setError('')
     try {
       await confirmRentalBooking(booking.id)
       onConfirmed()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
       setConfirming(false)
     }
   }
@@ -45,6 +48,8 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
     <Modal onClose={onClose}>
       <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Booking details</h2>
+
+        {error && <p className="error">{error}</p>}
 
         {isPending && <span className="rental-pending-badge">Pending request</span>}
         <p className="rental-booking-detail-guest">{booking.guest_name}</p>

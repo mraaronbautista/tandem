@@ -7,11 +7,13 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
   const [amount, setAmount] = useState(expense?.amount ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!label.trim() || amount === '') return
     setSaving(true)
+    setError('')
     try {
       const payload = { label: label.trim(), amount: Number(amount) }
       const saved = expense
@@ -19,7 +21,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
         : await createRentalExpense(company, payload)
       onSaved(saved)
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
     } finally {
       setSaving(false)
     }
@@ -28,11 +30,12 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
   async function handleDelete() {
     if (!window.confirm(`Delete the "${expense.label}" overhead item? This can't be undone.`)) return
     setDeleting(true)
+    setError('')
     try {
       await deleteRentalExpense(expense.id)
       onDeleted()
     } catch (err) {
-      alert(err.message)
+      setError(err.message)
       setDeleting(false)
     }
   }
@@ -41,6 +44,8 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
     <Modal onClose={onClose}>
       <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{expense ? 'Edit overhead item' : 'New overhead item'}</h2>
+
+        {error && <p className="error">{error}</p>}
 
         <label>
           Label
