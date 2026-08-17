@@ -3049,6 +3049,10 @@ label.new-task-checkbox-label {
   margin-bottom: 8px;
 }
 
+.cork-board-item .cork-board-compose {
+  margin-bottom: 8px;
+}
+
 .cork-board-item-meta {
   display: flex;
   align-items: center;
@@ -3088,13 +3092,15 @@ label.new-task-checkbox-label {
   cursor: pointer;
 }
 
-.cork-board-item-actions button.cork-board-focus-today {
+.cork-board-item-actions button.cork-board-focus-today,
+.cork-board-item-actions button.cork-board-save-edit {
   border-color: var(--accent);
   color: var(--accent);
   font-weight: 600;
 }
 
-.cork-board-focus-today:disabled {
+.cork-board-focus-today:disabled,
+.cork-board-save-edit:disabled {
   opacity: 0.6;
   cursor: default;
 }

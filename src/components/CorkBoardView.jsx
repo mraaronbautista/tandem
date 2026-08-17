@@ -33,6 +33,9 @@ export default function CorkBoardView({ me, memberName }) {
   const [posting, setPosting] = useState(false)
   const [promotingId, setPromotingId] = useState(null)
   const [promoted, setPromoted] = useState(() => new Set())
+  const [editingId, setEditingId] = useState(null)
+  const [editDraft, setEditDraft] = useState('')
+  const [saving, setSaving] = useState(false)
 
   function reload() {
     fetchCorkNotes()
@@ -84,6 +87,31 @@ export default function CorkBoardView({ me, memberName }) {
       reload()
     } catch (err) {
       alert(err.message)
+    }
+  }
+
+  function startEdit(note) {
+    setEditingId(note.id)
+    setEditDraft(note.body)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditDraft('')
+  }
+
+  async function handleSaveEdit(note) {
+    const trimmed = editDraft.trim()
+    if (!trimmed) return
+    setSaving(true)
+    try {
+      await updateCorkNote(note.id, { body: trimmed })
+      setEditingId(null)
+      reload()
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -147,9 +175,21 @@ export default function CorkBoardView({ me, memberName }) {
         <ul className="cork-board-list">
           {notes.map((note) => {
             const isOwn = note.author_id === me?.id
+            const isEditing = editingId === note.id
             return (
               <li key={note.id} className="cork-board-item">
-                <p className="cork-board-item-body">{note.body}</p>
+                {isEditing ? (
+                  <div className="cork-board-compose">
+                    <textarea
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      maxLength={2000}
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <p className="cork-board-item-body">{note.body}</p>
+                )}
                 <div className="cork-board-item-meta">
                   <span>
                     {memberName(note.author_id)} · {formatDate(note.created_at)}
@@ -159,26 +199,47 @@ export default function CorkBoardView({ me, memberName }) {
                   </span>
                 </div>
                 <div className="cork-board-item-actions">
-                  <button
-                    type="button"
-                    className="cork-board-focus-today"
-                    onClick={() => handleFocusToday(note)}
-                    disabled={promotingId === note.id || promoted.has(note.id)}
-                  >
-                    {promoted.has(note.id)
-                      ? '✓ Added to Today'
-                      : promotingId === note.id
-                        ? 'Adding…'
-                        : '🎯 Focus today'}
-                  </button>
-                  {isOwn && (
+                  {isEditing ? (
                     <>
-                      <button type="button" onClick={() => handleToggleShare(note)}>
-                        {note.shared ? 'Make private' : 'Share'}
+                      <button
+                        type="button"
+                        className="cork-board-save-edit"
+                        onClick={() => handleSaveEdit(note)}
+                        disabled={saving || !editDraft.trim()}
+                      >
+                        {saving ? 'Saving…' : 'Save'}
                       </button>
-                      <button type="button" onClick={() => handleDelete(note)}>
-                        Unpin
+                      <button type="button" onClick={cancelEdit} disabled={saving}>
+                        Cancel
                       </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="cork-board-focus-today"
+                        onClick={() => handleFocusToday(note)}
+                        disabled={promotingId === note.id || promoted.has(note.id)}
+                      >
+                        {promoted.has(note.id)
+                          ? '✓ Added to Today'
+                          : promotingId === note.id
+                            ? 'Adding…'
+                            : '🎯 Focus today'}
+                      </button>
+                      {isOwn && (
+                        <>
+                          <button type="button" onClick={() => startEdit(note)}>
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => handleToggleShare(note)}>
+                            {note.shared ? 'Make private' : 'Share'}
+                          </button>
+                          <button type="button" onClick={() => handleDelete(note)}>
+                            Unpin
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
