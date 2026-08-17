@@ -69,10 +69,6 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
   const answers = items.filter((item) => item.kind === 'answer')
   const finished = items.filter((item) => item.kind === 'finished')
 
-  const hasUnreadAnswers = answers.some(
-    (item) => !frozenLastViewedAt || new Date(item.at) > new Date(frozenLastViewedAt),
-  )
-
   // Visiting this tab already marks everything read for *next* time (see
   // frozenLastViewedAt above — it's deliberately the *previous* visit's
   // timestamp so answers stay highlighted for this whole visit). This
@@ -132,11 +128,9 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
         <section>
           <div className="inbox-section-heading-row">
             <h3 className="task-section-heading">Answered</h3>
-            {hasUnreadAnswers && (
-              <button type="button" className="inbox-mark-read" onClick={handleMarkAllRead}>
-                Mark all as read
-              </button>
-            )}
+            <button type="button" className="inbox-mark-read" onClick={handleMarkAllRead}>
+              Mark all as read
+            </button>
           </div>
           <ul className="inbox-list">{answers.map((item) => renderItem(item, 'answer'))}</ul>
         </section>
