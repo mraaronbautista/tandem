@@ -2500,14 +2500,21 @@ label.new-task-checkbox-label {
   min-width: 0;
 }
 
-/* Two independent prev/next .month-nav-row blocks side by side — month
-   on the left, unit on the right — replacing the separate unit-tabs row
-   the mobile layout still uses. */
+/* One flat row — month nav, then the unit name + its actions — rather
+   than two separate .month-nav-row blocks stacked on their own lines.
+   Two nested rows used to wrap as whole blocks below ~1000px-ish main-
+   column widths even with room to spare for individual items; flattened
+   so wrapping (still kept for genuinely narrow cases) happens per-item
+   instead. */
 .rentals-combined-nav {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 14px;
   flex-wrap: wrap;
+}
+
+.rentals-combined-nav-unit {
+  margin-left: 10px;
 }
 
 .rentals-financials-col {

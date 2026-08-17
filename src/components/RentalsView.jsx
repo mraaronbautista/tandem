@@ -176,48 +176,44 @@ export default function RentalsView({ me }) {
       <div className="rentals-dashboard">
         <div className="rentals-main">
           <div className="rentals-combined-nav">
-            <div className="month-nav-row">
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => shiftMonth(-1)}
-                title="Previous month"
-                aria-label="Previous month"
-              >
-                ‹
-              </button>
-              <span className="month-nav-label">{monthLabel}</span>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => shiftMonth(1)}
-                title="Next month"
-                aria-label="Next month"
-              >
-                ›
-              </button>
-            </div>
-            <div className="month-nav-row">
-              <span className="month-nav-label">{selectedUnit?.unit_name}</span>
-              <button
-                type="button"
-                className="rental-add-booking rental-add-booking-primary"
-                onClick={() => calendarRef.current?.openAddBooking()}
-              >
-                + Add booking
-              </button>
-              <button
-                type="button"
-                className="rental-add-booking"
-                onClick={() => openEditProperty(selectedUnit)}
-                disabled={!selectedUnit}
-              >
-                Edit unit
-              </button>
-              <button type="button" className="rental-add-booking" onClick={openNewProperty}>
-                + Add unit
-              </button>
-            </div>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => shiftMonth(-1)}
+              title="Previous month"
+              aria-label="Previous month"
+            >
+              ‹
+            </button>
+            <span className="month-nav-label">{monthLabel}</span>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => shiftMonth(1)}
+              title="Next month"
+              aria-label="Next month"
+            >
+              ›
+            </button>
+            <span className="month-nav-label rentals-combined-nav-unit">{selectedUnit?.unit_name}</span>
+            <button
+              type="button"
+              className="rental-add-booking rental-add-booking-primary"
+              onClick={() => calendarRef.current?.openAddBooking()}
+            >
+              + Add booking
+            </button>
+            <button
+              type="button"
+              className="rental-add-booking"
+              onClick={() => openEditProperty(selectedUnit)}
+              disabled={!selectedUnit}
+            >
+              Edit unit
+            </button>
+            <button type="button" className="rental-add-booking" onClick={openNewProperty}>
+              + Add unit
+            </button>
           </div>
 
           {/* The per-unit status list renders in place of the (hidden)
