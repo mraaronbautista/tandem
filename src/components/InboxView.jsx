@@ -59,7 +59,7 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
 // rather than flipping every item to "read" mid-visit once TaskBoard bumps
 // it for next time.
 export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpdate, lastViewedAt }) {
-  const [frozenLastViewedAt, setFrozenLastViewedAt] = useState(() => lastViewedAt)
+  const [frozenLastViewedAt] = useState(() => lastViewedAt)
 
   // Full history, not just recent activity — a completed task's
   // conversation should stay findable here, not age out just because the
@@ -68,17 +68,6 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
   const questions = items.filter((item) => item.kind === 'question')
   const answers = items.filter((item) => item.kind === 'answer')
   const finished = items.filter((item) => item.kind === 'finished')
-
-  // Visiting this tab already marks everything read for *next* time (see
-  // frozenLastViewedAt above — it's deliberately the *previous* visit's
-  // timestamp so answers stay highlighted for this whole visit). This
-  // button is for clearing that highlighting immediately, without
-  // needing to leave and come back — e.g. after skimming the whole list
-  // in one sitting, or if a new answer lands via Realtime while already
-  // on this tab, which the tab-entry bump alone wouldn't catch.
-  function handleMarkAllRead() {
-    setFrozenLastViewedAt(new Date().toISOString())
-  }
 
   // Same "not every clarification is a question" reasoning as
   // TaskClarifications.jsx's own handleResolve — this is the quick path
@@ -92,6 +81,41 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
         : c,
     )
     await onUpdate(task.id, { clarifications: updated })
+  }
+
+  // Bulk version of the same per-item "no reply needed" checkbox above —
+  // resolves every currently-listed question at once. Clarifications live
+  // inside each task's own jsonb array, not a flat table, so this groups
+  // by task first and writes each affected task exactly once (with every
+  // one of its pending items resolved together) rather than firing one
+  // update per clarification — several updates to the *same* task's array
+  // in a row would race against each other, each one reading whatever
+  // clarifications looked like before any of the others had landed.
+  async function handleMarkAllRead() {
+    // Unlike the single-item checkbox (a low-stakes misclick, one item),
+    // this can resolve several real pending conversations in one click
+    // with no undo — worth a confirm, same reasoning as other
+    // consequential batch/destructive actions in this app.
+    const count = questions.length
+    if (!window.confirm(`Mark all ${count} item${count === 1 ? '' : 's'} as no reply needed?`)) return
+
+    const idsByTask = new Map()
+    for (const item of questions) {
+      if (!idsByTask.has(item.taskId)) idsByTask.set(item.taskId, new Set())
+      idsByTask.get(item.taskId).add(item.clarificationId)
+    }
+    await Promise.all(
+      Array.from(idsByTask, ([taskId, clarificationIds]) => {
+        const task = tasks.find((t) => t.id === taskId)
+        if (!task) return null
+        const updated = task.clarifications.map((c) =>
+          clarificationIds.has(c.id)
+            ? { ...c, resolved: true, resolvedBy: meId, resolvedAt: new Date().toISOString() }
+            : c,
+        )
+        return onUpdate(taskId, { clarifications: updated })
+      }),
+    )
   }
 
   function renderItem(item, kind) {
@@ -119,19 +143,19 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
 
       {questions.length > 0 && (
         <section>
-          <h3 className="task-section-heading inbox-section-heading-question">Needs your reply</h3>
+          <div className="inbox-section-heading-row">
+            <h3 className="task-section-heading inbox-section-heading-question">Needs your reply</h3>
+            <button type="button" className="inbox-mark-read" onClick={handleMarkAllRead}>
+              Mark all as read
+            </button>
+          </div>
           <ul className="inbox-list">{questions.map((item) => renderItem(item, 'question'))}</ul>
         </section>
       )}
 
       {answers.length > 0 && (
         <section>
-          <div className="inbox-section-heading-row">
-            <h3 className="task-section-heading">Answered</h3>
-            <button type="button" className="inbox-mark-read" onClick={handleMarkAllRead}>
-              Mark all as read
-            </button>
-          </div>
+          <h3 className="task-section-heading">Answered</h3>
           <ul className="inbox-list">{answers.map((item) => renderItem(item, 'answer'))}</ul>
         </section>
       )}
