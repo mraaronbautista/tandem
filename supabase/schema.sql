@@ -557,6 +557,15 @@ create table vault_meta (
   created_at timestamptz not null default now()
 );
 
+-- Enforces "at most one row" at the database level. Without this, two
+-- people opening the never-set-up vault at the same time and both
+-- submitting "Set up vault" both succeed, leaving vault_meta with two
+-- rows — the client's .maybeSingle() fetch then errors on ">1 row" and
+-- the vault gets stuck on a permanent error screen with no way back in.
+-- A constant expression in a unique index means every row collides with
+-- every other row, so the second insert now fails cleanly instead.
+create unique index vault_meta_singleton on vault_meta ((true));
+
 alter table vault_meta enable row level security;
 
 create policy "members can read vault meta"
