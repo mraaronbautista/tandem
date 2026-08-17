@@ -26,15 +26,22 @@ function localLabel(isoString) {
 // "Jul 23, 5:30 – 6:10 PM (40 min)" when a duration is set, otherwise just
 // the point-in-time label as before. An All Day task pinned to a specific
 // date (see isAllDayTask) shows that date with "All day" instead of the
-// literal midnight it's actually stored at.
+// literal midnight it's actually stored at. A duration long enough to
+// land on a different calendar day than the start (now possible up to a
+// week — see TaskForm.jsx) shows the end's full date too, not just a
+// bare time — "5:30 PM – 9:00 AM" alone would misread as same-day for a
+// multi-day span.
 function dueLabel(task) {
   if (isAllDayTask(task)) {
     return `${new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })}, All day`
   }
   const start = localLabel(task.due_date)
   if (!task.duration_minutes) return start
-  const end = new Date(new Date(task.due_date).getTime() + task.duration_minutes * 60000)
-  return `${start} – ${end.toLocaleTimeString([], TIME_ONLY_FORMAT)} (${formatDuration(task.duration_minutes)})`
+  const startDate = new Date(task.due_date)
+  const end = new Date(startDate.getTime() + task.duration_minutes * 60000)
+  const spansDays = startDate.toDateString() !== end.toDateString()
+  const endLabel = spansDays ? localLabel(end.toISOString()) : end.toLocaleTimeString([], TIME_ONLY_FORMAT)
+  return `${start} – ${endLabel} (${formatDuration(task.duration_minutes)})`
 }
 
 export default function TaskRow({
@@ -42,6 +49,7 @@ export default function TaskRow({
   onStatusChange,
   onUpdate,
   onDelete,
+  onDuplicate,
   memberName,
   meId,
   defaultOpen = false,
@@ -77,6 +85,11 @@ export default function TaskRow({
     if (window.confirm(`Delete "${task.title}"? This can't be undone.`)) {
       onDelete(task.id)
     }
+  }
+
+  function handleDuplicate(e) {
+    e.stopPropagation()
+    onDuplicate(task)
   }
 
   function handleChecklistItemChange(itemId, patch) {
@@ -222,6 +235,7 @@ export default function TaskRow({
                 <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
                   <EditIcon width={15} height={15} />
                 </button>
+                <button onClick={handleDuplicate}>Duplicate</button>
                 {task.status === 'done' && hasSubmission && (
                   <button onClick={() => setViewSubmissionOpen(true)}>View submission</button>
                 )}

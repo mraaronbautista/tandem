@@ -347,10 +347,43 @@ export default function TaskBoard({ theme, toggleTheme }) {
     setTasks((prev) => prev.filter((t) => t.id !== id))
   }
 
+  // An exact copy — same fields, same due date/time — rather than
+  // opening a blank form pre-filled from the original; the common case
+  // is a near-duplicate of an existing task, so starting from a full
+  // copy and editing from there is less work than starting from scratch
+  // and re-entering everything. Completion history and the Q&A thread
+  // don't carry over (a copy isn't a record of what already happened),
+  // and the checklist resets to unchecked/unblocked — same reasoning as
+  // spawn_next_recurrence()'s own reset in schema.sql. Routes through
+  // handleCreate so the app also jumps to wherever the copy landed, same
+  // as creating any other task.
+  async function handleDuplicate(task) {
+    const checklist = (task.checklist || []).map((item) => ({
+      id: crypto.randomUUID(),
+      text: item.text,
+      done: false,
+    }))
+    await handleCreate({
+      title: task.title,
+      who: task.who,
+      status: 'to_do',
+      priority: task.priority,
+      due_date: task.due_date,
+      due_timezone: task.due_timezone,
+      duration_minutes: task.duration_minutes,
+      source: task.source,
+      source_note: task.source_note,
+      notes: task.notes,
+      checklist,
+      recurrence: task.recurrence,
+    })
+  }
+
   const taskRowProps = {
     onStatusChange: handleStatusChange,
     onUpdate: handleUpdate,
     onDelete: handleDelete,
+    onDuplicate: handleDuplicate,
     memberName,
     meId: session.user.id,
     overlappingIds,
