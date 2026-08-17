@@ -6,8 +6,6 @@ import {
   fetchUpcomingRentalBookings,
   fetchSavingsGoals,
   monthRangeStrings,
-  unitOccupancyStatus,
-  formatDateStr,
 } from '../lib/rentals'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import RentalCalendar from './RentalCalendar'
@@ -165,13 +163,14 @@ export default function RentalsView({ me }) {
             </div>
           </div>
 
-          {/* A subtle per-unit status list renders in place of the
-              (hidden) unit-tabs toolbar row — unit switching already
-              happens via the ‹ Unit › nav above, so this is read-only
-              status text, not another set of buttons. The bold $/mo unit
-              header and the toolbar's own "+ Add booking" are both
-              suppressed here too — this list already shows each unit's
-              price, and the button moved up beside the unit nav. */}
+          {/* The per-unit status list renders in place of the (hidden)
+              unit-tabs toolbar row and, same as mobile's Overview tab,
+              doubles as the way to switch units here — it's the only unit
+              switcher in the toolbar now that the plain unit-tabs are
+              hidden (the ‹ Unit › nav above is the other one). The bold
+              $/mo unit header and the toolbar's own "+ Add booking" are
+              both suppressed here too — this list already shows each
+              unit's price, and the button moved up beside the unit nav. */}
           <RentalCalendar
             ref={calendarRef}
             properties={properties}
@@ -185,22 +184,12 @@ export default function RentalsView({ me }) {
             showAddBooking={false}
             showUnitHeader={false}
             unitTabsReplacement={
-              <p className="rentals-units-summary">
-                {properties.map((p) => {
-                  const status = unitOccupancyStatus(upcomingBookings, p.id)
-                  const statusText = status.occupied
-                    ? `Occupied through ${formatDateStr(status.through)} — ${status.guest}`
-                    : status.next
-                      ? `Vacant — next ${status.next.pending ? 'request' : 'guest'} ${formatDateStr(status.next.checkIn)}`
-                      : 'Vacant'
-                  return (
-                    <span key={p.id} className="rentals-units-summary-item">
-                      <span className="rental-unit-dot" style={{ background: p.color }} />
-                      {p.unit_name} ${Number(p.monthly_rent).toLocaleString()}/mo: {statusText}
-                    </span>
-                  )
-                })}
-              </p>
+              <RentalOverview
+                properties={properties}
+                bookings={upcomingBookings}
+                selectedUnitId={selectedUnitId}
+                onSelectUnit={setSelectedUnitId}
+              />
             }
           />
         </div>

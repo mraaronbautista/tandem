@@ -2485,30 +2485,26 @@ label.new-task-checkbox-label {
   font-size: 13px;
 }
 
-/* The desktop dashboard's RentalCalendar toolbar — a plain, muted
-   status line (one unit per row) rendered in place of the (hidden)
-   .rental-unit-tabs row — "+ Add booking" moved up beside the unit nav,
-   so this no longer shares the row with it. flex-basis: 100% still
-   claims the whole toolbar width, same reasoning as .rental-unit-tabs
-   above. */
-.rentals-units-summary {
+/* The desktop dashboard's RentalCalendar toolbar reuses
+   RentalOverview.jsx's list (via unitTabsReplacement) in place of the
+   (hidden) .rental-unit-tabs row, so unit switching still works the same
+   way it does on mobile's Overview tab. Its default vertical layout
+   doesn't fit a toolbar row, so this lays it out as a horizontal
+   wrapping row instead — same "+ Add booking" reasoning as
+   .rental-unit-tabs above (moved up beside the unit nav, so this no
+   longer shares the row with it; flex-basis: 100% still claims the
+   whole toolbar width). */
+.rental-calendar-toolbar .rental-overview-list {
   flex-basis: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rental-calendar-toolbar .rental-overview-item {
+  width: auto;
+  padding: 4px 8px;
   font-size: 12px;
-  opacity: 0.7;
-}
-
-.rentals-units-summary-item {
-  display: flex;
-  align-items: center;
-}
-
-.rentals-units-summary-item .rental-unit-dot {
-  width: 7px;
-  height: 7px;
-  flex-shrink: 0;
 }
 
 .rental-overview-status-occupied {
