@@ -152,16 +152,6 @@ export default function RentalsView({ me }) {
     setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + delta, 1))
   }
 
-  // Cycles the desktop dashboard's unit nav through `properties` by
-  // index, wrapping at both ends — same "no visible bounds" feel as
-  // shiftMonth above.
-  function shiftUnit(delta) {
-    if (!properties?.length) return
-    const idx = properties.findIndex((p) => p.id === selectedUnitId)
-    const nextIdx = (idx + delta + properties.length) % properties.length
-    setSelectedUnitId(properties[nextIdx].id)
-  }
-
   const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
   const selectedUnit = properties?.find((p) => p.id === selectedUnitId)
 
@@ -208,25 +198,7 @@ export default function RentalsView({ me }) {
               </button>
             </div>
             <div className="month-nav-row">
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => shiftUnit(-1)}
-                title="Previous unit"
-                aria-label="Previous unit"
-              >
-                ‹
-              </button>
               <span className="month-nav-label">{selectedUnit?.unit_name}</span>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => shiftUnit(1)}
-                title="Next unit"
-                aria-label="Next unit"
-              >
-                ›
-              </button>
               <button
                 type="button"
                 className="rental-add-booking"
