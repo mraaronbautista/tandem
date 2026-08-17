@@ -33,9 +33,17 @@ function todayDateString() {
 export default function PrioritiesForm({ me, memberName, onClose }) {
   const [period, setPeriod] = useState('day')
   const [latest, setLatest] = useState(null)
-  const [items, setItems] = useState([])
+  // Keyed per period so switching the Day/Week/Month tab never discards
+  // what you'd already typed under a different one — each tab keeps its
+  // own draft until you actually save.
+  const [itemsByPeriod, setItemsByPeriod] = useState({ day: [], week: [], month: [] })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const items = itemsByPeriod[period]
+  function setItems(next) {
+    setItemsByPeriod((prev) => ({ ...prev, [period]: next }))
+  }
 
   const defaultWho = whoKeyForName(me.display_name) || 'yours'
 
@@ -44,11 +52,6 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
       .then(setLatest)
       .catch((err) => setError(err.message))
   }, [])
-
-  function handlePeriodChange(next) {
-    setPeriod(next)
-    setItems([])
-  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -101,7 +104,7 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
               type="button"
               key={p.value}
               className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
-              onClick={() => handlePeriodChange(p.value)}
+              onClick={() => setPeriod(p.value)}
             >
               {p.label}
             </button>
