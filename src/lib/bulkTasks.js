@@ -202,7 +202,19 @@ function splitDateDescription(line) {
 //       Aug 21
 //       Texas 12a-4a
 //       Washington 2a-5a
-//  2. A "<date or note> – description" line (splitDateDescription) is a
+//  2. A shift line (parseShiftLine) — title-first ("Texas 12a-4a") or
+//     time-first ("8am – 9am – 1072 Rachel"). Tried before #3 below on
+//     purpose: the time-first form's own start-end range can itself
+//     contain a spaced dash, which #3's looser "<date or note> –
+//     description" match would otherwise misread as its date prefix
+//     (splitting "8am – 9am – 1072 Rachel" into a bogus "8am" date and
+//     "9am – 1072 Rachel" as the title) instead of the timed shift it
+//     actually is — a shift's rigid numeric/am-pm shape means this check
+//     never misfires against a genuine item line. Only means something
+//     once a date context exists from #1 above; with no date context yet
+//     it's treated the same as any other unanchored line — silently
+//     skipped, since it could just as easily be a header.
+//  3. A "<date or note> – description" line (splitDateDescription) is a
 //     self-contained item, independent of any date context above it:
 //       Aug 30 – Abdul vacates Master Haven (schedule cleaning)
 //       If Ingrid unavailable – Follow-up with Martin (backup)
@@ -212,9 +224,6 @@ function splitDateDescription(line) {
 //     (a fuzzy relative phrase, or a plain dependency note with no date
 //     shape at all) keeps the *entire* line as the title with no due
 //     date, rather than guessing at a specific day.
-//  3. A bare shift line ("Texas 12a-4a", no leading date of its own)
-//     only means something once a date context exists from #1 above —
-//     it's an error otherwise, since there's nothing to anchor it to.
 //  4. Anything else (with an active date context: unreadable; without
 //     one: a category header, e.g. "Cleaning coordination") — headers
 //     are silently skipped, not an error, since they're a normal,
@@ -235,6 +244,12 @@ export function parseBulkTasks(text) {
       return
     }
 
+    const shift = parseShiftLine(line)
+    if (shift) {
+      if (currentDate) tasks.push({ type: 'shift', ...shift, due_date: currentDate })
+      return
+    }
+
     const split = splitDateDescription(line)
     if (split) {
       if (!split.description) {
@@ -247,12 +262,7 @@ export function parseBulkTasks(text) {
     }
 
     if (currentDate) {
-      const shift = parseShiftLine(line)
-      if (!shift) {
-        errors.push({ line: i + 1, text: line, message: 'Couldn\'t read a time range (expected e.g. "Texas 12a-4a").' })
-        return
-      }
-      tasks.push({ type: 'shift', ...shift, due_date: currentDate })
+      errors.push({ line: i + 1, text: line, message: 'Couldn\'t read a time range (expected e.g. "Texas 12a-4a").' })
       return
     }
 
