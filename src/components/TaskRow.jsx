@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
-import { splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
+import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import { EditIcon, PaperclipIcon } from './icons'
 import TaskForm from './TaskForm'
@@ -205,6 +205,17 @@ export default function TaskRow({
         )}
         {task.due_date && (
           <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{dueLabel(task)}</span>
+        )}
+        {/* Which zone this was actually *set* in — not the due time
+            itself, which always displays in the viewer's own local zone
+            already (see localLabel above). All Day tasks skip this: the
+            zone only affects which calendar day midnight falls on for
+            them, a much lower-stakes mistake than a timed task landing
+            hours off, so it's not worth a badge on every all-day item. */}
+        {task.due_date && !isAllDayTask(task) && (
+          <span className="task-zone-badge" title={`Set in ${zoneLabel(task.due_timezone || DEFAULT_TIMEZONE)}`}>
+            {zoneAbbreviation(task.due_timezone || DEFAULT_TIMEZONE)}
+          </span>
         )}
         {task.status === 'done' && task.completed_at && (
           <span className="task-completed-at">Completed {localLabel(task.completed_at)}</span>

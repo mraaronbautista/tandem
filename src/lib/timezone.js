@@ -45,6 +45,41 @@ export function detectDefaultTimezone() {
   return TIMEZONE_OPTIONS.some((tz) => tz.value === deviceZone) ? deviceZone : DEFAULT_TIMEZONE
 }
 
+const ZONE_ABBR = Object.fromEntries(
+  TIMEZONE_OPTIONS.map((tz) => [tz.value, tz.label.match(/\(([^)]+)\)/)?.[1] || tz.value]),
+)
+
+// Short abbreviation for a task's due_timezone, for a compact
+// at-a-glance badge next to its due time — which zone it was actually
+// *set* in, distinct from the due time itself (always shown in whichever
+// zone the viewer is currently in, unlabeled — see localLabel in
+// TaskRow.jsx). Exists so a task set in the wrong zone (the household's
+// actual failure mode this was built for — a shift meant for Ada's
+// Central time accidentally entered while the form still had Aaron's
+// Manila zone selected, landing 13 hours off) is visible at a glance
+// instead of only surfacing once someone's already missed it. Falls back
+// to the device's own short zone name for any IANA zone outside the
+// curated TIMEZONE_OPTIONS list — in practice every due_timezone this
+// app ever writes comes from that list, so this is just a safety net.
+export function zoneAbbreviation(timeZone) {
+  if (!timeZone) return ''
+  if (ZONE_ABBR[timeZone]) return ZONE_ABBR[timeZone]
+  try {
+    const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
+      .formatToParts(new Date())
+      .find((p) => p.type === 'timeZoneName')
+    return part?.value || timeZone
+  } catch {
+    return timeZone
+  }
+}
+
+// Full label, e.g. "Central (CT)" — for the badge's tooltip, more
+// explicit than the bare abbreviation for whoever's reading it.
+export function zoneLabel(timeZone) {
+  return TIMEZONE_OPTIONS.find((tz) => tz.value === timeZone)?.label || timeZone
+}
+
 function partsToMap(parts) {
   const map = {}
   for (const p of parts) if (p.type !== 'literal') map[p.type] = p.value

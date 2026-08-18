@@ -860,6 +860,22 @@
   font-weight: 600;
 }
 
+/* A bordered pill, not plain text like .task-due right beside it — this
+   is meant to be noticed (catching a task set in the wrong zone), not
+   just read as ordinary metadata. */
+.task-zone-badge {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
 .task-completed-at {
   font-size: 11px;
   opacity: 0.5;

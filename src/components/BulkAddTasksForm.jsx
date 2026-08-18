@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react'
 import { parseBulkSchedule } from '../lib/bulkTasks'
 import { createTask, updateTask, isAllDayTask } from '../lib/tasks'
-import { TIMEZONE_OPTIONS, zonedTimeToUtcIso, splitDueDateInZone } from '../lib/timezone'
+import {
+  TIMEZONE_OPTIONS,
+  zonedTimeToUtcIso,
+  splitDueDateInZone,
+  zoneAbbreviation,
+  zoneLabel,
+} from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import Modal from './Modal'
 
@@ -355,6 +361,14 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                                 {WHO_LABEL[whoKey]}
                               </span>
                               <span>{formatTaskDue(task)}</span>
+                              {task.due_date && !isAllDayTask(task) && (
+                                <span
+                                  className="task-zone-badge"
+                                  title={`Set in ${zoneLabel(task.due_timezone)}`}
+                                >
+                                  {zoneAbbreviation(task.due_timezone)}
+                                </span>
+                              )}
                             </span>
                           </span>
                         </label>
