@@ -7,6 +7,7 @@ import {
   splitDueDateInZone,
   zoneAbbreviation,
   zoneLabel,
+  DEFAULT_TIMEZONE,
 } from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import Modal from './Modal'
@@ -62,14 +63,21 @@ function formatPreviewDate(dateStr) {
   return date.toLocaleDateString([], opts)
 }
 
-// Viewer-local time, same reasoning as TaskRow.jsx's own list display —
-// this is just a quick reference for picking tasks out of a list, not an
-// authoritative zone-aware label.
+// Formatted in the task's own due_timezone, not the viewer's — this
+// sits right next to the zone badge (task-zone-badge, below), so a
+// silently-converted viewer-local time here would contradict what that
+// badge says (same fix, and same reasoning, as DayTimeline.jsx's
+// blockTimeLabel — a task set for 10 PM Eastern showing as "10:00 AM"
+// next to an "ET" badge for a viewer 12 hours away). All Day tasks have
+// no due_timezone-specific time to show, so they stay a plain date.
 function formatTaskDue(task) {
   if (!task.due_date) return 'No date'
   if (isAllDayTask(task)) return new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })
+  const tz = task.due_timezone || DEFAULT_TIMEZONE
   const d = new Date(task.due_date)
-  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  const date = d.toLocaleDateString('en-US', { timeZone: tz, month: 'short', day: 'numeric' })
+  const time = d.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' })
+  return `${date}, ${time}`
 }
 
 // A whole schedule at once — a date line followed by one shift per line

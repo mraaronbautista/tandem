@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
-import { zoneAbbreviation, zoneLabel } from '../lib/timezone'
+import { zoneAbbreviation, zoneLabel, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 
 const PX_PER_MINUTE = 1.2
@@ -11,12 +11,14 @@ const PX_PER_MINUTE = 1.2
 // not what getOverlappingTaskIds uses to decide the "⚠ Overlap" badge.
 const POINT_TASK_MINUTES = 30
 // Tall enough for a title to wrap to its full 2 lines (see
-// .day-timeline-block-title's line-clamp) without the block's own fixed
-// height clipping the second line off partway through — a hard 1-line
-// ellipsis on a title like "Hi Aaron I need a chapel for my husband's
-// service..." threw away most of it with no way to read the rest short
-// of clicking in, which defeats the point of a glanceable block.
-const MIN_BLOCK_HEIGHT = 46
+// .day-timeline-block-title's line-clamp) *and* for the right-hand
+// date/time/zone column's own 2 lines (date above, time+zone-badge
+// below — the badge's border+padding needs a bit more room than plain
+// text) to fit without either getting clipped by the block's own fixed
+// height. Verified empirically against both, not just estimated —46
+// fit the title alone but clipped the date+time+badge column once that
+// was added.
+const MIN_BLOCK_HEIGHT = 58
 // Breathing room added around each busy window (see buildWindows below)
 // so a block isn't flush against the window's own top/bottom edge.
 const PAD_MINUTES = 20
@@ -35,11 +37,37 @@ const GAP_MARKER_HEIGHT = 30
 // just "10:00 PM" for a point-in-time task — never the fake
 // POINT_TASK_MINUTES sizing used purely for a legible minimum block
 // height, which isn't a real duration worth stating as one.
-function blockTimeLabel(task, start, end) {
-  const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  if (task.status === 'done') return `Completed ${fmt(start)}`
+//
+// Formatted in the task's own due_timezone, not the viewer's — the
+// block's *position* on the timeline is deliberately viewer-local
+// (it's placed where this lands in the day the viewer is actually
+// looking at), but the time/zone badge's whole job is "can I trust
+// this was scheduled right in the zone it says it's in," which a
+// silently-converted time right next to that zone's abbreviation
+// actively defeats: a task set for 10 PM–2 AM Eastern showed as
+// "10:00 AM–2:00 PM" next to an "ET" badge for a viewer ~12 hours
+// away, reading as if 10 AM–2 PM *was* Eastern time. A completed
+// task shows completed_at in the viewer's own zone instead — that's
+// when it was actually finished in the real world, not tied to
+// whatever zone the original due time was set in.
+function blockTimeLabel(task, start, end, dueTimeZone) {
+  if (task.status === 'done') {
+    const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    return `Completed ${fmt(start)}`
+  }
+  const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: dueTimeZone })
   if (task.duration_minutes) return `${fmt(start)}–${fmt(end)}`
   return fmt(start)
+}
+
+// MM/DD/YY, same zone basis as blockTimeLabel above — a task set for
+// late evening in a zone hours ahead of the viewer's can land on a
+// different calendar date there than the block's own viewer-local
+// position on the day grid might suggest.
+function blockDateLabel(task, start, dueTimeZone) {
+  const opts = { year: '2-digit', month: '2-digit', day: '2-digit' }
+  if (task.status !== 'done') opts.timeZone = dueTimeZone
+  return start.toLocaleDateString('en-US', opts)
 }
 
 function roundUpToHour(date) {
@@ -313,12 +341,17 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                       )}
                     </span>
                     <span className="day-timeline-block-time">
-                      <span>{blockTimeLabel(task, start, end)}</span>
-                      {!isAllDayTask(task) && (
-                        <span className="task-zone-badge" title={`Set in ${zoneLabel(task.due_timezone)}`}>
-                          {zoneAbbreviation(task.due_timezone)}
-                        </span>
-                      )}
+                      <span className="day-timeline-block-date">
+                        {blockDateLabel(task, start, task.due_timezone || DEFAULT_TIMEZONE)}
+                      </span>
+                      <span className="day-timeline-block-time-row">
+                        <span>{blockTimeLabel(task, start, end, task.due_timezone || DEFAULT_TIMEZONE)}</span>
+                        {!isAllDayTask(task) && (
+                          <span className="task-zone-badge" title={`Set in ${zoneLabel(task.due_timezone)}`}>
+                            {zoneAbbreviation(task.due_timezone)}
+                          </span>
+                        )}
+                      </span>
                     </span>
                   </button>
                 </div>

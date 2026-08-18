@@ -760,15 +760,31 @@
    problem the previous fix was trying to get away from, just moved one
    level in. Side by side only ever needs the 1 line the rest of the
    block's first row already has room for. */
+/* Column again — date on its own line above the time+zone row — but
+   kept to 2 short lines at a smaller font than the title's, so it still
+   fits the same MIN_BLOCK_HEIGHT the 2-line title needs without
+   reintroducing the clipping a 2-line *stacked* time/zone caused
+   earlier (fixed by putting those two on one row instead). */
 .day-timeline-block-time {
   flex: none;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 5px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
   font-size: 11px;
   opacity: 0.7;
   white-space: nowrap;
+}
+
+.day-timeline-block-date {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.day-timeline-block-time-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .day-timeline-block-top {
