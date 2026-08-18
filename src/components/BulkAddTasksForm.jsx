@@ -48,10 +48,11 @@ function formatPreviewTime(dueTime, durationMinutes) {
 }
 
 // "No date" for an undated type: 'item' task (an unresolvable relative
-// phrase like "End of this week", or a plain dependency note with no
-// date shape at all) — same reasoning as formatTaskDue below, just for a
-// task that was never assigned a real due_date in the first place rather
-// than one that has one.
+// phrase like "End of month / start of next month" — two dates offered
+// on one line, so picking either would be guessing — or a plain
+// dependency note with no date shape at all) — same reasoning as
+// formatTaskDue below, just for a task that was never assigned a real
+// due_date in the first place rather than one that has one.
 function formatPreviewDateOrNone(dateStr) {
   return dateStr ? formatPreviewDate(dateStr) : 'No date'
 }
@@ -340,9 +341,10 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             <p className="bulk-add-hint">
               Either a date on its own line followed by one shift per line below it ("Title start-end", e.g. "Texas
               12a-4a"), or a "&lt;date or note&gt; – description" line with no time of day (e.g. "Aug 30 – Renew the
-              lease") — mix both freely. Category headers with no dash are skipped automatically; a line whose date
-              isn't recognized (e.g. "End of this week") is kept whole as the title with no due date, rather than
-              guessed at.
+              lease") — mix both freely. Category headers with no dash are skipped automatically. Besides real
+              dates, "Today", "Tomorrow", "within N days", "end of (this) week", "end of (this) month", and "start
+              of next month" are all recognized too; a line whose date still isn't recognized (e.g. "End of month /
+              start of next month") is kept whole as the title with no due date, rather than guessed at.
             </p>
 
             <label>
