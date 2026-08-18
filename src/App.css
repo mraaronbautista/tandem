@@ -1268,26 +1268,74 @@
   gap: 8px;
 }
 
+/* Taller than a single-line list (max-height bumped from 220 to 320)
+   now that each row is a full two-line card — still scrolls once there
+   are more tasks than fit, but shows meaningfully more at once before
+   that's needed. */
 .bulk-edit-task-list {
   margin: 0;
-  padding: 8px 10px;
+  padding: 8px;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 220px;
+  gap: 6px;
+  max-height: 320px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
 }
 
-.bulk-edit-task-row {
+/* Full title on its own line (never truncated — see .bulk-edit-task-title
+   below) plus a border that changes color/fill on selection, so which
+   tasks are checked reads at a glance instead of needing to hunt for a
+   small checkbox mark next to a squeezed one-line row.
+   Scoped under .bulk-edit-task-list (two classes, not one) deliberately
+   — this is a <label>, and .submission-modal label's own generic rule
+   (display: flex; flex-direction: column; font-size: 13px; opacity:
+   0.85, further up this file) has equal-or-higher specificity than a
+   single class, so it was silently winning: rows rendered as a stacked,
+   centered, dimmed column instead of a row. font-size/opacity are reset
+   below for the same reason — not just flex-direction. */
+.bulk-edit-task-list .bulk-edit-task-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 1;
+  cursor: pointer;
+}
+
+.bulk-edit-task-row-selected {
+  border-color: var(--accent);
+  background: var(--pill-bg);
+}
+
+.bulk-edit-task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bulk-edit-task-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  /* Deliberately no white-space: nowrap/ellipsis — wraps to a second
+     line rather than truncating, so a long title is always fully
+     readable without having to open the task to check. */
+}
+
+.bulk-edit-task-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 0;
-  font-size: 13px;
-  cursor: pointer;
+  font-size: 12px;
+  opacity: 0.75;
 }
 
 .bulk-edit-fields {
@@ -1299,24 +1347,51 @@
   border-radius: 8px;
 }
 
+/* Who and Time zone side by side — both are a single short select, so
+   stacking them as their own full-width rows left a lot of unused
+   horizontal space in a modal this wide. Title and Notes stay full-width
+   rows of their own: Title has two controls (mode + text) that need the
+   room, and Notes is a textarea. */
+.bulk-edit-fields-row {
+  display: flex;
+  gap: 12px;
+}
+
+.bulk-edit-fields-row .bulk-edit-field-row {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Each field's own "apply this" checkbox lives in the same row as the
    field itself, rather than as a separate label above it — the field is
    disabled (and visibly dimmed) until its checkbox is on, so the
    relationship between the two is always visually obvious even in a
-   list of several of these stacked together. */
-.bulk-edit-field-row {
+   list of several of these stacked together.
+   Scoped under .bulk-edit-fields (two classes) for the same reason as
+   .bulk-edit-task-list .bulk-edit-task-row above — Who/Time zone/Notes
+   are all real <label> elements, so .submission-modal label's own rule
+   would otherwise win and stack/dim/shrink them. (Title uses a plain
+   <div>, unaffected either way, but shares this class for the same
+   layout.) */
+.bulk-edit-fields .bulk-edit-field-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
+  font-size: 14px;
+  opacity: 1;
 }
 
 .bulk-edit-field-row select,
-.bulk-edit-field-row textarea {
+.bulk-edit-field-row textarea,
+.bulk-edit-field-row input[type='text'] {
   flex: 1;
+  min-width: 0;
 }
 
 .bulk-edit-field-row select:disabled,
-.bulk-edit-field-row textarea:disabled {
+.bulk-edit-field-row textarea:disabled,
+.bulk-edit-field-row input[type='text']:disabled {
   opacity: 0.45;
 }
 
@@ -1325,6 +1400,41 @@
   width: 70px;
   font-size: 13px;
   opacity: 0.85;
+}
+
+.bulk-edit-title-controls {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bulk-edit-title-controls select {
+  flex: none;
+  width: 112px;
+}
+
+/* Side by side reads fine once the modal is the capped-width desktop
+   version (560px — see .modal-backdrop .submission-modal), but below
+   Modal.jsx's own 640px breakpoint this becomes a full-width slide-up
+   sheet instead, which can still be meaningfully narrower than 560px on
+   a small/narrow viewport — two columns each carrying a 70px label
+   leaves barely enough room for the select itself. Matches that same
+   640px breakpoint (not an arbitrary phone-sized one) so the stacked
+   fallback covers the whole slide-up-sheet range, not just phones. */
+@media (max-width: 640px) {
+  .bulk-edit-fields-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bulk-edit-title-controls {
+    flex-direction: column;
+  }
+
+  .bulk-edit-title-controls select {
+    width: 100%;
+  }
 }
 
 .bulk-edit-field-row-notes {

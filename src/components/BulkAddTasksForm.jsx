@@ -172,6 +172,9 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   // to tell "leave Notes alone" apart from "clear every selected task's
   // notes", since both look identical (an empty textarea) without an
   // explicit flag.
+  const [applyTitle, setApplyTitle] = useState(false)
+  const [titleMode, setTitleMode] = useState('append')
+  const [titleText, setTitleText] = useState('')
   const [applyWho, setApplyWho] = useState(false)
   const [editWho, setEditWho] = useState('yours')
   const [applyTimezone, setApplyTimezone] = useState(false)
@@ -180,7 +183,11 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   const [editNotes, setEditNotes] = useState('')
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState('')
-  const hasFieldToApply = applyWho || applyTimezone || applyNotes
+  // Unlike Notes, an empty Title text isn't a meaningful "apply" — there's
+  // no such thing as clearing a task's title (it's required everywhere
+  // else in the app), so Title only counts toward "there's something to
+  // apply" once actual text is typed, even if its checkbox is on.
+  const hasFieldToApply = applyWho || applyTimezone || applyNotes || (applyTitle && titleText.trim())
 
   async function handleApply(e) {
     e.preventDefault()
@@ -188,10 +195,15 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
     setApplying(true)
     setApplyError('')
     try {
+      const word = titleText.trim()
       await Promise.all(
         Array.from(selectedIds).map((id) => {
           const task = editableTasks.find((t) => t.id === id)
           const patch = {}
+          if (applyTitle && word) {
+            patch.title =
+              titleMode === 'replace' ? word : titleMode === 'prepend' ? `${word} ${task.title}` : `${task.title} ${word}`
+          }
           if (applyWho) patch.who = editWho
           if (applyNotes) patch.notes = editNotes.trim() || null
           // Keeps the wall-clock date/time exactly as originally entered
@@ -331,19 +343,20 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                 <ul className="bulk-edit-task-list">
                   {editableTasks.map((task) => {
                     const whoKey = task.who
+                    const selected = selectedIds.has(task.id)
                     return (
                       <li key={task.id}>
-                        <label className="bulk-edit-task-row">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(task.id)}
-                            onChange={() => toggleSelected(task.id)}
-                          />
-                          <span className="task-who-badge" style={{ background: WHO_COLOR[whoKey] }}>
-                            {WHO_LABEL[whoKey]}
+                        <label className={`bulk-edit-task-row${selected ? ' bulk-edit-task-row-selected' : ''}`}>
+                          <input type="checkbox" checked={selected} onChange={() => toggleSelected(task.id)} />
+                          <span className="bulk-edit-task-info">
+                            <span className="bulk-edit-task-title">{task.title}</span>
+                            <span className="bulk-edit-task-meta">
+                              <span className="task-who-badge" style={{ background: WHO_COLOR[whoKey] }}>
+                                {WHO_LABEL[whoKey]}
+                              </span>
+                              <span>{formatTaskDue(task)}</span>
+                            </span>
                           </span>
-                          <span className="bulk-add-preview-title">{task.title}</span>
-                          <span className="bulk-add-preview-time">{formatTaskDue(task)}</span>
                         </label>
                       </li>
                     )
@@ -351,34 +364,62 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                 </ul>
 
                 <div className="bulk-edit-fields">
-                  <label className="bulk-edit-field-row">
-                    <input type="checkbox" checked={applyWho} onChange={(e) => setApplyWho(e.target.checked)} />
-                    <span className="bulk-edit-field-label">Who</span>
-                    <select value={editWho} onChange={(e) => setEditWho(e.target.value)} disabled={!applyWho}>
-                      <option value="yours">{WHO_LABEL.yours}</option>
-                      <option value="assistant">{WHO_LABEL.assistant}</option>
-                    </select>
-                  </label>
+                  <div className="bulk-edit-field-row bulk-edit-field-row-title">
+                    <input type="checkbox" checked={applyTitle} onChange={(e) => setApplyTitle(e.target.checked)} />
+                    <span className="bulk-edit-field-label">Title</span>
+                    <div className="bulk-edit-title-controls">
+                      <select value={titleMode} onChange={(e) => setTitleMode(e.target.value)} disabled={!applyTitle}>
+                        <option value="append">Add after</option>
+                        <option value="prepend">Add before</option>
+                        <option value="replace">Replace with</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder={titleMode === 'replace' ? 'New title' : 'Word or phrase to add'}
+                        value={titleText}
+                        onChange={(e) => setTitleText(e.target.value)}
+                        disabled={!applyTitle}
+                      />
+                    </div>
+                  </div>
+                  {applyTitle && titleMode === 'replace' && (
+                    <p className="bulk-add-hint">
+                      Every selected task gets this exact title — usually only useful for a batch of otherwise
+                      identical placeholder tasks. "Add before"/"Add after" keep each task's own title and just
+                      tack this onto it instead.
+                    </p>
+                  )}
 
-                  <label className="bulk-edit-field-row">
-                    <input
-                      type="checkbox"
-                      checked={applyTimezone}
-                      onChange={(e) => setApplyTimezone(e.target.checked)}
-                    />
-                    <span className="bulk-edit-field-label">Time zone</span>
-                    <select
-                      value={editTimezone}
-                      onChange={(e) => setEditTimezone(e.target.value)}
-                      disabled={!applyTimezone}
-                    >
-                      {TIMEZONE_OPTIONS.map((tz) => (
-                        <option key={tz.value} value={tz.value}>
-                          {tz.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="bulk-edit-fields-row">
+                    <label className="bulk-edit-field-row">
+                      <input type="checkbox" checked={applyWho} onChange={(e) => setApplyWho(e.target.checked)} />
+                      <span className="bulk-edit-field-label">Who</span>
+                      <select value={editWho} onChange={(e) => setEditWho(e.target.value)} disabled={!applyWho}>
+                        <option value="yours">{WHO_LABEL.yours}</option>
+                        <option value="assistant">{WHO_LABEL.assistant}</option>
+                      </select>
+                    </label>
+
+                    <label className="bulk-edit-field-row">
+                      <input
+                        type="checkbox"
+                        checked={applyTimezone}
+                        onChange={(e) => setApplyTimezone(e.target.checked)}
+                      />
+                      <span className="bulk-edit-field-label">Time zone</span>
+                      <select
+                        value={editTimezone}
+                        onChange={(e) => setEditTimezone(e.target.value)}
+                        disabled={!applyTimezone}
+                      >
+                        {TIMEZONE_OPTIONS.map((tz) => (
+                          <option key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   {applyTimezone && (
                     <p className="bulk-add-hint">
                       Keeps each task's date/time exactly as set, reinterpreted in the new zone — a task due "9:00
