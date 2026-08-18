@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { isAllDayTask, formatDuration } from '../lib/tasks'
-import { PRIORITY_COLOR } from '../lib/priorityColors'
+import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
+import { zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 
 const PX_PER_MINUTE = 1.2
@@ -21,6 +22,19 @@ const PAD_MINUTES = 20
 // scroll between them, burying whatever's on the other side of the gap.
 const GAP_THRESHOLD_MINUTES = 90
 const GAP_MARKER_HEIGHT = 30
+
+// "Completed 10:00 PM" for a finished task (start is completed_at, a
+// single instant — a range would misleadingly imply it was still in
+// progress the whole time), "10:00–10:40 PM" for a real duration, or
+// just "10:00 PM" for a point-in-time task — never the fake
+// POINT_TASK_MINUTES sizing used purely for a legible minimum block
+// height, which isn't a real duration worth stating as one.
+function blockTimeLabel(task, start, end) {
+  const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  if (task.status === 'done') return `Completed ${fmt(start)}`
+  if (task.duration_minutes) return `${fmt(start)}–${fmt(end)}`
+  return fmt(start)
+}
 
 function roundUpToHour(date) {
   const d = new Date(date)
@@ -120,7 +134,7 @@ function buildWindows(items) {
 // details inline the way TaskRow normally does — a block's height is
 // fixed to its time span, and full task details (notes, checklist,
 // clarifications) don't fit inside that without breaking the layout.
-export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappingIds }) {
+export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappingIds, meId }) {
   const untimed = tasks.filter((t) => t.status !== 'done' && isAllDayTask(t))
   const timed = tasks.filter((t) => !(t.status !== 'done' && isAllDayTask(t)))
 
@@ -173,6 +187,8 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
 
     const positioned = assignColumns(items).map(({ task, start, end, col, totalCols }) => ({
       task,
+      start,
+      end,
       col,
       totalCols,
       top: timeToPx(start),
@@ -216,11 +232,19 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
               </div>
             ))}
 
-            {layout.positioned.map(({ task, top, height, col, totalCols }) => {
+            {layout.positioned.map(({ task, start, end, top, height, col, totalCols }) => {
               const overlapping = overlappingIds?.has(task.id) ?? false
               const classes = ['day-timeline-block']
               if (overlapping) classes.push('day-timeline-block-overlapping')
               if (task.status === 'done') classes.push('day-timeline-block-done')
+              const checklist = task.checklist || []
+              const checklistDone = checklist.filter((item) => item.done).length
+              const hasNotes = Boolean(task.notes)
+              // Same rule as TaskRow.jsx's own 💬 badge — an unanswered,
+              // unresolved message directed at whoever's looking right now.
+              const hasQuestionForMe = (task.clarifications || []).some(
+                (c) => !c.answer && !c.resolved && c.askedBy !== meId,
+              )
               return (
                 <div
                   key={task.id}
@@ -232,6 +256,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                     width: `${100 / totalCols}%`,
                     borderLeftColor: overlapping ? '#e0a83e' : PRIORITY_COLOR[task.priority],
                   }}
+                  title={PRIORITY_LABEL[task.priority]}
                 >
                   <input
                     type="checkbox"
@@ -239,11 +264,43 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                     checked={task.status === 'done'}
                     onChange={() => onStatusChange(task.id, task.status === 'done' ? 'to_do' : 'done')}
                   />
+                  {/* Two rows, not one — title always shows (as before);
+                      everything else is "as much as fits" rather than a
+                      fixed set, since a block's height is whatever its
+                      real time span happens to be. The parent's own
+                      overflow: hidden clips this second row away on the
+                      shortest blocks (a bare 15-30min task) without any
+                      extra logic needed to detect that case. */}
                   <button type="button" className="day-timeline-block-body" onClick={() => onSelect(task)}>
-                    <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
-                      {WHO_LABEL[task.who]}
+                    <span className="day-timeline-block-top">
+                      <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
+                        {WHO_LABEL[task.who]}
+                      </span>
+                      <span className="day-timeline-block-title">{task.title}</span>
                     </span>
-                    <span className="day-timeline-block-title">{task.title}</span>
+                    <span className="day-timeline-block-meta">
+                      <span>{blockTimeLabel(task, start, end)}</span>
+                      {!isAllDayTask(task) && (
+                        <span className="task-zone-badge" title={`Set in ${zoneLabel(task.due_timezone)}`}>
+                          {zoneAbbreviation(task.due_timezone)}
+                        </span>
+                      )}
+                      {checklist.length > 0 && (
+                        <span className="day-timeline-block-checklist" title="Subtasks">
+                          ☑ {checklistDone}/{checklist.length}
+                        </span>
+                      )}
+                      {hasNotes && (
+                        <span title="Has notes" aria-label="Has notes">
+                          📝
+                        </span>
+                      )}
+                      {hasQuestionForMe && (
+                        <span title="Has something for you to reply to" aria-label="Has something for you to reply to">
+                          💬
+                        </span>
+                      )}
+                    </span>
                   </button>
                 </div>
               )

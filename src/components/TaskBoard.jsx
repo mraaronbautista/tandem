@@ -579,6 +579,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                             onSelect={(task) => setPeekTaskId(task.id)}
                             onStatusChange={handleStatusChange}
                             overlappingIds={overlappingIds}
+                            meId={session.user.id}
                           />
                         ) : (
                           <div className="timeline-list">
