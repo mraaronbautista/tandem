@@ -10,7 +10,13 @@ const PX_PER_MINUTE = 1.2
 // purely for a legible minimum block height — not a real duration, and
 // not what getOverlappingTaskIds uses to decide the "⚠ Overlap" badge.
 const POINT_TASK_MINUTES = 30
-const MIN_BLOCK_HEIGHT = 34
+// Tall enough for a title to wrap to its full 2 lines (see
+// .day-timeline-block-title's line-clamp) without the block's own fixed
+// height clipping the second line off partway through — a hard 1-line
+// ellipsis on a title like "Hi Aaron I need a chapel for my husband's
+// service..." threw away most of it with no way to read the rest short
+// of clicking in, which defeats the point of a glanceable block.
+const MIN_BLOCK_HEIGHT = 46
 // Breathing room added around each busy window (see buildWindows below)
 // so a block isn't flush against the window's own top/bottom edge.
 const PAD_MINUTES = 20

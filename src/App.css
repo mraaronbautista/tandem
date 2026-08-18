@@ -744,19 +744,37 @@
 
 .day-timeline-block-top {
   display: flex;
-  align-items: center;
+  /* flex-start, not center — with a title that wraps to 2 lines (see
+     .day-timeline-block-title below), centering would float the who
+     badge in the vertical middle of both lines instead of sitting level
+     with the first one. */
+  align-items: flex-start;
   gap: 6px;
   width: 100%;
   min-width: 0;
 }
 
+.day-timeline-block-top .task-who-badge {
+  margin-top: 1px;
+}
+
+/* Wraps up to 2 lines (the standard line-clamp trio: box + box-orient +
+   line-clamp) rather than a hard 1-line ellipsis — a title long enough
+   to need truncating at all (e.g. someone pasting a whole request in as
+   the title) used to lose everything past the first line's worth of
+   characters, with no way to read the rest short of clicking in. Only
+   ellipsizes if the title is still too long after 2 full lines.
+   MIN_BLOCK_HEIGHT (DayTimeline.jsx) is sized to fit this without the
+   block's own overflow: hidden clipping the second line off partway. */
 .day-timeline-block-title {
   flex: 1;
   min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 13px;
+  line-height: 1.3;
 }
 
 .day-timeline-block-meta {
