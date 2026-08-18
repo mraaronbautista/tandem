@@ -15,17 +15,25 @@ function pad(n) {
 
 // A line on its own that names a date — everything after it (until the
 // next date line) belongs to that date. Accepts 'YYYY-MM-DD', a loose
-// 'Aug 21' / 'August 21' / 'Aug 21, 2026' form, or the relative 'Today'/
-// 'Tomorrow' (optionally with a trailing colon, e.g. "Tomorrow:", or a
-// trailing parenthetical, e.g. "Tomorrow (date of meeting + 1 day)" —
-// both natural ways to head a quick note) — matching how most schedule
-// tools actually print dates, or how someone jotting a note by hand
-// actually writes one, so a line can often be pasted close to verbatim
-// rather than needing to be retyped as ISO. A bare 'Aug 21' with no year
-// assumes the current year, or next year if that date is more than
-// YEAR_ROLLOVER_GRACE_DAYS in the past — the common "planning into next
-// year" case, without misfiring on a schedule that starts a day or two
-// ago.
+// 'Aug 21' / 'August 21' / 'Aug 21, 2026' form, the relative 'Today'/
+// 'Tomorrow', or 'within N days'/'within the next N days' (optionally
+// with a trailing colon, e.g. "Tomorrow:", or a trailing parenthetical,
+// e.g. "Tomorrow (date of meeting + 1 day)" — both natural ways to head
+// a quick note) — matching how most schedule tools actually print dates,
+// or how someone jotting a note by hand actually writes one, so a line
+// can often be pasted close to verbatim rather than needing to be
+// retyped as ISO. A bare 'Aug 21' with no year assumes the current year,
+// or next year if that date is more than YEAR_ROLLOVER_GRACE_DAYS in the
+// past — the common "planning into next year" case, without misfiring on
+// a schedule that starts a day or two ago.
+//
+// Deliberately narrow on which relative phrases resolve to a real date —
+// only 'today'/'tomorrow'/'within N days' have one unambiguous
+// interpretation. Fuzzier ones like "End of this week" or "end of month"
+// still fall through unresolved (see the type: 'item' fallback below):
+// "end" of a week could reasonably mean Friday, Saturday, or Sunday
+// depending on who you ask, so guessing wrong and silently filing it
+// under the wrong day would be worse than leaving it dateless.
 function parseDateHeader(rawLine) {
   const line = rawLine.replace(/:\s*$/, '').replace(/\s*\([^)]*\)\s*$/, '')
 
@@ -33,6 +41,13 @@ function parseDateHeader(rawLine) {
   if (relative === 'today' || relative === 'tomorrow') {
     const d = new Date()
     if (relative === 'tomorrow') d.setDate(d.getDate() + 1)
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  }
+
+  const within = relative.match(/^within\s+(?:the\s+next\s+|next\s+)?(\d+)\s+days?$/)
+  if (within) {
+    const d = new Date()
+    d.setDate(d.getDate() + Number(within[1]))
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   }
 
