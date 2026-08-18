@@ -7,54 +7,76 @@ import { isImageAttachment } from '../lib/attachments'
 // (TaskClarifications.jsx), and eod_reports (EodReportsList.jsx/
 // EndOfDayReportForm.jsx) — all the same shape, so one component instead
 // of four copies of this markup.
+//
+// Files (a compact pill each) get their own row above images (a capped-
+// size thumbnail each), both wrapping side by side rather than one long
+// vertical stack — a report with several screenshots used to render each
+// one at up to 280px tall and full container width, one per line, which
+// could turn a handful of attachments into a very long scroll for not
+// much more information than a smaller thumbnail already conveys.
 export default function AttachmentList({ attachments, onRemove }) {
   if (!attachments?.length) return null
+
+  // Carries each attachment's original index through the split so
+  // onRemove(i) still targets the right item in the *source* array —
+  // the two rendered groups are a display-only partition, not a new
+  // array order that persists anywhere.
+  const indexed = attachments.map((a, i) => ({ ...a, _i: i }))
+  const files = indexed.filter((a) => !isImageAttachment(a.name))
+  const images = indexed.filter((a) => isImageAttachment(a.name))
+
+  function removeButton(i) {
+    return (
+      <button
+        type="button"
+        className="task-submission-remove"
+        onClick={() => onRemove(i)}
+        title="Remove"
+        aria-label="Remove attachment"
+      >
+        ✕
+      </button>
+    )
+  }
+
   return (
     <div className="task-submission-attachments">
-      {attachments.map((a, i) =>
-        isImageAttachment(a.name) ? (
-          <div className="task-submission-attachment task-submission-attachment-image" key={i}>
-            <img src={a.url} alt={a.name || 'Attachment'} />
-            {onRemove && (
-              <button
-                type="button"
-                className="task-submission-remove"
-                onClick={() => onRemove(i)}
-                title="Remove"
-                aria-label="Remove attachment"
+      {files.length > 0 && (
+        <div className="task-submission-files-row">
+          {files.map((a) =>
+            onRemove ? (
+              <div className="task-submission-attachment task-submission-file-link" key={a._i}>
+                <a href={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
+                  <span className="task-submission-file-icon">📎</span>
+                  <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
+                </a>
+                {removeButton(a._i)}
+              </div>
+            ) : (
+              <a
+                className="task-submission-attachment task-submission-file-link"
+                href={a.url}
+                target="_blank"
+                rel="noreferrer"
+                key={a._i}
               >
-                ✕
-              </button>
-            )}
-          </div>
-        ) : onRemove ? (
-          <div className="task-submission-attachment task-submission-file-link" key={i}>
-            <a href={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
-              <span className="task-submission-file-icon">📎</span>
-              <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
-            </a>
-            <button
-              type="button"
-              className="task-submission-remove"
-              onClick={() => onRemove(i)}
-              title="Remove"
-              aria-label="Remove attachment"
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <a
-            className="task-submission-attachment task-submission-file-link"
-            href={a.url}
-            target="_blank"
-            rel="noreferrer"
-            key={i}
-          >
-            <span className="task-submission-file-icon">📎</span>
-            <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
-          </a>
-        ),
+                <span className="task-submission-file-icon">📎</span>
+                <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
+              </a>
+            ),
+          )}
+        </div>
+      )}
+
+      {images.length > 0 && (
+        <div className="task-submission-images-row">
+          {images.map((a) => (
+            <div className="task-submission-attachment task-submission-attachment-image" key={a._i}>
+              <img src={a.url} alt={a.name || 'Attachment'} />
+              {onRemove && removeButton(a._i)}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
