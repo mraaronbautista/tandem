@@ -112,9 +112,12 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   const [view, setView] = useState('add')
   // 'shifts' (title + real time range, see parseBulkSchedule) or 'items'
   // (date/note + description, no time at all, see parseActionItemSchedule)
-  // — two different input shapes, not a setting on one shared parser, so
-  // switching also clears the pasted text rather than leaving it there to
-  // be silently reparsed under the other format's very different rules.
+  // — two different parsers over the same textarea. Switching doesn't
+  // clear the pasted text: pasting first and then realizing the other
+  // tab is the right one is a real, expected sequence (the error message
+  // for a shift-format failure and an action-items failure look
+  // different enough that this is how someone would notice), so the
+  // text just gets reparsed under the newly selected format's rules.
   const [format, setFormat] = useState('shifts')
 
   const [text, setText] = useState('')
@@ -140,11 +143,6 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   function handleWhoChange(nextWho) {
     setWho(nextWho)
     setZone(zoneForWho(nextWho))
-  }
-
-  function handleFormatChange(next) {
-    setFormat(next)
-    setText('')
   }
 
   const { tasks: parsedTasks, errors } = useMemo(
@@ -309,14 +307,14 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
               <button
                 type="button"
                 className={`period-tab${format === 'shifts' ? ' period-tab-active' : ''}`}
-                onClick={() => handleFormatChange('shifts')}
+                onClick={() => setFormat('shifts')}
               >
                 Shifts (with times)
               </button>
               <button
                 type="button"
                 className={`period-tab${format === 'items' ? ' period-tab-active' : ''}`}
-                onClick={() => handleFormatChange('items')}
+                onClick={() => setFormat('items')}
               >
                 Action items (dates only)
               </button>
