@@ -2388,6 +2388,34 @@ label.new-task-checkbox-label {
   cursor: pointer;
 }
 
+.checklist-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.checklist-bulk-add {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checklist-bulk-add textarea {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.checklist-bulk-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* Checklist — blocked/not-accomplishable state, shared by editor + view */
 .checklist-blocked-toggle {
   flex: none;

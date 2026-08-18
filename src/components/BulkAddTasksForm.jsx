@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { parseBulkSchedule } from '../lib/bulkTasks'
+import { parseBulkSchedule, parseActionItemSchedule } from '../lib/bulkTasks'
 import { createTask, updateTask, isAllDayTask } from '../lib/tasks'
 import {
   TIMEZONE_OPTIONS,
@@ -36,6 +36,12 @@ Texas 12a-4a
 Washington 2a-5a
 Texas 4a-7a`
 
+const ITEMS_PLACEHOLDER = `* Move-out / turnover dates
+   * Aug 30 – Abdul vacates Master Haven (schedule cleaning)
+   * Today – Contact Ingrid about the turnover
+* Cleaning coordination
+   * If Ingrid unavailable – Follow-up with Martin (backup)`
+
 // parseShiftLine's own midnight-wraparound (endMin += 24*60 when the end
 // clock-time is <= the start) caps a single shift under 24h, so this
 // never needs more than "(+1 day)" — same reasoning as TaskForm.jsx's
@@ -48,6 +54,15 @@ function formatPreviewTime(dueTime, durationMinutes) {
   const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
   const crossesDay = end.getDate() !== start.getDate()
   return `${fmt(start)} – ${fmt(end)}${crossesDay ? ' (+1 day)' : ''}`
+}
+
+// "No date" for the action-items format's undated tasks (an unresolvable
+// relative phrase like "End of this week", or a plain dependency note
+// with no date shape at all) — same reasoning as formatTaskDue below,
+// just for a task that was never assigned a real due_date in the first
+// place rather than one that has one.
+function formatPreviewDateOrNone(dateStr) {
+  return dateStr ? formatPreviewDate(dateStr) : 'No date'
 }
 
 // Includes the year only when it's not the current one — a bulk paste is
@@ -95,6 +110,12 @@ function formatTaskDue(task) {
 // operations" opened from the same quick action.
 export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClose, onCreated }) {
   const [view, setView] = useState('add')
+  // 'shifts' (title + real time range, see parseBulkSchedule) or 'items'
+  // (date/note + description, no time at all, see parseActionItemSchedule)
+  // — two different input shapes, not a setting on one shared parser, so
+  // switching also clears the pasted text rather than leaving it there to
+  // be silently reparsed under the other format's very different rules.
+  const [format, setFormat] = useState('shifts')
 
   const [text, setText] = useState('')
   const [who, setWho] = useState(defaultWho || 'yours')
@@ -121,7 +142,15 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
     setZone(zoneForWho(nextWho))
   }
 
-  const { tasks: parsedTasks, errors } = useMemo(() => parseBulkSchedule(text), [text])
+  function handleFormatChange(next) {
+    setFormat(next)
+    setText('')
+  }
+
+  const { tasks: parsedTasks, errors } = useMemo(
+    () => (format === 'shifts' ? parseBulkSchedule(text) : parseActionItemSchedule(text)),
+    [text, format],
+  )
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -134,9 +163,14 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
           createTask({
             title: t.title,
             who,
-            due_date: zonedTimeToUtcIso(t.due_date, t.due_time, zone),
+            due_date:
+              format === 'shifts'
+                ? zonedTimeToUtcIso(t.due_date, t.due_time, zone)
+                : t.due_date
+                  ? zonedTimeToUtcIso(t.due_date, '00:00', zone)
+                  : null,
             due_timezone: zone,
-            duration_minutes: t.duration_minutes,
+            duration_minutes: format === 'shifts' ? t.duration_minutes : null,
             created_by: me.id,
           }),
         ),
@@ -271,8 +305,27 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
 
         {view === 'add' ? (
           <>
+            <div className="period-tabs">
+              <button
+                type="button"
+                className={`period-tab${format === 'shifts' ? ' period-tab-active' : ''}`}
+                onClick={() => handleFormatChange('shifts')}
+              >
+                Shifts (with times)
+              </button>
+              <button
+                type="button"
+                className={`period-tab${format === 'items' ? ' period-tab-active' : ''}`}
+                onClick={() => handleFormatChange('items')}
+              >
+                Action items (dates only)
+              </button>
+            </div>
+
             <p className="bulk-add-hint">
-              A date on its own line, then one shift per line below it as "Title start-end" — e.g. "Texas 12a-4a".
+              {format === 'shifts'
+                ? 'A date on its own line, then one shift per line below it as "Title start-end" — e.g. "Texas 12a-4a".'
+                : 'A "<date or note> – description" per line, e.g. "Aug 30 – Renew the lease" or "Today – Call the plumber" — no time of day. Category headers with no dash are skipped automatically; a line whose date isn\'t recognized (e.g. "End of this week") is kept whole as the title with no due date, rather than guessed at.'}
             </p>
 
             <label>
@@ -295,8 +348,13 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             </label>
 
             <label>
-              Schedule
-              <textarea rows={10} placeholder={PLACEHOLDER} value={text} onChange={(e) => setText(e.target.value)} />
+              {format === 'shifts' ? 'Schedule' : 'Action items'}
+              <textarea
+                rows={10}
+                placeholder={format === 'shifts' ? PLACEHOLDER : ITEMS_PLACEHOLDER}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
             </label>
 
             {text.trim() && (
@@ -309,11 +367,15 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                     <ul className="bulk-add-preview-list">
                       {parsedTasks.map((t, i) => (
                         <li key={i}>
-                          <span className="bulk-add-preview-date">{formatPreviewDate(t.due_date)}</span>
-                          <span className="bulk-add-preview-title">{t.title}</span>
-                          <span className="bulk-add-preview-time">
-                            {formatPreviewTime(t.due_time, t.duration_minutes)}
+                          <span className="bulk-add-preview-date">
+                            {format === 'shifts' ? formatPreviewDate(t.due_date) : formatPreviewDateOrNone(t.due_date)}
                           </span>
+                          <span className="bulk-add-preview-title">{t.title}</span>
+                          {format === 'shifts' && (
+                            <span className="bulk-add-preview-time">
+                              {formatPreviewTime(t.due_time, t.duration_minutes)}
+                            </span>
+                          )}
                         </li>
                       ))}
                     </ul>

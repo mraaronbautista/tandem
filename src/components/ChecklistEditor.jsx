@@ -1,8 +1,13 @@
-function newItem() {
-  return { id: crypto.randomUUID(), text: '', done: false, blocked: false, blockedReason: '' }
+import { useState } from 'react'
+
+function newItem(text = '') {
+  return { id: crypto.randomUUID(), text, done: false, blocked: false, blockedReason: '' }
 }
 
 export default function ChecklistEditor({ items, onChange }) {
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkText, setBulkText] = useState('')
+
   function updateItem(id, patch) {
     onChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)))
   }
@@ -15,6 +20,18 @@ export default function ChecklistEditor({ items, onChange }) {
   // isn't "done," so marking it blocked clears done, and vice versa.
   function toggleBlocked(item) {
     updateItem(item.id, item.blocked ? { blocked: false, blockedReason: '' } : { blocked: true, done: false })
+  }
+
+  const bulkLines = bulkText
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+
+  function addBulk() {
+    if (!bulkLines.length) return
+    onChange([...items, ...bulkLines.map((text) => newItem(text))])
+    setBulkText('')
+    setBulkOpen(false)
   }
 
   return (
@@ -61,9 +78,45 @@ export default function ChecklistEditor({ items, onChange }) {
           ))}
         </div>
       )}
-      <button type="button" className="checklist-add" onClick={() => onChange([...items, newItem()])}>
-        + Add subtask
-      </button>
+
+      {/* One subtask per line, appended in one shot — typing/pasting a
+          list of 5+ subtasks one "+ Add subtask" click at a time was the
+          only option before this, each one re-focusing a fresh empty
+          text input. */}
+      {bulkOpen ? (
+        <div className="checklist-bulk-add">
+          <textarea
+            rows={4}
+            placeholder={'One subtask per line, e.g.\nBuy paint\nCall contractor\nSchedule inspection'}
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            autoFocus
+          />
+          <div className="checklist-bulk-actions">
+            <button
+              type="button"
+              onClick={() => {
+                setBulkOpen(false)
+                setBulkText('')
+              }}
+            >
+              Cancel
+            </button>
+            <button type="button" className="submission-save" onClick={addBulk} disabled={!bulkLines.length}>
+              Add {bulkLines.length || ''} subtask{bulkLines.length === 1 ? '' : 's'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="checklist-add-row">
+          <button type="button" className="checklist-add" onClick={() => onChange([...items, newItem()])}>
+            + Add subtask
+          </button>
+          <button type="button" className="checklist-add" onClick={() => setBulkOpen(true)}>
+            + Add multiple
+          </button>
+        </div>
+      )}
     </div>
   )
 }

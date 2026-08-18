@@ -164,3 +164,65 @@ export function parseBulkSchedule(text) {
 
   return { tasks, errors }
 }
+
+// Strips a leading bullet marker (*, -, •) and surrounding whitespace —
+// outline pastes commonly nest each real item under a plain category
+// label with no marker of its own significance beyond "this isn't a
+// task, it's a heading."
+function stripBullet(line) {
+  return line.replace(/^[*\-•]\s+/, '').trim()
+}
+
+// Splits on the first dash-like separator that has whitespace on both
+// sides — " – ", " — ", or " - " — never a bare hyphen, since those show
+// up constantly inside ordinary words and compound terms ("Move-out",
+// "gas-leak", "follow-up") that this format's own example text is full
+// of. Returns null (not an item at all) when there's no such separator,
+// which is exactly how a category header line is told apart from a real
+// "date/note – description" item — headers never have this shape.
+function splitDateDescription(line) {
+  const m = line.match(/^(.*?)\s[-–—]\s(.*)$/)
+  if (!m) return null
+  return { prefix: m[1].trim(), description: m[2].trim() }
+}
+
+// Parses an outline-style action-item list into { tasks, errors } — a
+// different shape from parseBulkSchedule's shift format: no time-of-day
+// at all, just "<date or note> – <description>" lines, often nested
+// under plain category headings with no date of their own:
+//   * Move-out / turnover dates
+//      * Aug 30 – Abdul vacates Master Haven (schedule cleaning)
+//      * Today – Contact Ingrid about the turnover
+//   * Cleaning coordination
+//      * If Ingrid unavailable – Follow-up with Martin (backup)
+// Category headers (no dash-separated shape at all) are silently
+// skipped — not an error, since they're a normal, expected part of this
+// format rather than a typo. A line that *does* have the "X – Y" shape
+// but whose left side isn't a real date (an unresolvable relative phrase
+// like "End of this week", or a plain dependency note like "If Ingrid
+// unavailable") becomes a task with no due date — the *entire* original
+// line as its title — rather than guessing at a specific day, which this
+// app has otherwise gone out of its way to avoid doing silently.
+export function parseActionItemSchedule(text) {
+  const lines = text.split('\n')
+  const tasks = []
+  const errors = []
+
+  lines.forEach((raw, i) => {
+    const line = stripBullet(raw.trim())
+    if (!line) return
+
+    const split = splitDateDescription(line)
+    if (!split) return // category header — no "date – description" shape
+
+    if (!split.description) {
+      errors.push({ line: i + 1, text: raw.trim(), message: 'Missing a description after the date.' })
+      return
+    }
+
+    const date = parseDateHeader(split.prefix)
+    tasks.push({ title: date ? split.description : line, due_date: date || null })
+  })
+
+  return { tasks, errors }
+}
