@@ -85,11 +85,22 @@ function roundUpToHour(date) {
 // a new one if none are free. Every item in a cluster gets the same
 // totalCols (the max simultaneous overlap within it), which is what
 // drives each block's width (100% / totalCols) below.
+//
+// Clusters on clusterEnd, not each item's real end — every block renders
+// at least MIN_BLOCK_HEIGHT tall regardless of its real/synthetic
+// duration (see clusterEnd's own definition below), and this needs to
+// see that same effective span to decide who actually needs a separate
+// column. Using the raw end here let two tasks whose real times didn't
+// overlap still end up sharing one column with visually colliding
+// rendered boxes once each was clamped up to MIN_BLOCK_HEIGHT — most
+// visible among several tasks completed within a short window of each
+// other, where completed_at's synthetic point-task span is often
+// shorter than MIN_BLOCK_HEIGHT actually renders as.
 function assignColumns(items) {
-  const sorted = [...items].sort((a, b) => a.start - b.start || a.end - b.end)
+  const sorted = [...items].sort((a, b) => a.start - b.start || a.clusterEnd - b.clusterEnd)
   const result = []
   let cluster = []
-  let clusterEnd = null
+  let clusterMax = null
 
   function flushCluster() {
     if (!cluster.length) return
@@ -98,9 +109,9 @@ function assignColumns(items) {
       let col = columnEnds.findIndex((end) => item.start >= end)
       if (col === -1) {
         col = columnEnds.length
-        columnEnds.push(item.end)
+        columnEnds.push(item.clusterEnd)
       } else {
-        columnEnds[col] = item.end
+        columnEnds[col] = item.clusterEnd
       }
       return { ...item, col }
     })
@@ -110,13 +121,13 @@ function assignColumns(items) {
   }
 
   for (const item of sorted) {
-    if (cluster.length && item.start < clusterEnd) {
+    if (cluster.length && item.start < clusterMax) {
       cluster.push(item)
-      if (item.end > clusterEnd) clusterEnd = item.end
+      if (item.clusterEnd > clusterMax) clusterMax = item.clusterEnd
     } else {
       flushCluster()
       cluster = [item]
-      clusterEnd = item.end
+      clusterMax = item.clusterEnd
     }
   }
   flushCluster()
@@ -127,16 +138,18 @@ function assignColumns(items) {
 // already-merged window and the next task) less than GAP_THRESHOLD_
 // MINUTES apart join the same window; anything further apart starts a
 // new one. What's left between windows is exactly the gaps worth
-// collapsing.
+// collapsing. Uses clusterEnd (see assignColumns above) so a window
+// reserves enough pixel space for every block's real rendered height,
+// not just its raw duration.
 function buildWindows(items) {
   const sorted = [...items].sort((a, b) => a.start - b.start)
   const windows = []
   for (const item of sorted) {
     const last = windows[windows.length - 1]
     if (last && (item.start.getTime() - last.end.getTime()) / 60000 <= GAP_THRESHOLD_MINUTES) {
-      if (item.end > last.end) last.end = item.end
+      if (item.clusterEnd > last.end) last.end = item.clusterEnd
     } else {
-      windows.push({ start: item.start, end: item.end })
+      windows.push({ start: item.start, end: item.clusterEnd })
     }
   }
   return windows
@@ -180,7 +193,12 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
     const items = timed.map((task) => {
       const start = new Date(task.status === 'done' ? task.completed_at : task.due_date)
       const end = new Date(start.getTime() + (task.duration_minutes || POINT_TASK_MINUTES) * 60000)
-      return { task, start, end }
+      // The floor every block actually renders at (MIN_BLOCK_HEIGHT),
+      // expressed as a Date so clustering/window logic can compare it
+      // against other tasks' real times directly — see assignColumns.
+      const minEnd = new Date(start.getTime() + (MIN_BLOCK_HEIGHT / PX_PER_MINUTE) * 60000)
+      const clusterEnd = end > minEnd ? end : minEnd
+      return { task, start, end, clusterEnd }
     })
 
     // Windows merge based on the tasks' own real start/end times, before
