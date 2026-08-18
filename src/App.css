@@ -765,26 +765,45 @@
    fits the same MIN_BLOCK_HEIGHT the 2-line title needs without
    reintroducing the clipping a 2-line *stacked* time/zone caused
    earlier (fixed by putting those two on one row instead). */
+/* One bordered badge, not a bare zone abbreviation as the only bordered
+   piece with plain date/time text floating beside it — date, time, and
+   zone read as a single "here's exactly when and where this is
+   scheduled" unit. */
 .day-timeline-block-time {
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--pill-bg);
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.85;
   white-space: nowrap;
 }
 
 .day-timeline-block-date {
   font-size: 10px;
-  opacity: 0.8;
+  opacity: 0.75;
 }
 
 .day-timeline-block-time-row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+}
+
+/* The zone abbreviation reads as plain bold text here rather than its
+   usual standalone pill (see .task-zone-badge) — .day-timeline-block-time
+   is already the badge at this point, so nesting a second bordered pill
+   inside it would double up the same visual treatment. */
+.day-timeline-block-time .task-zone-badge {
+  border: none;
+  padding: 0;
+  background: none;
+  opacity: 1;
 }
 
 .day-timeline-block-top {

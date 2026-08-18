@@ -60,14 +60,16 @@ function blockTimeLabel(task, start, end, dueTimeZone) {
   return fmt(start)
 }
 
-// MM/DD/YY, same zone basis as blockTimeLabel above — a task set for
-// late evening in a zone hours ahead of the viewer's can land on a
+// "Tue 08/18/26" — same zone basis as blockTimeLabel above — a task set
+// for late evening in a zone hours ahead of the viewer's can land on a
 // different calendar date there than the block's own viewer-local
-// position on the day grid might suggest.
+// position on the day grid might suggest. toLocaleDateString inserts a
+// comma after the weekday by default ("Tue, 08/18/26"); stripped since
+// the requested format is space-separated.
 function blockDateLabel(task, start, dueTimeZone) {
-  const opts = { year: '2-digit', month: '2-digit', day: '2-digit' }
+  const opts = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' }
   if (task.status !== 'done') opts.timeZone = dueTimeZone
-  return start.toLocaleDateString('en-US', opts)
+  return start.toLocaleDateString('en-US', opts).replace(', ', ' ')
 }
 
 function roundUpToHour(date) {
