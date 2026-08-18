@@ -181,8 +181,21 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         }),
     [tasks],
   )
+
+  // A picker list mixing both people's tasks gets long fast once there's
+  // any real volume — this narrows it to "just Ada's" / "just Aaron's"
+  // before picking rows to edit, same idea as the Today tab's who-select.
+  // Selection isn't cleared on switch: filtering only changes what's
+  // visible, and a task selected under one filter should stay selected
+  // (and still count toward "N selected") if you flip back to All.
+  const [editWhoFilter, setEditWhoFilter] = useState('all')
+  const visibleEditableTasks = useMemo(
+    () => (editWhoFilter === 'all' ? editableTasks : editableTasks.filter((t) => t.who === editWhoFilter)),
+    [editableTasks, editWhoFilter],
+  )
   const [selectedIds, setSelectedIds] = useState(() => new Set())
-  const allSelected = editableTasks.length > 0 && selectedIds.size === editableTasks.length
+  const allSelected =
+    visibleEditableTasks.length > 0 && visibleEditableTasks.every((t) => selectedIds.has(t.id))
 
   function toggleSelected(id) {
     setSelectedIds((prev) => {
@@ -193,8 +206,20 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
     })
   }
 
+  // Select all/none only among the currently-filtered rows — toggling
+  // Select all under the Ada tab shouldn't silently also select every
+  // one of Aaron's tasks sitting out of view.
   function toggleSelectAll() {
-    setSelectedIds(allSelected ? new Set() : new Set(editableTasks.map((t) => t.id)))
+    setSelectedIds((prev) => {
+      if (allSelected) {
+        const next = new Set(prev)
+        visibleEditableTasks.forEach((t) => next.delete(t.id))
+        return next
+      }
+      const next = new Set(prev)
+      visibleEditableTasks.forEach((t) => next.add(t.id))
+      return next
+    })
   }
 
   // Each field a bulk edit can touch gets its own "apply this" toggle,
@@ -369,17 +394,49 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
               <p className="task-notes-empty">No active tasks to edit.</p>
             ) : (
               <>
+                <div className="period-tabs">
+                  <button
+                    type="button"
+                    className={`period-tab${editWhoFilter === 'yours' ? ' period-tab-active' : ''}`}
+                    onClick={() => setEditWhoFilter('yours')}
+                  >
+                    {WHO_LABEL.yours}
+                  </button>
+                  <button
+                    type="button"
+                    className={`period-tab${editWhoFilter === 'assistant' ? ' period-tab-active' : ''}`}
+                    onClick={() => setEditWhoFilter('assistant')}
+                  >
+                    {WHO_LABEL.assistant}
+                  </button>
+                  <button
+                    type="button"
+                    className={`period-tab${editWhoFilter === 'all' ? ' period-tab-active' : ''}`}
+                    onClick={() => setEditWhoFilter('all')}
+                  >
+                    All
+                  </button>
+                </div>
+
                 <div className="bulk-edit-select-row">
                   <span className="submission-field-label">
                     {selectedIds.size} of {editableTasks.length} selected
                   </span>
-                  <button type="button" className="inbox-mark-read" onClick={toggleSelectAll}>
+                  <button
+                    type="button"
+                    className="inbox-mark-read"
+                    onClick={toggleSelectAll}
+                    disabled={visibleEditableTasks.length === 0}
+                  >
                     {allSelected ? 'Deselect all' : 'Select all'}
                   </button>
                 </div>
 
+                {visibleEditableTasks.length === 0 ? (
+                  <p className="task-notes-empty">No active tasks for this filter.</p>
+                ) : (
                 <ul className="bulk-edit-task-list">
-                  {editableTasks.map((task) => {
+                  {visibleEditableTasks.map((task) => {
                     const whoKey = task.who
                     const selected = selectedIds.has(task.id)
                     return (
@@ -408,6 +465,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                     )
                   })}
                 </ul>
+                )}
 
                 <div className="bulk-edit-fields">
                   <div className="bulk-edit-field-row bulk-edit-field-row-title">
