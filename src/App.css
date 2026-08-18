@@ -1685,14 +1685,19 @@
   border: 1px solid var(--border);
 }
 
+/* font-size set here (was unset, so it inherited whatever the
+   surrounding text happened to be — full paragraph size in a report
+   entry) rather than reading as a compact pill alongside the image
+   thumbnails next to it. */
 .task-submission-file-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--pill-bg);
+  font-size: 13px;
 }
 
 a.task-submission-file-link {
@@ -1715,7 +1720,7 @@ a.task-submission-file-link:hover {
 }
 
 .task-submission-file-icon {
-  font-size: 18px;
+  font-size: 15px;
   flex: none;
 }
 
