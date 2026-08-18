@@ -366,7 +366,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
 
             <label>
               Tasks
-              <textarea rows={10} placeholder={PLACEHOLDER} value={text} onChange={(e) => setText(e.target.value)} />
+              <textarea rows={6} placeholder={PLACEHOLDER} value={text} onChange={(e) => setText(e.target.value)} />
             </label>
 
             {text.trim() && (

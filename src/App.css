@@ -1300,10 +1300,17 @@
   width: 100%;
 }
 
+/* Capped at max-height (not just min-height) — uncapped resize: vertical
+   let a manually-dragged textarea grow tall enough to push the preview
+   list, hint text, and Create button below it out of the modal's own
+   scroll area (.modal-backdrop .submission-modal, max-height: 85vh).
+   120px/rows=6 as the default is enough to see a few lines of a pasted
+   schedule at once without the field itself dominating the modal. */
 .bulk-add-modal textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-  min-height: 160px;
+  min-height: 120px;
+  max-height: 240px;
   resize: vertical;
 }
 
