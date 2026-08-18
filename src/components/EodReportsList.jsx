@@ -25,14 +25,28 @@ function monthLabel(key) {
   return new Date(year, month - 1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' })
 }
 
+const PERIOD_TABS = [
+  { value: 'all', label: 'All' },
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+]
+
 // Grouped by calendar month (of report_date, the stable bucket identity —
 // not updated_at, which just determines sort order within a month) so the
 // list stays a handful of collapsible headers instead of growing forever —
 // one row per person per day/week/month otherwise still adds up over a year.
+// A period filter (All/Day/Week/Month, same .period-tabs pattern used
+// elsewhere for this exact Day/Week/Month split) sits above the month
+// groups, since day/week/month reports otherwise interleave in one mixed
+// list with no way to look at just one kind — "what did the last few
+// weekly summaries actually say" meant scrolling past every daily entry
+// in between them.
 // Persistent tab content, not a modal — see RentalsView.jsx for why.
 export default function EodReportsList({ memberName }) {
   const [reports, setReports] = useState(null)
   const [error, setError] = useState('')
+  const [period, setPeriod] = useState('all')
   const [expanded, setExpanded] = useState(() => new Set())
 
   useEffect(() => {
@@ -53,10 +67,23 @@ export default function EodReportsList({ memberName }) {
     })
   }
 
+  // Re-derives which month is auto-open for the newly filtered set —
+  // switching to Week, say, shouldn't leave the previously-open month
+  // expanded if it turns out to have no week reports at all, or leave
+  // everything collapsed if the top month under the old filter isn't
+  // the top month under the new one.
+  function handlePeriodChange(next) {
+    setPeriod(next)
+    const filtered = next === 'all' ? reports : reports?.filter((r) => r.period === next)
+    setExpanded(filtered?.length ? new Set([monthKey(filtered[0].report_date)]) : new Set())
+  }
+
+  const filteredReports = period === 'all' ? reports : reports?.filter((r) => r.period === period)
+
   const groups = []
-  if (reports?.length) {
+  if (filteredReports?.length) {
     const byMonth = new Map()
-    for (const r of reports) {
+    for (const r of filteredReports) {
       const key = monthKey(r.report_date)
       if (!byMonth.has(key)) byMonth.set(key, [])
       byMonth.get(key).push(r)
@@ -70,6 +97,25 @@ export default function EodReportsList({ memberName }) {
       {error && <p className="error">{error}</p>}
       {!error && !reports && <p className="loading">Loading…</p>}
       {reports && !reports.length && <p className="task-notes-empty">No reports yet.</p>}
+
+      {reports?.length > 0 && (
+        <div className="period-tabs">
+          {PERIOD_TABS.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
+              onClick={() => handlePeriodChange(p.value)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {reports?.length > 0 && groups.length === 0 && (
+        <p className="task-notes-empty">No {period} reports yet.</p>
+      )}
 
       {groups.length > 0 && (
         <div className="eod-reports-list">
