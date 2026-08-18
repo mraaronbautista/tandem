@@ -16,17 +16,18 @@ function pad(n) {
 // A line on its own that names a date — everything after it (until the
 // next date line) belongs to that date. Accepts 'YYYY-MM-DD', a loose
 // 'Aug 21' / 'August 21' / 'Aug 21, 2026' form, or the relative 'Today'/
-// 'Tomorrow' (optionally with a trailing colon, e.g. "Tomorrow:", since
-// that's a natural way to head a quick note) — matching how most
-// schedule tools actually print dates, or how someone jotting a note by
-// hand actually writes one, so a line can often be pasted close to
-// verbatim rather than needing to be retyped as ISO. A bare 'Aug 21'
-// with no year assumes the current year, or next year if that date is
-// more than YEAR_ROLLOVER_GRACE_DAYS in the past — the common "planning
-// into next year" case, without misfiring on a schedule that starts a
-// day or two ago.
+// 'Tomorrow' (optionally with a trailing colon, e.g. "Tomorrow:", or a
+// trailing parenthetical, e.g. "Tomorrow (date of meeting + 1 day)" —
+// both natural ways to head a quick note) — matching how most schedule
+// tools actually print dates, or how someone jotting a note by hand
+// actually writes one, so a line can often be pasted close to verbatim
+// rather than needing to be retyped as ISO. A bare 'Aug 21' with no year
+// assumes the current year, or next year if that date is more than
+// YEAR_ROLLOVER_GRACE_DAYS in the past — the common "planning into next
+// year" case, without misfiring on a schedule that starts a day or two
+// ago.
 function parseDateHeader(rawLine) {
-  const line = rawLine.replace(/:\s*$/, '')
+  const line = rawLine.replace(/:\s*$/, '').replace(/\s*\([^)]*\)\s*$/, '')
 
   const relative = line.trim().toLowerCase()
   if (relative === 'today' || relative === 'tomorrow') {
@@ -75,14 +76,18 @@ function toMinutes(numPart, ampm) {
 // task title verbatim. Deliberately forgiving on the range itself: "am"/
 // "pm"/"a.m."/"a" are all accepted (only the leading a/p is captured,
 // letting "12am to 4am" and "12a-4a" both work), the separator can be a
-// hyphen/en dash/em dash or the word "to"/"until", and a trailing "next
+// hyphen/en dash/em dash or the word "to"/"until", a trailing "next
 // day"/"(+1 day)" is accepted and ignored — crossing midnight is already
 // detected from the times themselves (see below), so that annotation is
 // only ever for the human reading it back, not something the parser
-// needs. This is intentionally more permissive than the one example
-// shown in the form's hint text, since real pasted schedules vary.
+// needs — and a further trailing parenthetical note ("8am-9am (gas-leak
+// repair)") is captured and appended back onto the title rather than
+// rejecting the whole line, since a shift very often does carry exactly
+// this kind of context. This is intentionally more permissive than the
+// one example shown in the form's hint text, since real pasted
+// schedules vary.
 const SHIFT_RE =
-  /^(.+?)\s+(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—|to|until)\s*(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?(?:\s*,?\s*(?:next\s*day|\(?\+\s*1\s*day\)?))?\.?$/i
+  /^(.+?)\s+(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—|to|until)\s*(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?(?:\s*,?\s*(?:next\s*day|\(?\+\s*1\s*day\)?))?\s*(\([^)]*\))?\.?$/i
 
 // The same shift, time range written first — "8 am – 9 am – 1072 Rachel
 // (gas-leak repair)" — some schedules get jotted with the time up front
@@ -94,12 +99,12 @@ const SHIFT_RE =
 const SHIFT_RE_TIME_FIRST =
   /^(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—|to|until)\s*(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—)\s*(.+?)\.?$/i
 
-function buildShift(title, startNum, startAmPm, endNum, endAmPm) {
+function buildShift(title, startNum, startAmPm, endNum, endAmPm, trailingNote) {
   const startMin = toMinutes(startNum, startAmPm)
   let endMin = toMinutes(endNum, endAmPm)
   if (endMin <= startMin) endMin += 24 * 60 // crosses midnight, e.g. 10p-2a
   return {
-    title: title.trim(),
+    title: trailingNote ? `${title.trim()} ${trailingNote}` : title.trim(),
     due_time: `${pad(Math.floor(startMin / 60) % 24)}:${pad(startMin % 60)}`,
     duration_minutes: endMin - startMin,
   }
@@ -108,8 +113,8 @@ function buildShift(title, startNum, startAmPm, endNum, endAmPm) {
 function parseShiftLine(line) {
   let m = line.match(SHIFT_RE)
   if (m) {
-    const [, title, startNum, startAmPm, endNum, endAmPm] = m
-    return buildShift(title, startNum, startAmPm, endNum, endAmPm)
+    const [, title, startNum, startAmPm, endNum, endAmPm, trailingNote] = m
+    return buildShift(title, startNum, startAmPm, endNum, endAmPm, trailingNote)
   }
 
   m = line.match(SHIFT_RE_TIME_FIRST)
