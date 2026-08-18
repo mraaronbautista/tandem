@@ -270,40 +270,53 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                     checked={task.status === 'done'}
                     onChange={() => onStatusChange(task.id, task.status === 'done' ? 'to_do' : 'done')}
                   />
-                  {/* Two rows, not one — title always shows (as before);
-                      everything else is "as much as fits" rather than a
-                      fixed set, since a block's height is whatever its
-                      real time span happens to be. The parent's own
-                      overflow: hidden clips this second row away on the
-                      shortest blocks (a bare 15-30min task) without any
-                      extra logic needed to detect that case. */}
+                  {/* Time/zone live in their own fixed right-hand column
+                      (day-timeline-block-time), not stacked below the
+                      title — a title long enough to wrap its full 2 lines
+                      would otherwise eat all the block's vertical room
+                      and push the time/zone out entirely, which is
+                      exactly backwards: those are the two things worth
+                      the most "can I trust this is scheduled right at a
+                      glance" value. Checklist/notes/question indicators
+                      stay in a secondary row below the title — genuinely
+                      optional context, fine to lose on the shortest
+                      blocks the same way it always has been. */}
                   <button type="button" className="day-timeline-block-body" onClick={() => onSelect(task)}>
-                    <span className="day-timeline-block-top">
-                      <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
-                        {WHO_LABEL[task.who]}
+                    <span className="day-timeline-block-main">
+                      <span className="day-timeline-block-top">
+                        <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
+                          {WHO_LABEL[task.who]}
+                        </span>
+                        <span className="day-timeline-block-title">{task.title}</span>
                       </span>
-                      <span className="day-timeline-block-title">{task.title}</span>
+                      {(checklist.length > 0 || hasNotes || hasQuestionForMe) && (
+                        <span className="day-timeline-block-meta">
+                          {checklist.length > 0 && (
+                            <span className="day-timeline-block-checklist" title="Subtasks">
+                              ☑ {checklistDone}/{checklist.length}
+                            </span>
+                          )}
+                          {hasNotes && (
+                            <span title="Has notes" aria-label="Has notes">
+                              📝
+                            </span>
+                          )}
+                          {hasQuestionForMe && (
+                            <span
+                              title="Has something for you to reply to"
+                              aria-label="Has something for you to reply to"
+                            >
+                              💬
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </span>
-                    <span className="day-timeline-block-meta">
+                    <span className="day-timeline-block-time">
                       <span>{blockTimeLabel(task, start, end)}</span>
                       {!isAllDayTask(task) && (
                         <span className="task-zone-badge" title={`Set in ${zoneLabel(task.due_timezone)}`}>
                           {zoneAbbreviation(task.due_timezone)}
-                        </span>
-                      )}
-                      {checklist.length > 0 && (
-                        <span className="day-timeline-block-checklist" title="Subtasks">
-                          ☑ {checklistDone}/{checklist.length}
-                        </span>
-                      )}
-                      {hasNotes && (
-                        <span title="Has notes" aria-label="Has notes">
-                          📝
-                        </span>
-                      )}
-                      {hasQuestionForMe && (
-                        <span title="Has something for you to reply to" aria-label="Has something for you to reply to">
-                          💬
                         </span>
                       )}
                     </span>

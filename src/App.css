@@ -718,21 +718,22 @@
   margin-top: 2px;
 }
 
-/* Column, not a single row — .day-timeline-block-top (who badge + title,
-   the original single-line content) sits above .day-timeline-block-meta
-   (everything added since: time, zone, checklist, notes/question icons).
-   A block's height is whatever its real time span happens to be, so the
-   meta row simply gets clipped away by .day-timeline-block's own
-   overflow: hidden on the shortest blocks (a bare 15-30min task) — no
-   extra logic needed to detect "is there room," the layout just shows
-   as much as physically fits. */
+/* A row, not a column — .day-timeline-block-main (who badge + title +
+   the optional checklist/notes/question row) on the left, and
+   .day-timeline-block-time (due time + zone) pinned in its own column
+   on the right. Time/zone used to sit stacked below the title, which
+   meant a title long enough to wrap its full 2 lines ate all the
+   block's vertical room and pushed them out entirely — exactly
+   backwards, since those are the two things most worth trusting at a
+   glance ("is this actually scheduled right"). Keeping them a
+   horizontal sibling instead means they're never squeezed out by
+   however tall the title happens to need to be. */
 .day-timeline-block-body {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 8px;
   border: none;
   background: none;
   padding: 0;
@@ -740,6 +741,29 @@
   font: inherit;
   color: inherit;
   text-align: left;
+}
+
+.day-timeline-block-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Fixed on the right, never shrinking — .day-timeline-block-main takes
+   the squeeze first (a longer title just wraps tighter/more), so the
+   time/zone column keeps its natural width regardless of how narrow an
+   overlapping block's own column gets. */
+.day-timeline-block-time {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .day-timeline-block-top {
