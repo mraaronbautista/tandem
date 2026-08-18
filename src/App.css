@@ -1261,6 +1261,89 @@
   word-break: break-word;
 }
 
+.bulk-edit-select-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bulk-edit-task-list {
+  margin: 0;
+  padding: 8px 10px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.bulk-edit-task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bulk-edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Each field's own "apply this" checkbox lives in the same row as the
+   field itself, rather than as a separate label above it — the field is
+   disabled (and visibly dimmed) until its checkbox is on, so the
+   relationship between the two is always visually obvious even in a
+   list of several of these stacked together. */
+.bulk-edit-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-edit-field-row select,
+.bulk-edit-field-row textarea {
+  flex: 1;
+}
+
+.bulk-edit-field-row select:disabled,
+.bulk-edit-field-row textarea:disabled {
+  opacity: 0.45;
+}
+
+.bulk-edit-field-label {
+  flex: none;
+  width: 70px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.bulk-edit-field-row-notes {
+  align-items: flex-start;
+}
+
+.bulk-edit-field-row-notes .bulk-edit-field-label {
+  padding-top: 10px;
+}
+
+/* Overrides .bulk-add-modal textarea's monospace/160px-tall styling,
+   which is sized for the schedule-paste box on the Add tab, not this
+   short Notes field. */
+.bulk-edit-field-row-notes textarea {
+  font-family: inherit;
+  font-size: 14px;
+  min-height: 70px;
+}
+
 .hours-minutes-row {
   display: flex;
   align-items: center;

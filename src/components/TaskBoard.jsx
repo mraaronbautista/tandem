@@ -398,7 +398,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // like the ones still here.
   const quickActions = [
     { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
-    { key: 'bulkAdd', icon: '📋', label: 'Bulk add tasks', onSelect: () => setBulkAddOpen(true) },
+    { key: 'bulkAdd', icon: '📋', label: 'Bulk add / edit tasks', onSelect: () => setBulkAddOpen(true) },
     { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
@@ -638,6 +638,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <BulkAddTasksForm
           me={me}
           members={members}
+          tasks={tasks}
           defaultWho={defaultWho}
           onClose={() => setBulkAddOpen(false)}
           onCreated={() => {

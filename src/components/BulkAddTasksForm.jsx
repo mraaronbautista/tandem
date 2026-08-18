@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { parseBulkSchedule } from '../lib/bulkTasks'
-import { createTask } from '../lib/tasks'
-import { TIMEZONE_OPTIONS, zonedTimeToUtcIso } from '../lib/timezone'
-import { WHO_LABEL, whoKeyForName } from '../lib/whoLabels'
+import { createTask, updateTask, isAllDayTask } from '../lib/tasks'
+import { TIMEZONE_OPTIONS, zonedTimeToUtcIso, splitDueDateInZone } from '../lib/timezone'
+import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import Modal from './Modal'
 
 // A bulk paste is often one person entering the OTHER person's schedule
@@ -56,6 +56,16 @@ function formatPreviewDate(dateStr) {
   return date.toLocaleDateString([], opts)
 }
 
+// Viewer-local time, same reasoning as TaskRow.jsx's own list display —
+// this is just a quick reference for picking tasks out of a list, not an
+// authoritative zone-aware label.
+function formatTaskDue(task) {
+  if (!task.due_date) return 'No date'
+  if (isAllDayTask(task)) return new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })
+  const d = new Date(task.due_date)
+  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+}
+
 // A whole schedule at once — a date line followed by one shift per line
 // ("Texas 12a-4a") until the next date line — instead of clicking through
 // the New Task form once per shift. All tasks in one paste get the same
@@ -63,7 +73,15 @@ function formatPreviewDate(dateStr) {
 // is normally all one person's shifts. See lib/bulkTasks.js for the
 // actual parsing rules and why a line can usually be pasted close to
 // verbatim out of a schedule tool's own display.
-export default function BulkAddTasksForm({ me, members, defaultWho, onClose, onCreated }) {
+//
+// A second tab, Edit, handles the opposite direction: picking a batch of
+// already-existing tasks and changing one field across all of them at
+// once (e.g. every task from a mis-set timezone). Sharing this modal
+// with Add rather than a separate one since they're both "bulk task
+// operations" opened from the same quick action.
+export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClose, onCreated }) {
+  const [view, setView] = useState('add')
+
   const [text, setText] = useState('')
   const [who, setWho] = useState(defaultWho || 'yours')
 
@@ -89,16 +107,16 @@ export default function BulkAddTasksForm({ me, members, defaultWho, onClose, onC
     setZone(zoneForWho(nextWho))
   }
 
-  const { tasks, errors } = useMemo(() => parseBulkSchedule(text), [text])
+  const { tasks: parsedTasks, errors } = useMemo(() => parseBulkSchedule(text), [text])
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!tasks.length || saving) return
+    if (!parsedTasks.length || saving) return
     setSaving(true)
     setSubmitError('')
     try {
       await Promise.all(
-        tasks.map((t) =>
+        parsedTasks.map((t) =>
           createTask({
             title: t.title,
             who,
@@ -117,83 +135,297 @@ export default function BulkAddTasksForm({ me, members, defaultWho, onClose, onC
     }
   }
 
+  // Every not-yet-done task — both already-overdue and anything upcoming
+  // — sorted soonest first, dateless (All Day, no date) ones trailing at
+  // the end rather than sorting as "earliest" the way a missing due_date
+  // would if compared naively.
+  const editableTasks = useMemo(
+    () =>
+      [...tasks]
+        .filter((t) => t.status !== 'done')
+        .sort((a, b) => {
+          if (!a.due_date && !b.due_date) return 0
+          if (!a.due_date) return 1
+          if (!b.due_date) return -1
+          return new Date(a.due_date) - new Date(b.due_date)
+        }),
+    [tasks],
+  )
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const allSelected = editableTasks.length > 0 && selectedIds.size === editableTasks.length
+
+  function toggleSelected(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(editableTasks.map((t) => t.id)))
+  }
+
+  // Each field a bulk edit can touch gets its own "apply this" toggle,
+  // independent of the field's own value — otherwise there'd be no way
+  // to tell "leave Notes alone" apart from "clear every selected task's
+  // notes", since both look identical (an empty textarea) without an
+  // explicit flag.
+  const [applyWho, setApplyWho] = useState(false)
+  const [editWho, setEditWho] = useState('yours')
+  const [applyTimezone, setApplyTimezone] = useState(false)
+  const [editTimezone, setEditTimezone] = useState(() => zoneForWho(defaultWho || 'yours'))
+  const [applyNotes, setApplyNotes] = useState(false)
+  const [editNotes, setEditNotes] = useState('')
+  const [applying, setApplying] = useState(false)
+  const [applyError, setApplyError] = useState('')
+  const hasFieldToApply = applyWho || applyTimezone || applyNotes
+
+  async function handleApply(e) {
+    e.preventDefault()
+    if (!selectedIds.size || !hasFieldToApply || applying) return
+    setApplying(true)
+    setApplyError('')
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) => {
+          const task = editableTasks.find((t) => t.id === id)
+          const patch = {}
+          if (applyWho) patch.who = editWho
+          if (applyNotes) patch.notes = editNotes.trim() || null
+          // Keeps the wall-clock date/time exactly as originally entered
+          // and reinterprets it in the new zone — the fix for "this whole
+          // batch was set in the wrong timezone" — rather than shifting
+          // to a different clock time that happens to be the same UTC
+          // instant, which is almost never what's actually wanted.
+          // Dateless (All Day, no date) tasks have no wall-clock time to
+          // reinterpret, so they're left untouched even when selected.
+          if (applyTimezone && task?.due_date) {
+            const { due_date, due_time } = splitDueDateInZone(task.due_date, task.due_timezone)
+            patch.due_date = zonedTimeToUtcIso(due_date, due_time, editTimezone)
+            patch.due_timezone = editTimezone
+          }
+          return updateTask(id, patch)
+        }),
+      )
+      onCreated()
+    } catch (err) {
+      setApplyError(err.message)
+    } finally {
+      setApplying(false)
+    }
+  }
+
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal bulk-add-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <h2>Bulk add tasks</h2>
-        <p className="bulk-add-hint">
-          A date on its own line, then one shift per line below it as "Title start-end" — e.g. "Texas 12a-4a".
-        </p>
+      <form
+        className="submission-modal bulk-add-modal"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={view === 'add' ? handleSubmit : handleApply}
+      >
+        <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
 
-        <label>
-          Who
-          <select value={who} onChange={(e) => handleWhoChange(e.target.value)}>
-            <option value="yours">{WHO_LABEL.yours}</option>
-            <option value="assistant">{WHO_LABEL.assistant}</option>
-          </select>
-        </label>
+        <div className="period-tabs">
+          <button
+            type="button"
+            className={`period-tab${view === 'add' ? ' period-tab-active' : ''}`}
+            onClick={() => setView('add')}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            className={`period-tab${view === 'edit' ? ' period-tab-active' : ''}`}
+            onClick={() => setView('edit')}
+          >
+            Edit
+          </button>
+        </div>
 
-        <label>
-          Time zone
-          <select value={zone} onChange={(e) => setZone(e.target.value)}>
-            {TIMEZONE_OPTIONS.map((tz) => (
-              <option key={tz.value} value={tz.value}>
-                {tz.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {view === 'add' ? (
+          <>
+            <p className="bulk-add-hint">
+              A date on its own line, then one shift per line below it as "Title start-end" — e.g. "Texas 12a-4a".
+            </p>
 
-        <label>
-          Schedule
-          <textarea rows={10} placeholder={PLACEHOLDER} value={text} onChange={(e) => setText(e.target.value)} />
-        </label>
+            <label>
+              Who
+              <select value={who} onChange={(e) => handleWhoChange(e.target.value)}>
+                <option value="yours">{WHO_LABEL.yours}</option>
+                <option value="assistant">{WHO_LABEL.assistant}</option>
+              </select>
+            </label>
 
-        {text.trim() && (
-          <div className="bulk-add-preview">
-            {tasks.length > 0 && (
-              <>
-                <span className="submission-field-label">
-                  {tasks.length} task{tasks.length === 1 ? '' : 's'} ready
-                </span>
-                <ul className="bulk-add-preview-list">
-                  {tasks.map((t, i) => (
-                    <li key={i}>
-                      <span className="bulk-add-preview-date">{formatPreviewDate(t.due_date)}</span>
-                      <span className="bulk-add-preview-title">{t.title}</span>
-                      <span className="bulk-add-preview-time">{formatPreviewTime(t.due_time, t.duration_minutes)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
+            <label>
+              Time zone
+              <select value={zone} onChange={(e) => setZone(e.target.value)}>
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Schedule
+              <textarea rows={10} placeholder={PLACEHOLDER} value={text} onChange={(e) => setText(e.target.value)} />
+            </label>
+
+            {text.trim() && (
+              <div className="bulk-add-preview">
+                {parsedTasks.length > 0 && (
+                  <>
+                    <span className="submission-field-label">
+                      {parsedTasks.length} task{parsedTasks.length === 1 ? '' : 's'} ready
+                    </span>
+                    <ul className="bulk-add-preview-list">
+                      {parsedTasks.map((t, i) => (
+                        <li key={i}>
+                          <span className="bulk-add-preview-date">{formatPreviewDate(t.due_date)}</span>
+                          <span className="bulk-add-preview-title">{t.title}</span>
+                          <span className="bulk-add-preview-time">
+                            {formatPreviewTime(t.due_time, t.duration_minutes)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
+                {errors.length > 0 && (
+                  <>
+                    <span className="submission-field-label bulk-add-error-label">
+                      {errors.length} line{errors.length === 1 ? '' : 's'} couldn't be read
+                    </span>
+                    <ul className="bulk-add-error-list">
+                      {errors.map((err) => (
+                        <li key={err.line}>
+                          Line {err.line}: "{err.text}" — {err.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
             )}
 
-            {errors.length > 0 && (
+            {submitError && <p className="error">{submitError}</p>}
+          </>
+        ) : (
+          <>
+            {editableTasks.length === 0 ? (
+              <p className="task-notes-empty">No active tasks to edit.</p>
+            ) : (
               <>
-                <span className="submission-field-label bulk-add-error-label">
-                  {errors.length} line{errors.length === 1 ? '' : 's'} couldn't be read
-                </span>
-                <ul className="bulk-add-error-list">
-                  {errors.map((err) => (
-                    <li key={err.line}>
-                      Line {err.line}: "{err.text}" — {err.message}
-                    </li>
-                  ))}
+                <div className="bulk-edit-select-row">
+                  <span className="submission-field-label">
+                    {selectedIds.size} of {editableTasks.length} selected
+                  </span>
+                  <button type="button" className="inbox-mark-read" onClick={toggleSelectAll}>
+                    {allSelected ? 'Deselect all' : 'Select all'}
+                  </button>
+                </div>
+
+                <ul className="bulk-edit-task-list">
+                  {editableTasks.map((task) => {
+                    const whoKey = task.who
+                    return (
+                      <li key={task.id}>
+                        <label className="bulk-edit-task-row">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(task.id)}
+                            onChange={() => toggleSelected(task.id)}
+                          />
+                          <span className="task-who-badge" style={{ background: WHO_COLOR[whoKey] }}>
+                            {WHO_LABEL[whoKey]}
+                          </span>
+                          <span className="bulk-add-preview-title">{task.title}</span>
+                          <span className="bulk-add-preview-time">{formatTaskDue(task)}</span>
+                        </label>
+                      </li>
+                    )
+                  })}
                 </ul>
+
+                <div className="bulk-edit-fields">
+                  <label className="bulk-edit-field-row">
+                    <input type="checkbox" checked={applyWho} onChange={(e) => setApplyWho(e.target.checked)} />
+                    <span className="bulk-edit-field-label">Who</span>
+                    <select value={editWho} onChange={(e) => setEditWho(e.target.value)} disabled={!applyWho}>
+                      <option value="yours">{WHO_LABEL.yours}</option>
+                      <option value="assistant">{WHO_LABEL.assistant}</option>
+                    </select>
+                  </label>
+
+                  <label className="bulk-edit-field-row">
+                    <input
+                      type="checkbox"
+                      checked={applyTimezone}
+                      onChange={(e) => setApplyTimezone(e.target.checked)}
+                    />
+                    <span className="bulk-edit-field-label">Time zone</span>
+                    <select
+                      value={editTimezone}
+                      onChange={(e) => setEditTimezone(e.target.value)}
+                      disabled={!applyTimezone}
+                    >
+                      {TIMEZONE_OPTIONS.map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {applyTimezone && (
+                    <p className="bulk-add-hint">
+                      Keeps each task's date/time exactly as set, reinterpreted in the new zone — a task due "9:00
+                      AM" stays "9:00 AM", just in a different zone. Dateless All Day tasks are left untouched.
+                    </p>
+                  )}
+
+                  <label className="bulk-edit-field-row bulk-edit-field-row-notes">
+                    <input type="checkbox" checked={applyNotes} onChange={(e) => setApplyNotes(e.target.checked)} />
+                    <span className="bulk-edit-field-label">Notes</span>
+                    <textarea
+                      rows={3}
+                      placeholder="Leave blank to clear notes on the selected tasks"
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      disabled={!applyNotes}
+                    />
+                  </label>
+                </div>
+
+                {applyError && <p className="error">{applyError}</p>}
               </>
             )}
-          </div>
+          </>
         )}
-
-        {submitError && <p className="error">{submitError}</p>}
 
         <div className="submission-actions">
           <button type="button" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="submission-save" disabled={saving || tasks.length === 0}>
-            {saving ? 'Creating…' : tasks.length ? `Create ${tasks.length} task${tasks.length === 1 ? '' : 's'}` : 'Create tasks'}
-          </button>
+          {view === 'add' ? (
+            <button type="submit" className="submission-save" disabled={saving || parsedTasks.length === 0}>
+              {saving
+                ? 'Creating…'
+                : parsedTasks.length
+                  ? `Create ${parsedTasks.length} task${parsedTasks.length === 1 ? '' : 's'}`
+                  : 'Create tasks'}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="submission-save"
+              disabled={applying || !selectedIds.size || !hasFieldToApply}
+            >
+              {applying ? 'Applying…' : `Apply to ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
+            </button>
+          )}
         </div>
       </form>
     </Modal>
