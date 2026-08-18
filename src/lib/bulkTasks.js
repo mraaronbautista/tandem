@@ -14,15 +14,27 @@ function pad(n) {
 }
 
 // A line on its own that names a date — everything after it (until the
-// next date line) belongs to that date. Accepts 'YYYY-MM-DD' or a loose
-// 'Aug 21' / 'August 21' / 'Aug 21, 2026' form, matching how most
-// schedule tools actually print dates, so a line can often be pasted
-// close to verbatim rather than needing to be retyped as ISO. A bare
-// 'Aug 21' with no year assumes the current year, or next year if that
-// date is more than YEAR_ROLLOVER_GRACE_DAYS in the past — the common
-// "planning into next year" case, without misfiring on a schedule that
-// starts a day or two ago.
-function parseDateHeader(line) {
+// next date line) belongs to that date. Accepts 'YYYY-MM-DD', a loose
+// 'Aug 21' / 'August 21' / 'Aug 21, 2026' form, or the relative 'Today'/
+// 'Tomorrow' (optionally with a trailing colon, e.g. "Tomorrow:", since
+// that's a natural way to head a quick note) — matching how most
+// schedule tools actually print dates, or how someone jotting a note by
+// hand actually writes one, so a line can often be pasted close to
+// verbatim rather than needing to be retyped as ISO. A bare 'Aug 21'
+// with no year assumes the current year, or next year if that date is
+// more than YEAR_ROLLOVER_GRACE_DAYS in the past — the common "planning
+// into next year" case, without misfiring on a schedule that starts a
+// day or two ago.
+function parseDateHeader(rawLine) {
+  const line = rawLine.replace(/:\s*$/, '')
+
+  const relative = line.trim().toLowerCase()
+  if (relative === 'today' || relative === 'tomorrow') {
+    const d = new Date()
+    if (relative === 'tomorrow') d.setDate(d.getDate() + 1)
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  }
+
   let m = line.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (m) return `${m[1]}-${m[2]}-${m[3]}`
 
@@ -72,10 +84,17 @@ function toMinutes(numPart, ampm) {
 const SHIFT_RE =
   /^(.+?)\s+(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—|to|until)\s*(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?(?:\s*,?\s*(?:next\s*day|\(?\+\s*1\s*day\)?))?\.?$/i
 
-function parseShiftLine(line) {
-  const m = line.match(SHIFT_RE)
-  if (!m) return null
-  const [, title, startNum, startAmPm, endNum, endAmPm] = m
+// The same shift, time range written first — "8 am – 9 am – 1072 Rachel
+// (gas-leak repair)" — some schedules get jotted with the time up front
+// instead of the title trailing it. Tried only after SHIFT_RE fails
+// (title-first is still the primary documented format), and requires an
+// explicit dash-like separator before the title (not just whitespace) so
+// a title that happens to start with a number right after the time
+// range isn't swallowed by accident.
+const SHIFT_RE_TIME_FIRST =
+  /^(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—|to|until)\s*(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?\s*(?:-|–|—)\s*(.+?)\.?$/i
+
+function buildShift(title, startNum, startAmPm, endNum, endAmPm) {
   const startMin = toMinutes(startNum, startAmPm)
   let endMin = toMinutes(endNum, endAmPm)
   if (endMin <= startMin) endMin += 24 * 60 // crosses midnight, e.g. 10p-2a
@@ -84,6 +103,22 @@ function parseShiftLine(line) {
     due_time: `${pad(Math.floor(startMin / 60) % 24)}:${pad(startMin % 60)}`,
     duration_minutes: endMin - startMin,
   }
+}
+
+function parseShiftLine(line) {
+  let m = line.match(SHIFT_RE)
+  if (m) {
+    const [, title, startNum, startAmPm, endNum, endAmPm] = m
+    return buildShift(title, startNum, startAmPm, endNum, endAmPm)
+  }
+
+  m = line.match(SHIFT_RE_TIME_FIRST)
+  if (m) {
+    const [, startNum, startAmPm, endNum, endAmPm, title] = m
+    return buildShift(title, startNum, startAmPm, endNum, endAmPm)
+  }
+
+  return null
 }
 
 // Parses a pasted schedule into { tasks, errors }. Format:
