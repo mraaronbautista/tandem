@@ -185,6 +185,22 @@ function splitDateDescription(line) {
   return { prefix: m[1].trim(), description: m[2].trim() }
 }
 
+// An explicit "there's no date, and that's on purpose" marker on the left
+// of a "<prefix> – description" line — distinct from a prefix that's
+// merely unresolvable (see NO_DATE_MARKERS below). The two look the same
+// to parseDateHeader (both return null), but they need different
+// treatment: an unresolvable prefix like "If Ingrid unavailable" carries
+// meaning that has to stay attached to the title, while a marker like
+// "ASAP" is only ever noise once its job (saying "no date") is done —
+// keeping it in the title would leave every such task starting with the
+// same word, indistinguishable from each other in any compact view
+// (e.g. the All Day row of chips) until each one is opened.
+const NO_DATE_MARKERS = new Set(['asap', 'no date', 'whenever', 'someday'])
+
+function isNoDateMarker(prefix) {
+  return NO_DATE_MARKERS.has(prefix.trim().toLowerCase())
+}
+
 // One parser, two line shapes it recognizes freely mixed in the same
 // paste — originally two separate parsers behind a manual "Shifts" vs
 // "Action items" format toggle, merged after that toggle turned out to
@@ -218,12 +234,19 @@ function splitDateDescription(line) {
 //     self-contained item, independent of any date context above it:
 //       Aug 30 – Abdul vacates Master Haven (schedule cleaning)
 //       If Ingrid unavailable – Follow-up with Martin (backup)
+//       ASAP – Draft the lease-payment explanation
 //     Returned with type: 'item' (all-day; no time-of-day at all) rather
 //     than type: 'shift'. A recognized date on the left becomes the real
-//     due_date with the right side as the title; an unresolvable one
-//     (a fuzzy relative phrase, or a plain dependency note with no date
-//     shape at all) keeps the *entire* line as the title with no due
-//     date, rather than guessing at a specific day.
+//     due_date with the right side alone as the title. An explicit
+//     NO_DATE_MARKERS prefix ("ASAP", "No date", ...) also uses just the
+//     right side as the title, but with due_date left null on purpose —
+//     it said its piece by picking a "no date" line shape at all, so
+//     it'd be pure noise left sitting in the title afterward. Anything
+//     else unresolvable (a fuzzy relative phrase, or a plain dependency
+//     note with no date shape at all) keeps the *entire* line as the
+//     title with no due date instead, since here the prefix carries real
+//     meaning that has to stay attached rather than guessing at a
+//     specific day.
 //  4. Anything else (with an active date context: unreadable; without
 //     one: a category header, e.g. "Cleaning coordination") — headers
 //     are silently skipped, not an error, since they're a normal,
@@ -257,7 +280,8 @@ export function parseBulkTasks(text) {
         return
       }
       const date = parseDateHeader(split.prefix)
-      tasks.push({ type: 'item', title: date ? split.description : line, due_date: date || null })
+      const title = (date || isNoDateMarker(split.prefix)) ? split.description : line
+      tasks.push({ type: 'item', title, due_date: date })
       return
     }
 
