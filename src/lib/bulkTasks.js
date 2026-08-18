@@ -13,10 +13,15 @@ function pad(n) {
   return String(n).padStart(2, '0')
 }
 
+function iso(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 // A line on its own that names a date — everything after it (until the
 // next date line) belongs to that date. Accepts 'YYYY-MM-DD', a loose
 // 'Aug 21' / 'August 21' / 'Aug 21, 2026' form, the relative 'Today'/
-// 'Tomorrow', or 'within N days'/'within the next N days' (optionally
+// 'Tomorrow', 'within N days'/'within the next N days', 'end of (this)
+// week', 'end of (this) month', or 'start of next month' (optionally
 // with a trailing colon, e.g. "Tomorrow:", or a trailing parenthetical,
 // e.g. "Tomorrow (date of meeting + 1 day)" — both natural ways to head
 // a quick note) — matching how most schedule tools actually print dates,
@@ -28,12 +33,11 @@ function pad(n) {
 // a schedule that starts a day or two ago.
 //
 // Deliberately narrow on which relative phrases resolve to a real date —
-// only 'today'/'tomorrow'/'within N days' have one unambiguous
-// interpretation. Fuzzier ones like "End of this week" or "end of month"
-// still fall through unresolved (see the type: 'item' fallback below):
-// "end" of a week could reasonably mean Friday, Saturday, or Sunday
-// depending on who you ask, so guessing wrong and silently filing it
-// under the wrong day would be worse than leaving it dateless.
+// each of the ones handled below has exactly one agreed-upon meaning.
+// A compound phrase like "end of month / start of next month" (offering
+// two alternatives on one line) still falls through unresolved (see the
+// type: 'item' fallback below), since picking one of the two for you
+// would be guessing, not resolving.
 function parseDateHeader(rawLine) {
   const line = rawLine.replace(/:\s*$/, '').replace(/\s*\([^)]*\)\s*$/, '')
 
@@ -41,14 +45,33 @@ function parseDateHeader(rawLine) {
   if (relative === 'today' || relative === 'tomorrow') {
     const d = new Date()
     if (relative === 'tomorrow') d.setDate(d.getDate() + 1)
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    return iso(d)
   }
 
   const within = relative.match(/^within\s+(?:the\s+next\s+|next\s+)?(\d+)\s+days?$/)
   if (within) {
     const d = new Date()
     d.setDate(d.getDate() + Number(within[1]))
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    return iso(d)
+  }
+
+  // Sunday-Saturday, same week boundary as getWeekDays() in tasks.js —
+  // Friday is that week's 6th day (index 5) regardless of where today
+  // falls within it.
+  if (relative === 'end of week' || relative === 'end of this week') {
+    const d = new Date()
+    d.setDate(d.getDate() - d.getDay() + 5)
+    return iso(d)
+  }
+
+  if (relative === 'end of month' || relative === 'end of this month') {
+    const d = new Date()
+    return iso(new Date(d.getFullYear(), d.getMonth() + 1, 0))
+  }
+
+  if (relative === 'start of next month') {
+    const d = new Date()
+    return iso(new Date(d.getFullYear(), d.getMonth() + 1, 1))
   }
 
   let m = line.match(/^(\d{4})-(\d{2})-(\d{2})$/)
