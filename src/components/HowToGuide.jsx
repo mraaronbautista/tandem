@@ -4,8 +4,16 @@ import Modal from './Modal'
 // Items starting with 'Tip: ' render distinctly from plain how-to/
 // context bullets (see .how-to-guide-tip in App.css) — the prefix itself
 // is stripped before display, it's just a marker for which items get the
-// different treatment.
+// different treatment. Shared by both the Guide and FAQ tabs below.
 const SECTIONS = [
+  {
+    title: 'Getting around',
+    items: [
+      'Five tabs — Today, Rentals, Reports, Cork Board, Inbox. On a phone they sit in a bar along the bottom; on a tablet or wider screen they fold into the top header next to Settings instead, since there\'s no separate sidebar.',
+      'The + button (bottom right) is for one-shot actions, not another tab you browse — Priorities, Bulk add/edit tasks, Vault, plus Submit report (Aaron only) or Nudge (Ada only).',
+      'The ⚙️ icon opens Settings: who\'s signed in, notifications, theme, default timezone, and this guide.',
+    ],
+  },
   {
     title: 'Today',
     items: [
@@ -14,6 +22,7 @@ const SECTIONS = [
       'Tip: a big empty gap between tasks (say, one at 6am and the next at 9pm) automatically collapses into a small marker instead of stretching the whole day out, so a light day doesn\'t turn into endless scrolling.',
       'Tap the "Month Year" label up top to jump straight to any date via the calendar popover; the ‹ › arrows next to it step by week.',
       'Switch whose tasks you\'re viewing with the All / Ada / Aaron picker.',
+      'Day / Week / Month tabs sit above the list. Week always snaps back to the current week when you tap it, even if you were browsing a different one in Day mode — Day and Month keep wherever you last left them. Month shows each day as a small grid cell with up to 3 task chips (plus a "N more" line); it hides the day-picker strip below the tabs since a day-by-day scroller doesn\'t make sense next to a full month grid.',
     ],
   },
   {
@@ -33,13 +42,15 @@ const SECTIONS = [
       'Comments: ask a question or leave a note on any task — either of you can comment regardless of who created or is assigned it, and files (PDFs, docs, photos, anything) can go on the message itself.',
       'Marking a task done lets you attach a completion note and files as proof of what was actually delivered.',
       'Tip: an "⚠ Overlap" badge means two of your own timed tasks collide — Ada and Aaron having things at the same time isn\'t flagged, since that\'s not a real conflict.',
+      'A 💬 badge on a task\'s collapsed row means there\'s a question or comment waiting on your reply — open the task to answer it, or check the Inbox tab to see every open one across all tasks in one place.',
     ],
   },
   {
     title: 'Rentals',
     items: [
       'Tracks occupancy and finances for Awa Rentalz.',
-      'Calendar: switch units via the tabs (or the unit nav on desktop); tap a booked day to view, edit, or delete that booking. A striped cell is a pending request, not yet confirmed.',
+      'Layout adapts to screen width: on a phone, switch between Calendar / Financials / Overview with tabs, one panel at a time. On a tablet or desktop-width screen, all three show together instead — Calendar and Overview share the main column, Financials stays visible in a column of its own — and you switch units by tapping one in Overview or the calendar\'s own unit-nav arrows rather than tabs.',
+      'Calendar: tap a booked day to view, edit, or delete that booking. A striped cell is a pending request, not yet confirmed — it still blocks the dates, but doesn\'t count toward revenue until you confirm it.',
       'Tip: record where a booking came from (Airbnb, Furnished Finder, Referral, etc.) when adding or editing it — Financials tallies revenue by source every month, so you can actually see which platform is worth the effort instead of guessing.',
       'Financials: revenue is recognized by upfront charge cycle (roughly every 30 days from check-in), not day-by-day occupancy — a guest still there in month two doesn\'t get double-counted.',
       'Tip: tap any overhead line to edit or delete it, or use "+ Add overhead" — it\'s not a fixed list, keep it current as costs change.',
@@ -53,7 +64,16 @@ const SECTIONS = [
       'Pin a task or note with no deadline, so a stray idea doesn\'t get lost.',
       'Private by default — toggle "Share to both boards" to let the other person see it too.',
       'Tip: "Focus today" turns any pin (yours, or shared with you) into a real task due today — so a good idea from last week can actually become something you do.',
-      'Only the original author can edit or unpin a pin, even once shared.',
+      'Only the original author can edit or unpin a pin, even once shared — the other person can see and comment on it, not manage it.',
+    ],
+  },
+  {
+    title: 'Inbox',
+    items: [
+      'Collects every open question or comment across all tasks in one place — the only reliable way to catch a stray 💬 without stumbling onto that specific task first.',
+      '"Needs your reply" — unanswered questions directed at you, shown first. "Answered" — questions you asked that got a reply. "Finished" — your own questions the other person marked "No reply needed" instead of answering.',
+      'Tapping an item jumps straight to that task\'s full detail, regardless of which day it\'s on.',
+      'Tip: a plain comment that isn\'t really a question can be dismissed with "No reply needed" — no push notification fires for that, since clearing something as not needing a reply isn\'t news worth pinging over.',
     ],
   },
   {
@@ -69,6 +89,7 @@ const SECTIONS = [
     title: 'The + menu',
     items: [
       'Priorities: shared planning goals for the day/week/month — each bullet also creates a real task, so setting a priority isn\'t just a note that gets forgotten. Day priorities are due today; week/month ones are All Day and stick around until done.',
+      'Bulk add/edit tasks: paste in a whole schedule at once on the Add tab (a date line plus one shift per line under it, or free "date – description" lines) instead of one task at a time. The Edit tab picks from your existing tasks — filterable to just Ada\'s, just Aaron\'s, or all — to retitle, reassign, re-timezone, or delete a batch together.',
       'Vault: a shared, encrypted password manager. The master password is the same for both of you and has to be re-entered every time you open it — it\'s never saved on the device.',
       'Tip: there\'s no password reset for the vault — if the master password is forgotten, "Reset vault" wipes everything, so keep it somewhere safe.',
       'Submit report (Aaron only) / Nudge (Ada only) — asymmetric on purpose, see Notifications below for why.',
@@ -85,17 +106,212 @@ const SECTIONS = [
   },
 ]
 
-// Accordion — one section open at a time, opening another closes
+// Real questions grounded in the app's actual (sometimes asymmetric or
+// non-obvious) behavior — written from Ada's side, since she's the one
+// without an edit/write toggle on several of these (working status,
+// reports) and the one running Rentals day to day. Answers call out a
+// mobile/desktop split only where the UI actually differs (mainly nav
+// placement and the Rentals layout) — most behavior here is identical on
+// both, so most answers don't need it.
+const FAQS = [
+  {
+    title: "Why can't I toggle my own \"working\" status?",
+    items: [
+      'That toggle is Aaron-only, on purpose — "working" is inherently self-reported, so there\'s nothing meaningful for Ada to toggle about her own status. Your side of it is the read-only green/gray badge next to Settings showing whether Aaron\'s currently on.',
+    ],
+  },
+  {
+    title: "Why don't I have a \"Submit report\" option?",
+    items: [
+      'End-of-day/week/month reports are Aaron\'s log of what he worked on — you can read every one of them, grouped by month, from the Reports tab. There\'s nothing for you to submit there.',
+      'Tip: if you want to flag something to Aaron rather than read a past report, use Nudge in the + menu instead — that one\'s Ada-only.',
+    ],
+  },
+  {
+    title: 'How do I remind Aaron about something?',
+    items: [
+      'Tap + then Nudge — it sends Aaron a push notification directly. It\'s the Ada-side counterpart to Aaron\'s Submit report action.',
+    ],
+  },
+  {
+    title: 'I checked off an overdue task and it vanished from Overdue — did it delete?',
+    items: [
+      'No — it moved to Today\'s list. A completed task is grouped by when you actually finished it, not its original due date, so a task overdue from last week that you finish today shows up under Today (still with its original due time and a small "Completed" tag) rather than staying buried in Overdue or disappearing.',
+    ],
+  },
+  {
+    title: "Why does a task's time look different than what I typed?",
+    items: [
+      'It shouldn\'t — a task always displays in whatever timezone it was set in (shown as a small badge like "CT" or "PHT" next to the time), not converted to whichever of you happens to be looking at it. If the badge shows the zone you expect, the time next to it is correct as entered.',
+      'Tip: if a whole batch of tasks came out in the wrong zone (e.g. you pasted Aaron\'s schedule using your own zone by mistake), Bulk edit → Time zone can reinterpret the same wall-clock time in the correct zone for all of them at once, instead of fixing each one by hand.',
+    ],
+  },
+  {
+    title: "How do I see just my tasks, or just Aaron's?",
+    items: [
+      'The All / Ada / Aaron picker on the Today tab, next to the Day/Week/Month tabs. Bulk edit\'s own task picker has the same three-way filter, separately, for narrowing down which tasks you\'re selecting to edit or delete.',
+    ],
+  },
+  {
+    title: "I tapped Week and it jumped to a different week than I was looking at — why?",
+    items: [
+      'Week always resets to the current week the moment you tap it, so it always answers "how does this week look right now" rather than showing whatever week you last happened to be browsing in Day mode. Day and Month don\'t do this — they keep whatever date you last picked.',
+    ],
+  },
+  {
+    title: "What's the difference between checking off a checklist item and marking it blocked?",
+    items: [
+      'Done means it got finished. Blocked means it turned out not to be doable at all (with an optional reason why) — the two are mutually exclusive, so setting one clears the other.',
+    ],
+  },
+  {
+    title: 'How do I add my whole week\'s schedule at once instead of one task at a time?',
+    items: [
+      'Tap + → Bulk add/edit tasks (the Add tab). Either put a date on its own line followed by one shift per line under it ("Texas 12a-4a"), or write freeform "date – description" lines with no time — you can mix both in the same paste. A live preview shows exactly what will be created before you confirm.',
+    ],
+  },
+  {
+    title: 'Can I edit or delete several tasks at once?',
+    items: [
+      'Yes — same Bulk add/edit tasks screen, on the Edit tab. Filter the list to Ada\'s, Aaron\'s, or all of them, select the ones you want, then either apply a change (title, who, timezone, or notes) across all of them, or hit "Delete N tasks" to remove them together. Deleting asks you to confirm first, since it can\'t be undone.',
+    ],
+  },
+  {
+    title: "What does the 💬 badge on a task mean?",
+    items: [
+      'There\'s an unanswered question or comment on that task directed at you. Open the task to reply, or check the Inbox tab to see every one of these across every task in one place instead of hunting for the badge.',
+    ],
+  },
+  {
+    title: 'What are the three sections in Inbox?',
+    items: [
+      '"Needs your reply" — questions aimed at you with no answer yet, always shown first. "Answered" — questions you asked that got a reply. "Finished" — your own questions that got dismissed with "No reply needed" instead of an actual answer.',
+    ],
+  },
+  {
+    title: "I pinned something on the Cork Board — can Aaron see it?",
+    items: [
+      'Not unless you share it. New pins are private by default; toggle "Share to both boards" to let Aaron see it too. Even shared, only you can edit or unpin it — he can view and comment, not manage it.',
+    ],
+  },
+  {
+    title: 'What does "Focus today" do on a Cork Board pin?',
+    items: [
+      'It turns that pin into a real task due today, assigned to whoever tapped the button — not necessarily the pin\'s original author, since claiming a shared idea as today\'s work is the point. The pin itself stays on the board untouched, so you can promote it again later if needed.',
+    ],
+  },
+  {
+    title: 'I forgot the Vault master password — how do I get back in?',
+    items: [
+      'There\'s no password-reset flow. The only way out is "Reset vault," which wipes every saved entry and requires typing a confirmation word first — so it\'s worth keeping the shared password written down somewhere safe rather than relying on memory alone.',
+    ],
+  },
+  {
+    title: 'Why do I have to re-type the Vault password every time I open it?',
+    items: [
+      "It's never saved to the device or browser — only kept in memory while the vault happens to be open — so your saved passwords stay unreadable even if a device is lost or a browser session is compromised.",
+    ],
+  },
+  {
+    title: "I'm not getting push notifications on my phone — why?",
+    items: [
+      'On iPhone, push only works from this app after it\'s added to your Home Screen (iOS 16.4+) — a regular Safari tab can\'t receive push at all, no matter what\'s toggled in Settings. Confirm it\'s installed that way first, then check the notification toggle in Settings.',
+      'Tip: if you and Aaron ever share a device, check "Signed in as {name}" at the top of Settings before flipping the toggle — it\'s easy to accidentally change the other person\'s notification setting.',
+    ],
+  },
+  {
+    title: 'Rentals looks completely different on my phone than on my laptop — is something broken?',
+    items: [
+      'That\'s expected, not a bug. On a phone, Rentals is three separate tabs (Calendar / Financials / Overview) you flip between one at a time. On a tablet or desktop-width screen, all three show together side by side instead, and unit switching moves from tabs to tapping a unit in the Overview list or using the calendar\'s own unit-nav arrows.',
+    ],
+  },
+  {
+    title: 'A guest stayed two months but Financials only shows one lump of revenue — is that right?',
+    items: [
+      'Yes — revenue is recognized by upfront charge cycle (about every 30 days from check-in, like a security-deposit-style payment), not by counting calendar days of occupancy. A later cycle only counts once there\'s an actual day of stay left beyond it, so a long stay doesn\'t get billed twice at the boundary.',
+    ],
+  },
+  {
+    title: 'What does a striped/diagonal booking cell mean on the calendar?',
+    items: [
+      "A pending request (e.g. an inbound inquiry) rather than a confirmed booking. It still blocks those dates against a double-booking, but it won't count toward revenue until you explicitly confirm it.",
+    ],
+  },
+  {
+    title: 'Does the rental savings goal update itself from bookings?',
+    items: [
+      "No — it's a plain number you update by hand in the goal's own edit form. Two earlier attempts at calculating it automatically from booking revenue both turned out to be more hassle than just editing the total directly.",
+    ],
+  },
+  {
+    title: "Why hasn't next week's copy of a recurring task shown up yet?",
+    items: [
+      'The next occurrence is only created once you mark the current one done — it\'s not generated ahead of time, so you won\'t see it sitting there early.',
+    ],
+  },
+  {
+    title: "What does the ⚠ Overlap badge mean, and why doesn't it show when Aaron and I both have something scheduled at the same time?",
+    items: [
+      'It only flags two of your own timed tasks colliding with each other. You and Aaron having separate tasks at the same time isn\'t treated as a real conflict, so that combination is never flagged.',
+    ],
+  },
+  {
+    title: 'How do I change which timezone new tasks default to?',
+    items: [
+      'Settings (⚙️) → Default timezone. Once set, it\'s used automatically for any new task, priority, or Cork Board pin you create — Aaron bulk-adding your schedule for you uses your saved zone too, not his device\'s.',
+    ],
+  },
+]
+
+// Two independent accordions (Guide sections, FAQ questions) sharing this
+// one render path — same "one open at a time" behavior, just against
+// whichever list/openTitle/toggle triple the caller passes in, so
+// switching the top-level tab doesn't have to reset or merge either
+// accordion's own open/closed state into the other's.
+function AccordionList({ sections, openTitle, onToggle }) {
+  return (
+    <div className="how-to-guide-list">
+      {sections.map((section) => (
+        <div key={section.title} className="how-to-guide-section">
+          <button type="button" className="how-to-guide-header" onClick={() => onToggle(section.title)}>
+            <span>{section.title}</span>
+            <span>{openTitle === section.title ? '▾' : '▸'}</span>
+          </button>
+          {openTitle === section.title && (
+            <ul className="how-to-guide-items">
+              {section.items.map((item, i) => {
+                const isTip = item.startsWith('Tip: ')
+                return (
+                  <li key={i} className={isTip ? 'how-to-guide-tip' : undefined}>
+                    {isTip ? item.slice('Tip: '.length) : item}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Accordion — one section/question open at a time, opening another closes
 // whichever was open — instead of an independent expand/collapse per
-// section, so the guide stays scannable instead of one long wall of text
+// item, so either tab stays scannable instead of one long wall of text
 // with several sections open at once. Nested inside SettingsMenu's own
 // Modal; Modal.jsx renders via a portal, so this works regardless of the
 // outer modal's DOM position/transform.
 export default function HowToGuide({ onClose }) {
-  const [openTitle, setOpenTitle] = useState(SECTIONS[0].title)
+  const [view, setView] = useState('guide')
+  const [openSection, setOpenSection] = useState(SECTIONS[0].title)
+  const [openFaq, setOpenFaq] = useState(FAQS[0].title)
 
-  function toggle(title) {
-    setOpenTitle((prev) => (prev === title ? null : title))
+  function toggleSection(title) {
+    setOpenSection((prev) => (prev === title ? null : title))
+  }
+
+  function toggleFaq(title) {
+    setOpenFaq((prev) => (prev === title ? null : title))
   }
 
   return (
@@ -103,28 +319,28 @@ export default function HowToGuide({ onClose }) {
       <div className="submission-modal how-to-guide-modal" onClick={(e) => e.stopPropagation()}>
         <h2>How this app works</h2>
 
-        <div className="how-to-guide-list">
-          {SECTIONS.map((section) => (
-            <div key={section.title} className="how-to-guide-section">
-              <button type="button" className="how-to-guide-header" onClick={() => toggle(section.title)}>
-                <span>{section.title}</span>
-                <span>{openTitle === section.title ? '▾' : '▸'}</span>
-              </button>
-              {openTitle === section.title && (
-                <ul className="how-to-guide-items">
-                  {section.items.map((item, i) => {
-                    const isTip = item.startsWith('Tip: ')
-                    return (
-                      <li key={i} className={isTip ? 'how-to-guide-tip' : undefined}>
-                        {isTip ? item.slice('Tip: '.length) : item}
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </div>
-          ))}
+        <div className="period-tabs">
+          <button
+            type="button"
+            className={`period-tab${view === 'guide' ? ' period-tab-active' : ''}`}
+            onClick={() => setView('guide')}
+          >
+            Guide
+          </button>
+          <button
+            type="button"
+            className={`period-tab${view === 'faq' ? ' period-tab-active' : ''}`}
+            onClick={() => setView('faq')}
+          >
+            FAQ
+          </button>
         </div>
+
+        {view === 'guide' ? (
+          <AccordionList sections={SECTIONS} openTitle={openSection} onToggle={toggleSection} />
+        ) : (
+          <AccordionList sections={FAQS} openTitle={openFaq} onToggle={toggleFaq} />
+        )}
 
         <div className="submission-actions">
           <button type="button" onClick={onClose}>
