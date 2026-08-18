@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { parseBulkTasks } from '../lib/bulkTasks'
-import { createTask, updateTask, isAllDayTask } from '../lib/tasks'
+import { createTask, updateTask, deleteTask, isAllDayTask } from '../lib/tasks'
 import {
   TIMEZONE_OPTIONS,
   zonedTimeToUtcIso,
@@ -284,6 +284,31 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
     }
   }
 
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  // A plain button, not a form submit — sharing this modal's one <form>
+  // between Apply and Delete means a submit-triggered delete would run
+  // whatever apply-field checkboxes happen to be checked too, so this
+  // stays a separate type="button" handler like every other destructive
+  // action in the app (see window.confirm usages elsewhere).
+  async function handleDelete() {
+    if (!selectedIds.size || applying || deleting) return
+    const count = selectedIds.size
+    if (!window.confirm(`Delete ${count} task${count === 1 ? '' : 's'}? This can't be undone.`)) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => deleteTask(id)))
+      setSelectedIds(new Set())
+      onCreated()
+    } catch (err) {
+      setDeleteError(err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <Modal onClose={onClose}>
       <form
@@ -545,6 +570,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                 </div>
 
                 {applyError && <p className="error">{applyError}</p>}
+                {deleteError && <p className="error">{deleteError}</p>}
               </>
             )}
           </>
@@ -563,13 +589,23 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                   : 'Create tasks'}
             </button>
           ) : (
-            <button
-              type="submit"
-              className="submission-save"
-              disabled={applying || !selectedIds.size || !hasFieldToApply}
-            >
-              {applying ? 'Applying…' : `Apply to ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
-            </button>
+            <>
+              <button
+                type="button"
+                className="submission-delete"
+                onClick={handleDelete}
+                disabled={deleting || applying || !selectedIds.size}
+              >
+                {deleting ? 'Deleting…' : `Delete ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
+              </button>
+              <button
+                type="submit"
+                className="submission-save"
+                disabled={applying || deleting || !selectedIds.size || !hasFieldToApply}
+              >
+                {applying ? 'Applying…' : `Apply to ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
+              </button>
+            </>
           )}
         </div>
       </form>

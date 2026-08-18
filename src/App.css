@@ -3156,7 +3156,8 @@ label.new-task-checkbox-label {
   border-top: 1px solid var(--border);
 }
 
-.submission-actions button.rental-delete-booking {
+.submission-actions button.rental-delete-booking,
+.submission-actions button.submission-delete {
   background: #dc2626;
   border-color: #dc2626;
   color: #fff;
