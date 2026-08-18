@@ -121,50 +121,6 @@ function parseShiftLine(line) {
   return null
 }
 
-// Parses a pasted schedule into { tasks, errors }. Format:
-//   <date line>
-//   <title> <start>-<end>
-//   <title> <start>-<end>
-//
-//   <date line>
-//   ...
-// Blank lines are ignored; a shift line before any date line, or a line
-// that doesn't match either shape, becomes an entry in `errors` (1-based
-// line number + the raw text) instead of silently being dropped, so a
-// typo doesn't just quietly vanish from a 20-line paste.
-export function parseBulkSchedule(text) {
-  const lines = text.split('\n')
-  const tasks = []
-  const errors = []
-  let currentDate = null
-
-  lines.forEach((raw, i) => {
-    const line = raw.trim()
-    if (!line) return
-
-    const date = parseDateHeader(line)
-    if (date) {
-      currentDate = date
-      return
-    }
-
-    if (!currentDate) {
-      errors.push({ line: i + 1, text: line, message: 'No date set yet — add a date line above this one.' })
-      return
-    }
-
-    const shift = parseShiftLine(line)
-    if (!shift) {
-      errors.push({ line: i + 1, text: line, message: 'Couldn\'t read a time range (expected e.g. "Texas 12a-4a").' })
-      return
-    }
-
-    tasks.push({ ...shift, due_date: currentDate })
-  })
-
-  return { tasks, errors }
-}
-
 // Strips a leading bullet marker (*, -, •) and surrounding whitespace —
 // outline pastes commonly nest each real item under a plain category
 // label with no marker of its own significance beyond "this isn't a
@@ -176,52 +132,89 @@ function stripBullet(line) {
 // Splits on the first dash-like separator that has whitespace on both
 // sides — " – ", " — ", or " - " — never a bare hyphen, since those show
 // up constantly inside ordinary words and compound terms ("Move-out",
-// "gas-leak", "follow-up") that this format's own example text is full
-// of. Returns null (not an item at all) when there's no such separator,
-// which is exactly how a category header line is told apart from a real
-// "date/note – description" item — headers never have this shape.
+// "gas-leak", "follow-up", and plenty of shift titles too). Returns null
+// when there's no such separator, which is how a category header line is
+// told apart from a real "date/note – description" item — headers never
+// have this shape.
 function splitDateDescription(line) {
   const m = line.match(/^(.*?)\s[-–—]\s(.*)$/)
   if (!m) return null
   return { prefix: m[1].trim(), description: m[2].trim() }
 }
 
-// Parses an outline-style action-item list into { tasks, errors } — a
-// different shape from parseBulkSchedule's shift format: no time-of-day
-// at all, just "<date or note> – <description>" lines, often nested
-// under plain category headings with no date of their own:
-//   * Move-out / turnover dates
-//      * Aug 30 – Abdul vacates Master Haven (schedule cleaning)
-//      * Today – Contact Ingrid about the turnover
-//   * Cleaning coordination
-//      * If Ingrid unavailable – Follow-up with Martin (backup)
-// Category headers (no dash-separated shape at all) are silently
-// skipped — not an error, since they're a normal, expected part of this
-// format rather than a typo. A line that *does* have the "X – Y" shape
-// but whose left side isn't a real date (an unresolvable relative phrase
-// like "End of this week", or a plain dependency note like "If Ingrid
-// unavailable") becomes a task with no due date — the *entire* original
-// line as its title — rather than guessing at a specific day, which this
-// app has otherwise gone out of its way to avoid doing silently.
-export function parseActionItemSchedule(text) {
+// One parser, two line shapes it recognizes freely mixed in the same
+// paste — originally two separate parsers behind a manual "Shifts" vs
+// "Action items" format toggle, merged after that toggle turned out to
+// just be a way to fail confusingly by pasting into the wrong one (the
+// error messages for "shift line with no date header above it" and
+// "action item with an unrecognized date" look nothing alike, which is
+// how the wrong-tab mistake actually got noticed). Recognizing both
+// shapes per line removes the wrong-tab failure mode entirely — the same
+// paste can now mix a real shift schedule with plain dated notes.
+//
+// Line shapes, tried in this order per line:
+//  1. A standalone date/"Today"/"Tomorrow" line (parseDateHeader) sets
+//     the current date context for bare shift lines below it — the
+//     original shift-schedule format:
+//       Aug 21
+//       Texas 12a-4a
+//       Washington 2a-5a
+//  2. A "<date or note> – description" line (splitDateDescription) is a
+//     self-contained item, independent of any date context above it:
+//       Aug 30 – Abdul vacates Master Haven (schedule cleaning)
+//       If Ingrid unavailable – Follow-up with Martin (backup)
+//     Returned with type: 'item' (all-day; no time-of-day at all) rather
+//     than type: 'shift'. A recognized date on the left becomes the real
+//     due_date with the right side as the title; an unresolvable one
+//     (a fuzzy relative phrase, or a plain dependency note with no date
+//     shape at all) keeps the *entire* line as the title with no due
+//     date, rather than guessing at a specific day.
+//  3. A bare shift line ("Texas 12a-4a", no leading date of its own)
+//     only means something once a date context exists from #1 above —
+//     it's an error otherwise, since there's nothing to anchor it to.
+//  4. Anything else (with an active date context: unreadable; without
+//     one: a category header, e.g. "Cleaning coordination") — headers
+//     are silently skipped, not an error, since they're a normal,
+//     expected part of an outline paste rather than a typo.
+export function parseBulkTasks(text) {
   const lines = text.split('\n')
   const tasks = []
   const errors = []
+  let currentDate = null
 
   lines.forEach((raw, i) => {
     const line = stripBullet(raw.trim())
     if (!line) return
 
-    const split = splitDateDescription(line)
-    if (!split) return // category header — no "date – description" shape
-
-    if (!split.description) {
-      errors.push({ line: i + 1, text: raw.trim(), message: 'Missing a description after the date.' })
+    const dateHeader = parseDateHeader(line)
+    if (dateHeader) {
+      currentDate = dateHeader
       return
     }
 
-    const date = parseDateHeader(split.prefix)
-    tasks.push({ title: date ? split.description : line, due_date: date || null })
+    const split = splitDateDescription(line)
+    if (split) {
+      if (!split.description) {
+        errors.push({ line: i + 1, text: raw.trim(), message: 'Missing a description after the date.' })
+        return
+      }
+      const date = parseDateHeader(split.prefix)
+      tasks.push({ type: 'item', title: date ? split.description : line, due_date: date || null })
+      return
+    }
+
+    if (currentDate) {
+      const shift = parseShiftLine(line)
+      if (!shift) {
+        errors.push({ line: i + 1, text: line, message: 'Couldn\'t read a time range (expected e.g. "Texas 12a-4a").' })
+        return
+      }
+      tasks.push({ type: 'shift', ...shift, due_date: currentDate })
+      return
+    }
+
+    // No date context and no "date – description" shape — a category
+    // header, silently skipped.
   })
 
   return { tasks, errors }
