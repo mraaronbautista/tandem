@@ -1,4 +1,5 @@
 const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const WEEKDAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 // A bare 'Aug 21' with no year that's already in the past only rolls
 // forward to next year once it's more than this many days stale. Without
@@ -21,7 +22,8 @@ function iso(d) {
 // next date line) belongs to that date. Accepts 'YYYY-MM-DD', a loose
 // 'Aug 21' / 'August 21' / 'Aug 21, 2026' form, the relative 'Today'/
 // 'Tomorrow', 'within N days'/'within the next N days', 'end of (this)
-// week', 'end of (this) month', or 'start of next month' (optionally
+// week', 'end of (this) month', 'start of next month', or 'next
+// <weekday>' (optionally
 // with a trailing colon, e.g. "Tomorrow:", or a trailing parenthetical,
 // e.g. "Tomorrow (date of meeting + 1 day)" — both natural ways to head
 // a quick note) — matching how most schedule tools actually print dates,
@@ -72,6 +74,21 @@ function parseDateHeader(rawLine) {
   if (relative === 'start of next month') {
     const d = new Date()
     return iso(new Date(d.getFullYear(), d.getMonth() + 1, 1))
+  }
+
+  // "next Monday" always means the upcoming one strictly ahead of today —
+  // if today itself is Monday, that rolls to the Monday a full week out
+  // rather than resolving to today, since nobody says "next Monday" to
+  // mean the day they're already on.
+  const nextWeekday = relative.match(/^next\s+([a-z]{3,9})$/)
+  if (nextWeekday) {
+    const weekdayIdx = WEEKDAY_NAMES.findIndex((w) => nextWeekday[1].startsWith(w))
+    if (weekdayIdx !== -1) {
+      const d = new Date()
+      const delta = ((weekdayIdx - d.getDay() + 7) % 7) || 7
+      d.setDate(d.getDate() + delta)
+      return iso(d)
+    }
   }
 
   let m = line.match(/^(\d{4})-(\d{2})-(\d{2})$/)

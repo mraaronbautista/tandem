@@ -342,8 +342,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
               Either a date on its own line followed by one shift per line below it ("Title start-end", e.g. "Texas
               12a-4a"), or a "&lt;date or note&gt; – description" line with no time of day (e.g. "Aug 30 – Renew the
               lease") — mix both freely. Category headers with no dash are skipped automatically. Besides real
-              dates, "Today", "Tomorrow", "within N days", "end of (this) week", "end of (this) month", and "start
-              of next month" are all recognized too. For something with genuinely no date, start the line with
+              dates, "Today", "Tomorrow", "within N days", "end of (this) week", "end of (this) month", "start
+              of next month", and "next &lt;weekday&gt;" are all recognized too. For something with genuinely no date, start the line with
               "ASAP" (or "No date"/"Whenever"/"Someday") to get a clean title with no due date — a line whose date
               still isn't recognized at all (e.g. "End of month / start of next month") is instead kept whole as
               the title, rather than guessed at.
