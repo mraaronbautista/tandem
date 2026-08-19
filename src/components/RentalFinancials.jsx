@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { chargeDatesForBooking, monthRangeStrings, BOOKING_SOURCE_LABEL } from '../lib/rentals'
+import { chargeDatesForBooking, monthRangeStrings, todayDateStr, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
 
@@ -7,8 +7,20 @@ function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 }
 
+// A charge only counts toward revenue once its billing day has actually
+// arrived — a tenant who moved in on the 30th isn't billed for this
+// month until the 30th actually happens, even while browsing the current
+// month, so a unit whose next cycle starts later this month doesn't show
+// as already paid before it's due. Past months are unaffected (every
+// charge date in a fully-elapsed month is already <= today); a future
+// month you're browsing ahead just shows nothing yet, for the same
+// reason.
+function isBillableCharge(d, start, end) {
+  return d >= start && d < end && d <= todayDateStr()
+}
+
 // Revenue is recognized by upfront charge, not by calendar-day occupancy —
-// a guest who checked in Aug 15 already paid for the Aug 15 - Sep 13
+// a guest who checked in Aug 15 already paid for the Aug 15 - Sep 14
 // cycle, so September shows no revenue for that unit even though the
 // guest is still physically there. Pending (unconfirmed) requests never
 // count toward revenue, only confirmed bookings. `bookings` is scoped to
@@ -51,7 +63,7 @@ export default function RentalFinancials({
 
   const chargesByProperty = new Map()
   for (const b of confirmedBookings) {
-    const count = chargeDatesForBooking(b).filter((d) => d >= start && d < end).length
+    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end)).length
     if (count > 0) chargesByProperty.set(b.property_id, (chargesByProperty.get(b.property_id) || 0) + count)
   }
 
@@ -81,7 +93,7 @@ export default function RentalFinancials({
   for (const b of confirmedBookings) {
     const property = propertyById.get(b.property_id)
     if (!property) continue
-    const count = chargeDatesForBooking(b).filter((d) => d >= start && d < end).length
+    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end)).length
     if (count === 0) continue
     const key = b.source || 'unspecified'
     const entry = sourceBreakdown.get(key) || { count: 0, revenue: 0 }

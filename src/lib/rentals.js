@@ -28,9 +28,19 @@ export function monthRangeStrings(monthDate) {
   return { start, end }
 }
 
-function addDays(dateStr, days) {
+// N calendar months after dateStr, same day-of-month — not "+30*N days",
+// which drifts the billing day earlier every cycle it crosses a
+// shorter month (Jan 30 + 30 days lands on Mar 1, not Feb 30). Always
+// computed from the ORIGINAL date, not the previous cycle's result, so
+// a short month's rollover (see chargeDatesForBooking below) can't
+// compound into the next cycle too. JS's own month-overflow handling
+// covers the one case with no clean answer — a check-in on the 31st
+// hitting a 30-day month — by rolling into early the following month,
+// same as most billing systems do when a due day doesn't exist that
+// month.
+function addCalendarMonths(dateStr, months) {
   const [y, m, d] = dateStr.split('-').map(Number)
-  const dt = new Date(y, m - 1, d + days)
+  const dt = new Date(y, m - 1 + months, d)
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
 }
 
@@ -47,24 +57,30 @@ export function formatDateStr(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
-// Rent is paid upfront in ~30-day cycles starting at check-in (a security
-// deposit / Airbnb-style upfront payment, not a smooth per-calendar-day
-// accrual) — so a booking spanning Aug 15 - Dec 30 generates charges on
-// Aug 15, Sep 14, Oct 14, Nov 13, Dec 13, not one per calendar month it
-// happens to touch. A guest who checked in Aug 15 hasn't paid anything
-// new by Sep 1 — that's still covered by the Aug 15 charge.
+// Rent is paid upfront in monthly cycles anchored to check-in's calendar
+// day-of-month (a security deposit / Airbnb-style upfront payment, not a
+// smooth per-calendar-day accrual) — so a guest who checked in May 30
+// bills on the 30th of every month from then on (May 30, Jun 30, Jul 30,
+// ...), not "30 days later" repeatedly, which would drift the billing
+// day earlier and earlier across shorter months. A guest who checked in
+// Aug 15 hasn't paid anything new by Sep 1 — that's still covered by the
+// Aug 15 charge, and their next one lands Sep 15, not "Sep 14" the way
+// raw +30-day math would put it.
 //
 // A later cycle only counts if there's an actual day of stay left beyond
-// it: a 31-day stay (e.g. Aug 7 - Sep 6) has its would-be second cycle
-// land exactly on check_out itself (Aug 7 + 30 = Sep 6) with zero days of
-// occupancy past it, so no second charge happens — the trailing single
-// day is absorbed into the first cycle rather than billed again.
+// it: a booking checking out on exactly its next billing day (e.g.
+// check-in Aug 7, check-out Sep 7) has that would-be next cycle land
+// exactly on check_out itself, with zero days of occupancy past it, so
+// no second charge happens — the trailing day is absorbed into the first
+// cycle rather than billed again.
 export function chargeDatesForBooking(booking) {
   const dates = [booking.check_in]
-  let d = addDays(booking.check_in, 30)
+  let cycle = 1
+  let d = addCalendarMonths(booking.check_in, cycle)
   while (d < booking.check_out) {
     dates.push(d)
-    d = addDays(d, 30)
+    cycle += 1
+    d = addCalendarMonths(booking.check_in, cycle)
   }
   return dates
 }
