@@ -4,7 +4,7 @@ import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
-import { EditIcon, PaperclipIcon } from './icons'
+import { EditIcon, PaperclipIcon, DuplicateIcon, ViewIcon, TrashIcon, CheckIcon } from './icons'
 import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -268,15 +268,25 @@ export default function TaskRow({
                 <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
                   <EditIcon width={15} height={15} />
                 </button>
-                <button onClick={handleDuplicate}>Duplicate</button>
+                <button onClick={handleDuplicate} title="Duplicate" aria-label="Duplicate">
+                  <DuplicateIcon width={15} height={15} />
+                </button>
                 {task.status === 'done' && hasSubmission && (
-                  <button onClick={() => setViewSubmissionOpen(true)}>View submission</button>
+                  <button onClick={() => setViewSubmissionOpen(true)} title="View submission" aria-label="View submission">
+                    <ViewIcon width={15} height={15} />
+                  </button>
                 )}
                 {task.status === 'done' && (
-                  <button onClick={() => setSubmitOpen(true)}>{hasSubmission ? 'Edit submission' : 'Submit'}</button>
+                  <button
+                    onClick={() => setSubmitOpen(true)}
+                    title={hasSubmission ? 'Edit submission' : 'Submit'}
+                    aria-label={hasSubmission ? 'Edit submission' : 'Submit'}
+                  >
+                    {hasSubmission ? <EditIcon width={15} height={15} /> : <CheckIcon width={15} height={15} />}
+                  </button>
                 )}
-                <button className="task-delete" onClick={handleDelete}>
-                  Delete
+                <button className="task-delete" onClick={handleDelete} title="Delete" aria-label="Delete">
+                  <TrashIcon width={15} height={15} />
                 </button>
               </div>
             }
