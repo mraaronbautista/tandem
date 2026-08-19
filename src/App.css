@@ -125,9 +125,16 @@
 .task-board {
   max-width: 640px;
   margin: 0 auto;
-  /* Extra bottom padding clears the fixed bottom tab bar (mobile/tablet;
-     see .task-board-nav) so the last list item is never hidden under it. */
-  padding: 24px 16px 96px;
+  /* Clears both the fixed bottom tab bar (mobile/tablet; see
+     .task-board-nav) *and* the floating "+" FAB (.quick-actions) that
+     sits above it — the FAB's own bottom offset (84px) plus its height
+     (56px, see .fab-new-task) means its top edge reaches 140px up from
+     the viewport bottom, well past a padding that was only ever sized
+     for the nav bar underneath it. Content scrolled all the way down
+     used to end up genuinely covered by the button — not just closely
+     adjacent to it — most visible once a single page (Rentals' merged
+     mobile view, for one) runs long enough to actually reach bottom. */
+  padding: 24px 16px calc(160px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Today / Rentals / Reports / Cork Board — a fixed bottom bar, mobile
