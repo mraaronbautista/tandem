@@ -79,8 +79,7 @@ const SECTIONS = [
   {
     title: 'Reports',
     items: [
-      'Aaron submits end-of-day/week/month/2-weeks reports; Ada can read them all, grouped by month.',
-      'Tip: the 2-weeks option lines up with the actual payroll cutoff (a fixed cycle, not just "the last 14 days"), for pulling everything completed in one pay period into a single report instead of piecing it together from weekly ones.',
+      'Aaron submits end-of-day/week/month reports; Ada can read them all, grouped by month.',
       'The auto-filled draft only lists what you completed since your last submission for that bucket, not the whole day again, so reopening it doesn\'t duplicate old entries.',
       'Tip: minutes logged is overwritten each time, not added up — match it to your actual time tracker\'s running total rather than trying to sum sessions yourself.',
       'Any files attached as proof of a completed task carry through into the report automatically.',

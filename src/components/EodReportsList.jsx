@@ -25,12 +25,15 @@ function monthLabel(key) {
   return new Date(year, month - 1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' })
 }
 
+// No 'biweekly' filter tab, matching EndOfDayReportForm.jsx's picker —
+// see the comment there. "All" still surfaces any past biweekly report
+// (filteredReports below doesn't special-case period at all), just with
+// no dedicated way to filter down to only those.
 const PERIOD_TABS = [
   { value: 'all', label: 'All' },
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
-  { value: 'biweekly', label: '2 Weeks' },
 ]
 
 // Grouped by calendar month (of report_date, the stable bucket identity —

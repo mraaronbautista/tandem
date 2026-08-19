@@ -6,11 +6,17 @@ import { sendEodReportNotification } from '../lib/manualNotify'
 import AttachmentList from './AttachmentList'
 import Modal from './Modal'
 
+// 'biweekly' is deliberately left out of this picker — Ada/Aaron found
+// it cluttered the tab row without pulling its weight day to day. Not a
+// full removal: the 'biweekly' report_period value, BIWEEKLY_ANCHOR/
+// startOfPeriod() in lib/tasks.js, and PERIOD_NOUN below all stay
+// intact, and any already-submitted biweekly report still shows up in
+// EodReportsList.jsx under "All" — this is reversible by just adding
+// the tab back, not a data-affecting change.
 const PERIODS = [
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
-  { value: 'biweekly', label: '2 Weeks' },
 ]
 
 // A noun to slot into "this ___" prose — day/week/month already read

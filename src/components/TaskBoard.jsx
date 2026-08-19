@@ -396,14 +396,20 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // Rentals and Reports moved out to the persistent tab bar/sidebar (see
   // TABS above) since they're places you go browse, not one-shot actions
   // like the ones still here.
+  // Ordered by roughly how often you'd actually reach for each one, not
+  // alphabetically or by when it was added — Bulk add/Priorities are
+  // routine task-management, Submit report/Nudge are routine-ish but
+  // person-specific one-shot actions, and Vault is both the rarest to
+  // open and the most sensitive, so it sits furthest from an accidental
+  // tap at the top of the speed-dial rather than sandwiched in the middle.
   const quickActions = [
-    { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
     { key: 'bulkAdd', icon: '📋', label: 'Bulk add / edit tasks', onSelect: () => setBulkAddOpen(true) },
-    { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
+    { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
       : []),
     ...(me?.display_name === 'Ada' ? [{ key: 'nudge', icon: '🚨', label: 'Nudge Aaron', onSelect: handleNudge }] : []),
+    { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
   ]
 
   const navButtons = TABS.map((tab) => (
