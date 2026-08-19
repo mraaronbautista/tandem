@@ -89,7 +89,8 @@ const SECTIONS = [
     title: 'The + menu',
     items: [
       'Priorities: shared planning goals for the day/week/month — each bullet also creates a real task, so setting a priority isn\'t just a note that gets forgotten. Day priorities are due today; week/month ones are All Day and stick around until done.',
-      'Bulk add/edit tasks: paste in a whole schedule at once on the Add tab (a date line plus one shift per line under it, or free "date – description" lines) instead of one task at a time. The Edit tab picks from your existing tasks — filterable to just Ada\'s, just Aaron\'s, or all — to retitle, reassign, re-timezone, or delete a batch together.',
+      'Bulk add/edit tasks: paste in a whole schedule at once on the Add tab (a date line plus one shift per line under it, or free "date – description" lines) instead of one task at a time. The Edit tab picks from your existing tasks — filterable to just Ada\'s, just Aaron\'s, or all — to retitle, reassign, re-timezone, reschedule, or delete a batch together.',
+      'Tip: the Edit tab\'s Date/Time field has two modes — "Shift by" moves each selected task from its own current date/time by an amount you set (e.g. -1 day for a batch that all needs to move a day earlier), while "Set to" pins every selected task to one exact date and time, dateless ones included.',
       'Tip: "Export tasks" (top-right of that same Bulk add/edit screen) dumps every task\'s title, date, time, and timezone as plain text — filterable, and with a toggle for completed tasks — so you can copy or download it to double-check the whole schedule somewhere else at a glance.',
       'Vault: a shared, encrypted password manager. The master password is the same for both of you and has to be re-entered every time you open it — it\'s never saved on the device.',
       'Tip: there\'s no password reset for the vault — if the master password is forgotten, "Reset vault" wipes everything, so keep it somewhere safe.',

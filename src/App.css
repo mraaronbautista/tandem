@@ -1539,14 +1539,18 @@
 
 .bulk-edit-field-row select,
 .bulk-edit-field-row textarea,
-.bulk-edit-field-row input[type='text'] {
+.bulk-edit-field-row input[type='text'],
+.bulk-edit-field-row input[type='number'],
+.bulk-edit-field-row input[type='date'] {
   flex: 1;
   min-width: 0;
 }
 
 .bulk-edit-field-row select:disabled,
 .bulk-edit-field-row textarea:disabled,
-.bulk-edit-field-row input[type='text']:disabled {
+.bulk-edit-field-row input[type='text']:disabled,
+.bulk-edit-field-row input[type='number']:disabled,
+.bulk-edit-field-row input[type='date']:disabled {
   opacity: 0.45;
 }
 

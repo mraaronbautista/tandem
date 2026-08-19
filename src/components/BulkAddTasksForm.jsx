@@ -10,8 +10,11 @@ import {
   DEFAULT_TIMEZONE,
 } from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
+
+const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 
 // A bulk paste is often one person entering the OTHER person's schedule
 // (e.g. Aaron, in the Philippines, pasting in Ada's US shift times) —
@@ -238,6 +241,12 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   const [applyTitle, setApplyTitle] = useState(false)
   const [titleMode, setTitleMode] = useState('append')
   const [titleText, setTitleText] = useState('')
+  const [applyDateTime, setApplyDateTime] = useState(false)
+  const [dateTimeMode, setDateTimeMode] = useState('shift')
+  const [shiftAmount, setShiftAmount] = useState('')
+  const [shiftUnit, setShiftUnit] = useState('days')
+  const [setToDate, setSetToDate] = useState('')
+  const [setToTime, setSetToTime] = useState('09:00')
   const [applyWho, setApplyWho] = useState(false)
   const [editWho, setEditWho] = useState('yours')
   const [applyTimezone, setApplyTimezone] = useState(false)
@@ -249,8 +258,14 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   // Unlike Notes, an empty Title text isn't a meaningful "apply" — there's
   // no such thing as clearing a task's title (it's required everywhere
   // else in the app), so Title only counts toward "there's something to
-  // apply" once actual text is typed, even if its checkbox is on.
-  const hasFieldToApply = applyWho || applyTimezone || applyNotes || (applyTitle && titleText.trim())
+  // apply" once actual text is typed, even if its checkbox is on. Date/
+  // Time needs a real value from whichever of its two modes is active:
+  // Shift needs a parseable (non-empty) amount, Set needs a date picked.
+  const dateTimeReady =
+    applyDateTime &&
+    (dateTimeMode === 'shift' ? shiftAmount.trim() !== '' && !Number.isNaN(Number(shiftAmount)) : Boolean(setToDate))
+  const hasFieldToApply =
+    applyWho || applyTimezone || applyNotes || dateTimeReady || (applyTitle && titleText.trim())
 
   async function handleApply(e) {
     e.preventDefault()
@@ -279,6 +294,26 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
           if (applyTimezone && task?.due_date) {
             const { due_date, due_time } = splitDueDateInZone(task.due_date, task.due_timezone)
             patch.due_date = zonedTimeToUtcIso(due_date, due_time, editTimezone)
+            patch.due_timezone = editTimezone
+          }
+          // Shift moves each task's own due_date by a fixed duration —
+          // its due_timezone is untouched, so "9:00 AM" stays "9:00 AM"
+          // in whatever zone it was already in, just on a different day/
+          // time. Only meaningful for a task that already has a due_date;
+          // a dateless task has nothing to shift from, so it's silently
+          // skipped even when selected (same as the Time zone field
+          // above). Set instead replaces due_date outright with one
+          // exact date/time, interpreted in the Time zone field's own
+          // selection (editTimezone) regardless of whether that field's
+          // own checkbox is on — some zone has to anchor "9:00 AM" to,
+          // and this applies to dateless tasks too, unlike Shift, since
+          // there's nothing to preserve from a task that never had a
+          // time to begin with.
+          if (applyDateTime && dateTimeMode === 'shift' && task?.due_date) {
+            const ms = Number(shiftAmount) * MS_PER_UNIT[shiftUnit]
+            patch.due_date = new Date(new Date(task.due_date).getTime() + ms).toISOString()
+          } else if (applyDateTime && dateTimeMode === 'set' && setToDate) {
+            patch.due_date = zonedTimeToUtcIso(setToDate, setToTime, editTimezone)
             patch.due_timezone = editTimezone
           }
           return updateTask(id, patch)
@@ -532,6 +567,79 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                       Every selected task gets this exact title — usually only useful for a batch of otherwise
                       identical placeholder tasks. "Add before"/"Add after" keep each task's own title and just
                       tack this onto it instead.
+                    </p>
+                  )}
+
+                  <div className="bulk-edit-field-row bulk-edit-field-row-title">
+                    <input
+                      type="checkbox"
+                      checked={applyDateTime}
+                      onChange={(e) => setApplyDateTime(e.target.checked)}
+                    />
+                    <span className="bulk-edit-field-label">Date/Time</span>
+                    <div className="bulk-edit-title-controls">
+                      <select
+                        value={dateTimeMode}
+                        onChange={(e) => setDateTimeMode(e.target.value)}
+                        disabled={!applyDateTime}
+                      >
+                        <option value="shift">Shift by</option>
+                        <option value="set">Set to</option>
+                      </select>
+                      {dateTimeMode === 'shift' ? (
+                        <>
+                          <input
+                            type="number"
+                            placeholder="e.g. -1"
+                            value={shiftAmount}
+                            onChange={(e) => setShiftAmount(e.target.value)}
+                            disabled={!applyDateTime}
+                          />
+                          <select
+                            value={shiftUnit}
+                            onChange={(e) => setShiftUnit(e.target.value)}
+                            disabled={!applyDateTime}
+                          >
+                            <option value="days">Days</option>
+                            <option value="hours">Hours</option>
+                            <option value="minutes">Minutes</option>
+                          </select>
+                        </>
+                      ) : (
+                        <>
+                          <input
+                            type="date"
+                            value={setToDate}
+                            onChange={(e) => setSetToDate(e.target.value)}
+                            disabled={!applyDateTime}
+                          />
+                          <select
+                            value={setToTime}
+                            onChange={(e) => setSetToTime(e.target.value)}
+                            disabled={!applyDateTime}
+                          >
+                            {TIME_OPTIONS.map((t) => (
+                              <option key={t.value} value={t.value}>
+                                {t.label}
+                              </option>
+                            ))}
+                          </select>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {applyDateTime && dateTimeMode === 'shift' && (
+                    <p className="bulk-add-hint">
+                      Moves each selected task from its own current date/time by this amount — negative moves it
+                      earlier. Dateless tasks have nothing to shift from, so they're left untouched even when
+                      selected.
+                    </p>
+                  )}
+                  {applyDateTime && dateTimeMode === 'set' && (
+                    <p className="bulk-add-hint">
+                      Every selected task — dateless ones included — gets set to this exact date and time,
+                      interpreted in the Time zone field's selection below (whether or not that field's own
+                      checkbox is on).
                     </p>
                   )}
 
