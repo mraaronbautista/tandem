@@ -1401,8 +1401,22 @@
 
 .bulk-add-preview-list li {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bulk-add-preview-row {
+  display: flex;
   gap: 8px;
   align-items: baseline;
+}
+
+.bulk-add-preview-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 80px;
+  opacity: 0.65;
 }
 
 .bulk-add-preview-date {

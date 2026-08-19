@@ -289,6 +289,10 @@ function isNoDateMarker(prefix) {
 // paste can now mix a real shift schedule with plain dated notes.
 //
 // Line shapes, tried in this order per line:
+//  0. An indented line (isIndented, checked before any of the trimming/
+//     stripping below) attaches as a checklist item on the most recently
+//     pushed task, rather than being read as a task of its own — see
+//     isIndented above.
 //  1. A standalone date/"Today"/"Tomorrow" line (parseDateHeader) sets
 //     the current date context for bare shift lines below it — the
 //     original shift-schedule format:
@@ -337,6 +341,20 @@ function isNoDateMarker(prefix) {
 //     one: a category header, e.g. "Cleaning coordination") — headers
 //     are silently skipped, not an error, since they're a normal,
 //     expected part of an outline paste rather than a typo.
+// An indented line right under an item/shift line becomes a checklist
+// entry on that task instead of a task of its own — same
+// `{ id, text, done, blocked, blockedReason }` shape ChecklistEditor.jsx
+// builds by hand, so a task created this way is editable the normal way
+// immediately after. Indentation (raw leading whitespace, checked before
+// the rest of the parser trims it away) is the only signal, tried before
+// every other line shape — a deliberate, low-effort way to say "this
+// belongs to the task above," rather than inventing a second marker
+// character on top of the bullet stripping every other line already
+// tolerates.
+function isIndented(raw) {
+  return /^[ \t]+\S/.test(raw)
+}
+
 export function parseBulkTasks(text) {
   const lines = text.split('\n')
   const tasks = []
@@ -344,6 +362,19 @@ export function parseBulkTasks(text) {
   let currentDate = null
 
   lines.forEach((raw, i) => {
+    if (isIndented(raw)) {
+      const text = stripBullet(raw.trim())
+      if (!text) return
+      const lastTask = tasks[tasks.length - 1]
+      if (!lastTask) {
+        errors.push({ line: i + 1, text: raw.trim(), message: 'Sub-item with no task above it to attach to.' })
+        return
+      }
+      if (!lastTask.checklist) lastTask.checklist = []
+      lastTask.checklist.push({ id: crypto.randomUUID(), text, done: false, blocked: false, blockedReason: '' })
+      return
+    }
+
     const line = stripBullet(raw.trim())
     if (!line) return
 

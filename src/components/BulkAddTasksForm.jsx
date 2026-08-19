@@ -30,6 +30,7 @@ const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 const WHO_DEFAULT_ZONE = { yours: 'America/Chicago', assistant: 'Asia/Manila' }
 
 const PLACEHOLDER = `Aug 28 8am-9am CT – Plumber at 1072 Rachel
+  - Confirm parts on hand
 Aug 30 – Abdul vacates Master Haven (schedule cleaning)
 Today 3pm ET – Call Ingrid about the turnover
 If Ingrid unavailable – Follow-up with Martin (backup)`
@@ -162,6 +163,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             due_date: t.due_date ? zonedTimeToUtcIso(t.due_date, t.due_time || '00:00', t.due_timezone || zone) : null,
             due_timezone: t.due_timezone || zone,
             duration_minutes: t.duration_minutes || null,
+            checklist: t.checklist || [],
             created_by: me.id,
           }),
         ),
@@ -386,7 +388,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             <p className="bulk-add-hint">
               One line per task: "&lt;date&gt; [time] [zone] – description", e.g. "Aug 28 8am-9am CT – Plumber at
               1072 Rachel" — leave the time off for an all-day task, add a zone (ET/CT/MT/PT/PHT) to override the
-              dropdown below for just that line, or start the line with "ASAP" for no date at all.
+              dropdown below for just that line, start the line with "ASAP" for no date at all, or indent a line
+              underneath to add it as a checklist item on the task above.
             </p>
 
             <label>
@@ -423,28 +426,39 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                     <ul className="bulk-add-preview-list">
                       {parsedTasks.map((t, i) => (
                         <li key={i}>
-                          <span className="bulk-add-preview-date">{formatPreviewDateOrNone(t.due_date)}</span>
-                          <span className="bulk-add-preview-title">{t.title}</span>
-                          {t.due_time && (
-                            <span className="bulk-add-preview-time">
-                              {formatPreviewTime(t.due_time, t.duration_minutes)}
-                            </span>
-                          )}
-                          {/* A line can name its own zone ("9am CT") to
-                              override the dropdown just for that task —
-                              shown per row, right next to the time it
-                              actually applies to, rather than only once
-                              near the dropdown, since a batch mixing zones
-                              is exactly the case that dropdown alone can't
-                              cover. Falls back to the dropdown's zone when
-                              the line didn't name one. */}
-                          {t.due_date && (
-                            <span
-                              className="task-zone-badge"
-                              title={`Set in ${zoneLabel(t.due_timezone || zone)}`}
-                            >
-                              {zoneAbbreviation(t.due_timezone || zone)}
-                            </span>
+                          <div className="bulk-add-preview-row">
+                            <span className="bulk-add-preview-date">{formatPreviewDateOrNone(t.due_date)}</span>
+                            <span className="bulk-add-preview-title">{t.title}</span>
+                            {t.due_time && (
+                              <span className="bulk-add-preview-time">
+                                {formatPreviewTime(t.due_time, t.duration_minutes)}
+                              </span>
+                            )}
+                            {/* A line can name its own zone ("9am CT") to
+                                override the dropdown just for that task —
+                                shown per row, right next to the time it
+                                actually applies to, rather than only once
+                                near the dropdown, since a batch mixing zones
+                                is exactly the case that dropdown alone can't
+                                cover. Falls back to the dropdown's zone when
+                                the line didn't name one. */}
+                            {t.due_date && (
+                              <span
+                                className="task-zone-badge"
+                                title={`Set in ${zoneLabel(t.due_timezone || zone)}`}
+                              >
+                                {zoneAbbreviation(t.due_timezone || zone)}
+                              </span>
+                            )}
+                          </div>
+                          {t.checklist?.length > 0 && (
+                            <div className="bulk-add-preview-checklist">
+                              {t.checklist.map((c) => (
+                                <div key={c.id} className="bulk-add-preview-checklist-item">
+                                  · {c.text}
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </li>
                       ))}
