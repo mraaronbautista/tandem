@@ -278,6 +278,23 @@ function isNoDateMarker(prefix) {
   return NO_DATE_MARKERS.has(prefix.trim().toLowerCase())
 }
 
+// An optional "!high"/"!med"/"!low" (plus a couple of natural spellings)
+// anywhere in a date/time prefix, e.g. "Aug 28 8am-9am CT !high" or
+// "ASAP !high" — the "!" sigil is distinctive enough that it can't
+// collide with any date/time/zone syntax, so unlike the zone override
+// this doesn't need to sit in any particular position. Matched and
+// stripped before the zone/time extraction below runs, on the whole
+// prefix rather than just its tail end.
+const PRIORITY_ALIAS = { high: 'high', hi: 'high', med: 'med', medium: 'med', low: 'low', lo: 'low' }
+const PRIORITY_MARKER_RE = new RegExp(`(?:^|\\s)!(${Object.keys(PRIORITY_ALIAS).join('|')})(?:\\s|$)`, 'i')
+
+function splitPriorityMarker(prefix) {
+  const m = prefix.match(PRIORITY_MARKER_RE)
+  if (!m) return { rest: prefix, priority: null }
+  const rest = prefix.slice(0, m.index) + prefix.slice(m.index + m[0].length)
+  return { rest: rest.trim(), priority: PRIORITY_ALIAS[m[1].toLowerCase()] }
+}
+
 // One parser, two line shapes it recognizes freely mixed in the same
 // paste — originally two separate parsers behind a manual "Shifts" vs
 // "Action items" format toggle, merged after that toggle turned out to
@@ -336,7 +353,12 @@ function isNoDateMarker(prefix) {
 //     meaning that has to stay attached rather than guessing at a
 //     specific day — note this reuses `line`, not the time-stripped
 //     `datePart`, so a false-positive time match from step 3's own
-//     speculative parse never leaks into an unresolved title.
+//     speculative parse never leaks into an unresolved title. A "!high"/
+//     "!med"/"!low" marker (splitPriorityMarker, tried first, anywhere in
+//     the prefix rather than pinned to the tail like the zone override)
+//     sets the task's priority — kept even on a NO_DATE_MARKERS line
+//     ("ASAP !high"), since urgency and datelessness aren't a
+//     contradiction the way a specific time would be.
 //  4. Anything else (with an active date context: unreadable; without
 //     one: a category header, e.g. "Cleaning coordination") — headers
 //     are silently skipped, not an error, since they're a normal,
@@ -396,7 +418,8 @@ export function parseBulkTasks(text) {
         errors.push({ line: i + 1, text: raw.trim(), message: 'Missing a description after the date.' })
         return
       }
-      const { rest: prefixNoZone, due_timezone } = splitTrailingZone(split.prefix)
+      const { rest: prefixNoPriority, priority } = splitPriorityMarker(split.prefix)
+      const { rest: prefixNoZone, due_timezone } = splitTrailingZone(prefixNoPriority)
       const { datePart, due_time, duration_minutes } = splitDateAndTime(prefixNoZone)
       const date = parseDateHeader(datePart)
       const resolved = date || isNoDateMarker(datePart)
@@ -414,6 +437,15 @@ export function parseBulkTasks(text) {
         // null means "use whatever zone the form's dropdown has selected"
         // — only a line that names its own zone overrides that per-task.
         due_timezone: date ? due_timezone : null,
+        // Gated on `resolved`, not `date` like time/zone above — unlike a
+        // specific time, "ASAP, and it's high priority" isn't a
+        // contradiction, so a NO_DATE_MARKERS line still gets to keep its
+        // priority even though it has no due_time/due_timezone to keep.
+        // An unresolved line (dependency note, fuzzy phrase) still drops
+        // it, same reasoning as title above: `line` stays untouched so a
+        // marker inside an ambiguous prefix can't silently vanish from
+        // what the user actually typed.
+        priority: resolved ? priority : null,
       })
       return
     }

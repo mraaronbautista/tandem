@@ -10,6 +10,7 @@ import {
   DEFAULT_TIMEZONE,
 } from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
@@ -29,7 +30,7 @@ const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 // (see zoneForWho below) — this hardcoded guess predates that setting.
 const WHO_DEFAULT_ZONE = { yours: 'America/Chicago', assistant: 'Asia/Manila' }
 
-const PLACEHOLDER = `Aug 28 8am-9am CT – Plumber at 1072 Rachel
+const PLACEHOLDER = `Aug 28 8am-9am CT !high – Plumber at 1072 Rachel
   - Confirm parts on hand
 Aug 30 – Abdul vacates Master Haven (schedule cleaning)
 Today 3pm ET – Call Ingrid about the turnover
@@ -164,6 +165,12 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             due_timezone: t.due_timezone || zone,
             duration_minutes: t.duration_minutes || null,
             checklist: t.checklist || [],
+            // null (nothing tagged in the text) has to become a real
+            // value here, not stay null — the column is NOT NULL with a
+            // DB-side default of 'med', but that default only kicks in
+            // when the key is omitted from the insert entirely, not when
+            // it's explicitly null.
+            priority: t.priority || 'med',
             created_by: me.id,
           }),
         ),
@@ -386,10 +393,11 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         {view === 'add' ? (
           <>
             <p className="bulk-add-hint">
-              One line per task: "&lt;date&gt; [time] [zone] – description", e.g. "Aug 28 8am-9am CT – Plumber at
-              1072 Rachel" — leave the time off for an all-day task, add a zone (ET/CT/MT/PT/PHT) to override the
-              dropdown below for just that line, start the line with "ASAP" for no date at all, or indent a line
-              underneath to add it as a checklist item on the task above.
+              One line per task: "&lt;date&gt; [time] [zone] [!priority] – description", e.g. "Aug 28 8am-9am CT
+              !high – Plumber at 1072 Rachel" — leave the time off for an all-day task, add a zone (ET/CT/MT/PT/PHT)
+              to override the dropdown below for just that line, tag "!high"/"!med"/"!low" to set that task's
+              priority, start the line with "ASAP" for no date at all, or indent a line underneath to add it as a
+              checklist item on the task above.
             </p>
 
             <label>
@@ -428,6 +436,17 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                         <li key={i}>
                           <div className="bulk-add-preview-row">
                             <span className="bulk-add-preview-date">{formatPreviewDateOrNone(t.due_date)}</span>
+                            {/* Only shown when a line actually tagged a
+                                priority ("!high") — everything else lands
+                                at the ordinary 'med' default silently, so
+                                a dot on every row would just be noise. */}
+                            {t.priority && (
+                              <span
+                                className="task-priority-dot"
+                                style={{ background: PRIORITY_COLOR[t.priority] }}
+                                title={PRIORITY_LABEL[t.priority]}
+                              />
+                            )}
                             <span className="bulk-add-preview-title">{t.title}</span>
                             {t.due_time && (
                               <span className="bulk-add-preview-time">
