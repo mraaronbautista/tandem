@@ -258,14 +258,6 @@ export function getWeekDays(date) {
   return getDaysStartingAt(start, 7)
 }
 
-// Every day (1st through last) in the calendar month containing `date`.
-export function getMonthDays(date) {
-  const year = date.getFullYear()
-  const month = date.getMonth()
-  const numDays = new Date(year, month + 1, 0).getDate()
-  return Array.from({ length: numDays }, (_, i) => new Date(year, month, i + 1))
-}
-
 // Shared with InboxView.jsx (which writes to it) and TaskBoard.jsx's nav
 // badge (which reads it via hasUnseenInboxItems below) — a single key so
 // both stay in sync without importing each other.

@@ -352,7 +352,6 @@
      these actually get tapped on — left alone on desktop, where the
      32px circle is mouse-driven and the extra size would just crowd the
      header row for no benefit. */
-  .push-toggle,
   .icon-button {
     width: 40px;
     height: 40px;
@@ -387,22 +386,6 @@
   opacity: 1;
 }
 
-.sign-out {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--card-bg);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-}
-
-.push-toggle,
 .icon-button {
   width: 32px;
   height: 32px;
@@ -419,11 +402,6 @@
 }
 
 .icon-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.push-toggle:disabled {
   opacity: 0.5;
   cursor: default;
 }

@@ -3,8 +3,15 @@ import Modal from './Modal'
 
 const CONFIRM_WORD = 'EXPORT'
 
+// A value starting with =/+/-/@ is interpreted as a formula by Excel/
+// Sheets on open, not literal text — on the one export in this app that's
+// explicitly every password in plaintext, that's a real (if narrow)
+// injection risk if any stored field ever starts with one of these.
+// Prefixing a leading apostrophe forces spreadsheet apps to treat the
+// cell as literal text while staying invisible in any plain-text viewer.
 function csvEscape(value) {
-  const s = String(value ?? '')
+  let s = String(value ?? '')
+  if (/^[=+\-@]/.test(s)) s = `'${s}`
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
   return s
 }

@@ -24,9 +24,22 @@ export { supabaseAdmin }
 // otherwise defined. Kept here too since an Edge Function can't import
 // from the frontend's src/.
 export async function resolveMemberIds() {
-  const { data } = await supabaseAdmin.from('members').select('id, display_name')
+  const { data, error } = await supabaseAdmin.from('members').select('id, display_name')
+  if (error) throw new Error(`resolveMemberIds: failed to load members: ${error.message}`)
   const byName = Object.fromEntries((data || []).map((m) => [m.display_name, m.id]))
-  return { yours: byName['Ada'], assistant: byName['Aaron'] }
+  const { yours, assistant } = { yours: byName['Ada'], assistant: byName['Aaron'] }
+  // A failed query and a genuinely-missing/renamed member both used to
+  // collapse into the same silent-undefined outcome — every downstream
+  // notifyMember(undefined, ...) call just no-ops with no visible error
+  // anywhere, and in manual-notify specifically it also skews
+  // callerIsAda (== caller.id === yours) to always false, misattributing
+  // who a notification is from. Throwing here instead surfaces the
+  // failure loudly (visible in the function's own logs) rather than
+  // silently dropping notifications.
+  if (!yours || !assistant) {
+    throw new Error("resolveMemberIds: couldn't find both 'Ada' and 'Aaron' in members")
+  }
+  return { yours, assistant }
 }
 
 export async function notifyMember(memberId, payload) {

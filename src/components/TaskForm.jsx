@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { WHO_LABEL } from '../lib/whoLabels'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
+import { PRIORITY_SHORT_LABEL } from '../lib/priorityColors'
 import ChecklistEditor from './ChecklistEditor'
 import ScrollSelect from './ScrollSelect'
 
@@ -270,9 +271,11 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         <label>
           Priority
           <select value={form.priority} onChange={(e) => set('priority', e.target.value)}>
-            <option value="low">Low</option>
-            <option value="med">Med</option>
-            <option value="high">High</option>
+            {Object.entries(PRIORITY_SHORT_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
 
