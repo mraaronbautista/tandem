@@ -61,10 +61,25 @@ export default function RentalFinancials({
   const confirmedBookings = bookings.filter((b) => b.status === 'confirmed')
   const pendingBookings = bookings.filter((b) => b.status === 'pending')
 
+  // Tracks bookingIds alongside the raw count, not just a running total —
+  // ×2 in one month can come from two different tenants (a checkout and
+  // the next tenant's move-in both landing in the same calendar month)
+  // or, rarely, from one tenant's own cycles (a check-in day near a
+  // month's end can roll two of the SAME booking's cycles into one
+  // calendar month — see addCalendarMonths' day-31 rollover). Those read
+  // very differently to a person scanning this list, so the Units row
+  // below only calls out "N tenants" when it's actually more than one
+  // booking, rather than always implying a double payment from the same
+  // tenant.
   const chargesByProperty = new Map()
   for (const b of confirmedBookings) {
     const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end)).length
-    if (count > 0) chargesByProperty.set(b.property_id, (chargesByProperty.get(b.property_id) || 0) + count)
+    if (count > 0) {
+      const existing = chargesByProperty.get(b.property_id) || { count: 0, bookingIds: new Set() }
+      existing.count += count
+      existing.bookingIds.add(b.id)
+      chargesByProperty.set(b.property_id, existing)
+    }
   }
 
   const confirmedOccupiedIds = new Set(confirmedBookings.map((b) => b.property_id))
@@ -79,7 +94,7 @@ export default function RentalFinancials({
   const pendingOnly = properties.filter((p) => pendingOnlyIds.has(p.id))
   const vacant = properties.filter((p) => !confirmedOccupiedIds.has(p.id) && !pendingOnlyIds.has(p.id))
 
-  const revenue = billed.reduce((sum, p) => sum + Number(p.monthly_rent) * chargesByProperty.get(p.id), 0)
+  const revenue = billed.reduce((sum, p) => sum + Number(p.monthly_rent) * chargesByProperty.get(p.id).count, 0)
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const surplus = revenue - overhead
 
@@ -193,7 +208,8 @@ export default function RentalFinancials({
 
       <h3 className="rental-financials-subheading">Units</h3>
       {billed.map((p) => {
-        const count = chargesByProperty.get(p.id)
+        const { count, bookingIds } = chargesByProperty.get(p.id)
+        const tenantCount = bookingIds.size
         return (
           <div key={p.id} className="rental-unit-status-row">
             <span>
@@ -201,7 +217,8 @@ export default function RentalFinancials({
               {p.unit_name}
             </span>
             <span className="rental-unit-badge rental-unit-badge-billed">
-              Billed{count > 1 ? ` ×${count}` : ''} — {money(Number(p.monthly_rent) * count)}
+              Billed{count > 1 ? ` ×${count}` : ''}
+              {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(Number(p.monthly_rent) * count)}
             </span>
           </div>
         )
