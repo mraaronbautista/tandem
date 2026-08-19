@@ -392,13 +392,21 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
 
         {view === 'add' ? (
           <>
-            <p className="bulk-add-hint">
-              One line per task: "&lt;date&gt; [time] [zone] [!priority] – description", e.g. "Aug 28 8am-9am CT
-              !high – Plumber at 1072 Rachel" — leave the time off for an all-day task, add a zone (ET/CT/MT/PT/PHT)
-              to override the dropdown below for just that line, tag "!high"/"!med"/"!low" to set that task's
-              priority, start the line with "ASAP" for no date at all, or indent a line underneath to add it as a
-              checklist item on the task above.
-            </p>
+            <div className="bulk-add-hint">
+              <p>
+                One line per task: <code>&lt;date&gt; [time] [zone] [!priority] – description</code>
+              </p>
+              <p className="bulk-add-hint-example">e.g. "Aug 28 8am-9am CT !high – Plumber at 1072 Rachel"</p>
+              <ul className="bulk-add-hint-list">
+                <li>No time → all-day task</li>
+                <li>Zone (ET/CT/MT/PT/PHT) → overrides the dropdown below, just for that line</li>
+                <li>
+                  <code>!high</code> / <code>!med</code> / <code>!low</code> → sets that task's priority
+                </li>
+                <li>Start the line with "ASAP" → no date at all</li>
+                <li>Indent a line underneath → adds it as a checklist item on the task above</li>
+              </ul>
+            </div>
 
             <label>
               Who

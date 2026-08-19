@@ -1348,10 +1348,41 @@
   font-size: 13px;
 }
 
+/* Was a single dense run-on paragraph packing the format template plus
+   every modifier (time/zone/priority/no-date/checklist) into one block
+   of prose — a leading line + example, then each modifier broken into
+   its own scannable bullet, reads far faster than parsing one long
+   sentence for the part that's actually relevant right now. */
 .bulk-add-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   font-size: 12px;
   opacity: 0.65;
   margin: -4px 0 0;
+}
+
+.bulk-add-hint p {
+  margin: 0;
+}
+
+.bulk-add-hint-example {
+  opacity: 0.8;
+}
+
+.bulk-add-hint code {
+  font-size: 11px;
+  background: var(--pill-bg);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.bulk-add-hint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 2px 0 0;
+  padding-left: 18px;
 }
 
 .bulk-add-preview {
