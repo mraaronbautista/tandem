@@ -1,5 +1,32 @@
+import { TIMEZONE_OPTIONS } from './timezone'
+
 const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 const WEEKDAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+// The same short abbreviations shown on every zone-aware badge elsewhere
+// in the app (zoneAbbreviation in timezone.js) — recognized as an
+// optional trailing token on an item-line's date/time prefix, e.g. "Aug
+// 21 9am CT". Lets one paste mix tasks across zones (a household split
+// between Ada's Central shifts and Aaron's Philippines schedule) without
+// having to switch the form's single Time zone dropdown and re-paste each
+// group separately.
+const ZONE_ABBR_TO_IANA = Object.fromEntries(
+  TIMEZONE_OPTIONS.map((tz) => [tz.label.match(/\(([^)]+)\)/)[1].toLowerCase(), tz.value]),
+)
+const ZONE_ABBR_RE = new RegExp(`\\s+(${Object.keys(ZONE_ABBR_TO_IANA).join('|')})$`, 'i')
+
+// Strips a trailing zone abbreviation off a date/time prefix, if present.
+// Tried on the whole prefix (before any time extraction) since the zone
+// always comes last — after the time when there is one ("9am CT"), after
+// the bare date when there isn't ("Aug 30 CT"). Word-bounded and matched
+// only against the curated abbreviation list, so it can't misfire against
+// an ordinary word (the prefix is always a date/time phrase in practice,
+// not free text).
+function splitTrailingZone(prefix) {
+  const m = prefix.match(ZONE_ABBR_RE)
+  if (!m) return { rest: prefix, due_timezone: null }
+  return { rest: prefix.slice(0, m.index), due_timezone: ZONE_ABBR_TO_IANA[m[1].toLowerCase()] }
+}
 
 // A bare 'Aug 21' with no year that's already in the past only rolls
 // forward to next year once it's more than this many days stale. Without
@@ -338,19 +365,24 @@ export function parseBulkTasks(text) {
         errors.push({ line: i + 1, text: raw.trim(), message: 'Missing a description after the date.' })
         return
       }
-      const { datePart, due_time, duration_minutes } = splitDateAndTime(split.prefix)
+      const { rest: prefixNoZone, due_timezone } = splitTrailingZone(split.prefix)
+      const { datePart, due_time, duration_minutes } = splitDateAndTime(prefixNoZone)
       const date = parseDateHeader(datePart)
       const resolved = date || isNoDateMarker(datePart)
       tasks.push({
         type: 'item',
         title: resolved ? split.description : line,
         due_date: date,
-        // Only a real resolved date carries its extracted time through —
-        // a no-date-marker ("ASAP 3pm") drops it (a marker plus a time is
-        // a contradiction, not worth guessing at), same as an unresolved
-        // line already drops everything back to the untouched original.
+        // Only a real resolved date carries its extracted time/zone
+        // through — a no-date-marker ("ASAP 3pm") drops them (a marker
+        // plus a time or zone is a contradiction, not worth guessing at),
+        // same as an unresolved line already drops everything back to the
+        // untouched original.
         due_time: date ? due_time : null,
         duration_minutes: date ? duration_minutes : null,
+        // null means "use whatever zone the form's dropdown has selected"
+        // — only a line that names its own zone overrides that per-task.
+        due_timezone: date ? due_timezone : null,
       })
       return
     }

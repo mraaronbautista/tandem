@@ -29,9 +29,9 @@ const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 // (see zoneForWho below) — this hardcoded guess predates that setting.
 const WHO_DEFAULT_ZONE = { yours: 'America/Chicago', assistant: 'Asia/Manila' }
 
-const PLACEHOLDER = `Aug 28 8am-9am – Plumber at 1072 Rachel
+const PLACEHOLDER = `Aug 28 8am-9am CT – Plumber at 1072 Rachel
 Aug 30 – Abdul vacates Master Haven (schedule cleaning)
-Today – Contact Ingrid about the turnover
+Today 3pm ET – Call Ingrid about the turnover
 If Ingrid unavailable – Follow-up with Martin (backup)`
 
 // A point-in-time item line ("next Monday 1pm – Lunch") has a due_time
@@ -159,8 +159,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             // Lunch"), not just the shift-schedule format. Falls back to
             // midnight (All Day) when there's a date but no time, or
             // null when there's no date at all (nothing recognized).
-            due_date: t.due_date ? zonedTimeToUtcIso(t.due_date, t.due_time || '00:00', zone) : null,
-            due_timezone: zone,
+            due_date: t.due_date ? zonedTimeToUtcIso(t.due_date, t.due_time || '00:00', t.due_timezone || zone) : null,
+            due_timezone: t.due_timezone || zone,
             duration_minutes: t.duration_minutes || null,
             created_by: me.id,
           }),
@@ -384,15 +384,9 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         {view === 'add' ? (
           <>
             <p className="bulk-add-hint">
-              One line per task: "&lt;date&gt; [time] – description", e.g. "Aug 30 – Renew the lease" or "Aug 28
-              8am-9am – Plumber at 1072 Rachel" (a tight "8am-9am", no spaces around the dash, for a time range —
-              leave the time off entirely for an all-day task). Besides real dates, "Today", "Tomorrow", "within N
-              days", "end of (this) week", "end of (this) month", "start of next month", and "next
-              &lt;weekday&gt;" are all recognized. For something with genuinely no date, start the line with "ASAP"
-              (or "No date"/"Whenever"/"Someday") for a clean title with no due date. A line whose date isn't
-              recognized at all (e.g. "End of month / start of next month") is kept whole as the title instead,
-              rather than guessed at — same as a plain dependency note like "If Ingrid unavailable – Follow-up
-              with Martin". Category headers with no dash are skipped automatically.
+              One line per task: "&lt;date&gt; [time] [zone] – description", e.g. "Aug 28 8am-9am CT – Plumber at
+              1072 Rachel" — leave the time off for an all-day task, add a zone (ET/CT/MT/PT/PHT) to override the
+              dropdown below for just that line, or start the line with "ASAP" for no date at all.
             </p>
 
             <label>
@@ -432,22 +426,25 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                           <span className="bulk-add-preview-date">{formatPreviewDateOrNone(t.due_date)}</span>
                           <span className="bulk-add-preview-title">{t.title}</span>
                           {t.due_time && (
-                            <>
-                              <span className="bulk-add-preview-time">
-                                {formatPreviewTime(t.due_time, t.duration_minutes)}
-                              </span>
-                              {/* Every parsed task lands in the one Time
-                                  zone selected above — shown per row
-                                  anyway (same as the Edit tab's task
-                                  picker just below) rather than only
-                                  once near the dropdown, so it reads the
-                                  same way every other zone-aware list in
-                                  the app already does: right next to the
-                                  time it actually applies to. */}
-                              <span className="task-zone-badge" title={`Set in ${zoneLabel(zone)}`}>
-                                {zoneAbbreviation(zone)}
-                              </span>
-                            </>
+                            <span className="bulk-add-preview-time">
+                              {formatPreviewTime(t.due_time, t.duration_minutes)}
+                            </span>
+                          )}
+                          {/* A line can name its own zone ("9am CT") to
+                              override the dropdown just for that task —
+                              shown per row, right next to the time it
+                              actually applies to, rather than only once
+                              near the dropdown, since a batch mixing zones
+                              is exactly the case that dropdown alone can't
+                              cover. Falls back to the dropdown's zone when
+                              the line didn't name one. */}
+                          {t.due_date && (
+                            <span
+                              className="task-zone-badge"
+                              title={`Set in ${zoneLabel(t.due_timezone || zone)}`}
+                            >
+                              {zoneAbbreviation(t.due_timezone || zone)}
+                            </span>
                           )}
                         </li>
                       ))}
