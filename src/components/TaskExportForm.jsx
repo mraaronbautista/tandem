@@ -31,6 +31,14 @@ function timeLabel(task) {
   const start = new Date(task.due_date)
   if (!task.duration_minutes) return `${fmt(start)} ${zone}`
   const end = new Date(start.getTime() + task.duration_minutes * 60000)
+  // Compared as calendar dates in due_timezone, not browser-local — same
+  // fix as TaskRow.jsx's dueLabel: a bare "9:00 AM–9:00 AM" for a task
+  // whose duration actually spans multiple days reads as same-day and
+  // hides exactly the kind of scheduling mistake this export exists to
+  // catch.
+  const startDay = splitDueDateInZone(task.due_date, tz).due_date
+  const endDay = splitDueDateInZone(end.toISOString(), tz).due_date
+  if (endDay !== startDay) return `${fmt(start)} – ${fmt(end)} ${zone}, through ${dayHeaderLabel(endDay)}`
   return `${fmt(start)}–${fmt(end)} ${zone}`
 }
 
