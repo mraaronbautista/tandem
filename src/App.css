@@ -1657,7 +1657,13 @@
   width: 64px;
 }
 
+/* Explicit width to match the hours input above — a bare <select> sizes
+   itself off native OS chrome rather than its content, which rendered
+   noticeably wider than the number input next to it despite the two
+   holding equally-short values ("0" vs. "45"), reading as a mismatched,
+   unsorted-looking row instead of a matched pair. */
 .hours-minutes-row select {
+  width: 64px;
   padding: 10px 8px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -2270,9 +2276,27 @@ a.task-submission-file-link:hover {
      width once the label text and a longer zone name (e.g. "Philippines
      (PHT)") were both in play. Scoped to desktop only, same as the two
      rules above — the mobile slide-up sheet is already full viewport
-     width, nothing to widen there. */
+     width, nothing to widen there. `max-width` has to be raised
+     alongside `width` — the shared `.submission-modal` rule above sets
+     `max-width: 560px`, which silently wins over a plain `width: 640px`
+     here and clamps it right back down to 560 (max-width always caps
+     width, regardless of rule order/specificity), so this went unnoticed
+     until it was actually measured rather than just eyeballed. */
   .modal-backdrop .submission-modal.settings-modal {
     width: 640px;
+    max-width: 640px;
+  }
+
+  /* Wider than the shared 560px cap — a report's draft body is often a
+     multi-line completed-tasks list (see buildDraft in
+     EndOfDayReportForm.jsx), and at 560px nearly every line wrapped
+     inside the textarea despite having plenty of unused width in the
+     modal itself. Scoped to desktop only, same reasoning as the two
+     rules above — see the max-width note on .settings-modal just above,
+     same fix needed here. */
+  .modal-backdrop .submission-modal.eod-report-modal {
+    width: 640px;
+    max-width: 640px;
   }
 }
 

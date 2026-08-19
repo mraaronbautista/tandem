@@ -140,7 +140,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <form className="submission-modal eod-report-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{period[0].toUpperCase() + period.slice(1)} report</h2>
 
         <div className="period-tabs">
