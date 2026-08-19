@@ -29,24 +29,25 @@ const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 // (see zoneForWho below) — this hardcoded guess predates that setting.
 const WHO_DEFAULT_ZONE = { yours: 'America/Chicago', assistant: 'Asia/Manila' }
 
-const PLACEHOLDER = `Aug 21
-Texas 12a-4a
-Washington 2a-5a
-
+const PLACEHOLDER = `Aug 28 8am-9am – Plumber at 1072 Rachel
 Aug 30 – Abdul vacates Master Haven (schedule cleaning)
 Today – Contact Ingrid about the turnover
 If Ingrid unavailable – Follow-up with Martin (backup)`
 
-// parseShiftLine's own midnight-wraparound (endMin += 24*60 when the end
-// clock-time is <= the start) caps a single shift under 24h, so this
-// never needs more than "(+1 day)" — same reasoning as TaskForm.jsx's
-// end-time picker labeling a span that crosses midnight, just bounded
-// here by the line format itself rather than a picker's own range.
+// A point-in-time item line ("next Monday 1pm – Lunch") has a due_time
+// but no duration — just the bare time, same as a plain point-in-time
+// task shows everywhere else in the app. parseShiftLine's own midnight-
+// wraparound (endMin += 24*60 when the end clock-time is <= the start)
+// caps a real range under 24h, so that case never needs more than
+// "(+1 day)" — same reasoning as TaskForm.jsx's end-time picker labeling
+// a span that crosses midnight, just bounded here by the line format
+// itself rather than a picker's own range.
 function formatPreviewTime(dueTime, durationMinutes) {
   const [h, m] = dueTime.split(':').map(Number)
   const start = new Date(2000, 0, 1, h, m)
-  const end = new Date(start.getTime() + durationMinutes * 60000)
   const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  if (!durationMinutes) return fmt(start)
+  const end = new Date(start.getTime() + durationMinutes * 60000)
   const crossesDay = end.getDate() !== start.getDate()
   return `${fmt(start)} – ${fmt(end)}${crossesDay ? ' (+1 day)' : ''}`
 }
@@ -153,17 +154,14 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
           createTask({
             title: t.title,
             who,
-            // 'shift' has a real time; 'item' is always All Day — either
-            // pinned to a specific date (due_time 00:00, no duration) or
-            // fully dateless (due_date null) when no date was recognized.
-            due_date:
-              t.type === 'shift'
-                ? zonedTimeToUtcIso(t.due_date, t.due_time, zone)
-                : t.due_date
-                  ? zonedTimeToUtcIso(t.due_date, '00:00', zone)
-                  : null,
+            // due_time carries a real time regardless of type now — an
+            // item line can bring its own (e.g. "next Monday 1pm –
+            // Lunch"), not just the shift-schedule format. Falls back to
+            // midnight (All Day) when there's a date but no time, or
+            // null when there's no date at all (nothing recognized).
+            due_date: t.due_date ? zonedTimeToUtcIso(t.due_date, t.due_time || '00:00', zone) : null,
             due_timezone: zone,
-            duration_minutes: t.type === 'shift' ? t.duration_minutes : null,
+            duration_minutes: t.duration_minutes || null,
             created_by: me.id,
           }),
         ),
@@ -386,14 +384,15 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         {view === 'add' ? (
           <>
             <p className="bulk-add-hint">
-              Either a date on its own line followed by one shift per line below it ("Title start-end", e.g. "Texas
-              12a-4a"), or a "&lt;date or note&gt; – description" line with no time of day (e.g. "Aug 30 – Renew the
-              lease") — mix both freely. Category headers with no dash are skipped automatically. Besides real
-              dates, "Today", "Tomorrow", "within N days", "end of (this) week", "end of (this) month", "start
-              of next month", and "next &lt;weekday&gt;" are all recognized too. For something with genuinely no date, start the line with
-              "ASAP" (or "No date"/"Whenever"/"Someday") to get a clean title with no due date — a line whose date
-              still isn't recognized at all (e.g. "End of month / start of next month") is instead kept whole as
-              the title, rather than guessed at.
+              One line per task: "&lt;date&gt; [time] – description", e.g. "Aug 30 – Renew the lease" or "Aug 28
+              8am-9am – Plumber at 1072 Rachel" (a tight "8am-9am", no spaces around the dash, for a time range —
+              leave the time off entirely for an all-day task). Besides real dates, "Today", "Tomorrow", "within N
+              days", "end of (this) week", "end of (this) month", "start of next month", and "next
+              &lt;weekday&gt;" are all recognized. For something with genuinely no date, start the line with "ASAP"
+              (or "No date"/"Whenever"/"Someday") for a clean title with no due date. A line whose date isn't
+              recognized at all (e.g. "End of month / start of next month") is kept whole as the title instead,
+              rather than guessed at — same as a plain dependency note like "If Ingrid unavailable – Follow-up
+              with Martin". Category headers with no dash are skipped automatically.
             </p>
 
             <label>
@@ -430,11 +429,9 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                     <ul className="bulk-add-preview-list">
                       {parsedTasks.map((t, i) => (
                         <li key={i}>
-                          <span className="bulk-add-preview-date">
-                            {t.type === 'shift' ? formatPreviewDate(t.due_date) : formatPreviewDateOrNone(t.due_date)}
-                          </span>
+                          <span className="bulk-add-preview-date">{formatPreviewDateOrNone(t.due_date)}</span>
                           <span className="bulk-add-preview-title">{t.title}</span>
-                          {t.type === 'shift' && (
+                          {t.due_time && (
                             <span className="bulk-add-preview-time">
                               {formatPreviewTime(t.due_time, t.duration_minutes)}
                             </span>

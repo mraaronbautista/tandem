@@ -126,6 +126,39 @@ function toMinutes(numPart, ampm) {
   return h * 60 + m
 }
 
+// Peels an optional trailing time (or tight-hyphen time range) off a
+// date-phrase prefix — "Aug 28 8am-9am" -> date part "Aug 28" + a real
+// due_time/duration, same relaxed am/pm parsing (optional "at", "am"/
+// "pm"/"a.m." forms, midnight-wraparound) the title-first shift format
+// already uses. Tight hyphen only ("8am-9am", not "8am - 9am") — a
+// spaced one would collide with splitDateDescription's own "first
+// spaced dash" split, which has already run by the time this sees the
+// prefix, so a spaced range would get sliced apart before ever reaching
+// here. Tried speculatively on every prefix regardless of whether the
+// remaining date part ends up resolving — an unresolved prefix (a
+// dependency note, a category header) falls back to the *original,
+// untouched* line either way (see the item-line branch below), so a
+// false-positive time match here never actually corrupts anything.
+function splitDateAndTime(prefix) {
+  const m = prefix.match(
+    /^(.*?)\s+(?:at\s+)?(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?(?:\s*(?:-|–|—|to|until)\s*(\d{1,2}(?::\d{2})?)\s*([ap])\.?m?\.?)?$/i,
+  )
+  if (!m) return { datePart: prefix, due_time: null, duration_minutes: null }
+  const [, datePart, startNum, startAmPm, endNum, endAmPm] = m
+  const startMin = toMinutes(startNum, startAmPm)
+  let duration_minutes = null
+  if (endNum) {
+    let endMin = toMinutes(endNum, endAmPm)
+    if (endMin <= startMin) endMin += 24 * 60 // crosses midnight, e.g. 10p-2a
+    duration_minutes = endMin - startMin
+  }
+  return {
+    datePart,
+    due_time: `${pad(Math.floor(startMin / 60) % 24)}:${pad(startMin % 60)}`,
+    duration_minutes,
+  }
+}
+
 // A shift line: title, then a trailing time range. Whatever's before the
 // range — "Texas", "Washington 2a-5a" minus its own range — becomes the
 // task title verbatim. Deliberately forgiving on the range itself: "am"/
@@ -247,23 +280,32 @@ function isNoDateMarker(prefix) {
 //     once a date context exists from #1 above; with no date context yet
 //     it's treated the same as any other unanchored line — silently
 //     skipped, since it could just as easily be a header.
-//  3. A "<date or note> – description" line (splitDateDescription) is a
-//     self-contained item, independent of any date context above it:
+//  3. A "<date or note> [time-or-range] – description" line
+//     (splitDateDescription, then splitDateAndTime on its prefix) is a
+//     self-contained item, independent of any date context above it —
+//     this is the one format meant to cover everything, timed or not:
 //       Aug 30 – Abdul vacates Master Haven (schedule cleaning)
+//       Aug 28 8am-9am – Depart DFW to CVG
 //       If Ingrid unavailable – Follow-up with Martin (backup)
 //       ASAP – Draft the lease-payment explanation
-//     Returned with type: 'item' (all-day; no time-of-day at all) rather
-//     than type: 'shift'. A recognized date on the left becomes the real
-//     due_date with the right side alone as the title. An explicit
-//     NO_DATE_MARKERS prefix ("ASAP", "No date", ...) also uses just the
-//     right side as the title, but with due_date left null on purpose —
-//     it said its piece by picking a "no date" line shape at all, so
-//     it'd be pure noise left sitting in the title afterward. Anything
-//     else unresolvable (a fuzzy relative phrase, or a plain dependency
-//     note with no date shape at all) keeps the *entire* line as the
+//     A recognized date on the left becomes the real due_date with the
+//     right side alone as the title; a time/range immediately before the
+//     dash (tight hyphen only, see splitDateAndTime) becomes a real
+//     due_time/duration_minutes right on this same type: 'item' task,
+//     no need to switch to the #1/#2 shift-schedule shape just to get a
+//     specific time. An explicit NO_DATE_MARKERS prefix ("ASAP", "No
+//     date", ...) also uses just the right side as the title, with
+//     due_date left null on purpose (it said its piece by picking a "no
+//     date" line shape at all) and any time that happened to match
+//     dropped too — a marker plus a time is a contradiction, not
+//     something worth guessing an interpretation for. Anything else
+//     unresolvable (a fuzzy relative phrase, or a plain dependency note
+//     with no date shape at all) keeps the *entire original line* as the
 //     title with no due date instead, since here the prefix carries real
 //     meaning that has to stay attached rather than guessing at a
-//     specific day.
+//     specific day — note this reuses `line`, not the time-stripped
+//     `datePart`, so a false-positive time match from step 3's own
+//     speculative parse never leaks into an unresolved title.
 //  4. Anything else (with an active date context: unreadable; without
 //     one: a category header, e.g. "Cleaning coordination") — headers
 //     are silently skipped, not an error, since they're a normal,
@@ -296,9 +338,20 @@ export function parseBulkTasks(text) {
         errors.push({ line: i + 1, text: raw.trim(), message: 'Missing a description after the date.' })
         return
       }
-      const date = parseDateHeader(split.prefix)
-      const title = (date || isNoDateMarker(split.prefix)) ? split.description : line
-      tasks.push({ type: 'item', title, due_date: date })
+      const { datePart, due_time, duration_minutes } = splitDateAndTime(split.prefix)
+      const date = parseDateHeader(datePart)
+      const resolved = date || isNoDateMarker(datePart)
+      tasks.push({
+        type: 'item',
+        title: resolved ? split.description : line,
+        due_date: date,
+        // Only a real resolved date carries its extracted time through —
+        // a no-date-marker ("ASAP 3pm") drops it (a marker plus a time is
+        // a contradiction, not worth guessing at), same as an unresolved
+        // line already drops everything back to the untouched original.
+        due_time: date ? due_time : null,
+        duration_minutes: date ? duration_minutes : null,
+      })
       return
     }
 
