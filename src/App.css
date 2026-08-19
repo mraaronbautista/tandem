@@ -1385,11 +1385,17 @@
   padding-left: 18px;
 }
 
+/* A fixed height (not max-height) so this box is always the same,
+   readable size — whether it holds one line or twenty, an empty-state
+   message, or an error list — instead of shrinking down to whatever a
+   short result happens to need and reading as broken/near-invisible.
+   flex: none stops the parent form's flex column from squeezing it. */
 .bulk-add-preview {
   display: flex;
   flex-direction: column;
+  flex: none;
   gap: 6px;
-  max-height: 220px;
+  height: 200px;
   overflow-y: auto;
   padding: 8px 10px;
   border: 1px solid var(--border);

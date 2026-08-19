@@ -507,6 +507,22 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                     </ul>
                   </>
                 )}
+
+                {/* A line with no recognized date/time shape and no dash
+                    separator (e.g. missing the " – " before the
+                    description entirely) parses as neither a task nor an
+                    error — it's read the same as a plain category header
+                    and silently skipped, which is correct for an actual
+                    header but reads as "nothing happened, no explanation"
+                    when it wasn't meant to be one. This is the one case
+                    with literally nothing else in the box to explain why
+                    the paste produced 0 tasks. */}
+                {parsedTasks.length === 0 && errors.length === 0 && (
+                  <p className="task-notes-empty">
+                    Nothing recognized in this paste — check that each task line has a " – " before its
+                    description, e.g. "Sep 4 8pm-8am – Vital Care".
+                  </p>
+                )}
               </div>
             )}
 
