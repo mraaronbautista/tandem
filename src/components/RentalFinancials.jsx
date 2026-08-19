@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { chargeDatesForBooking, monthRangeStrings, todayDateStr, BOOKING_SOURCE_LABEL } from '../lib/rentals'
+import { chargeDatesForBooking, monthRangeStrings, todayDateStr, formatDateStr, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
 
@@ -80,6 +80,24 @@ export default function RentalFinancials({
       existing.bookingIds.add(b.id)
       chargesByProperty.set(b.property_id, existing)
     }
+  }
+
+  // For a unit that's occupied but hasn't hit a billable charge date yet
+  // this month (occupiedNoCharge below) — the soonest upcoming one, so
+  // "no charge yet" can say when the money's actually coming instead of
+  // leaving it a bare status. Covers both a current tenant's own next
+  // cycle and an already-booked replacement tenant's move-in charge
+  // (the back-to-back-turnover case) the same way — whichever charge
+  // date lands first this month is what's shown, regardless of which
+  // booking it belongs to. chargeDatesForBooking returns dates in
+  // chronological order already, so the first one left after filtering
+  // is the soonest.
+  const upcomingChargeByProperty = new Map()
+  for (const b of confirmedBookings) {
+    const soonest = chargeDatesForBooking(b).find((d) => d >= start && d < end && d > todayDateStr())
+    if (!soonest) continue
+    const existing = upcomingChargeByProperty.get(b.property_id)
+    if (!existing || soonest < existing) upcomingChargeByProperty.set(b.property_id, soonest)
   }
 
   const confirmedOccupiedIds = new Set(confirmedBookings.map((b) => b.property_id))
@@ -223,15 +241,22 @@ export default function RentalFinancials({
           </div>
         )
       })}
-      {occupiedNoCharge.map((p) => (
-        <div key={p.id} className="rental-unit-status-row">
-          <span>
-            <span className="rental-unit-dot" style={{ background: p.color }} />
-            {p.unit_name}
-          </span>
-          <span className="rental-unit-badge rental-unit-badge-nocharge">Occupied, no charge this month</span>
-        </div>
-      ))}
+      {occupiedNoCharge.map((p) => {
+        const nextCharge = upcomingChargeByProperty.get(p.id)
+        return (
+          <div key={p.id} className="rental-unit-status-row">
+            <span>
+              <span className="rental-unit-dot" style={{ background: p.color }} />
+              {p.unit_name}
+            </span>
+            <span className="rental-unit-badge rental-unit-badge-nocharge">
+              {nextCharge
+                ? `Occupied, no charge yet — ${money(p.monthly_rent)} due ${formatDateStr(nextCharge)}`
+                : 'Occupied, no charge this month'}
+            </span>
+          </div>
+        )
+      })}
       {pendingOnly.map((p) => (
         <div key={p.id} className="rental-unit-status-row">
           <span>
