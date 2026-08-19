@@ -1225,6 +1225,17 @@
   font-size: 19px;
 }
 
+/* BulkAddTasksForm.jsx's title + "Export tasks" link share this modal's
+   header row — .submission-modal's own flex column already spaces this
+   row from the tabs below it, so only the row's own internal layout
+   needs setting here. */
+.bulk-add-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .submission-field {
   display: flex;
   flex-direction: column;
@@ -1312,6 +1323,31 @@
   min-height: 120px;
   max-height: 240px;
   resize: vertical;
+}
+
+/* Read-only output, not something typed into — sized taller than
+   .bulk-add-modal's own input textarea (280px/480px vs. 120px/240px)
+   since this is the modal's one and only field, meant to be scanned as
+   a whole list rather than glanced at alongside several other fields. */
+.task-export-textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  min-height: 280px;
+  max-height: 480px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  width: 100%;
+}
+
+.task-export-include-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
 }
 
 .bulk-add-hint {

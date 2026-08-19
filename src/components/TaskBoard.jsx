@@ -34,6 +34,7 @@ import EndOfDayReportForm from './EndOfDayReportForm'
 import EodReportsList from './EodReportsList'
 import PrioritiesForm from './PrioritiesForm'
 import BulkAddTasksForm from './BulkAddTasksForm'
+import TaskExportForm from './TaskExportForm'
 import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
@@ -115,6 +116,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [reportOpen, setReportOpen] = useState(false)
   const [prioritiesOpen, setPrioritiesOpen] = useState(false)
   const [bulkAddOpen, setBulkAddOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
@@ -399,6 +401,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const quickActions = [
     { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
     { key: 'bulkAdd', icon: '📋', label: 'Bulk add / edit tasks', onSelect: () => setBulkAddOpen(true) },
+    { key: 'export', icon: '📤', label: 'Export tasks', onSelect: () => setExportOpen(true) },
     { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
@@ -650,6 +653,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
       )}
 
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
+
+      {exportOpen && <TaskExportForm tasks={tasks} onClose={() => setExportOpen(false)} />}
 
       {settingsOpen && (
         <SettingsMenu

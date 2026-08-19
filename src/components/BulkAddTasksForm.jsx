@@ -11,6 +11,7 @@ import {
 } from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import Modal from './Modal'
+import TaskExportForm from './TaskExportForm'
 
 // A bulk paste is often one person entering the OTHER person's schedule
 // (e.g. Aaron, in the Philippines, pasting in Ada's US shift times) —
@@ -104,6 +105,12 @@ function formatTaskDue(task) {
 // operations" opened from the same quick action.
 export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClose, onCreated }) {
   const [view, setView] = useState('add')
+  // Stacked on top via Modal's own portal (same as ScrollSelect nested
+  // inside a task form, or HowToGuide inside SettingsMenu) rather than a
+  // third Add/Edit/Export tab here — reviewing whether a batch actually
+  // landed right is a genuinely separate task from adding or editing one,
+  // and doesn't need to share this form's own Cancel/Create/Apply footer.
+  const [exportOpen, setExportOpen] = useState(false)
 
   const [text, setText] = useState('')
   const [who, setWho] = useState(defaultWho || 'yours')
@@ -317,7 +324,12 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         onClick={(e) => e.stopPropagation()}
         onSubmit={view === 'add' ? handleSubmit : handleApply}
       >
-        <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
+        <div className="bulk-add-header-row">
+          <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
+          <button type="button" className="inbox-mark-read" onClick={() => setExportOpen(true)}>
+            Export tasks
+          </button>
+        </div>
 
         <div className="period-tabs">
           <button
@@ -613,6 +625,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
           )}
         </div>
       </form>
+
+      {exportOpen && <TaskExportForm tasks={tasks} onClose={() => setExportOpen(false)} />}
     </Modal>
   )
 }
