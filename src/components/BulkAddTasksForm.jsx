@@ -432,9 +432,22 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                           <span className="bulk-add-preview-date">{formatPreviewDateOrNone(t.due_date)}</span>
                           <span className="bulk-add-preview-title">{t.title}</span>
                           {t.due_time && (
-                            <span className="bulk-add-preview-time">
-                              {formatPreviewTime(t.due_time, t.duration_minutes)}
-                            </span>
+                            <>
+                              <span className="bulk-add-preview-time">
+                                {formatPreviewTime(t.due_time, t.duration_minutes)}
+                              </span>
+                              {/* Every parsed task lands in the one Time
+                                  zone selected above — shown per row
+                                  anyway (same as the Edit tab's task
+                                  picker just below) rather than only
+                                  once near the dropdown, so it reads the
+                                  same way every other zone-aware list in
+                                  the app already does: right next to the
+                                  time it actually applies to. */}
+                              <span className="task-zone-badge" title={`Set in ${zoneLabel(zone)}`}>
+                                {zoneAbbreviation(zone)}
+                              </span>
+                            </>
                           )}
                         </li>
                       ))}
