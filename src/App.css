@@ -2982,11 +2982,23 @@ label.new-task-checkbox-label {
   cursor: pointer;
 }
 
+/* flex-start, not center — center against the row's full cross-axis
+   height put the dot and price at the vertical midpoint of a unit name
+   long enough to wrap onto 2 lines, instead of anchored to the first
+   line the way a single-line name already reads. The dot gets a small
+   downward nudge of its own (see .rental-overview-top .rental-unit-dot
+   below) since flex-start alone pins it flush to the text's own top
+   edge, sitting visibly higher than optically centered against the
+   first line's cap-height. */
 .rental-overview-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   width: 100%;
+}
+
+.rental-overview-top .rental-unit-dot {
+  margin-top: 5px;
 }
 
 /* Only present on mobile's standalone Overview tab, where each unit row

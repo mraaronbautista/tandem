@@ -51,7 +51,8 @@ export default function RentalOverview({ properties, bookings, selectedUnitId, o
               </span>
             ) : status.next ? (
               <span className="rental-overview-status">
-                Vacant — next {status.next.pending ? 'request' : 'guest'} {formatDateStr(status.next.checkIn)}
+                Vacant — next {status.next.pending ? 'request' : 'guest'} {formatDateStr(status.next.checkIn)} —{' '}
+                {status.next.guest}
               </span>
             ) : (
               <span className="rental-overview-status rental-overview-status-vacant">Vacant</span>
