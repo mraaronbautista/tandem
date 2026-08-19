@@ -10,7 +10,15 @@ const PERIODS = [
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
+  { value: 'biweekly', label: '2 Weeks' },
 ]
+
+// A noun to slot into "this ___" prose — day/week/month already read
+// fine as-is ("this week"), but "this biweekly" doesn't, since biweekly
+// is an adjective, not a noun. Only needed here; "biweekly report" (the
+// H2 title, the sent-notification text) already reads fine using the
+// raw period value directly, same as day/week/month do.
+const PERIOD_NOUN = { day: 'day', week: 'week', month: 'month', biweekly: 'pay period' }
 
 const MINUTE_OPTIONS = ['00', '15', '30', '45']
 
@@ -35,9 +43,9 @@ function collectAttachments(completedTasks) {
 
 function buildDraft(completedTasks, period, isAppend) {
   if (!completedTasks.length) {
-    return isAppend ? 'Nothing new completed since your last update.' : `Nothing completed this ${period}.`
+    return isAppend ? 'Nothing new completed since your last update.' : `Nothing completed this ${PERIOD_NOUN[period]}.`
   }
-  const heading = isAppend ? 'Completed since your last update' : `Completed this ${period}`
+  const heading = isAppend ? 'Completed since your last update' : `Completed this ${PERIOD_NOUN[period]}`
   const lines = completedTasks.map((t) => {
     const count = t.completion_attachments?.length || 0
     const suffix = count > 0 ? ` (📎 ${count} file${count > 1 ? 's' : ''})` : ''
@@ -152,7 +160,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
 
         {!loading && existingReport && (
           <div className="submission-field">
-            <span className="submission-field-label">Already logged this {period}</span>
+            <span className="submission-field-label">Already logged this {PERIOD_NOUN[period]}</span>
             <p className="task-submission-note-text eod-report-existing">{existingReport.body}</p>
             <AttachmentList
               attachments={existingReport.attachments?.map((a) => ({ url: a.url, name: `${a.taskTitle}: ${a.name}` }))}
@@ -161,7 +169,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
         )}
 
         <label className="submission-field">
-          Total time worked this {period}
+          Total time worked this {PERIOD_NOUN[period]}
           <div className="hours-minutes-row">
             <input
               type="number"

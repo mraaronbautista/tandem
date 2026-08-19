@@ -257,16 +257,20 @@ create policy "members can update own working status"
   using (id = auth.uid())
   with check (id = auth.uid());
 
--- End-of-day/week/month reports: manually submitted, auto-tallied from
--- that period's completed tasks but editable before sending. Persisted
--- (not just a fire-and-forget push) since push delivery is best-effort —
--- losing the report entirely if the notification doesn't land defeats
--- the point, especially once it's tracking logged minutes. One row per
--- (submitted_by, period, report_date) — a work day rarely happens in one
--- sitting, so later submissions the same day append to the existing
--- row's body (see upsert_eod_report below) rather than creating a new,
--- disconnected row per session.
-create type report_period as enum ('day', 'week', 'month');
+-- End-of-day/week/month/biweekly reports: manually submitted, auto-
+-- tallied from that period's completed tasks but editable before
+-- sending. Persisted (not just a fire-and-forget push) since push
+-- delivery is best-effort — losing the report entirely if the
+-- notification doesn't land defeats the point, especially once it's
+-- tracking logged minutes. One row per (submitted_by, period,
+-- report_date) — a work day rarely happens in one sitting, so later
+-- submissions the same day append to the existing row's body (see
+-- upsert_eod_report below) rather than creating a new, disconnected row
+-- per session. 'biweekly' matches the household's actual payroll cutoff
+-- (a fixed 14-day cycle anchored to a known pay-period start, not just
+-- "the last 14 days" — see BIWEEKLY_ANCHOR in src/lib/tasks.js), added
+-- for accounting all tasks completed within one payroll period at once.
+create type report_period as enum ('day', 'week', 'month', 'biweekly');
 
 create table eod_reports (
   id uuid primary key default gen_random_uuid(),

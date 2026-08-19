@@ -82,7 +82,7 @@ Notification rules (see `notify-task-events/index.ts`), not a general preference
 
 iOS specifics: web push only works from an installed Home Screen PWA (`manifest.json` + `apple-touch-icon`), iOS 16.4+ — a regular Safari tab can't receive push at all, and this is a hard platform limit, not something fixable in code.
 
-## End-of-day / week / month reports
+## End-of-day / week / month / biweekly reports
 
 `eod_reports`: one row per `(submitted_by, period, report_date)` — **not** one row per submission. `report_date` is always computed client-side in the submitter's own local timezone (`reportDateForPeriod()` in `src/lib/tasks.js`) and passed explicitly; the column has no database-side default, deliberately, since a UTC-based default would silently bucket under the wrong calendar day for a meaningful part of every day for Aaron.
 
@@ -91,6 +91,8 @@ A later submission within the same bucket doesn't insert a new row — it upsert
 - `minutes_logged` **overwrites**, never summed — this mirrors an external time tracker's running total, which the submitter corrects to match, not something this app tallies from sessions itself. Leaving it blank on a given submission keeps whatever total was last set.
 
 `EndOfDayReportForm.jsx` fetches the caller's own existing row for the selected bucket on open (`fetchOwnEodReport`) and, if one exists, shows it read-only above a fresh "add to this" textarea, seeding the auto-tally via `getCompletedSince(tasks, whoKey, existing.updated_at)` — only completions *since the last submission*, not the whole period again, so a second session's draft doesn't duplicate what an earlier session already reported. The push notification still fires on every submission, not just the first one for a bucket — the point is Ada seeing progress after each session.
+
+`biweekly` (the 4th `report_period` enum value, alongside day/week/month) exists specifically to account for everything completed within one payroll cutoff at once, rather than piecing it together from several week reports. Unlike week/month's boundaries (always "the current calendar week/month, whatever that happens to be"), a payroll period is a *fixed* 14-day cycle that doesn't reset with the calendar — so `startOfPeriod()` in `src/lib/tasks.js` anchors it to `BIWEEKLY_ANCHOR` (2026-07-26, a real confirmed cutoff: paid Aug 12 for Jul 26 - Aug 8, paid Aug 26 for Aug 9-22) and counts whole 14-day blocks elapsed since then, so every later cutoff stays aligned to it too, however far past the anchor "now" gets — same "always compute from the one fixed origin point, never the previous cycle" reasoning as `rentals.js`'s `addCalendarMonths`. `'biweekly'` reads fine as a bare adjective everywhere else it's used (the H2 title, the sent-notification text, EodReportsList.jsx's tab/meta labels — "Biweekly report", "— biweekly —"), but not in the few spots that slot the period into "this ___" prose ("this week" reads fine, "this biweekly" doesn't) — those go through a small `PERIOD_NOUN` map (`'pay period'`) in `EndOfDayReportForm.jsx` instead.
 
 ## Priorities
 

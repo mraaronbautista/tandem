@@ -30,6 +30,7 @@ const PERIOD_TABS = [
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
+  { value: 'biweekly', label: '2 Weeks' },
 ]
 
 // Grouped by calendar month (of report_date, the stable bucket identity —

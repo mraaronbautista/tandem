@@ -149,13 +149,34 @@ export function getOverdueTasks(tasks) {
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
-// Start of the current day/week/month, in the viewer's own local
-// timezone. Week starts Sunday, matching DateStrip's weekday order.
+// A known start-of-period date for the household's actual biweekly
+// payroll cycle (confirmed against a real cutoff: paid Aug 12 for
+// Jul 26-Aug 8, paid Aug 26 for Aug 9-22) — a Sunday, same as every
+// other 14-day boundary counted from it. Fixed-anchor rather than
+// "whichever Sunday starts the current week, doubled": without a single
+// shared reference point, there's no way to tell which of the two
+// candidate Sundays a 14-day cycle should start on, and picking wrong
+// would silently misalign every later cutoff too.
+const BIWEEKLY_ANCHOR = new Date(2026, 6, 26)
+
+// Start of the current day/week/month/biweekly period, in the viewer's
+// own local timezone. Week starts Sunday, matching DateStrip's weekday
+// order. Biweekly counts whole 14-day blocks elapsed since
+// BIWEEKLY_ANCHOR, so every cycle stays aligned to that one fixed
+// reference no matter how far past it "now" is — same reasoning as
+// rentals.js's addCalendarMonths always computing from a booking's
+// original check-in rather than the previous cycle.
 function startOfPeriod(period) {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
   if (period === 'week') d.setDate(d.getDate() - d.getDay())
   if (period === 'month') d.setDate(1)
+  if (period === 'biweekly') {
+    const daysSinceAnchor = Math.floor((d.getTime() - BIWEEKLY_ANCHOR.getTime()) / 86400000)
+    const cyclesElapsed = Math.floor(daysSinceAnchor / 14)
+    d.setTime(BIWEEKLY_ANCHOR.getTime())
+    d.setDate(d.getDate() + cyclesElapsed * 14)
+  }
   return d
 }
 
