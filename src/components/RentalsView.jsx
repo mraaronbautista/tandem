@@ -22,15 +22,21 @@ const COMPANY = 'awa'
 // TaskBoard.jsx's shared header now, not here — see PAGE_LABELS.
 //
 // Two genuinely different layouts, not one repositioned via CSS: mobile
-// keeps the original Calendar/Financials/Overview tabs (one panel at a
-// time), desktop is an always-mounted 2-column dashboard (calendar +
-// unit list stacked in the main column, financials in its own column,
-// all visible together, no tabs) — see useMediaQuery.js for why that
-// split happens in JS here instead of CSS like everywhere else in the
-// app.
+// stacks Overview, Calendar, and Financials into one scrollable column
+// (no tabs — Overview also doubles as the only unit-switcher, so Calendar
+// renders with showUnitTabs/showUnitHeader off rather than duplicating
+// it), desktop is an always-mounted 2-column dashboard (calendar + unit
+// list stacked in the main column, financials in its own column, all
+// visible together) — see useMediaQuery.js for why that split happens in
+// JS here instead of CSS like everywhere else in the app. Desktop still
+// dedupes Calendar's unit-switcher differently (unitTabsReplacement,
+// rendering Overview inside Calendar's own toolbar) rather than reusing
+// mobile's side-by-side-sections approach — that toolbar-scoped CSS
+// (.rental-calendar-toolbar .rental-overview-list) is tuned for a wide
+// row, not a narrow column, so the two layouts solve the same redundancy
+// in different ways on purpose.
 export default function RentalsView({ me }) {
   const isDesktop = useMediaQuery('(min-width: 900px)')
-  const [view, setView] = useState('calendar')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
     d.setDate(1)
@@ -281,93 +287,76 @@ export default function RentalsView({ me }) {
 
   return (
     <div className="tab-panel">
-      <div className="period-tabs">
+      <h3 className="task-section-heading">Overview</h3>
+      <RentalOverview
+        properties={properties}
+        bookings={upcomingBookings}
+        selectedUnitId={selectedUnitId}
+        onSelectUnit={setSelectedUnitId}
+        onEditUnit={openEditProperty}
+      />
+      <button type="button" className="rental-add-booking" onClick={openNewProperty}>
+        + Add unit
+      </button>
+
+      <div className="month-nav-row">
         <button
           type="button"
-          className={`period-tab${view === 'calendar' ? ' period-tab-active' : ''}`}
-          onClick={() => setView('calendar')}
+          className="icon-button"
+          onClick={() => shiftMonth(-1)}
+          title="Previous month"
+          aria-label="Previous month"
         >
-          Calendar
+          ‹
         </button>
+        <span className="month-nav-label">{monthLabel}</span>
         <button
           type="button"
-          className={`period-tab${view === 'financials' ? ' period-tab-active' : ''}`}
-          onClick={() => setView('financials')}
+          className="icon-button"
+          onClick={() => shiftMonth(1)}
+          title="Next month"
+          aria-label="Next month"
         >
-          Financials
-        </button>
-        <button
-          type="button"
-          className={`period-tab${view === 'overview' ? ' period-tab-active' : ''}`}
-          onClick={() => setView('overview')}
-        >
-          Overview
+          ›
         </button>
       </div>
 
-      {view !== 'overview' && (
-        <div className="month-nav-row">
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => shiftMonth(-1)}
-            title="Previous month"
-            aria-label="Previous month"
-          >
-            ‹
-          </button>
-          <span className="month-nav-label">{monthLabel}</span>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => shiftMonth(1)}
-            title="Next month"
-            aria-label="Next month"
-          >
-            ›
-          </button>
-        </div>
-      )}
+      {/* Overview's cards above are the only unit-switcher here — no
+          .rental-unit-tabs strip and no bold $/mo header, both redundant
+          once Overview is always visible and already showing per-unit
+          price. Deliberately not the same unitTabsReplacement trick the
+          desktop dashboard uses for this: that renders Overview *inside*
+          Calendar's own toolbar, and the CSS that makes it fit there
+          (.rental-calendar-toolbar .rental-overview-list, a horizontal
+          wrapping row) is tuned for a wide desktop toolbar — forcing
+          Overview's multi-line cards into that same row at 375px would
+          just squeeze them. Kept as its own section instead; the two
+          components staying visually separate doesn't matter since they
+          already share selectedUnitId/onSelectUnit from here regardless
+          of whether one is nested inside the other. */}
+      <RentalCalendar
+        properties={properties}
+        bookings={bookings}
+        monthDate={monthDate}
+        createdBy={me?.id}
+        onBookingsChanged={handleBookingsChanged}
+        selectedUnitId={selectedUnitId}
+        onSelectUnit={setSelectedUnitId}
+        showUnitTabs={false}
+        showUnitHeader={false}
+      />
 
-      {view === 'calendar' && (
-        <RentalCalendar
-          properties={properties}
-          bookings={bookings}
-          monthDate={monthDate}
-          createdBy={me?.id}
-          onBookingsChanged={handleBookingsChanged}
-          selectedUnitId={selectedUnitId}
-          onSelectUnit={setSelectedUnitId}
-        />
-      )}
-
-      {view === 'financials' && (
-        <RentalFinancials
-          company={COMPANY}
-          properties={properties}
-          bookings={bookings}
-          expenses={expenses}
-          monthDate={monthDate}
-          goals={goals}
-          onGoalsChanged={reloadGoals}
-          onExpensesChanged={reloadExpenses}
-        />
-      )}
-
-      {view === 'overview' && (
-        <>
-          <RentalOverview
-            properties={properties}
-            bookings={upcomingBookings}
-            selectedUnitId={selectedUnitId}
-            onSelectUnit={setSelectedUnitId}
-            onEditUnit={openEditProperty}
-          />
-          <button type="button" className="rental-add-booking" onClick={openNewProperty}>
-            + Add unit
-          </button>
-        </>
-      )}
+      <h3 className="task-section-heading">Financials</h3>
+      <RentalFinancials
+        company={COMPANY}
+        properties={properties}
+        bookings={bookings}
+        expenses={expenses}
+        monthDate={monthDate}
+        goals={goals}
+        onGoalsChanged={reloadGoals}
+        onExpensesChanged={reloadExpenses}
+      />
 
       {propertyFormOpen && (
         <RentalPropertyForm
