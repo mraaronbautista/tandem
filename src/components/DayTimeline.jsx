@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
-import { zoneAbbreviation, zoneLabel, DEFAULT_TIMEZONE } from '../lib/timezone'
+import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 
 const PX_PER_MINUTE = 1.2
@@ -30,6 +30,18 @@ const PAD_MINUTES = 20
 // scroll between them, burying whatever's on the other side of the gap.
 const GAP_THRESHOLD_MINUTES = 90
 const GAP_MARKER_HEIGHT = 30
+// A block's rendered height/layout footprint is capped at this many
+// minutes' worth of pixels, regardless of its real duration — a task
+// spanning multiple days (a real, supported case: TaskForm.jsx's own
+// duration picker goes up to a week, e.g. for a multi-day trip) would
+// otherwise scale linearly right along with everything else and dwarf
+// the rest of the day's tasks, or the day's whole scroll. Generous
+// enough (6 hours) to still show a genuinely long same-day task — an
+// all-day outing, a full workday block — at its real proportional size;
+// only the rare task that's actually longer than that gets truncated
+// (see .day-timeline-block-truncated below), with its real end time
+// still shown in full via blockTimeLabel.
+const MAX_BLOCK_MINUTES = 360
 
 // "Completed 10:00 PM" for a finished task (start is completed_at, a
 // single instant — a range would misleadingly imply it was still in
@@ -50,14 +62,25 @@ const GAP_MARKER_HEIGHT = 30
 // task shows completed_at in the viewer's own zone instead — that's
 // when it was actually finished in the real world, not tied to
 // whatever zone the original due time was set in.
+// A task whose real duration (not the capped/truncated render height —
+// see MAX_BLOCK_MINUTES above) crosses into another calendar day in its
+// own due_timezone needs the end's date stated too, not just its time —
+// "9:00 AM–9:00 AM" for a 2-day task is actively misleading, since it
+// reads as a same-day span. Compared in due_timezone, matching every
+// other zone-aware label here (blockDateLabel, the badge).
 function blockTimeLabel(task, start, end, dueTimeZone) {
   if (task.status === 'done') {
     const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     return `Completed ${fmt(start)}`
   }
   const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: dueTimeZone })
-  if (task.duration_minutes) return `${fmt(start)}–${fmt(end)}`
-  return fmt(start)
+  if (!task.duration_minutes) return fmt(start)
+  const spansDays =
+    splitDueDateInZone(start.toISOString(), dueTimeZone).due_date !==
+    splitDueDateInZone(end.toISOString(), dueTimeZone).due_date
+  if (!spansDays) return `${fmt(start)}–${fmt(end)}`
+  const dateFmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: dueTimeZone })
+  return `${fmt(start)} – ${dateFmt(end)}, ${fmt(end)}`
 }
 
 // "Tue 08/18/26" — same zone basis as blockTimeLabel above — a task set
@@ -193,12 +216,20 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
     const items = timed.map((task) => {
       const start = new Date(task.status === 'done' ? task.completed_at : task.due_date)
       const end = new Date(start.getTime() + (task.duration_minutes || POINT_TASK_MINUTES) * 60000)
+      // Layout (position/height/which tasks cluster together) is driven
+      // by cappedEnd, not the real end — see MAX_BLOCK_MINUTES above. The
+      // real `end` is kept alongside purely for blockTimeLabel's text,
+      // which states it in full regardless of how tall the block itself
+      // renders.
+      const maxEnd = new Date(start.getTime() + MAX_BLOCK_MINUTES * 60000)
+      const cappedEnd = end > maxEnd ? maxEnd : end
+      const truncated = end > maxEnd
       // The floor every block actually renders at (MIN_BLOCK_HEIGHT),
       // expressed as a Date so clustering/window logic can compare it
       // against other tasks' real times directly — see assignColumns.
       const minEnd = new Date(start.getTime() + (MIN_BLOCK_HEIGHT / PX_PER_MINUTE) * 60000)
-      const clusterEnd = end > minEnd ? end : minEnd
-      return { task, start, end, clusterEnd }
+      const clusterEnd = cappedEnd > minEnd ? cappedEnd : minEnd
+      return { task, start, end, truncated, clusterEnd }
     })
 
     // Windows merge based on the tasks' own real start/end times, before
@@ -239,14 +270,20 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
       return w.pxStart + ((t - w.start.getTime()) / 60000) * PX_PER_MINUTE
     }
 
-    const positioned = assignColumns(items).map(({ task, start, end, col, totalCols }) => ({
+    const positioned = assignColumns(items).map(({ task, start, end, truncated, clusterEnd, col, totalCols }) => ({
       task,
       start,
       end,
+      truncated,
       col,
       totalCols,
       top: timeToPx(start),
-      height: Math.max(MIN_BLOCK_HEIGHT, timeToPx(end) - timeToPx(start)),
+      // clusterEnd, not the real end — it's already floored at
+      // MIN_BLOCK_HEIGHT and capped at MAX_BLOCK_MINUTES (see items
+      // above), and using the real (possibly far-outside-any-window) end
+      // here would break timeToPx, which only resolves times that fall
+      // within a window built from clusterEnd in the first place.
+      height: timeToPx(clusterEnd) - timeToPx(start),
     }))
 
     const hourMarks = []
@@ -286,11 +323,12 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
               </div>
             ))}
 
-            {layout.positioned.map(({ task, start, end, top, height, col, totalCols }) => {
+            {layout.positioned.map(({ task, start, end, truncated, top, height, col, totalCols }) => {
               const overlapping = overlappingIds?.has(task.id) ?? false
               const classes = ['day-timeline-block']
               if (overlapping) classes.push('day-timeline-block-overlapping')
               if (task.status === 'done') classes.push('day-timeline-block-done')
+              if (truncated) classes.push('day-timeline-block-truncated')
               const checklist = task.checklist || []
               const checklistDone = checklist.filter((item) => item.done).length
               const hasNotes = Boolean(task.notes)

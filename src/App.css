@@ -847,6 +847,19 @@
   opacity: 0.55;
 }
 
+/* A task whose real duration got capped for layout purposes (see
+   MAX_BLOCK_MINUTES in DayTimeline.jsx — a multi-day task rendered at
+   its true linear scale would otherwise dwarf the rest of the day) —
+   dashed instead of solid on every edge but the left (which already
+   carries the priority color) marks the box itself as a deliberately
+   cut-off view, not the task's real full extent. blockTimeLabel already
+   states the real end date/time in full text alongside this. */
+.day-timeline-block-truncated {
+  border-top-style: dashed;
+  border-right-style: dashed;
+  border-bottom-style: dashed;
+}
+
 .day-timeline-block-done .day-timeline-block-title {
   text-decoration: line-through;
 }
