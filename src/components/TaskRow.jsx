@@ -14,13 +14,20 @@ const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
 const TIME_ONLY_FORMAT = { hour: 'numeric', minute: '2-digit' }
 
-// Editing/assigning a task stays explicit about which zone the time is
-// in (so you can target Ada's zone precisely) — but glancing at the list
-// should show what time it lands at in whoever is actually looking right
-// now, in their own device's local time. No zone label needed here since
-// it's always "your" time, unambiguous by definition.
-function localLabel(isoString) {
-  return new Date(isoString).toLocaleString([], DATE_TIME_FORMAT)
+// Shown in the task's own due_timezone, not the viewer's — same fix and
+// same reasoning as DayTimeline.jsx's blockTimeLabel/blockDateLabel: a
+// silently-converted time sitting right next to the task-zone-badge
+// (which names the zone it was actually *set* in) reads as if the shown
+// time *is* in that zone. A task set for 10 PM Eastern showing as
+// "10:00 AM" next to an "ET" badge, for a viewer 12 hours away, is
+// exactly that bug. `timeZone` is optional — completed_at (see the
+// "Completed" tag below) has no due_timezone concept of its own, it's
+// just when the task was actually finished in the real world, so that
+// one call stays in the viewer's own local time.
+function localLabel(isoString, timeZone) {
+  return timeZone
+    ? new Date(isoString).toLocaleString('en-US', { ...DATE_TIME_FORMAT, timeZone })
+    : new Date(isoString).toLocaleString([], DATE_TIME_FORMAT)
 }
 
 // "Jul 23, 5:30 – 6:10 PM (40 min)" when a duration is set, otherwise just
@@ -32,23 +39,29 @@ function localLabel(isoString) {
 // bare time — "5:30 PM – 9:00 AM" alone would misread as same-day for a
 // multi-day span.
 function dueLabel(task) {
+  const timeZone = task.due_timezone || DEFAULT_TIMEZONE
   if (isAllDayTask(task)) {
-    const startLabel = new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })
+    const startLabel = new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone })
     // A multi-day All Day task (see TaskForm.jsx's End date field) still
     // only appears once, on its start day (same as a multi-day *timed*
     // task doesn't repeat across every day it spans either) — the range
     // is what tells the two apart in the label.
     if (!task.duration_minutes) return `${startLabel}, All day`
     const endDate = new Date(new Date(task.due_date).getTime() + task.duration_minutes * 60000)
-    const endLabel = endDate.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    const endLabel = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone })
     return `${startLabel} – ${endLabel}, All day`
   }
-  const start = localLabel(task.due_date)
+  const start = localLabel(task.due_date, timeZone)
   if (!task.duration_minutes) return start
   const startDate = new Date(task.due_date)
   const end = new Date(startDate.getTime() + task.duration_minutes * 60000)
-  const spansDays = startDate.toDateString() !== end.toDateString()
-  const endLabel = spansDays ? localLabel(end.toISOString()) : end.toLocaleTimeString([], TIME_ONLY_FORMAT)
+  // Compared as calendar dates in due_timezone, not browser-local — a
+  // span that crosses midnight in the due zone but not the viewer's (or
+  // vice versa) needs to agree with the zone-aware labels above it.
+  const spansDays = splitDueDateInZone(task.due_date, timeZone).due_date !== splitDueDateInZone(end.toISOString(), timeZone).due_date
+  const endLabel = spansDays
+    ? localLabel(end.toISOString(), timeZone)
+    : end.toLocaleTimeString('en-US', { ...TIME_ONLY_FORMAT, timeZone })
   return `${start} – ${endLabel} (${formatDuration(task.duration_minutes)})`
 }
 
@@ -206,9 +219,10 @@ export default function TaskRow({
         {task.due_date && (
           <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{dueLabel(task)}</span>
         )}
-        {/* Which zone this was actually *set* in — not the due time
-            itself, which always displays in the viewer's own local zone
-            already (see localLabel above). All Day tasks skip this: the
+        {/* Names the zone dueLabel above is already showing the time in
+            (see localLabel) — the two have to agree, since a badge next
+            to a time that's actually in some other zone reads as if the
+            badge's zone is what's displayed. All Day tasks skip this: the
             zone only affects which calendar day midnight falls on for
             them, a much lower-stakes mistake than a timed task landing
             hours off, so it's not worth a badge on every all-day item. */}

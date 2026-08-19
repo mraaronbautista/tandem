@@ -2,8 +2,9 @@
 // Central, but she travels around the US (the other US entries below cover
 // that), Aaron is fixed in the Philippines. This picker is only used when
 // setting a task's time, so you can target Ada's zone precisely regardless
-// of your own device's timezone — display elsewhere always converts to
-// whoever is actually looking, in their own local time.
+// of your own device's timezone — a due time displays elsewhere in this
+// same zone too, not converted to whoever's actually looking (see
+// zoneAbbreviation below).
 export const TIMEZONE_OPTIONS = [
   { value: 'America/New_York', label: 'Eastern (ET)' },
   { value: 'America/Chicago', label: 'Central (CT)' },
@@ -50,10 +51,10 @@ const ZONE_ABBR = Object.fromEntries(
 )
 
 // Short abbreviation for a task's due_timezone, for a compact
-// at-a-glance badge next to its due time — which zone it was actually
-// *set* in, distinct from the due time itself (always shown in whichever
-// zone the viewer is currently in, unlabeled — see localLabel in
-// TaskRow.jsx). Exists so a task set in the wrong zone (the household's
+// at-a-glance badge next to its due time — the time itself is always
+// shown in this same zone too (see localLabel in TaskRow.jsx), so the
+// badge and the time next to it can't disagree about what zone is being
+// displayed. Exists so a task set in the wrong zone (the household's
 // actual failure mode this was built for — a shift meant for Ada's
 // Central time accidentally entered while the form still had Aaron's
 // Manila zone selected, landing 13 hours off) is visible at a glance
