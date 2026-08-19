@@ -607,7 +607,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
         )}
       </div>
 
-      <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} extraActions={quickActions} />
+      <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} selectedDate={selectedDate} extraActions={quickActions} />
 
       {datePickerOpen && (
         <DatePickerModal

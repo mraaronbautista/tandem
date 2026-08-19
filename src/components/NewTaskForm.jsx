@@ -2,12 +2,17 @@ import { useState } from 'react'
 import TaskForm from './TaskForm'
 import Modal from './Modal'
 
+function dateStr(d) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 // The FAB doubles as a speed-dial for the less-frequent actions (report,
 // priorities, nudge) — those used to live as separate header icons, which
 // got cluttered fast as more got added. "New task" stays the default/most
 // common action; extraActions are optional and only expand the FAB into a
 // menu when there's something to show.
-export default function NewTaskForm({ onCreate, defaultWho, extraActions = [] }) {
+export default function NewTaskForm({ onCreate, defaultWho, selectedDate, extraActions = [] }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
 
@@ -57,7 +62,17 @@ export default function NewTaskForm({ onCreate, defaultWho, extraActions = [] })
         <Modal onClose={() => setFormOpen(false)}>
           <TaskForm
             submitLabel="Save task"
-            initialValues={{ who: defaultWho }}
+            // Anchors a new task to whichever day is currently browsed
+            // (Today tab's selectedDate) rather than always today — the
+            // default *time* still rounds up from right now (see
+            // defaultDueDateTime in TaskForm.jsx), just landing on the
+            // selected day instead of today's. Conditionally spread in
+            // (not `due_date: selectedDate && dateStr(selectedDate)`) —
+            // TaskForm.jsx's hasDueDateKey treats an explicit `due_date:
+            // undefined` key as still "present", which flips its All Day
+            // checkbox on by mistake; omitting the key entirely when
+            // there's no selectedDate avoids that.
+            initialValues={{ who: defaultWho, ...(selectedDate ? { due_date: dateStr(selectedDate) } : null) }}
             onCancel={() => setFormOpen(false)}
             onSubmit={async (values) => {
               await onCreate(values)
