@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { getInboxItems } from '../lib/tasks'
-import { WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { getInboxItems, getCompletedSubmissions } from '../lib/tasks'
+import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
 
@@ -45,6 +45,42 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
   )
 }
 
+// A completed task's proof-of-completion — same .inbox-item card family
+// as InboxItem above, but keyed by task rather than clarification (no
+// per-item resolve action; clicking straight through to the task is the
+// only interaction) since a submission isn't a conversation thread with
+// its own read/unread state. Badged by task.who (who the task was
+// assigned to) rather than an otherPersonId, since completion_note/
+// completion_attachments carry no separate "who actually submitted
+// this" of their own — consistent with the rest of the app treating a
+// task's `who` as its owning-person label.
+function SubmissionItem({ task, onSelectTask }) {
+  const attachmentCount = task.completion_attachments?.length || 0
+  return (
+    <li className="inbox-item inbox-item-submission" onClick={() => onSelectTask(task)}>
+      <div className="inbox-item-top">
+        <span className="inbox-item-title">{task.title}</span>
+        <span className="inbox-item-when">{formatWhen(task.completed_at)}</span>
+      </div>
+      {task.completion_note ? (
+        <p className="inbox-item-text">{task.completion_note}</p>
+      ) : (
+        <p className="inbox-item-text inbox-item-text-muted">No note — attachments only.</p>
+      )}
+      <div className="inbox-item-footer">
+        <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
+          {WHO_LABEL[task.who]}
+        </span>
+        {attachmentCount > 0 && (
+          <span className="inbox-item-attachment-count">
+            📎 {attachmentCount} file{attachmentCount > 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+    </li>
+  )
+}
+
 // Persistent tab content, not a modal — see RentalsView.jsx for why. Unlike
 // CorkBoardView/EodReportsList this isn't self-fetching: fetchTasks() (see
 // tasks.js) already loads every task with no date filter, and TaskBoard.jsx
@@ -68,6 +104,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
   const questions = items.filter((item) => item.kind === 'question')
   const answers = items.filter((item) => item.kind === 'answer')
   const finished = items.filter((item) => item.kind === 'finished')
+  const submissions = getCompletedSubmissions(tasks)
 
   // Same "not every clarification is a question" reasoning as
   // TaskClarifications.jsx's own handleResolve — this is the quick path
@@ -137,7 +174,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
 
   return (
     <div className="tab-panel">
-      {questions.length === 0 && answers.length === 0 && finished.length === 0 && (
+      {questions.length === 0 && answers.length === 0 && finished.length === 0 && submissions.length === 0 && (
         <p className="task-notes-empty">Nothing waiting on you.</p>
       )}
 
@@ -164,6 +201,21 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
         <section>
           <h3 className="task-section-heading">Finished</h3>
           <ul className="inbox-list">{finished.map((item) => renderItem(item, 'finished'))}</ul>
+        </section>
+      )}
+
+      {/* Full history, same reasoning as the clarification sections above
+          — a completed task's proof shouldn't age out of findability just
+          because it was finished a while ago. Last section: lowest
+          priority, closer to a log than something waiting on you. */}
+      {submissions.length > 0 && (
+        <section>
+          <h3 className="task-section-heading">Completed</h3>
+          <ul className="inbox-list">
+            {submissions.map((task) => (
+              <SubmissionItem key={task.id} task={task} onSelectTask={onSelectTask} />
+            ))}
+          </ul>
         </section>
       )}
     </div>

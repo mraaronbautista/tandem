@@ -340,6 +340,20 @@ export function hasUnseenInboxItems(tasks, meId, lastViewedAt) {
   )
 }
 
+// Completed tasks that carry a proof-of-completion note or attachment,
+// newest first — the same discoverability gap Inbox's clarification
+// sections close, just for submissions instead of comments. Before
+// this, the only way to notice one was stumbling onto that task's own
+// detail view, or catching the push notification before it scrolled
+// away. Not scoped to `meId` like getInboxItems above — a submission is
+// mutually visible regardless of who completed the task or who's
+// looking, same as everything else in this app.
+export function getCompletedSubmissions(tasks) {
+  return tasks
+    .filter((t) => t.status === 'done' && (t.completion_note || t.completion_attachments?.length))
+    .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+}
+
 // Buckets tasks by the local day they belong to (same done/not-done rule
 // as getTasksForDay: done tasks by completed_at, others by due_date) into
 // a Map of 'YYYY-MM-DD' -> tasks[] — for rendering many days at once
