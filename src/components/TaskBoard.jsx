@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
@@ -300,6 +300,46 @@ export default function TaskBoard({ theme, toggleTheme }) {
     })
   }
 
+  function shiftDay(delta) {
+    setSelectedDate((d) => {
+      const next = new Date(d)
+      next.setDate(next.getDate() + delta)
+      return startOfDay(next)
+    })
+  }
+
+  // Swipe left/right on mobile Day view to step selectedDate to the day
+  // before/after — same result as tapping the next/previous day in
+  // DateStrip, just without needing that day to already be scrolled into
+  // view in the strip. Mobile-only (no touch gesture on desktop, and the
+  // header's own ‹ › arrows already cover stepping there, albeit by week
+  // — see shiftWeek) and Day-mode-only (Week/Month have their own shape,
+  // not a single date to step). touchend's dx/dy, not a running
+  // touchmove delta — this only needs to fire once, at the end of the
+  // gesture, unlike PullToRefresh's own live-tracked pull distance.
+  const daySwipeStart = useRef(null)
+  const SWIPE_MIN_DISTANCE = 60
+
+  function handleDaySwipeStart(e) {
+    if (isDesktop || viewMode !== 'day') return
+    const t = e.touches[0]
+    daySwipeStart.current = { x: t.clientX, y: t.clientY }
+  }
+
+  function handleDaySwipeEnd(e) {
+    const start = daySwipeStart.current
+    daySwipeStart.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    // Requires the gesture to be clearly more horizontal than vertical —
+    // otherwise an ordinary vertical scroll through a long task list
+    // would occasionally read as a stray day-change.
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    shiftDay(dx > 0 ? 1 : -1)
+  }
+
   const monthLabel = selectedDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
 
   // Computed across all tasks, not just whoFiltered — a conflict is real
@@ -538,7 +578,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 }}
               />
             ) : (
-              <div className="task-list">
+              <div className="task-list" onTouchStart={handleDaySwipeStart} onTouchEnd={handleDaySwipeEnd}>
                 {allDay.length > 0 && (
                   <section>
                     <h2 className="task-section-heading">All Day</h2>
