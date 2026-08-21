@@ -73,6 +73,7 @@ const SECTIONS = [
       'Collects every open question or comment across all tasks in one place — the only reliable way to catch a stray 💬 without stumbling onto that specific task first.',
       '"Needs your reply" — unanswered questions directed at you, shown first. "Answered" — questions you asked that got a reply. "Finished" — your own questions the other person marked "No reply needed" instead of answering.',
       '"Completed" — tasks that were finished with a note or file attached as proof, newest first, so you don\'t have to stumble onto the task itself just to see what was submitted.',
+      'Tabs above the list (All / Needs your reply / Answered / Finished / Completed) narrow it down to one kind at a time — handy once there\'s enough activity that scrolling past everything else gets old.',
       'Tapping an item jumps straight to that task\'s full detail, regardless of which day it\'s on.',
       'Tip: a plain comment that isn\'t really a question can be dismissed with "No reply needed" — no push notification fires for that, since clearing something as not needing a reply isn\'t news worth pinging over.',
     ],

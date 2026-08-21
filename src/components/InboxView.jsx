@@ -4,6 +4,25 @@ import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
 
+// Same .period-tabs pattern EodReportsList.jsx already uses to solve
+// this exact problem (several kinds of item otherwise interleaving into
+// one long, hard-to-scan list) — "All" keeps today's stacked-sections
+// behavior as the default, the rest narrow down to just one section.
+const TABS = [
+  { value: 'all', label: 'All' },
+  { value: 'question', label: 'Needs your reply' },
+  { value: 'answer', label: 'Answered' },
+  { value: 'finished', label: 'Finished' },
+  { value: 'submission', label: 'Completed' },
+]
+
+const TAB_EMPTY_LABEL = {
+  question: 'Nothing needs a reply right now.',
+  answer: 'No answered questions yet.',
+  finished: 'Nothing finished yet.',
+  submission: 'No completed submissions yet.',
+}
+
 function formatWhen(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
@@ -96,6 +115,7 @@ function SubmissionItem({ task, onSelectTask }) {
 // it for next time.
 export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpdate, lastViewedAt }) {
   const [frozenLastViewedAt] = useState(() => lastViewedAt)
+  const [view, setView] = useState('all')
 
   // Full history, not just recent activity — a completed task's
   // conversation should stay findable here, not age out just because the
@@ -105,6 +125,11 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
   const answers = items.filter((item) => item.kind === 'answer')
   const finished = items.filter((item) => item.kind === 'finished')
   const submissions = getCompletedSubmissions(tasks)
+  const totalCount = questions.length + answers.length + finished.length + submissions.length
+  const showQuestions = (view === 'all' || view === 'question') && questions.length > 0
+  const showAnswers = (view === 'all' || view === 'answer') && answers.length > 0
+  const showFinished = (view === 'all' || view === 'finished') && finished.length > 0
+  const showSubmissions = (view === 'all' || view === 'submission') && submissions.length > 0
 
   // Same "not every clarification is a question" reasoning as
   // TaskClarifications.jsx's own handleResolve — this is the quick path
@@ -174,11 +199,33 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
 
   return (
     <div className="tab-panel">
-      {questions.length === 0 && answers.length === 0 && finished.length === 0 && submissions.length === 0 && (
-        <p className="task-notes-empty">Nothing waiting on you.</p>
+      {totalCount === 0 && <p className="task-notes-empty">Nothing waiting on you.</p>}
+
+      {totalCount > 0 && (
+        <div className="period-tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              className={`period-tab${view === t.value ? ' period-tab-active' : ''}`}
+              onClick={() => setView(t.value)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       )}
 
-      {questions.length > 0 && (
+      {/* One section's own list being empty under "All" just means that
+          section doesn't render at all (unchanged from before tabs
+          existed) — this message is only for a specific tab selected on
+          purpose that turns out to have nothing in it right now. */}
+      {view !== 'all' &&
+        { question: questions, answer: answers, finished, submission: submissions }[view].length === 0 && (
+          <p className="task-notes-empty">{TAB_EMPTY_LABEL[view]}</p>
+        )}
+
+      {showQuestions && (
         <section>
           <div className="inbox-section-heading-row">
             <h3 className="task-section-heading inbox-section-heading-question">Needs your reply</h3>
@@ -190,14 +237,14 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
         </section>
       )}
 
-      {answers.length > 0 && (
+      {showAnswers && (
         <section>
           <h3 className="task-section-heading">Answered</h3>
           <ul className="inbox-list">{answers.map((item) => renderItem(item, 'answer'))}</ul>
         </section>
       )}
 
-      {finished.length > 0 && (
+      {showFinished && (
         <section>
           <h3 className="task-section-heading">Finished</h3>
           <ul className="inbox-list">{finished.map((item) => renderItem(item, 'finished'))}</ul>
@@ -208,7 +255,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
           — a completed task's proof shouldn't age out of findability just
           because it was finished a while ago. Last section: lowest
           priority, closer to a log than something waiting on you. */}
-      {submissions.length > 0 && (
+      {showSubmissions && (
         <section>
           <h3 className="task-section-heading">Completed</h3>
           <ul className="inbox-list">
