@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
-import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
+import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
-import { EditIcon, PaperclipIcon, DuplicateIcon, ViewIcon, TrashIcon, CheckIcon } from './icons'
+import { sendTaskNudge } from '../lib/manualNotify'
+import { EditIcon, PaperclipIcon, DuplicateIcon, ViewIcon, TrashIcon, CheckIcon, BellIcon } from './icons'
 import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -84,6 +85,8 @@ export default function TaskRow({
   const [noteDraft, setNoteDraft] = useState(task.completion_note || '')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [nudging, setNudging] = useState(false)
+  const [nudgeSent, setNudgeSent] = useState(false)
   const attachments = task.completion_attachments || []
   const hasSubmission = Boolean(task.completion_note || attachments.length)
   const overdue = isOverdue(task)
@@ -91,6 +94,15 @@ export default function TaskRow({
   const hasNotes = Boolean(task.notes)
   const sourceLabel = SOURCE_LABEL[task.source]
   const creatorName = memberName(task.created_by)
+  // Nudging yourself makes no sense — same "assigning yourself a task
+  // doesn't ping you, since you already know" reasoning notify-task-events
+  // already uses. myWhoKey is falsy until members have loaded (memberName
+  // returns '' until then, and whoKeyForName('') finds no match) — checked
+  // explicitly rather than just `!== task.who`, since undefined !== 'yours'
+  // is true, which would show this on your own task for a beat on first
+  // load instead of staying hidden.
+  const myWhoKey = whoKeyForName(memberName(meId))
+  const canNudge = overdue && myWhoKey && task.who !== myWhoKey
   const checklist = task.checklist || []
   const checklistDone = checklist.filter((item) => item.done).length
   const clarifications = task.clarifications || []
@@ -111,6 +123,23 @@ export default function TaskRow({
   function handleDuplicate(e) {
     e.stopPropagation()
     onDuplicate(task)
+  }
+
+  // nudgeSent is purely a local "yep, that went through" confirmation —
+  // doesn't reflect overdue_nudge_sent_at (never fetched by the
+  // frontend, see schema.sql) and resets on the next render of this
+  // task from anywhere else, same low-stakes as any other fire-and-
+  // forget notification button in this app (Nudge Aaron, Ask a
+  // question) not tracking its own delivery state persistently.
+  async function handleNudge(e) {
+    e.stopPropagation()
+    setNudging(true)
+    try {
+      await sendTaskNudge(task.id, task.title)
+      setNudgeSent(true)
+    } finally {
+      setNudging(false)
+    }
   }
 
   function handleChecklistItemChange(itemId, patch) {
@@ -271,6 +300,16 @@ export default function TaskRow({
                 <button onClick={handleDuplicate} title="Duplicate" aria-label="Duplicate">
                   <DuplicateIcon width={15} height={15} />
                 </button>
+                {canNudge && (
+                  <button
+                    onClick={handleNudge}
+                    disabled={nudging || nudgeSent}
+                    title={nudgeSent ? 'Nudge sent' : 'Nudge — still on your plate?'}
+                    aria-label={nudgeSent ? 'Nudge sent' : 'Nudge — still on your plate?'}
+                  >
+                    <BellIcon width={15} height={15} />
+                  </button>
+                )}
                 {task.status === 'done' && hasSubmission && (
                   <button onClick={() => setViewSubmissionOpen(true)} title="View submission" aria-label="View submission">
                     <ViewIcon width={15} height={15} />

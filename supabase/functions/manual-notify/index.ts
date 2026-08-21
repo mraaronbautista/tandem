@@ -5,7 +5,7 @@
 // but that only proves "some signed-in user called this," not which of
 // the two members it is, so the caller's identity is still resolved
 // explicitly below rather than trusted from anything the client sends.
-import { resolveMemberIds, notifyMember } from '../_shared/notify.ts'
+import { resolveMemberIds, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -57,6 +57,28 @@ Deno.serve(async (req) => {
       body: `${taskTitle}: ${question}`,
       url: '/',
     })
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  // A one-tap nudge on a specific overdue task, distinct from the plain
+  // 'nudge' kind above (which is person-level, "something urgent, check
+  // the board" with no task attached). The caller is always the task's
+  // *other* person by construction — TaskRow.jsx only ever shows this
+  // button on a task that isn't the viewer's own (see CLAUDE.md), so
+  // targetId ("whoever isn't the caller") already equals "whoever the
+  // task belongs to" here; no separate task.who-based resolution needed.
+  // Also marks overdue_nudge_sent_at so the automatic overdue-nudge cron
+  // pass (notify-reminders) doesn't duplicate this shortly after.
+  if (payload.kind === 'task_nudge') {
+    const taskId = String(payload.taskId || '')
+    const taskTitle = String(payload.taskTitle || '')
+    if (!taskId || !taskTitle.trim()) return new Response('Missing taskId/taskTitle', { status: 400, headers: corsHeaders })
+    await notifyMember(targetId, {
+      title: 'Still on your plate?',
+      body: taskTitle,
+      url: '/',
+    })
+    await supabaseAdmin.from('tasks').update({ overdue_nudge_sent_at: new Date().toISOString() }).eq('id', taskId)
     return new Response('ok', { headers: corsHeaders })
   }
 

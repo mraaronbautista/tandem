@@ -2100,6 +2100,11 @@ a.task-submission-file-link:hover {
   cursor: pointer;
 }
 
+.task-row-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .task-delete {
   color: var(--overdue);
 }

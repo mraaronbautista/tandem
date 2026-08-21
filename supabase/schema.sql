@@ -79,6 +79,13 @@ create table tasks (
   -- so the reminder cron job (runs every few minutes) doesn't re-notify
   -- on every subsequent pass. Null means not sent yet.
   reminder_sent_at timestamptz,
+  -- Same one-shot dedup idea as reminder_sent_at, for the "still overdue
+  -- after N days" nudge instead of the "about to start" one — set by
+  -- either the automatic overdue-nudge cron pass (notify-reminders) or a
+  -- manual per-task nudge (manual-notify), whichever fires first, so the
+  -- other doesn't immediately duplicate it. Backend bookkeeping only,
+  -- same as reminder_sent_at — never read by the frontend.
+  overdue_nudge_sent_at timestamptz,
   -- Lightweight Q&A thread for clarifying a vague assignment — same
   -- "doesn't need a child table" reasoning as checklist/
   -- completion_attachments. A jsonb array of { id, askedBy, question,
