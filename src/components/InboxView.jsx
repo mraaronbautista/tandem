@@ -8,19 +8,25 @@ const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked fi
 // this exact problem (several kinds of item otherwise interleaving into
 // one long, hard-to-scan list) — "All" keeps today's stacked-sections
 // behavior as the default, the rest narrow down to just one section.
+// Answered/Finished merged into one Resolved tab — both are "a question
+// you asked that's no longer pending," just closed two different ways
+// (an actual reply vs. dismissed with "No reply needed"); splitting them
+// into separate tabs was a finer distinction than the tab row needed to
+// make, given both were already the lowest-priority, closer-to-an-
+// archive sections. Per-item kind (answer vs. finished) still drives the
+// badge text and unread styling below — only the section/tab grouping
+// merged, not the underlying data.
 const TABS = [
   { value: 'all', label: 'All' },
   { value: 'question', label: 'Needs your reply' },
-  { value: 'answer', label: 'Answered' },
-  { value: 'finished', label: 'Finished' },
-  { value: 'submission', label: 'Completed' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'submission', label: 'Submissions' },
 ]
 
 const TAB_EMPTY_LABEL = {
   question: 'Nothing needs a reply right now.',
-  answer: 'No answered questions yet.',
-  finished: 'Nothing finished yet.',
-  submission: 'No completed submissions yet.',
+  resolved: 'Nothing resolved yet.',
+  submission: 'No submissions yet.',
 }
 
 function formatWhen(iso) {
@@ -122,13 +128,16 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
   // work itself is long done.
   const items = getInboxItems(tasks, meId)
   const questions = items.filter((item) => item.kind === 'question')
-  const answers = items.filter((item) => item.kind === 'answer')
-  const finished = items.filter((item) => item.kind === 'finished')
+  // Merged, but re-sorted by date alone — getInboxItems' own INBOX_KIND_ORDER
+  // sort (answer before finished, within each kind newest-first) doesn't
+  // apply once the two are shown as a single chronological list.
+  const resolved = items
+    .filter((item) => item.kind === 'answer' || item.kind === 'finished')
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
   const submissions = getCompletedSubmissions(tasks)
-  const totalCount = questions.length + answers.length + finished.length + submissions.length
+  const totalCount = questions.length + resolved.length + submissions.length
   const showQuestions = (view === 'all' || view === 'question') && questions.length > 0
-  const showAnswers = (view === 'all' || view === 'answer') && answers.length > 0
-  const showFinished = (view === 'all' || view === 'finished') && finished.length > 0
+  const showResolved = (view === 'all' || view === 'resolved') && resolved.length > 0
   const showSubmissions = (view === 'all' || view === 'submission') && submissions.length > 0
 
   // Same "not every clarification is a question" reasoning as
@@ -220,10 +229,9 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
           section doesn't render at all (unchanged from before tabs
           existed) — this message is only for a specific tab selected on
           purpose that turns out to have nothing in it right now. */}
-      {view !== 'all' &&
-        { question: questions, answer: answers, finished, submission: submissions }[view].length === 0 && (
-          <p className="task-notes-empty">{TAB_EMPTY_LABEL[view]}</p>
-        )}
+      {view !== 'all' && { question: questions, resolved, submission: submissions }[view].length === 0 && (
+        <p className="task-notes-empty">{TAB_EMPTY_LABEL[view]}</p>
+      )}
 
       {showQuestions && (
         <section>
@@ -237,27 +245,20 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
         </section>
       )}
 
-      {showAnswers && (
+      {showResolved && (
         <section>
-          <h3 className="task-section-heading">Answered</h3>
-          <ul className="inbox-list">{answers.map((item) => renderItem(item, 'answer'))}</ul>
-        </section>
-      )}
-
-      {showFinished && (
-        <section>
-          <h3 className="task-section-heading">Finished</h3>
-          <ul className="inbox-list">{finished.map((item) => renderItem(item, 'finished'))}</ul>
+          <h3 className="task-section-heading">Resolved</h3>
+          <ul className="inbox-list">{resolved.map((item) => renderItem(item, item.kind))}</ul>
         </section>
       )}
 
       {/* Full history, same reasoning as the clarification sections above
-          — a completed task's proof shouldn't age out of findability just
+          — a submission's proof shouldn't age out of findability just
           because it was finished a while ago. Last section: lowest
           priority, closer to a log than something waiting on you. */}
       {showSubmissions && (
         <section>
-          <h3 className="task-section-heading">Completed</h3>
+          <h3 className="task-section-heading">Submissions</h3>
           <ul className="inbox-list">
             {submissions.map((task) => (
               <SubmissionItem key={task.id} task={task} onSelectTask={onSelectTask} />
