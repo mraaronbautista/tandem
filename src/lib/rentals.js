@@ -252,7 +252,14 @@ export const MIN_STAY_DAYS = 30
 // for the first gap of at least `minStayDays`. Returns `{ date }` alone
 // when that gap runs past every booking currently on the books (nothing
 // left to bound it), or `{ date, until }` when the gap is itself capped
-// by a specific future booking's own check-in.
+// by a specific future booking's own check-in. `blocking` lists, in
+// order, every tenant actually stood in the way of an earlier date (the
+// current occupant, plus any already-booked tenant(s) after them with no
+// real gap in between) — a back-to-back turnover chain otherwise jumps
+// straight from "occupied by X" to a date months out with nothing
+// explaining why, which reads as arbitrary or wrong even when the date
+// itself is correct; showing who's actually queued up front makes the
+// jump self-evident instead of something you have to take on faith.
 export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DAYS) {
   // A missing `bookings` array (a call site forgetting to wire the prop
   // through, e.g. RentalsView.jsx's mobile layout once already forgot
@@ -264,6 +271,7 @@ export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DA
     .sort((a, b) => (a.check_in < b.check_in ? -1 : 1))
 
   let cursor = todayDateStr()
+  const blocking = []
 
   for (const b of confirmed) {
     if (b.check_out < cursor) continue // fully in the past relative to cursor already
@@ -273,13 +281,16 @@ export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DA
     // gap below; both just advance cursor instead of returning. Only a
     // check_in strictly after cursor can open a real gap to measure.
     if (b.check_in > cursor && daysBetweenStrs(cursor, b.check_in) >= minStayDays) {
-      return { date: cursor, until: b.check_in }
+      return { date: cursor, until: b.check_in, blocking }
     }
     const after = addDaysStr(b.check_out, 1)
-    if (after > cursor) cursor = after
+    if (after > cursor) {
+      cursor = after
+      blocking.push(b.guest_name)
+    }
   }
 
-  return { date: cursor }
+  return { date: cursor, blocking }
 }
 
 // Multiple milestones can share the same underlying accumulating savings
