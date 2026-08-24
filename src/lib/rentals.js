@@ -250,7 +250,12 @@ export const MIN_STAY_DAYS = 30
 // left to bound it), or `{ date, until }` when the gap is itself capped
 // by a specific future booking's own check-in.
 export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DAYS) {
-  const confirmed = bookings
+  // A missing `bookings` array (a call site forgetting to wire the prop
+  // through, e.g. RentalsView.jsx's mobile layout once already forgot
+  // allBookings) used to throw here and blank the whole Financials
+  // panel with no error boundary to catch it — reads as "no known
+  // bookings" instead, same as an actually-empty array would.
+  const confirmed = (bookings || [])
     .filter((b) => b.property_id === propertyId && b.status === 'confirmed')
     .sort((a, b) => (a.check_in < b.check_in ? -1 : 1))
 
