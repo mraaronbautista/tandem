@@ -281,7 +281,12 @@ export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DA
     // gap below; both just advance cursor instead of returning. Only a
     // check_in strictly after cursor can open a real gap to measure.
     if (b.check_in > cursor && daysBetweenStrs(cursor, b.check_in) >= minStayDays) {
-      return { date: cursor, until: b.check_in, blocking }
+      // `until` is the last actually-available day, inclusive — same
+      // "check_out is the last occupied day" convention bookings already
+      // use elsewhere in this app — not the blocking booking's own
+      // check_in, which is that tenant's first occupied day and would
+      // otherwise display as if it were still open.
+      return { date: cursor, until: addDaysStr(b.check_in, -1), blocking }
     }
     const after = addDaysStr(b.check_out, 1)
     if (after > cursor) {
