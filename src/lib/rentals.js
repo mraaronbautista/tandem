@@ -250,18 +250,24 @@ export const MIN_STAY_DAYS = 30
 // left to bound it), or `{ date, until }` when the gap is itself capped
 // by a specific future booking's own check-in.
 export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DAYS) {
-  const todayStr = todayDateStr()
   const confirmed = bookings
     .filter((b) => b.property_id === propertyId && b.status === 'confirmed')
     .sort((a, b) => (a.check_in < b.check_in ? -1 : 1))
 
-  const current = confirmed.find((b) => b.check_in <= todayStr && b.check_out >= todayStr)
-  let cursor = current ? addDaysStr(current.check_out, 1) : todayStr
+  let cursor = todayDateStr()
 
   for (const b of confirmed) {
-    if (b.check_in <= cursor) continue // already passed, or is `current` itself
-    if (daysBetweenStrs(cursor, b.check_in) >= minStayDays) return { date: cursor, until: b.check_in }
-    cursor = addDaysStr(b.check_out, 1)
+    if (b.check_out < cursor) continue // fully in the past relative to cursor already
+    // A booking whose check_in lands exactly on (or before) cursor — the
+    // "current" booking covering today, or a true back-to-back turnover
+    // with zero gap — leaves no room here at all, same as a too-short
+    // gap below; both just advance cursor instead of returning. Only a
+    // check_in strictly after cursor can open a real gap to measure.
+    if (b.check_in > cursor && daysBetweenStrs(cursor, b.check_in) >= minStayDays) {
+      return { date: cursor, until: b.check_in }
+    }
+    const after = addDaysStr(b.check_out, 1)
+    if (after > cursor) cursor = after
   }
 
   return { date: cursor }
