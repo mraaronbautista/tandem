@@ -201,7 +201,11 @@ export async function fetchUpcomingRentalBookings(company) {
 // until it starts), or fully vacant with nothing on the books.
 export function unitOccupancyStatus(bookings, propertyId) {
   const todayStr = todayDateStr()
-  const unitBookings = bookings.filter((b) => b.property_id === propertyId)
+  // Same defensive guard as nextAvailability below, and for the same
+  // reason — this now has two call sites (RentalOverview.jsx, and
+  // RentalFinancials.jsx's tenant-name lookup), so a missing `bookings`
+  // prop at either one degrades to "nothing known" instead of throwing.
+  const unitBookings = (bookings || []).filter((b) => b.property_id === propertyId)
   const current = unitBookings.find(
     (b) => b.status === 'confirmed' && b.check_in <= todayStr && b.check_out >= todayStr,
   )

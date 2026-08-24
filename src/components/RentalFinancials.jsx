@@ -6,6 +6,7 @@ import {
   formatDateStr,
   BOOKING_SOURCE_LABEL,
   nextAvailability,
+  unitOccupancyStatus,
 } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
@@ -21,6 +22,18 @@ function money(n) {
 function formatAvailability({ date, until }) {
   const when = date === todayDateStr() ? 'now' : formatDateStr(date)
   return until ? `Available ${when} – ${formatDateStr(until)}` : `Available ${when}`
+}
+
+// Tenant name + availability sharing one sub-line rather than two — a
+// third line per unit just to name the tenant would eat more vertical
+// space than the badge-text crowding this was meant to fix in the first
+// place. `guest` is genuinely-occupied-right-now only (unitOccupancyStatus
+// below, independent of whichever month Financials happens to be
+// browsing) — a pending request's own requester isn't "the current
+// renter", so it's left out of this line on purpose.
+function unitSubLine(guest, availability) {
+  const avail = formatAvailability(availability)
+  return guest ? `${guest} · ${avail}` : avail
 }
 
 // A charge only counts toward revenue once its billing day has actually
@@ -248,6 +261,7 @@ export default function RentalFinancials({
       {billed.map((p) => {
         const { count, bookingIds } = chargesByProperty.get(p.id)
         const tenantCount = bookingIds.size
+        const guest = tenantCount === 1 ? unitOccupancyStatus(allBookings, p.id).guest : null
         return (
           <div key={p.id} className="rental-unit-block">
             <div className="rental-unit-status-row">
@@ -260,12 +274,15 @@ export default function RentalFinancials({
                 {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(Number(p.monthly_rent) * count)}
               </span>
             </div>
-            <div className="rental-unit-availability">{formatAvailability(nextAvailability(allBookings, p.id))}</div>
+            <div className="rental-unit-availability">
+              {unitSubLine(guest, nextAvailability(allBookings, p.id))}
+            </div>
           </div>
         )
       })}
       {occupiedNoCharge.map((p) => {
         const nextCharge = upcomingChargeByProperty.get(p.id)
+        const guest = unitOccupancyStatus(allBookings, p.id).guest
         return (
           <div key={p.id} className="rental-unit-block">
             <div className="rental-unit-status-row">
@@ -273,13 +290,19 @@ export default function RentalFinancials({
                 <span className="rental-unit-dot" style={{ background: p.color }} />
                 {p.unit_name}
               </span>
+              {/* Dropped "Occupied, no charge yet" down to just "Occupied"
+                  — the tenant name on the line below already confirms
+                  it's occupied, so spelling that out twice just made this
+                  the longest badge in the list for no extra information. */}
               <span className="rental-unit-badge rental-unit-badge-nocharge">
                 {nextCharge
-                  ? `Occupied, no charge yet — ${money(p.monthly_rent)} due ${formatDateStr(nextCharge)}`
-                  : 'Occupied, no charge this month'}
+                  ? `Occupied — ${money(p.monthly_rent)} due ${formatDateStr(nextCharge)}`
+                  : 'Occupied — no charge this month'}
               </span>
             </div>
-            <div className="rental-unit-availability">{formatAvailability(nextAvailability(allBookings, p.id))}</div>
+            <div className="rental-unit-availability">
+              {unitSubLine(guest, nextAvailability(allBookings, p.id))}
+            </div>
           </div>
         )
       })}
@@ -291,7 +314,7 @@ export default function RentalFinancials({
               {p.unit_name}
             </span>
             <span className="rental-unit-badge rental-unit-badge-request">
-              Pending request — {money(p.monthly_rent)} if accepted
+              Pending — {money(p.monthly_rent)} if accepted
             </span>
           </div>
           <div className="rental-unit-availability">{formatAvailability(nextAvailability(allBookings, p.id))}</div>
