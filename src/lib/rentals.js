@@ -213,6 +213,60 @@ export function unitOccupancyStatus(bookings, propertyId) {
   return { occupied: false, next: null }
 }
 
+function addDaysStr(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + days)
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+}
+
+function daysBetweenStrs(a, b) {
+  const [ay, am, ad] = a.split('-').map(Number)
+  const [by, bm, bd] = b.split('-').map(Number)
+  return Math.round((new Date(by, bm - 1, bd) - new Date(ay, am - 1, ad)) / 86_400_000)
+}
+
+export const MIN_STAY_DAYS = 30
+
+// The next date this unit could actually accept a NEW booking honoring
+// the household's 30-day minimum stay — not just "the day after
+// checkout." A unit already re-booked soon after its current tenant
+// leaves (a fast back-to-back turnover) might not have room for another
+// 30-day stay in the gap at all, and "Vacant" alone (unitOccupancyStatus
+// above, or the vacant/occupied buckets in RentalFinancials.jsx) doesn't
+// capture that — it only reflects whether a booking touches the
+// currently-browsed month, not whether the surrounding gap actually
+// clears the minimum.
+//
+// Only CONFIRMED bookings block a gap — a pending request isn't
+// guaranteed, so treating it as blocking would understate real
+// availability for someone trying to fill a vacancy. `bookings` must be
+// the *unscoped* set (see fetchUpcomingRentalBookings), not the
+// month-limited one RentalFinancials.jsx otherwise uses, since a
+// blocking booking can be months out.
+//
+// Walks forward through every future confirmed booking in order, looking
+// for the first gap of at least `minStayDays`. Returns `{ date }` alone
+// when that gap runs past every booking currently on the books (nothing
+// left to bound it), or `{ date, until }` when the gap is itself capped
+// by a specific future booking's own check-in.
+export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DAYS) {
+  const todayStr = todayDateStr()
+  const confirmed = bookings
+    .filter((b) => b.property_id === propertyId && b.status === 'confirmed')
+    .sort((a, b) => (a.check_in < b.check_in ? -1 : 1))
+
+  const current = confirmed.find((b) => b.check_in <= todayStr && b.check_out >= todayStr)
+  let cursor = current ? addDaysStr(current.check_out, 1) : todayStr
+
+  for (const b of confirmed) {
+    if (b.check_in <= cursor) continue // already passed, or is `current` itself
+    if (daysBetweenStrs(cursor, b.check_in) >= minStayDays) return { date: cursor, until: b.check_in }
+    cursor = addDaysStr(b.check_out, 1)
+  }
+
+  return { date: cursor }
+}
+
 // Multiple milestones can share the same underlying accumulating savings
 // (e.g. a $20k short-term goal, then $75k for the actual down payment) —
 // ordered ascending so the nearer milestone shows first. saved_amount is

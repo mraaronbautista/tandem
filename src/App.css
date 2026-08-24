@@ -3341,6 +3341,25 @@ label.new-task-checkbox-label {
 }
 
 .rental-expense-row,
+/* Wraps .rental-unit-status-row plus the .rental-unit-availability line
+   below it — vertical spacing lives here now instead of on the row
+   itself, since a unit is now two lines, not one. */
+.rental-unit-block {
+  padding: 4px 0;
+}
+
+.rental-unit-block .rental-unit-status-row {
+  padding: 0;
+}
+
+/* 15px = the .rental-unit-dot's own 9px width + 6px margin-right, so
+   this lines up under the unit *name* text, not the dot before it. */
+.rental-unit-availability {
+  padding-left: 15px;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
 .rental-unit-status-row {
   display: flex;
   justify-content: space-between;

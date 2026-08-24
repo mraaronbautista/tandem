@@ -1,10 +1,26 @@
 import { useState } from 'react'
-import { chargeDatesForBooking, monthRangeStrings, todayDateStr, formatDateStr, BOOKING_SOURCE_LABEL } from '../lib/rentals'
+import {
+  chargeDatesForBooking,
+  monthRangeStrings,
+  todayDateStr,
+  formatDateStr,
+  BOOKING_SOURCE_LABEL,
+  nextAvailability,
+} from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+}
+
+// "Available {date}[ – {until}]" from nextAvailability()'s raw
+// {date, until?} — "now" instead of spelling out today's own date, since
+// that reads faster for the single most common case (a unit that's
+// vacant this instant, or just freed up).
+function formatAvailability({ date, until }) {
+  const when = date === todayDateStr() ? 'now' : formatDateStr(date)
+  return until ? `Available ${when} – ${formatDateStr(until)}` : `Available ${when}`
 }
 
 // A charge only counts toward revenue once its billing day has actually
@@ -26,11 +42,15 @@ function isBillableCharge(d, start, end) {
 // count toward revenue, only confirmed bookings. `bookings` is scoped to
 // the visible month (see RentalsView's fetch), which is enough here since
 // any charge landing in this month implies the booking overlaps this
-// month too.
+// month too. `allBookings` (RentalsView's own `upcomingBookings`, already
+// fetched for RentalOverview) is the unscoped counterpart used only for
+// nextAvailability() below — a blocking booking there can be months past
+// the currently-browsed one.
 export default function RentalFinancials({
   company,
   properties,
   bookings,
+  allBookings,
   expenses,
   monthDate,
   goals,
@@ -229,55 +249,67 @@ export default function RentalFinancials({
         const { count, bookingIds } = chargesByProperty.get(p.id)
         const tenantCount = bookingIds.size
         return (
-          <div key={p.id} className="rental-unit-status-row">
-            <span>
-              <span className="rental-unit-dot" style={{ background: p.color }} />
-              {p.unit_name}
-            </span>
-            <span className="rental-unit-badge rental-unit-badge-billed">
-              Billed{count > 1 ? ` ×${count}` : ''}
-              {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(Number(p.monthly_rent) * count)}
-            </span>
+          <div key={p.id} className="rental-unit-block">
+            <div className="rental-unit-status-row">
+              <span>
+                <span className="rental-unit-dot" style={{ background: p.color }} />
+                {p.unit_name}
+              </span>
+              <span className="rental-unit-badge rental-unit-badge-billed">
+                Billed{count > 1 ? ` ×${count}` : ''}
+                {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(Number(p.monthly_rent) * count)}
+              </span>
+            </div>
+            <div className="rental-unit-availability">{formatAvailability(nextAvailability(allBookings, p.id))}</div>
           </div>
         )
       })}
       {occupiedNoCharge.map((p) => {
         const nextCharge = upcomingChargeByProperty.get(p.id)
         return (
-          <div key={p.id} className="rental-unit-status-row">
-            <span>
-              <span className="rental-unit-dot" style={{ background: p.color }} />
-              {p.unit_name}
-            </span>
-            <span className="rental-unit-badge rental-unit-badge-nocharge">
-              {nextCharge
-                ? `Occupied, no charge yet — ${money(p.monthly_rent)} due ${formatDateStr(nextCharge)}`
-                : 'Occupied, no charge this month'}
-            </span>
+          <div key={p.id} className="rental-unit-block">
+            <div className="rental-unit-status-row">
+              <span>
+                <span className="rental-unit-dot" style={{ background: p.color }} />
+                {p.unit_name}
+              </span>
+              <span className="rental-unit-badge rental-unit-badge-nocharge">
+                {nextCharge
+                  ? `Occupied, no charge yet — ${money(p.monthly_rent)} due ${formatDateStr(nextCharge)}`
+                  : 'Occupied, no charge this month'}
+              </span>
+            </div>
+            <div className="rental-unit-availability">{formatAvailability(nextAvailability(allBookings, p.id))}</div>
           </div>
         )
       })}
       {pendingOnly.map((p) => (
-        <div key={p.id} className="rental-unit-status-row">
-          <span>
-            <span className="rental-unit-dot" style={{ background: p.color }} />
-            {p.unit_name}
-          </span>
-          <span className="rental-unit-badge rental-unit-badge-request">
-            Pending request — {money(p.monthly_rent)} if accepted
-          </span>
+        <div key={p.id} className="rental-unit-block">
+          <div className="rental-unit-status-row">
+            <span>
+              <span className="rental-unit-dot" style={{ background: p.color }} />
+              {p.unit_name}
+            </span>
+            <span className="rental-unit-badge rental-unit-badge-request">
+              Pending request — {money(p.monthly_rent)} if accepted
+            </span>
+          </div>
+          <div className="rental-unit-availability">{formatAvailability(nextAvailability(allBookings, p.id))}</div>
         </div>
       ))}
       {vacant.map((p, i) => (
-        <div key={p.id} className="rental-unit-status-row">
-          <span>
-            <span className="rental-unit-dot" style={{ background: p.color }} />
-            {p.unit_name}
-          </span>
-          <span className="rental-unit-badge rental-unit-badge-vacant">
-            Vacant — {money(p.monthly_rent)}
-            {i === 0 && <span className="rental-fill-next-badge">Fill next</span>}
-          </span>
+        <div key={p.id} className="rental-unit-block">
+          <div className="rental-unit-status-row">
+            <span>
+              <span className="rental-unit-dot" style={{ background: p.color }} />
+              {p.unit_name}
+            </span>
+            <span className="rental-unit-badge rental-unit-badge-vacant">
+              Vacant — {money(p.monthly_rent)}
+              {i === 0 && <span className="rental-fill-next-badge">Fill next</span>}
+            </span>
+          </div>
+          <div className="rental-unit-availability">{formatAvailability(nextAvailability(allBookings, p.id))}</div>
         </div>
       ))}
     </div>

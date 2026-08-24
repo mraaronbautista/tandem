@@ -258,6 +258,7 @@ export default function RentalsView({ me }) {
             company={COMPANY}
             properties={properties}
             bookings={bookings}
+            allBookings={upcomingBookings}
             expenses={expenses}
             monthDate={monthDate}
             goals={goals}
