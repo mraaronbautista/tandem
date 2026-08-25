@@ -183,8 +183,10 @@ export default function RentalsView({ me }) {
     const t = e.changedTouches[0]
     const dx = t.clientX - start.x
     const dy = t.clientY - start.y
+    // Swipe left to advance to next month, right to go back — same
+    // convention TaskBoard.jsx's own day/month swipe use.
     if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
-    shiftMonth(dx > 0 ? 1 : -1)
+    shiftMonth(dx > 0 ? -1 : 1)
   }
 
   const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' })

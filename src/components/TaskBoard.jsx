@@ -336,8 +336,12 @@ export default function TaskBoard({ theme, toggleTheme }) {
     // Requires the gesture to be clearly more horizontal than vertical —
     // otherwise an ordinary vertical scroll through a long task list
     // would occasionally read as a stray day-change.
+    // dx > 0 is a swipe *right* (finger moved rightward) — that steps
+    // back, not forward, matching the common carousel/calendar
+    // convention (swipe left to advance) rather than the literal
+    // direction-of-motion mapping this shipped with initially.
     if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
-    shiftDay(dx > 0 ? 1 : -1)
+    shiftDay(dx > 0 ? -1 : 1)
   }
 
   // Resets to day 1 of the target month rather than shifting the day
@@ -370,8 +374,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
     const t = e.changedTouches[0]
     const dx = t.clientX - start.x
     const dy = t.clientY - start.y
+    // Same swipe-left-to-advance convention as handleDaySwipeEnd above.
     if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
-    shiftMonth(dx > 0 ? 1 : -1)
+    shiftMonth(dx > 0 ? -1 : 1)
   }
 
   const monthLabel = selectedDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
