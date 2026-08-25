@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { deleteRentalBooking, confirmRentalBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
+import {
+  deleteRentalBooking,
+  confirmRentalBooking,
+  setChargePaid,
+  chargeDatesForBooking,
+  todayDateStr,
+  BOOKING_SOURCE_LABEL,
+} from '../lib/rentals'
 import Modal from './Modal'
 
 function formatDateStr(dateStr) {
@@ -15,8 +22,33 @@ function formatDateStr(dateStr) {
 export default function RentalBookingDetail({ booking, onClose, onDeleted, onConfirmed, onEdit }) {
   const [deleting, setDeleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [markingPaid, setMarkingPaid] = useState(false)
   const [error, setError] = useState('')
   const isPending = booking.status === 'pending'
+  // The soonest of this booking's own charge dates (see
+  // chargeDatesForBooking) that hasn't actually happened yet and isn't
+  // already marked paid — an advance payment, same concept as
+  // RentalFinancials.jsx's own "Mark paid" button, just scoped to one
+  // specific booking instead of "whichever booking generates a
+  // property's next charge." A charge that's already arrived doesn't
+  // need this at all (isBillableCharge already counts it once the date
+  // passes, paid_charges or not), and a pending request can't be paid in
+  // advance for something that might still be declined.
+  const nextUnpaidCharge = isPending
+    ? null
+    : chargeDatesForBooking(booking).find((d) => d > todayDateStr() && !(booking.paid_charges || []).includes(d))
+
+  async function handleMarkPaid() {
+    setMarkingPaid(true)
+    setError('')
+    try {
+      await setChargePaid(booking.id, booking.paid_charges || [], nextUnpaidCharge)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMarkingPaid(false)
+    }
+  }
 
   async function handleDelete() {
     const verb = isPending ? 'Decline' : 'Delete'
@@ -56,6 +88,9 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
         <p className="rental-booking-detail-dates">
           {formatDateStr(booking.check_in)} – {formatDateStr(booking.check_out)}
         </p>
+        {nextUnpaidCharge && (
+          <p className="rental-booking-detail-charge">Next charge: {formatDateStr(nextUnpaidCharge)}</p>
+        )}
         {booking.source && (
           <p className="rental-booking-detail-source">
             Source: {BOOKING_SOURCE_LABEL[booking.source]}
@@ -71,6 +106,11 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
           <button type="button" onClick={() => onEdit(booking)}>
             Edit
           </button>
+          {nextUnpaidCharge && (
+            <button type="button" onClick={handleMarkPaid} disabled={markingPaid}>
+              {markingPaid ? 'Marking…' : `Mark ${formatDateStr(nextUnpaidCharge)} paid`}
+            </button>
+          )}
           <button type="button" className="rental-delete-booking" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting…' : isPending ? 'Decline' : 'Delete booking'}
           </button>

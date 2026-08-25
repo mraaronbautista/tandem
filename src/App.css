@@ -3306,6 +3306,11 @@ label.new-task-checkbox-label {
   opacity: 0.65;
 }
 
+.rental-booking-detail-charge {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
 .rental-booking-detail-notes {
   font-size: 14px;
   white-space: pre-wrap;
