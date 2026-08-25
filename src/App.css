@@ -26,6 +26,25 @@
   gap: 12px;
 }
 
+/* Form controls — a shared soft "settled into place" focus state, applied
+   once here rather than repeated on every individual input/textarea/select
+   rule scattered through this file (there's no per-component CSS in this
+   app — see CLAUDE.md). Excludes checkbox/radio/color/range, which already
+   get a native focus treatment that reads fine as-is. */
+input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range']),
+textarea,
+select {
+  transition: border-color var(--dur-base) var(--ease-tactile), box-shadow var(--dur-base) var(--ease-tactile);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range']):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(217, 160, 102, 0.25);
+  outline: none;
+}
+
 .theme-toggle {
   width: 32px;
   height: 32px;
@@ -39,6 +58,11 @@
   align-items: center;
   justify-content: center;
   flex: none;
+  transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.theme-toggle:active {
+  transform: scale(0.92);
 }
 
 /* Login */
@@ -72,7 +96,7 @@
 
 .login-form input {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--card-bg);
   color: var(--text-h);
@@ -155,6 +179,21 @@
   background: var(--card-bg);
   border-top: 1px solid var(--border);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  /* Upward-only shadow (not the omnidirectional --shadow-raised token) —
+     this bar is fixed to the viewport bottom, so only the top edge needs
+     to read as lifted off the content scrolling beneath it. Same warm
+     alpha/color language as --shadow-raised, just one-directional. */
+  box-shadow: 0 -2px 8px rgba(60, 45, 25, 0.1);
+}
+
+:root[data-theme='dark'] .task-board-nav {
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .task-board-nav {
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.35);
+  }
 }
 
 .task-board-nav-item {
@@ -171,6 +210,7 @@
   font: inherit;
   font-size: 11px;
   cursor: pointer;
+  transition: color var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
 }
 
 .task-board-nav-item-active {
@@ -367,6 +407,11 @@
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
+  transition: transform var(--dur-fast) var(--ease-tactile), border-color var(--dur-base) var(--ease-tactile), color var(--dur-base) var(--ease-tactile);
+}
+
+.working-toggle:active {
+  transform: scale(0.96);
 }
 
 .working-toggle-on {
@@ -399,6 +444,11 @@
   align-items: center;
   justify-content: center;
   flex: none;
+  transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.icon-button:active {
+  transform: scale(0.92);
 }
 
 .icon-button:disabled {
@@ -880,14 +930,35 @@
   cursor: default;
 }
 
+/* Not actually clickable in this context (see cursor: default above) —
+   the hover/press lift added to .task-row would otherwise misleadingly
+   suggest this whole row responds to a click. */
+.peek-task .task-row:hover,
+.peek-task .task-row:active {
+  box-shadow: var(--shadow-resting);
+  transform: none;
+}
+
 .task-row {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   margin-bottom: 8px;
   cursor: pointer;
   text-align: left;
+  box-shadow: var(--shadow-resting);
+  transition: box-shadow var(--dur-base) var(--ease-tactile), transform var(--dur-base) var(--ease-tactile);
+}
+
+.task-row:hover {
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-1px);
+}
+
+.task-row:active {
+  box-shadow: var(--shadow-press);
+  transform: translateY(0);
 }
 
 .task-row-done .task-title {
@@ -1018,6 +1089,11 @@
   cursor: pointer;
   font: inherit;
   color: var(--text);
+  transition: transform var(--dur-fast) var(--ease-tactile);
+}
+
+.date-strip-day:active {
+  transform: scale(0.94);
 }
 
 .date-strip-weekday {
@@ -1067,6 +1143,10 @@
   grid-template-columns: repeat(7, 1fr);
   gap: 0;
   border: 1px solid var(--border);
+  /* Lifts the grid off the page as one unit — deliberately not applied
+     per-cell (see .month-view-day below), which would fight the
+     outline-based hairline collapsing between cells. */
+  box-shadow: var(--shadow-resting);
 }
 
 .month-view-weekday {
@@ -1145,7 +1225,7 @@
   gap: 4px;
   min-width: 0;
   padding: 2px 5px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--pill-bg);
 }
 
@@ -1514,10 +1594,15 @@
   gap: 10px;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   opacity: 1;
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile), border-color var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.bulk-edit-task-list .bulk-edit-task-row:active {
+  transform: scale(0.98);
 }
 
 .bulk-edit-task-row-selected {
@@ -1729,13 +1814,18 @@
   justify-content: space-between;
   width: 100%;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--pill-bg);
   color: var(--text-h);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile);
+}
+
+.eod-report-month-header:active {
+  transform: scale(0.98);
 }
 
 .eod-report-month-count {
@@ -1929,12 +2019,17 @@ a.task-submission-file-link:hover {
 .period-tab {
   flex: 1;
   padding: 7px 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--pill-bg);
   color: var(--text-h);
   font-size: 13px;
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile), box-shadow var(--dur-base) var(--ease-tactile);
+}
+
+.period-tab:active {
+  transform: scale(0.97);
 }
 
 .period-tab-active {
@@ -1942,6 +2037,7 @@ a.task-submission-file-link:hover {
   border-color: var(--accent);
   color: #fff;
   font-weight: 600;
+  box-shadow: var(--shadow-resting);
 }
 
 .settings-menu-account {
@@ -1961,7 +2057,7 @@ a.task-submission-file-link:hover {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--pill-bg);
   color: var(--text-h);
@@ -1969,6 +2065,11 @@ a.task-submission-file-link:hover {
   font-size: 14px;
   cursor: pointer;
   text-align: left;
+  transition: transform var(--dur-fast) var(--ease-tactile);
+}
+
+.settings-menu-item:active {
+  transform: scale(0.98);
 }
 
 .settings-menu-icon {
@@ -2043,6 +2144,7 @@ a.task-submission-file-link:hover {
   font-weight: 600;
   cursor: pointer;
   text-align: left;
+  transition: background var(--dur-base) var(--ease-tactile);
 }
 
 .how-to-guide-items {
@@ -2075,11 +2177,16 @@ a.task-submission-file-link:hover {
 
 .submission-actions button {
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--pill-bg);
   cursor: pointer;
   font-size: 14px;
+  transition: transform var(--dur-fast) var(--ease-tactile), box-shadow var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.submission-actions button:active {
+  transform: scale(0.97);
 }
 
 .submission-actions button.submission-save {
@@ -2087,6 +2194,17 @@ a.task-submission-file-link:hover {
   border-color: var(--accent);
   color: #fff;
   font-weight: 600;
+  box-shadow: var(--shadow-resting);
+}
+
+.submission-actions button.submission-save:hover {
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-1px);
+}
+
+.submission-actions button.submission-save:active {
+  box-shadow: var(--shadow-press);
+  transform: translateY(0) scale(0.98);
 }
 
 /* No margin-top here anymore — this now renders inside
@@ -2099,12 +2217,17 @@ a.task-submission-file-link:hover {
 
 .task-row-actions button {
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--pill-bg);
   color: var(--text-h);
   font-size: 13px;
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.task-row-actions button:active {
+  transform: scale(0.96);
 }
 
 .task-row-actions button:disabled {
@@ -2121,6 +2244,13 @@ a.task-submission-file-link:hover {
   padding: 0;
   border: none;
   background: none;
+  box-shadow: none;
+}
+
+.task-row-editing:hover,
+.task-row-editing:active {
+  box-shadow: none;
+  transform: none;
 }
 
 .task-row-editing .new-task-form {
@@ -2161,12 +2291,18 @@ a.task-submission-file-link:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-floating);
   flex: none;
+  transition: transform var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
 }
 
 .fab-new-task:hover {
   background: var(--accent-h);
+  transform: translateY(-2px);
+}
+
+.fab-new-task:active {
+  transform: scale(0.95);
 }
 
 .quick-actions-menu {
@@ -2188,8 +2324,13 @@ a.task-submission-file-link:hover {
   font-size: 14px;
   font: inherit;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-raised);
   white-space: nowrap;
+  transition: transform var(--dur-fast) var(--ease-tactile);
+}
+
+.quick-action-item:active {
+  transform: scale(0.96);
 }
 
 .quick-action-icon {
@@ -2199,12 +2340,13 @@ a.task-submission-file-link:hover {
 .new-task-form {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 14px;
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: var(--shadow-resting);
 }
 
 /* Popup for + New task: desktop gets a centered modal, narrow screens get
@@ -2240,18 +2382,24 @@ a.task-submission-file-link:hover {
   width: 100%;
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 6px;
+  box-shadow: var(--shadow-floating);
 }
 
 .submission-modal {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: var(--shadow-floating);
+}
+
+.modal-backdrop .new-task-form {
+  box-shadow: var(--shadow-floating);
 }
 
 @media (max-width: 640px) {
@@ -2811,13 +2959,18 @@ label.new-task-checkbox-label {
   justify-content: center;
   gap: 6px;
   padding: 7px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--pill-bg);
   color: var(--text-h);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.rental-unit-tab:active {
+  transform: scale(0.97);
 }
 
 .rental-unit-tab-active {
@@ -3067,12 +3220,17 @@ label.new-task-checkbox-label {
   min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: none;
   font: inherit;
   color: inherit;
   text-align: left;
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile), border-color var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.rental-overview-item:active {
+  transform: scale(0.98);
 }
 
 /* flex-start, not center — center against the row's full cross-axis
@@ -3211,7 +3369,7 @@ label.new-task-checkbox-label {
 
 .rental-savings {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
 }
 
@@ -3258,7 +3416,7 @@ label.new-task-checkbox-label {
 
 .rental-financials-summary {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -3436,11 +3594,16 @@ label.new-task-checkbox-label {
   color: inherit;
   text-align: left;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-base) var(--ease-tactile);
 }
 
 .rental-expense-row-editable:hover {
   background: var(--pill-bg);
+}
+
+.rental-expense-row-editable:active {
+  background: var(--border);
 }
 
 .rental-unit-badge {
@@ -3512,13 +3675,25 @@ label.new-task-checkbox-label {
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--card-bg);
   color: var(--text-h);
   font: inherit;
   cursor: pointer;
   text-align: left;
+  box-shadow: var(--shadow-resting);
+  transition: box-shadow var(--dur-base) var(--ease-tactile), transform var(--dur-base) var(--ease-tactile);
+}
+
+.vault-entry-row:hover {
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-1px);
+}
+
+.vault-entry-row:active {
+  box-shadow: var(--shadow-press);
+  transform: translateY(0);
 }
 
 .vault-entry-label {
@@ -3776,9 +3951,10 @@ label.new-task-checkbox-label {
 
 .cork-board-item {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   background: var(--card-bg);
+  box-shadow: var(--shadow-resting);
 }
 
 .cork-board-item-body {
@@ -3951,10 +4127,22 @@ label.new-task-checkbox-label {
 .inbox-item {
   border: 1px solid var(--border);
   border-left: 3px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 10px 14px;
   background: var(--card-bg);
   cursor: pointer;
+  box-shadow: var(--shadow-resting);
+  transition: box-shadow var(--dur-base) var(--ease-tactile), transform var(--dur-base) var(--ease-tactile);
+}
+
+.inbox-item:hover {
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-1px);
+}
+
+.inbox-item:active {
+  box-shadow: var(--shadow-press);
+  transform: translateY(0);
 }
 
 .inbox-item-question {
