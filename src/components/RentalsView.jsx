@@ -158,6 +158,35 @@ export default function RentalsView({ me }) {
     setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + delta, 1))
   }
 
+  // Swipe left/right on mobile to step the calendar to the previous/next
+  // month — same gesture/threshold TaskBoard.jsx's own Day and Month
+  // views already use, mobile-only since desktop's ‹ › month arrows
+  // (right above the calendar there) already cover it and there's no
+  // touch gesture to hook anyway. Only wired on the mobile render below,
+  // not the desktop one, rather than gating inside the handler like
+  // TaskBoard.jsx does — Rentals' mobile/desktop layouts are already two
+  // fully separate JSX trees (see file-top comment), so there's no single
+  // shared element both branches render that a runtime isDesktop check
+  // would need to guard.
+  const monthSwipeStart = useRef(null)
+  const SWIPE_MIN_DISTANCE = 60
+
+  function handleMonthSwipeStart(e) {
+    const t = e.touches[0]
+    monthSwipeStart.current = { x: t.clientX, y: t.clientY }
+  }
+
+  function handleMonthSwipeEnd(e) {
+    const start = monthSwipeStart.current
+    monthSwipeStart.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    shiftMonth(dx > 0 ? 1 : -1)
+  }
+
   const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
   const selectedUnit = properties?.find((p) => p.id === selectedUnitId)
 
@@ -335,17 +364,19 @@ export default function RentalsView({ me }) {
           components staying visually separate doesn't matter since they
           already share selectedUnitId/onSelectUnit from here regardless
           of whether one is nested inside the other. */}
-      <RentalCalendar
-        properties={properties}
-        bookings={bookings}
-        monthDate={monthDate}
-        createdBy={me?.id}
-        onBookingsChanged={handleBookingsChanged}
-        selectedUnitId={selectedUnitId}
-        onSelectUnit={setSelectedUnitId}
-        showUnitTabs={false}
-        showUnitHeader={false}
-      />
+      <div onTouchStart={handleMonthSwipeStart} onTouchEnd={handleMonthSwipeEnd}>
+        <RentalCalendar
+          properties={properties}
+          bookings={bookings}
+          monthDate={monthDate}
+          createdBy={me?.id}
+          onBookingsChanged={handleBookingsChanged}
+          selectedUnitId={selectedUnitId}
+          onSelectUnit={setSelectedUnitId}
+          showUnitTabs={false}
+          showUnitHeader={false}
+        />
+      </div>
 
       <h3 className="task-section-heading">Financials</h3>
       <RentalFinancials

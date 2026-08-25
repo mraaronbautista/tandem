@@ -340,6 +340,40 @@ export default function TaskBoard({ theme, toggleTheme }) {
     shiftDay(dx > 0 ? 1 : -1)
   }
 
+  // Resets to day 1 of the target month rather than shifting the day
+  // number as-is — selectedDate's only job here is naming which month
+  // MonthView shows, and a naive setMonth() on e.g. Jan 31 would overflow
+  // into early March instead of landing in February, silently skipping a
+  // month. Same fix RentalsView.jsx's own shiftMonth already uses.
+  function shiftMonth(delta) {
+    setSelectedDate((d) => startOfDay(new Date(d.getFullYear(), d.getMonth() + delta, 1)))
+  }
+
+  // Swipe left/right on mobile Month view to step to the previous/next
+  // month — same gesture as handleDaySwipe above, just Month-mode-only
+  // instead of Day-mode-only, and stepping shiftMonth instead of
+  // shiftDay. Deliberately a second copy rather than a shared helper —
+  // each is a handful of lines with a different mode gate and step
+  // function, not worth a hook for.
+  const monthSwipeStart = useRef(null)
+
+  function handleMonthSwipeStart(e) {
+    if (isDesktop || viewMode !== 'month') return
+    const t = e.touches[0]
+    monthSwipeStart.current = { x: t.clientX, y: t.clientY }
+  }
+
+  function handleMonthSwipeEnd(e) {
+    const start = monthSwipeStart.current
+    monthSwipeStart.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    shiftMonth(dx > 0 ? 1 : -1)
+  }
+
   const monthLabel = selectedDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
 
   // Computed across all tasks, not just whoFiltered — a conflict is real
@@ -568,15 +602,17 @@ export default function TaskBoard({ theme, toggleTheme }) {
             {loading ? (
               <p className="loading">Loading…</p>
             ) : viewMode === 'month' ? (
-              <MonthView
-                monthDate={selectedDate}
-                tasksByDay={tasksByDay}
-                selectedDate={selectedDate}
-                onSelectDay={(d) => {
-                  setSelectedDate(d)
-                  setViewMode('day')
-                }}
-              />
+              <div onTouchStart={handleMonthSwipeStart} onTouchEnd={handleMonthSwipeEnd}>
+                <MonthView
+                  monthDate={selectedDate}
+                  tasksByDay={tasksByDay}
+                  selectedDate={selectedDate}
+                  onSelectDay={(d) => {
+                    setSelectedDate(d)
+                    setViewMode('day')
+                  }}
+                />
+              </div>
             ) : (
               <div className="task-list" onTouchStart={handleDaySwipeStart} onTouchEnd={handleDaySwipeEnd}>
                 {allDay.length > 0 && (

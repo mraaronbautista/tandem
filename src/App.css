@@ -450,8 +450,15 @@
 }
 
 /* Task rows */
+/* min-height so an empty/near-empty day still fills most of the screen —
+   without it, .task-list's height was just whatever its actual content
+   needed (a single "Nothing here." line on an empty day), leaving the
+   rest of the visible area belonging to a parent element with no swipe
+   handler of its own, so the day-swipe gesture only worked in the small
+   sliver of screen an empty day's text happened to occupy. */
 .task-list {
   margin-top: 8px;
+  min-height: 50vh;
 }
 
 /* Consistent spacing between sections whether or not they start with a
