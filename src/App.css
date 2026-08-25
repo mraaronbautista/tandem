@@ -3001,6 +3001,24 @@ label.new-task-checkbox-label {
     height: 6px;
     margin-right: 0;
   }
+
+  /* Mobile's Calendar tab renders this toolbar with unit tabs hidden
+     (RentalOverview's cards are the unit-switcher instead — see
+     RentalsView.jsx) and no unitTabsReplacement, so "+ Add booking" ends
+     up the toolbar's only child. Left under the base row/space-between
+     layout (built for a multi-item toolbar), a lone flex item with no
+     grow just hugs the left edge as a small pill with dead space beside
+     it — stretching it full width instead matches "+ Add unit" directly
+     above it in the same stacked column. */
+  .rental-calendar-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rental-calendar-toolbar .rental-add-booking {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 .rental-add-booking {
