@@ -2931,10 +2931,31 @@ label.new-task-checkbox-label {
   font-weight: 700;
 }
 
+/* Column instead of the base .rental-month-day's single centered item —
+   an occupied cell can now hold two lines (day number + guest name on
+   isStart cells), and a column layout with just the one child (every
+   other occupied cell, no name shown) still centers exactly like before. */
 .rental-month-day-occupied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.1;
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+}
+
+.rental-month-day-guest {
+  max-width: 100%;
+  padding: 0 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .rental-month-day-pending {

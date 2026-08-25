@@ -237,6 +237,13 @@ const RentalCalendar = forwardRef(function RentalCalendar(
                 onClick={() => setSelectedBooking(booking)}
               >
                 {day}
+                {/* isStart already means "the real check-in day, OR the
+                    first column of a row this booking is just continuing
+                    into" — exactly where a name needs to (re)appear so a
+                    bar spanning several weeks doesn't go unlabeled after
+                    its first row, same as a real calendar app repeats an
+                    event's title at the start of each week it crosses. */}
+                {isStart && <span className="rental-month-day-guest">{booking.guest_name}</span>}
               </button>
             )
           }),
