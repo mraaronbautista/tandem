@@ -3557,6 +3557,18 @@ label.new-task-checkbox-label {
   padding: 4px 0;
 }
 
+/* Label + amount spans — needs its own flex/space-between (missing from
+   the shared rule above, which only ever covered padding) or the two
+   spans just sit flush against each other with no gap, unlike the
+   equivalent "Bookings by source" rows (.rental-financials-row, which
+   already has this) right above this section. */
+.rental-expense-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
 .rental-unit-block .rental-unit-status-row {
   padding: 0;
 }
