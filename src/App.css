@@ -3353,11 +3353,35 @@ label.new-task-checkbox-label {
 }
 
 /* 15px = the .rental-unit-dot's own 9px width + 6px margin-right, so
-   this lines up under the unit *name* text, not the dot before it. */
+   this lines up under the unit *name* text, not the dot before it. Flex
+   with space-between so occupiedNoCharge's "Mark paid" button (the only
+   row with a second child here) sits pinned to the right instead of
+   crowding right up against the availability text — harmless on every
+   other row, which only ever has the one text child. */
 .rental-unit-availability {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   padding-left: 15px;
   font-size: 12px;
   opacity: 0.55;
+}
+
+.rental-mark-paid {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.rental-mark-paid:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .rental-unit-status-row {

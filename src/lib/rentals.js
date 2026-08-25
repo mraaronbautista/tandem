@@ -170,7 +170,7 @@ export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
   const { data, error } = await supabase
     .from('rental_bookings')
     .select(
-      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, rental_properties!inner(company)',
+      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, paid_charges, rental_properties!inner(company)',
     )
     .eq('rental_properties.company', company)
     .lt('check_in', rangeEnd)
@@ -187,7 +187,7 @@ export async function fetchUpcomingRentalBookings(company) {
   const { data, error } = await supabase
     .from('rental_bookings')
     .select(
-      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, rental_properties!inner(company)',
+      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, paid_charges, rental_properties!inner(company)',
     )
     .eq('rental_properties.company', company)
     .gte('check_out', todayDateStr())
@@ -423,6 +423,20 @@ export async function updateRentalBooking(
 
 export async function confirmRentalBooking(id) {
   const { error } = await supabase.from('rental_bookings').update({ status: 'confirmed' }).eq('id', id)
+  if (error) throw error
+}
+
+// Manually marks a specific charge date (see chargeDatesForBooking above)
+// paid ahead of schedule, e.g. an advance/early payment the normal
+// date-driven revenue calc wouldn't otherwise count until that day
+// actually happens. Takes the booking's own current `paid_charges` array
+// (RentalFinancials.jsx already has it in hand from the fetch) rather
+// than reading it back first — a plain read-modify-write, same low-
+// ceremony approach TaskRow.jsx's checklist/completion_attachments
+// already use for their own jsonb array fields in this app.
+export async function setChargePaid(id, paidCharges, chargeDate) {
+  const next = paidCharges.includes(chargeDate) ? paidCharges : [...paidCharges, chargeDate]
+  const { error } = await supabase.from('rental_bookings').update({ paid_charges: next }).eq('id', id)
   if (error) throw error
 }
 

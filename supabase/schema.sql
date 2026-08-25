@@ -439,6 +439,19 @@ create table rental_bookings (
   -- check-in", "paid via Venmo") — distinct from source_note, which is
   -- specifically the detail for an 'other' source.
   notes text,
+  -- Charge dates (see chargeDatesForBooking() in rentals.js) manually
+  -- confirmed paid even though the date hasn't arrived yet — an early/
+  -- advance payment, which the normal date-driven revenue calc
+  -- (isBillableCharge()) would otherwise not count until that day
+  -- actually happens. A plain array of 'YYYY-MM-DD' strings, same
+  -- "doesn't need a child table" reasoning as tasks.checklist.
+  paid_charges jsonb not null default '[]'::jsonb,
+  -- Last charge date (see chargeDatesForBooking()) the "rent due today"
+  -- reminder already fired for, so the cron pass in notify-reminders
+  -- doesn't re-notify on every later run the same day — and, being the
+  -- *date* rather than a boolean, naturally allows firing again on a
+  -- later cycle's own due date without needing to be reset by hand.
+  rent_reminder_sent_for date,
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
   constraint rental_bookings_dates_check check (check_out >= check_in)

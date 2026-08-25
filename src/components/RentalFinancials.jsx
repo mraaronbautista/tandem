@@ -6,6 +6,7 @@ import {
   formatDateStr,
   BOOKING_SOURCE_LABEL,
   nextAvailability,
+  setChargePaid,
 } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
@@ -45,9 +46,12 @@ function unitSubLine({ blocking, ...availability }) {
 // as already paid before it's due. Past months are unaffected (every
 // charge date in a fully-elapsed month is already <= today); a future
 // month you're browsing ahead just shows nothing yet, for the same
-// reason.
-function isBillableCharge(d, start, end) {
-  return d >= start && d < end && d <= todayDateStr()
+// reason. `paidCharges` (the booking's own paid_charges array) is the
+// one override to all of this — an advance/early payment manually
+// confirmed via the "Mark paid" button below counts as billed even
+// though the date itself hasn't happened yet.
+function isBillableCharge(d, start, end, paidCharges) {
+  return d >= start && d < end && (d <= todayDateStr() || paidCharges?.includes(d))
 }
 
 // Revenue is recognized by upfront charge, not by calendar-day occupancy —
@@ -80,6 +84,21 @@ export default function RentalFinancials({
   // short instead of scrolling past a full breakdown every time.
   const [sourceOpen, setSourceOpen] = useState(false)
   const [overheadOpen, setOverheadOpen] = useState(false)
+  const [markingPaidId, setMarkingPaidId] = useState(null)
+
+  // Marks one specific charge date paid ahead of schedule — see
+  // isBillableCharge's paidCharges branch. No local optimistic update or
+  // refetch call needed: rental_bookings is already on RentalsView.jsx's
+  // Realtime channel, so the write here lands and the resulting refetch
+  // moves this unit from occupiedNoCharge into billed on its own.
+  async function handleMarkPaid(booking, date) {
+    setMarkingPaidId(booking.id)
+    try {
+      await setChargePaid(booking.id, booking.paid_charges || [], date)
+    } finally {
+      setMarkingPaidId(null)
+    }
+  }
 
   function openNewExpense() {
     setEditingExpense(null)
@@ -108,7 +127,7 @@ export default function RentalFinancials({
   // tenant.
   const chargesByProperty = new Map()
   for (const b of confirmedBookings) {
-    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end)).length
+    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end, b.paid_charges)).length
     if (count > 0) {
       const existing = chargesByProperty.get(b.property_id) || { count: 0, bookingIds: new Set() }
       existing.count += count
@@ -126,13 +145,15 @@ export default function RentalFinancials({
   // date lands first this month is what's shown, regardless of which
   // booking it belongs to. chargeDatesForBooking returns dates in
   // chronological order already, so the first one left after filtering
-  // is the soonest.
+  // is the soonest. Keeps the whole booking, not just the date, so the
+  // "Mark paid" button below has the booking id + its current
+  // paid_charges to act on.
   const upcomingChargeByProperty = new Map()
   for (const b of confirmedBookings) {
     const soonest = chargeDatesForBooking(b).find((d) => d >= start && d < end && d > todayDateStr())
     if (!soonest) continue
     const existing = upcomingChargeByProperty.get(b.property_id)
-    if (!existing || soonest < existing) upcomingChargeByProperty.set(b.property_id, soonest)
+    if (!existing || soonest < existing.date) upcomingChargeByProperty.set(b.property_id, { date: soonest, booking: b })
   }
 
   const confirmedOccupiedIds = new Set(confirmedBookings.map((b) => b.property_id))
@@ -161,7 +182,7 @@ export default function RentalFinancials({
   for (const b of confirmedBookings) {
     const property = propertyById.get(b.property_id)
     if (!property) continue
-    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end)).length
+    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end, b.paid_charges)).length
     if (count === 0) continue
     const key = b.source || 'unspecified'
     const entry = sourceBreakdown.get(key) || { count: 0, revenue: 0 }
@@ -280,7 +301,7 @@ export default function RentalFinancials({
         )
       })}
       {occupiedNoCharge.map((p) => {
-        const nextCharge = upcomingChargeByProperty.get(p.id)
+        const upcoming = upcomingChargeByProperty.get(p.id)
         return (
           <div key={p.id} className="rental-unit-block">
             <div className="rental-unit-status-row">
@@ -293,12 +314,29 @@ export default function RentalFinancials({
                   it's occupied, so spelling that out twice just made this
                   the longest badge in the list for no extra information. */}
               <span className="rental-unit-badge rental-unit-badge-nocharge">
-                {nextCharge
-                  ? `Occupied — ${money(p.monthly_rent)} due ${formatDateStr(nextCharge)}`
+                {upcoming
+                  ? `Occupied — ${money(p.monthly_rent)} due ${formatDateStr(upcoming.date)}`
                   : 'Occupied — no charge this month'}
               </span>
             </div>
-            <div className="rental-unit-availability">{unitSubLine(nextAvailability(allBookings, p.id))}</div>
+            <div className="rental-unit-availability">
+              <span>{unitSubLine(nextAvailability(allBookings, p.id))}</span>
+              {/* Advance/early payment — the normal date-driven revenue
+                  calc otherwise never counts this charge until its due
+                  date actually arrives (see isBillableCharge). Only
+                  offered here, on the one charge that's actually next in
+                  line — not a general per-date payment history. */}
+              {upcoming && (
+                <button
+                  type="button"
+                  className="rental-mark-paid"
+                  disabled={markingPaidId === upcoming.booking.id}
+                  onClick={() => handleMarkPaid(upcoming.booking, upcoming.date)}
+                >
+                  {markingPaidId === upcoming.booking.id ? 'Marking…' : 'Mark paid'}
+                </button>
+              )}
+            </div>
           </div>
         )
       })}
