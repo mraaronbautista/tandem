@@ -3002,20 +3002,12 @@ label.new-task-checkbox-label {
     margin-right: 0;
   }
 
-  /* Mobile's Calendar tab renders this toolbar with unit tabs hidden
-     (RentalOverview's cards are the unit-switcher instead — see
-     RentalsView.jsx) and no unitTabsReplacement, so "+ Add booking" ends
-     up the toolbar's only child. Left under the base row/space-between
-     layout (built for a multi-item toolbar), a lone flex item with no
-     grow just hugs the left edge as a small pill with dead space beside
-     it — stretching it full width instead matches "+ Add unit" directly
-     above it in the same stacked column. */
-  .rental-calendar-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .rental-calendar-toolbar .rental-add-booking {
+  /* "+ Add booking" sits below the calendar grid on mobile (see
+     .rental-add-booking-below-grid) rather than in this toolbar — the
+     toolbar itself renders empty here (unit tabs are hidden, Overview's
+     cards are the unit-switcher instead — see RentalsView.jsx), so
+     nothing else needs styling in this block for that case. */
+  .rental-add-booking-below-grid {
     width: 100%;
     text-align: center;
   }
@@ -3042,6 +3034,14 @@ label.new-task-checkbox-label {
   border-color: var(--accent);
   color: #fff;
   font-weight: 600;
+}
+
+/* RentalCalendar.jsx's own "+ Add booking" (mobile only — see the
+   caller-side showAddBooking prop) sits right after .rental-month-grid
+   as a plain block-level sibling, not inside the flex toolbar above the
+   grid — needs its own top spacing since nothing else provides it here. */
+.rental-add-booking-below-grid {
+  margin-top: 10px;
 }
 
 .rental-unit-header {

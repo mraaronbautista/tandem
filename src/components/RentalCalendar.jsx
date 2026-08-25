@@ -135,18 +135,6 @@ const RentalCalendar = forwardRef(function RentalCalendar(
         ) : (
           unitTabsReplacement
         )}
-        {showAddBooking && (
-          <button
-            type="button"
-            className="rental-add-booking rental-add-booking-primary"
-            onClick={() => {
-              setPrefillCheckIn(null)
-              setFormOpen(true)
-            }}
-          >
-            + Add booking
-          </button>
-        )}
       </div>
 
       {showUnitHeader && (
@@ -249,6 +237,28 @@ const RentalCalendar = forwardRef(function RentalCalendar(
           }),
         )}
       </div>
+
+      {/* Below the grid rather than in the toolbar above it (moved from
+          there — see the toolbar above) — on mobile, where this is the
+          only caller that renders it (showAddBooking={false} on desktop;
+          the combined nav row up in RentalsView.jsx has its own copy of
+          this button instead), the calendar itself is what you're
+          looking at right before deciding to add a booking, so the
+          action reads more naturally as "here's what I just saw, now add
+          to it" sitting right after it, rather than floating above
+          content you haven't scrolled to yet. */}
+      {showAddBooking && (
+        <button
+          type="button"
+          className="rental-add-booking rental-add-booking-primary rental-add-booking-below-grid"
+          onClick={() => {
+            setPrefillCheckIn(null)
+            setFormOpen(true)
+          }}
+        >
+          + Add booking
+        </button>
+      )}
 
       {(formOpen || editingBooking) && (
         <RentalBookingForm
