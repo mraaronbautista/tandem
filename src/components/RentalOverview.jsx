@@ -19,7 +19,14 @@ import { formatDateStr, unitOccupancyStatus } from '../lib/rentals'
 // way to switch units now that the plain unit-tabs are hidden there; on
 // mobile it's a handy bonus (priming which unit the Calendar tab opens
 // to next).
-export default function RentalOverview({ properties, bookings, selectedUnitId, onSelectUnit, onEditUnit }) {
+export default function RentalOverview({
+  properties,
+  bookings,
+  selectedUnitId,
+  onSelectUnit,
+  onEditUnit,
+  onToggleNegotiating,
+}) {
   if (properties.length === 0) {
     return <p className="task-notes-empty">No units yet.</p>
   }
@@ -64,14 +71,30 @@ export default function RentalOverview({ properties, bookings, selectedUnitId, o
           // onEditUnit is only ever passed from mobile's standalone
           // Overview tab (see RentalsView.jsx) — the desktop toolbar
           // reuse of this same list stays exactly as compact as before,
-          // no extra button crowding that row.
-          <li key={p.id} className={onEditUnit ? 'rental-overview-row' : undefined}>
+          // no extra button crowding that row. onToggleNegotiating is
+          // passed from both, unlike onEditUnit — the mark is meant to be
+          // settable wherever this list renders, not mobile-only.
+          <li key={p.id} className={onEditUnit || onToggleNegotiating ? 'rental-overview-row' : undefined}>
             {onSelectUnit ? (
               <button type="button" className={itemClasses.join(' ')} onClick={() => onSelectUnit(p.id)}>
                 {content}
               </button>
             ) : (
               <div className={itemClasses.join(' ')}>{content}</div>
+            )}
+            {onToggleNegotiating && (
+              // A plain sibling button, not nested inside the card above
+              // — that card is itself a <button> whenever onSelectUnit is
+              // passed (true at both current call sites), and a <button>
+              // can't validly contain another interactive control.
+              <button
+                type="button"
+                className={`rental-negotiating-toggle${p.in_negotiation ? ' rental-negotiating-toggle-on' : ''}`}
+                onClick={() => onToggleNegotiating(p)}
+                title={p.in_negotiation ? 'In negotiation — click to clear' : 'Mark as in negotiation'}
+                aria-pressed={!!p.in_negotiation}
+                aria-label={`${p.unit_name}: ${p.in_negotiation ? 'in negotiation' : 'not in negotiation'}`}
+              />
             )}
             {onEditUnit && (
               <button type="button" className="rental-savings-edit" onClick={() => onEditUnit(p)}>

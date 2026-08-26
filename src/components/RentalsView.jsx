@@ -7,6 +7,7 @@ import {
   fetchUpcomingRentalBookings,
   fetchSavingsGoals,
   monthRangeStrings,
+  setUnitNegotiating,
 } from '../lib/rentals'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import RentalCalendar from './RentalCalendar'
@@ -110,6 +111,15 @@ export default function RentalsView({ me }) {
   function reloadProperties() {
     fetchRentalProperties(COMPANY)
       .then(setProperties)
+      .catch((err) => setError(err.message))
+  }
+
+  // Flips optimistically-fast rather than waiting on the rentals-changes
+  // realtime round-trip — reloadProperties() right after the write keeps
+  // the click feeling instant instead of a beat behind.
+  function handleToggleNegotiating(property) {
+    setUnitNegotiating(property.id, !property.in_negotiation)
+      .then(reloadProperties)
       .catch((err) => setError(err.message))
   }
 
@@ -278,6 +288,7 @@ export default function RentalsView({ me }) {
                 bookings={upcomingBookings}
                 selectedUnitId={selectedUnitId}
                 onSelectUnit={setSelectedUnitId}
+                onToggleNegotiating={handleToggleNegotiating}
               />
             }
           />
@@ -326,6 +337,7 @@ export default function RentalsView({ me }) {
         selectedUnitId={selectedUnitId}
         onSelectUnit={setSelectedUnitId}
         onEditUnit={openEditProperty}
+        onToggleNegotiating={handleToggleNegotiating}
       />
       <button type="button" className="rental-add-booking" onClick={openNewProperty}>
         + Add unit

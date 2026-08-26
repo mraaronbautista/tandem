@@ -3270,8 +3270,10 @@ label.new-task-checkbox-label {
   margin-top: 5px;
 }
 
-/* Only present on mobile's standalone Overview tab, where each unit row
-   also gets an Edit button beside it — see RentalOverview.jsx. */
+/* Present wherever a unit row gets a sibling control beside the card
+   itself — mobile's standalone Overview tab gets both Edit and the
+   negotiating toggle; the desktop toolbar reuse of this same list gets
+   just the toggle (no Edit button there) — see RentalOverview.jsx. */
 .rental-overview-row {
   display: flex;
   align-items: stretch;
@@ -3281,6 +3283,34 @@ label.new-task-checkbox-label {
 .rental-overview-item-selected {
   border-color: var(--accent);
   background: var(--pill-bg);
+}
+
+/* A plain sibling button, not nested inside .rental-overview-item (see
+   the comment in RentalOverview.jsx for why) — styled to read as a small
+   radio-style mark: an outlined circle at rest, filled once toggled on.
+   Amber rather than the app's usual accent gold, so it doesn't get
+   visually confused with .rental-overview-item-selected's own accent
+   border on the card right beside it. */
+.rental-negotiating-toggle {
+  flex: none;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile), border-color var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+}
+
+.rental-negotiating-toggle:active {
+  transform: scale(0.9);
+}
+
+.rental-negotiating-toggle-on {
+  border-color: #e0a83e;
+  background: #e0a83e;
 }
 
 .rental-overview-name {

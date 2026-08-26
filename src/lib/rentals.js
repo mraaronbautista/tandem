@@ -88,7 +88,7 @@ export function chargeDatesForBooking(booking) {
 export async function fetchRentalProperties(company) {
   const { data, error } = await supabase
     .from('rental_properties')
-    .select('id, company, unit_name, address, monthly_rent, color, active')
+    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
     .eq('company', company)
     .eq('active', true)
     .order('monthly_rent', { ascending: false })
@@ -100,7 +100,7 @@ export async function createRentalProperty(company, { unit_name, address, monthl
   const { data, error } = await supabase
     .from('rental_properties')
     .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color })
-    .select('id, company, unit_name, address, monthly_rent, color, active')
+    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
     .single()
   if (error) throw error
   return data
@@ -111,7 +111,7 @@ export async function updateRentalProperty(id, { unit_name, address, monthly_ren
     .from('rental_properties')
     .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color })
     .eq('id', id)
-    .select('id, company, unit_name, address, monthly_rent, color, active')
+    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
     .single()
   if (error) throw error
   return data
@@ -123,6 +123,17 @@ export async function updateRentalProperty(id, { unit_name, address, monthly_ren
 // booking history intact, not cascade-delete it.
 export async function archiveRentalProperty(id) {
   const { error } = await supabase.from('rental_properties').update({ active: false }).eq('id', id)
+  if (error) throw error
+}
+
+// A quick per-unit flag ("in negotiation" — a promising prospective
+// tenant, an active back-and-forth) rather than a field on the edit
+// form: the whole point is a fast toggle from the unit list itself, not
+// something buried behind opening the edit modal. No select-back — the
+// existing rentals-changes realtime channel in RentalsView.jsx already
+// refetches on any rental_properties change, same as archiveRentalProperty.
+export async function setUnitNegotiating(id, inNegotiation) {
+  const { error } = await supabase.from('rental_properties').update({ in_negotiation: inNegotiation }).eq('id', id)
   if (error) throw error
 }
 

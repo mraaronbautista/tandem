@@ -419,6 +419,12 @@ create table rental_properties (
   -- Soft-hide rather than delete: keeps booking history intact if a unit
   -- is sold/taken off the market.
   active boolean not null default true,
+  -- A quick flag for "there's a promising prospective tenant / an active
+  -- negotiation happening on this unit right now" — not tied to any
+  -- specific booking row (a negotiation usually predates a confirmed
+  -- booking existing at all), just a plain toggle set/cleared from the
+  -- unit list itself.
+  in_negotiation boolean not null default false,
   created_at timestamptz not null default now()
 );
 
