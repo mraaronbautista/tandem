@@ -52,6 +52,10 @@ export default function RentalOverview({
               <span className="rental-overview-name">{p.unit_name}</span>
               <span className="rental-overview-price">${Number(p.monthly_rent).toLocaleString()}/mo</span>
             </span>
+            {/* Read-only — the actual toggle lives outside the card as a
+                sibling button (see onToggleNegotiating below); this is
+                just the "so it shows in the box" display the toggle sets. */}
+            {p.in_negotiation && <span className="rental-negotiating-badge">🤝 In talks</span>}
             {status.occupied ? (
               <span className="rental-overview-status rental-overview-status-occupied">
                 Occupied through {formatDateStr(status.through)} — {status.guest}
@@ -86,15 +90,20 @@ export default function RentalOverview({
               // A plain sibling button, not nested inside the card above
               // — that card is itself a <button> whenever onSelectUnit is
               // passed (true at both current call sites), and a <button>
-              // can't validly contain another interactive control.
+              // can't validly contain another interactive control. The
+              // 🤝 glyph itself can't be recolored by CSS (emoji ignore
+              // `color`), so "on" is communicated by the amber fill behind
+              // it, not the glyph changing — same as the in-card badge.
               <button
                 type="button"
                 className={`rental-negotiating-toggle${p.in_negotiation ? ' rental-negotiating-toggle-on' : ''}`}
                 onClick={() => onToggleNegotiating(p)}
-                title={p.in_negotiation ? 'In negotiation — click to clear' : 'Mark as in negotiation'}
+                title={p.in_negotiation ? 'In talks — click to clear' : 'Mark as in talks'}
                 aria-pressed={!!p.in_negotiation}
-                aria-label={`${p.unit_name}: ${p.in_negotiation ? 'in negotiation' : 'not in negotiation'}`}
-              />
+                aria-label={`${p.unit_name}: ${p.in_negotiation ? 'in talks' : 'not in talks'}`}
+              >
+                🤝
+              </button>
             )}
             {onEditUnit && (
               <button type="button" className="rental-savings-edit" onClick={() => onEditUnit(p)}>

@@ -3276,22 +3276,29 @@ label.new-task-checkbox-label {
 }
 
 /* A plain sibling button, not nested inside .rental-overview-item (see
-   the comment in RentalOverview.jsx for why) — styled to read as a small
-   radio-style mark: an outlined circle at rest, filled once toggled on.
-   Amber rather than the app's usual accent gold, so it doesn't get
-   visually confused with .rental-overview-item-selected's own accent
-   border on the card right beside it. */
+   the comment in RentalOverview.jsx for why) — a 🤝 glyph on a circle,
+   outlined/dim at rest, filled amber once toggled on (the glyph itself
+   can't be recolored by CSS, so the fill behind it is what carries the
+   on/off state). Amber rather than the app's usual accent gold, so it
+   doesn't get visually confused with .rental-overview-item-selected's
+   own accent border on the card right beside it. */
 .rental-negotiating-toggle {
   flex: none;
   align-self: center;
-  width: 20px;
-  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  border: 2px solid var(--border);
-  background: none;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
   padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.45;
   cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease-tactile), border-color var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
+  transition: transform var(--dur-fast) var(--ease-tactile), border-color var(--dur-base) var(--ease-tactile), background var(--dur-base) var(--ease-tactile), opacity var(--dur-base) var(--ease-tactile);
 }
 
 .rental-negotiating-toggle:active {
@@ -3301,6 +3308,23 @@ label.new-task-checkbox-label {
 .rental-negotiating-toggle-on {
   border-color: #e0a83e;
   background: #e0a83e;
+  opacity: 1;
+}
+
+/* Read-only display badge inside the card itself — see the comment
+   above it in RentalOverview.jsx. Same amber as the toggle that sets it,
+   so the two visually read as one feature. */
+.rental-negotiating-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e0a83e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .rental-overview-name {
