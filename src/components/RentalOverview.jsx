@@ -52,10 +52,6 @@ export default function RentalOverview({
               <span className="rental-overview-name">{p.unit_name}</span>
               <span className="rental-overview-price">${Number(p.monthly_rent).toLocaleString()}/mo</span>
             </span>
-            {/* Read-only — the actual toggle lives outside the card as a
-                sibling button (see onToggleNegotiating below); this is
-                just the "so it shows in the box" display the toggle sets. */}
-            {p.in_negotiation && <span className="rental-negotiating-badge">🤝 In talks</span>}
             {status.occupied ? (
               <span className="rental-overview-status rental-overview-status-occupied">
                 Occupied through {formatDateStr(status.through)} — {status.guest}
@@ -71,39 +67,67 @@ export default function RentalOverview({
           </>
         )
 
+        // Absolutely positioned within the card (.rental-overview-item
+        // is position: relative) rather than sitting in normal flow —
+        // pinned to the card's right edge, vertically centered against
+        // the *whole* card regardless of how many lines its status text
+        // wraps to, so toggling it never changes the card's own height
+        // the way inserting a badge as another stacked line would.
+        // Icon-only at rest, grows to include "In talks" once on — same
+        // element serves as both the control and the display, rather
+        // than a separate read-only badge plus a separate toggle.
+        const negotiatingToggle = onToggleNegotiating && (
+          <button
+            type="button"
+            className={`rental-negotiating-toggle${p.in_negotiation ? ' rental-negotiating-toggle-on' : ''}`}
+            onClick={(e) => {
+              // Stops this from also bubbling up into the card's own
+              // onClick/onKeyDown (select-unit) — needed now that the
+              // toggle lives inside the card rather than beside it.
+              e.stopPropagation()
+              onToggleNegotiating(p)
+            }}
+            title={p.in_negotiation ? 'In talks — click to clear' : 'Mark as in talks'}
+            aria-pressed={!!p.in_negotiation}
+            aria-label={`${p.unit_name}: ${p.in_negotiation ? 'in talks' : 'not in talks'}`}
+          >
+            {p.in_negotiation ? '🤝 In talks' : '🤝'}
+          </button>
+        )
+
         return (
           // onEditUnit is only ever passed from mobile's standalone
           // Overview tab (see RentalsView.jsx) — the desktop toolbar
           // reuse of this same list stays exactly as compact as before,
-          // no extra button crowding that row. onToggleNegotiating is
-          // passed from both, unlike onEditUnit — the mark is meant to be
-          // settable wherever this list renders, not mobile-only.
-          <li key={p.id} className={onEditUnit || onToggleNegotiating ? 'rental-overview-row' : undefined}>
+          // no extra button crowding that row.
+          <li key={p.id} className={onEditUnit ? 'rental-overview-row' : undefined}>
             {onSelectUnit ? (
-              <button type="button" className={itemClasses.join(' ')} onClick={() => onSelectUnit(p.id)}>
-                {content}
-              </button>
-            ) : (
-              <div className={itemClasses.join(' ')}>{content}</div>
-            )}
-            {onToggleNegotiating && (
-              // A plain sibling button, not nested inside the card above
-              // — that card is itself a <button> whenever onSelectUnit is
-              // passed (true at both current call sites), and a <button>
-              // can't validly contain another interactive control. The
-              // 🤝 glyph itself can't be recolored by CSS (emoji ignore
-              // `color`), so "on" is communicated by the amber fill behind
-              // it, not the glyph changing — same as the in-card badge.
-              <button
-                type="button"
-                className={`rental-negotiating-toggle${p.in_negotiation ? ' rental-negotiating-toggle-on' : ''}`}
-                onClick={() => onToggleNegotiating(p)}
-                title={p.in_negotiation ? 'In talks — click to clear' : 'Mark as in talks'}
-                aria-pressed={!!p.in_negotiation}
-                aria-label={`${p.unit_name}: ${p.in_negotiation ? 'in talks' : 'not in talks'}`}
+              // A <div role="button"> here, not a real <button> — the
+              // negotiating toggle now needs to live *inside* this card
+              // (see negotiatingToggle above), and a <button> can't
+              // validly contain another interactive control. tabIndex +
+              // onKeyDown replace what a real button would otherwise
+              // give for free, so keyboard activation (Enter/Space)
+              // still works the same as before.
+              <div
+                role="button"
+                tabIndex={0}
+                className={itemClasses.join(' ')}
+                onClick={() => onSelectUnit(p.id)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' && e.key !== ' ') return
+                  e.preventDefault()
+                  onSelectUnit(p.id)
+                }}
               >
-                🤝
-              </button>
+                {content}
+                {negotiatingToggle}
+              </div>
+            ) : (
+              <div className={itemClasses.join(' ')}>
+                {content}
+                {negotiatingToggle}
+              </div>
             )}
             {onEditUnit && (
               <button type="button" className="rental-savings-edit" onClick={() => onEditUnit(p)}>
