@@ -44,12 +44,16 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
   const aaron = members.find((m) => m.display_name === 'Aaron')
   const aaronOnline = Boolean(aaron?.working_since)
 
+  // The dot color alone already carries online/offline — "Aaron is
+  // online"/"Aaron is offline" was saying the same thing twice. The
+  // title tooltip still spells it out for anyone who can't tell green
+  // from gray at a glance.
   return (
     <span
       className={`working-badge${aaronOnline ? ' working-badge-online' : ''}`}
       title={aaronOnline ? `Online since ${formatSince(aaron.working_since)}` : 'Offline'}
     >
-      {aaronOnline ? '🟢 Aaron is online' : '⚪ Aaron is offline'}
+      {aaronOnline ? '🟢 Aaron' : '⚪ Aaron'}
     </span>
   )
 }
