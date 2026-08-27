@@ -144,18 +144,18 @@ export default function TaskBoard({ theme, toggleTheme }) {
     setViewMode(key)
   }
 
-  // The quick-actions menu closes as soon as an item is picked (see
-  // NewTaskForm), so there's no persistent button left to show a "sent"
-  // state on — a quick confirmation alert is the feedback instead.
+  // The 👋 header icon this triggers (see .header-actions below) is a
+  // single tap with no per-click local state of its own — a quick
+  // confirmation alert is simpler feedback than adding a "sent" flash
+  // state just for this one button.
   async function handleNudge() {
     try {
       await sendNudge()
       alert('Nudge sent to Aaron.')
     } catch {
-      // No persistent surface to show this inline on — the quick-actions
-      // menu is already closed by the time this fires (see comment
-      // above) — so alert() is the only option, but the raw Supabase
-      // error text isn't meant for a person to read.
+      // No persistent surface to show this inline on, so alert() is the
+      // only option — but the raw Supabase error text isn't meant for a
+      // person to read.
       alert("Couldn't send the nudge — try again.")
     }
   }
@@ -474,20 +474,25 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // icons — that's what got cluttered as these got added one by one.
   // Rentals and Reports moved out to the persistent tab bar/sidebar (see
   // TABS above) since they're places you go browse, not one-shot actions
-  // like the ones still here.
+  // like the ones still here. Nudge moved back out to a standalone header
+  // icon (see .header-actions below) — unlike these, it's reached for
+  // often enough, and is time-sensitive enough in the moment, that
+  // burying it two taps deep behind the FAB menu was actual friction, not
+  // just tidiness; being one specific single-icon exception (Ada-only, so
+  // Aaron's header is untouched) doesn't reintroduce the clutter this
+  // speed-dial was built to avoid.
   // Ordered by roughly how often you'd actually reach for each one, not
   // alphabetically or by when it was added — Bulk add/Priorities are
-  // routine task-management, Submit report/Nudge are routine-ish but
-  // person-specific one-shot actions, and Vault is both the rarest to
-  // open and the most sensitive, so it sits furthest from an accidental
-  // tap at the top of the speed-dial rather than sandwiched in the middle.
+  // routine task-management, Submit report is routine-ish but
+  // person-specific, and Vault is both the rarest to open and the most
+  // sensitive, so it sits furthest from an accidental tap at the top of
+  // the speed-dial rather than sandwiched in the middle.
   const quickActions = [
     { key: 'bulkAdd', icon: '📋', label: 'Bulk add / edit tasks', onSelect: () => setBulkAddOpen(true) },
     { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
     ...(me?.display_name === 'Aaron'
       ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
       : []),
-    ...(me?.display_name === 'Ada' ? [{ key: 'nudge', icon: '🚨', label: 'Nudge Aaron', onSelect: handleNudge }] : []),
     { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
   ]
 
@@ -555,6 +560,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
             {isDesktop && <nav className="header-nav">{navButtons}</nav>}
             <div className="header-actions">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
+              {me?.display_name === 'Ada' && (
+                <button className="icon-button" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
+                  👋
+                </button>
+              )}
               <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
                 ⚙️
               </button>
