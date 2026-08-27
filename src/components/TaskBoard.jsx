@@ -527,26 +527,35 @@ export default function TaskBoard({ theme, toggleTheme }) {
               >
                 {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '︿' : '﹀'}</span>
               </button>
-              <div className="month-nav-arrows">
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={() => shiftWeek(-1)}
-                  title="Previous week"
-                  aria-label="Previous week"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={() => shiftWeek(1)}
-                  title="Next week"
-                  aria-label="Next week"
-                >
-                  ›
-                </button>
-              </div>
+              {/* Desktop only — mobile already has a swipe gesture on
+                  .task-list covering the same step-forward/back job (see
+                  handleDaySwipeEnd/handleMonthSwipeEnd below), so this
+                  button pair was pure redundancy there, competing for
+                  cramped header width with the label's own ▾ tap target
+                  right next to it. Desktop has no swipe equivalent, so
+                  the buttons stay the only way to step there. */}
+              {isDesktop && (
+                <div className="month-nav-arrows">
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => shiftWeek(-1)}
+                    title="Previous week"
+                    aria-label="Previous week"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => shiftWeek(1)}
+                    title="Next week"
+                    aria-label="Next week"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}

@@ -2837,24 +2837,24 @@ label.new-task-checkbox-label {
 
 /* Groups the header's ‹/› week-step arrows as one adjacent pair after the
    label, tighter than .month-nav-row's own 14px gap so they read as a
-   single paired control rather than flanking the label on both sides. */
+   single paired control rather than flanking the label on both sides.
+   Desktop only now — TaskBoard.jsx gates this whole element behind
+   isDesktop, since mobile's swipe gesture on .task-list already covers
+   the same step-forward/back job without a redundant button pair
+   competing for cramped header width. */
 .month-nav-arrows {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-/* On a narrow phone, the header row's two halves — "August 2026 ⌄ ‹›" on
-   the left, the working-status badge + settings gear on the right — no
+/* On a narrow phone, the header row's two halves — the date label on the
+   left, the working-status badge + settings gear on the right — no
    longer fit on one line together, so .task-board-header's flex-wrap
    drops the whole right half to its own row. .month-nav-label's fixed
-   150px min-width and the full-size 32px icon-buttons were both sized for
-   the old flanking ‹ [label] › layout / desktop, and neither actually
-   needs to be that wide now: the label's min-width existed to keep
-   arrows from shifting when they sat on both sides of it (no longer true,
-   they're grouped after it), and the arrows themselves read fine smaller.
-   Trimming both, plus the row's own gap, reclaims enough width to keep
-   the header on one line on most phones. */
+   150px min-width was sized for when it shared this row with the (now
+   desktop-only) arrows; trimmed here so a long month/year string still
+   has room to shrink instead of forcing the row wider than the phone. */
 @media (max-width: 480px) {
   .month-nav-row {
     gap: 10px;
@@ -2862,16 +2862,6 @@ label.new-task-checkbox-label {
 
   .month-nav-label {
     min-width: 0;
-  }
-
-  .month-nav-arrows {
-    gap: 4px;
-  }
-
-  .month-nav-arrows .icon-button {
-    width: 26px;
-    height: 26px;
-    font-size: 13px;
   }
 }
 
