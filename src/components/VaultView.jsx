@@ -6,6 +6,8 @@ import {
   resetVault,
   fetchVaultEntries,
   decryptJSON,
+  encryptJSON,
+  updateVaultEntry,
   VAULT_FOLDERS,
 } from '../lib/vault'
 import Modal from './Modal'
@@ -15,14 +17,26 @@ import VaultExportForm from './VaultExportForm'
 
 const RESET_CONFIRM_WORD = 'RESET'
 
-// Named folders first (in VAULT_FOLDERS' own order), "General" (no folder,
-// or a folder value that predates/falls outside the current list) last —
-// folders are the deliberate organization someone opted into, so they sit
-// above the catch-all bucket. Only entries that exist land in the result;
-// an unused folder doesn't get an empty placeholder group.
-function groupByFolder(entries) {
-  const groups = VAULT_FOLDERS.map((name) => ({ name, items: entries.filter((e) => e.folder === name) }))
-  groups.push({ name: 'General', items: entries.filter((e) => !VAULT_FOLDERS.includes(e.folder)) })
+// Folders aren't their own stored entity — there's no folder table/row,
+// just a `folder` string on each entry (see lib/vault.js). So the full
+// set of folders in play is always *derived* from what's actually on
+// entries right now, seeded with VAULT_FOLDERS' defaults so the create
+// form's suggestions aren't empty on a brand-new vault. This also means
+// "creating" a folder is just typing a new name onto an entry — there's
+// no separate empty-folder-with-no-entries state to persist.
+function distinctFolders(entries) {
+  const set = new Set(VAULT_FOLDERS)
+  for (const e of entries) if (e.folder) set.add(e.folder)
+  return [...set].sort((a, b) => a.localeCompare(b))
+}
+
+// Alphabetical, "General" (no folder set) always last — folders are the
+// deliberate organization someone opted into, so they sit above the
+// catch-all bucket. Only entries that exist land in the result; an
+// unused folder doesn't get an empty placeholder group.
+function groupByFolder(entries, folderNames) {
+  const groups = folderNames.map((name) => ({ name, items: entries.filter((e) => e.folder === name) }))
+  groups.push({ name: 'General', items: entries.filter((e) => !e.folder) })
   return groups.filter((g) => g.items.length > 0)
 }
 
@@ -60,6 +74,14 @@ export default function VaultView({ me, onClose }) {
   const [editingEntry, setEditingEntry] = useState(null)
   const [selectedEntry, setSelectedEntry] = useState(null)
   const [exportOpen, setExportOpen] = useState(false)
+
+  // Which folder's header is mid-rename (the folder's *current* name, used
+  // as the key/identity while renameDraft holds the in-progress new name)
+  // — null when no header is being edited. Same inline-swap-to-input
+  // pattern CorkBoardView.jsx uses for editing a pin in place.
+  const [renamingFolder, setRenamingFolder] = useState(null)
+  const [renameDraft, setRenameDraft] = useState('')
+  const [folderBusy, setFolderBusy] = useState(false)
 
   useEffect(() => {
     fetchVaultMeta()
@@ -154,7 +176,85 @@ export default function VaultView({ me, onClose }) {
     loadEntries(vaultKey)
   }
 
-  const folderGroups = groupByFolder(entries)
+  // Re-encrypts one entry with a new folder value, keeping every other
+  // field as-is — the one primitive handleMoveFolder, handleRenameFolder,
+  // and handleDeleteFolder below all build on.
+  async function saveEntryFolder(entry, folder) {
+    const value = {
+      label: entry.label,
+      username: entry.username,
+      loginMethod: entry.loginMethod,
+      password: entry.password,
+      url: entry.url,
+      notes: entry.notes,
+      folder,
+    }
+    const { ciphertext, iv } = await encryptJSON(vaultKey, value)
+    await updateVaultEntry(entry.id, { ciphertext, iv })
+    return value
+  }
+
+  // A quick reassignment from the entry's own detail view (see
+  // VaultEntryDetail.jsx's Folder select) rather than requiring the full
+  // Edit form just to move an existing entry into a folder — useful for
+  // sorting a batch of entries that predate this feature one at a time
+  // without re-entering every other field each time.
+  async function handleMoveFolder(entry, folder) {
+    try {
+      const value = await saveEntryFolder(entry, folder)
+      setSelectedEntry({ ...value, id: entry.id })
+      loadEntries(vaultKey)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Folders aren't a stored entity (see distinctFolders above) — renaming
+  // one means bulk-rewriting every entry currently tagged with the old
+  // name. Renaming to a name that already matches another existing folder
+  // just merges the two, which falls out naturally: grouping is always
+  // derived fresh from whatever's on entries afterward, nothing extra to
+  // reconcile.
+  async function handleRenameFolder(oldName, newName) {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed === oldName) {
+      setRenamingFolder(null)
+      return
+    }
+    setFolderBusy(true)
+    try {
+      const affected = entries.filter((e) => e.folder === oldName)
+      await Promise.all(affected.map((entry) => saveEntryFolder(entry, trimmed)))
+      setRenamingFolder(null)
+      await loadEntries(vaultKey)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setFolderBusy(false)
+    }
+  }
+
+  // "Deleting" a folder doesn't touch the entries themselves, only their
+  // folder tag — they fall back into General, same as any entry that
+  // never had a folder set.
+  async function handleDeleteFolder(name) {
+    const affected = entries.filter((e) => e.folder === name)
+    if (!window.confirm(`Remove the "${name}" folder? Its ${affected.length} ${affected.length === 1 ? 'entry moves' : 'entries move'} back to General — nothing gets deleted.`)) {
+      return
+    }
+    setFolderBusy(true)
+    try {
+      await Promise.all(affected.map((entry) => saveEntryFolder(entry, '')))
+      await loadEntries(vaultKey)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setFolderBusy(false)
+    }
+  }
+
+  const folderNames = distinctFolders(entries)
+  const folderGroups = groupByFolder(entries, folderNames)
 
   return (
     <Modal onClose={onClose}>
@@ -313,12 +413,76 @@ export default function VaultView({ me, onClose }) {
               <div className="vault-folder-list">
                 {folderGroups.map((group) => (
                   <div key={group.name} className="vault-folder">
-                    <button type="button" className="vault-folder-header" onClick={() => toggleFolder(group.name)}>
-                      <span>{group.name}</span>
-                      <span className="vault-folder-count">
-                        {group.items.length} {expandedFolders.has(group.name) ? '▾' : '▸'}
-                      </span>
-                    </button>
+                    {renamingFolder === group.name ? (
+                      // Swapped in place of the header row while renaming
+                      // — same "editing" idea CorkBoardView.jsx uses for a
+                      // pin, just for a folder name instead of a note body.
+                      <div className="vault-folder-header-row vault-folder-rename-row">
+                        <input
+                          autoFocus
+                          value={renameDraft}
+                          disabled={folderBusy}
+                          onChange={(e) => setRenameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRenameFolder(group.name, renameDraft)
+                            if (e.key === 'Escape') setRenamingFolder(null)
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="vault-folder-action"
+                          disabled={folderBusy}
+                          onClick={() => handleRenameFolder(group.name, renameDraft)}
+                        >
+                          Save
+                        </button>
+                        <button type="button" className="vault-folder-action" onClick={() => setRenamingFolder(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="vault-folder-header-row">
+                        <button
+                          type="button"
+                          className="vault-folder-header"
+                          onClick={() => toggleFolder(group.name)}
+                        >
+                          <span>{group.name}</span>
+                          <span className="vault-folder-count">
+                            {group.items.length} {expandedFolders.has(group.name) ? '▾' : '▸'}
+                          </span>
+                        </button>
+                        {/* General is the catch-all, not something anyone
+                            created — nothing to rename or remove there. */}
+                        {group.name !== 'General' && (
+                          <>
+                            <button
+                              type="button"
+                              className="vault-folder-action"
+                              title="Rename folder"
+                              aria-label={`Rename ${group.name}`}
+                              disabled={folderBusy}
+                              onClick={() => {
+                                setRenamingFolder(group.name)
+                                setRenameDraft(group.name)
+                              }}
+                            >
+                              ✎
+                            </button>
+                            <button
+                              type="button"
+                              className="vault-folder-action"
+                              title="Remove folder"
+                              aria-label={`Remove ${group.name}`}
+                              disabled={folderBusy}
+                              onClick={() => handleDeleteFolder(group.name)}
+                            >
+                              ×
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                     {expandedFolders.has(group.name) && (
                       <div className="vault-entry-list vault-folder-items">
                         {group.items.map((entry) => (
@@ -352,6 +516,7 @@ export default function VaultView({ me, onClose }) {
             vaultKey={vaultKey}
             createdBy={me.id}
             entry={editingEntry}
+            existingFolders={folderNames}
             onClose={() => {
               setFormOpen(false)
               setEditingEntry(null)
@@ -363,6 +528,7 @@ export default function VaultView({ me, onClose }) {
         {selectedEntry && !formOpen && (
           <VaultEntryDetail
             entry={selectedEntry}
+            existingFolders={folderNames}
             onClose={() => setSelectedEntry(null)}
             onEdit={() => {
               setEditingEntry(selectedEntry)
@@ -370,6 +536,7 @@ export default function VaultView({ me, onClose }) {
               setFormOpen(true)
             }}
             onDeleted={handleEntryChanged}
+            onMoveFolder={(folder) => handleMoveFolder(selectedEntry, folder)}
           />
         )}
 

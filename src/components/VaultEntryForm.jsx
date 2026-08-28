@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { encryptJSON, generateStrongPassword, createVaultEntry, updateVaultEntry, VAULT_FOLDERS } from '../lib/vault'
+import { encryptJSON, generateStrongPassword, createVaultEntry, updateVaultEntry } from '../lib/vault'
 import Modal from './Modal'
 
-export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, onSaved }) {
+export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFolders = [], onClose, onSaved }) {
   const [label, setLabel] = useState(entry?.label || '')
   const [username, setUsername] = useState(entry?.username || '')
   const [loginMethod, setLoginMethod] = useState(entry?.loginMethod || '')
@@ -85,14 +85,23 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
 
         <label>
           Folder (optional)
-          <select value={folder} onChange={(e) => setFolder(e.target.value)}>
-            <option value="">General</option>
-            {VAULT_FOLDERS.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
+          {/* Free text, not a fixed list — typing any name here is how a
+              folder gets created in the first place (folders are just a
+              tag on entries, not their own stored row; see lib/vault.js).
+              The datalist only suggests folders that already exist
+              somewhere, so retyping an existing name (fixing a typo
+              aside) merges into it rather than spawning a near-duplicate. */}
+          <input
+            list="vault-folder-options"
+            placeholder="General"
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
+          />
+          <datalist id="vault-folder-options">
+            {existingFolders.map((name) => (
+              <option key={name} value={name} />
             ))}
-          </select>
+          </datalist>
         </label>
 
         <label>

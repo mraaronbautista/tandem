@@ -3765,11 +3765,23 @@ label.new-task-checkbox-label {
   gap: 8px;
 }
 
+/* Wraps the toggle button plus the rename/delete actions beside it — the
+   header itself used to be the only element in this row; now it shares
+   space with .vault-folder-action so those can be plain sibling buttons
+   rather than nested inside the toggle (a <button> can't validly contain
+   another interactive control). */
+.vault-folder-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .vault-folder-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -3789,6 +3801,48 @@ label.new-task-checkbox-label {
   font-weight: 400;
   opacity: 0.6;
   font-size: 13px;
+}
+
+.vault-folder-action {
+  flex: none;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity var(--dur-base) var(--ease-tactile);
+}
+
+.vault-folder-action:hover {
+  opacity: 1;
+}
+
+.vault-folder-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Replaces the header row entirely while renaming — the input takes the
+   same flex:1 slot .vault-folder-header normally fills. */
+.vault-folder-rename-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.vault-folder-rename-row .vault-folder-action {
+  flex: none;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  opacity: 1;
 }
 
 .vault-folder-items {

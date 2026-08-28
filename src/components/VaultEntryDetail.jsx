@@ -5,7 +5,7 @@ import Modal from './Modal'
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
 // something a stray tap on the list can trigger.
-export default function VaultEntryDetail({ entry, onClose, onEdit, onDeleted }) {
+export default function VaultEntryDetail({ entry, existingFolders = [], onClose, onEdit, onDeleted, onMoveFolder }) {
   const [revealed, setRevealed] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -14,6 +14,19 @@ export default function VaultEntryDetail({ entry, onClose, onEdit, onDeleted }) 
   // all, making it easy to double-tap unsure whether the first click
   // registered.
   const [copiedField, setCopiedField] = useState('')
+  const [moving, setMoving] = useState(false)
+
+  async function handleFolderChange(e) {
+    setMoving(true)
+    setError('')
+    try {
+      await onMoveFolder(e.target.value)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMoving(false)
+    }
+  }
 
   async function handleCopy(field, text) {
     try {
@@ -44,6 +57,20 @@ export default function VaultEntryDetail({ entry, onClose, onEdit, onDeleted }) 
         <h2>{entry.label}</h2>
 
         {error && <p className="error">{error}</p>}
+
+        {onMoveFolder && (
+          <div className="vault-field-row">
+            <span className="vault-field-label">Folder</span>
+            <select value={entry.folder || ''} onChange={handleFolderChange} disabled={moving}>
+              <option value="">General</option>
+              {existingFolders.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {entry.username && (
           <div className="vault-field-row">
