@@ -410,20 +410,38 @@ export default function TaskBoard({ theme, toggleTheme }) {
     }
   }
 
+  // These three used to have no error handling at all — a failed write
+  // (RLS, network, a bad trigger on the DB side) became a silent
+  // unhandled promise rejection: the checkbox/edit/delete would just
+  // appear to do nothing, with no feedback and nothing for `error`'s own
+  // display (below in the header) to show, since setError was never
+  // reached. Now every write path here surfaces into that same banner.
   async function handleStatusChange(id, status) {
-    const updated = await updateTask(id, { status })
-    setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
-    reload() // pick up any spawned recurrence
+    try {
+      const updated = await updateTask(id, { status })
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      reload() // pick up any spawned recurrence
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function handleUpdate(id, patch) {
-    const updated = await updateTask(id, patch)
-    setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+    try {
+      const updated = await updateTask(id, patch)
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function handleDelete(id) {
-    await deleteTask(id)
-    setTasks((prev) => prev.filter((t) => t.id !== id))
+    try {
+      await deleteTask(id)
+      setTasks((prev) => prev.filter((t) => t.id !== id))
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   // An exact copy — same fields, same due date/time — rather than
