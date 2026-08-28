@@ -144,6 +144,20 @@ export default function TaskBoard({ theme, toggleTheme }) {
     setViewMode(key)
   }
 
+  // Tapping the Today nav item is "take me home" — resets back to today's
+  // date in Day mode, same reset-to-today idea handleViewModeClick already
+  // uses for the Week tab above. Day/Week/Month are all view-modes inside
+  // this one tab rather than separate tabs, so this is the only "jump back
+  // to today" control needed — you're always already on Today whenever
+  // you're deep in Week or Month view, and tapping it again just resets it.
+  function handleTabClick(key) {
+    setActiveTab(key)
+    if (key === 'today') {
+      setSelectedDate(startOfDay(new Date()))
+      setViewMode('day')
+    }
+  }
+
   // The 👋 header icon this triggers (see .header-actions below) is a
   // single tap with no per-click local state of its own — a quick
   // confirmation alert is simpler feedback than adding a "sent" flash
@@ -519,7 +533,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       key={tab.key}
       type="button"
       className={`task-board-nav-item${activeTab === tab.key ? ' task-board-nav-item-active' : ''}`}
-      onClick={() => setActiveTab(tab.key)}
+      onClick={() => handleTabClick(tab.key)}
     >
       <span className="task-board-nav-icon">
         {tab.icon}
