@@ -69,14 +69,16 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
           {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
           <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
         </label>
-        <button
-          type="button"
-          className="clarification-answer-button"
-          onClick={handleAnswer}
-          disabled={sending || uploading}
-        >
-          {sending ? 'Sending…' : 'Reply'}
-        </button>
+        {(answerDraft.trim() || answerAttachments.length > 0) && (
+          <button
+            type="button"
+            className="clarification-answer-button"
+            onClick={handleAnswer}
+            disabled={sending || uploading}
+          >
+            {sending ? 'Sending…' : 'Reply'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -235,9 +237,15 @@ export default function TaskClarifications({
             </label>
             {extraActions}
           </div>
-          <button type="button" className="clarification-ask-button" onClick={handleAsk} disabled={asking || uploading}>
-            {asking ? 'Sending…' : 'Send'}
-          </button>
+          {/* Only shown once there's actually something to send — an empty
+              Send button sitting right next to the task's own Edit/
+              Delete/Duplicate row (extraActions, to its left) was an easy
+              misclick target when reaching for one of those instead. */}
+          {(questionDraft.trim() || questionAttachments.length > 0) && (
+            <button type="button" className="clarification-ask-button" onClick={handleAsk} disabled={asking || uploading}>
+              {asking ? 'Sending…' : 'Send'}
+            </button>
+          )}
         </div>
       </div>
     </div>
