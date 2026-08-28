@@ -2438,6 +2438,19 @@ a.task-submission-file-link:hover {
     max-height: 640px;
   }
 
+  /* Same reasoning as .how-to-guide-modal above, and for the same class
+     of problem: the entry list's own folder accordions (see VaultView.jsx)
+     resize the card's content just like the guide's sections do, on top
+     of the list itself simply growing as entries are added. A fixed box
+     with internal scroll (already inherited from the shared
+     .submission-modal rule's overflow-y: auto) keeps the vault's own
+     position/size stable while navigating it instead. */
+  .modal-backdrop .submission-modal.vault-modal {
+    width: 480px;
+    height: 560px;
+    max-height: 560px;
+  }
+
   /* Same reasoning as .how-to-guide-modal above — a 7-column day grid
      doesn't need the shared .submission-modal family's 560px cap, so
      narrow it down, scoped to desktop only so the mobile slide-up sheet

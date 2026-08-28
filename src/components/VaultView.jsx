@@ -260,7 +260,7 @@ export default function VaultView({ me, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="submission-modal vault-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Vault</h2>
 
         {error && <p className="error">{error}</p>}
