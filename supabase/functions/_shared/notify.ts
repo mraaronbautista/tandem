@@ -57,6 +57,17 @@ export async function notifyMember(memberId, payload) {
         // app uninstalled, etc.) — drop it so we stop retrying forever.
         if (err.statusCode === 404 || err.statusCode === 410) {
           await supabaseAdmin.from('push_subscriptions').delete().eq('id', sub.id)
+        } else {
+          // Every other failure (a VAPID key mismatch, a malformed
+          // subscription, a push-service-side error) used to be caught
+          // and silently discarded here — the caller (manual-notify,
+          // notify-task-events) still returns 200 either way, since this
+          // whole call is fire-and-forget, so a real delivery failure had
+          // no trace anywhere. Logged now so it shows up in this
+          // function's own logs instead of vanishing.
+          console.error(
+            `notifyMember: push failed for subscription ${sub.id} (member ${memberId}): ${err.statusCode ?? '?'} ${err.body || err.message}`,
+          )
         }
       }
     }),
