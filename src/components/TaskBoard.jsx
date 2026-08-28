@@ -738,7 +738,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
           selectedDate={selectedDate}
           onSelect={(d) => {
             setSelectedDate(startOfDay(d))
-            setViewMode('week')
+            // Matches MonthView's own onSelectDay drill-down (day picked
+            // → Day mode on that day) — picking one specific date here and
+            // landing on Week instead was inconsistent with that, and with
+            // the whole point of picking an exact day rather than a range.
+            setViewMode('day')
             setDatePickerOpen(false)
           }}
           onClose={() => setDatePickerOpen(false)}
