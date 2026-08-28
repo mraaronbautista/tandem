@@ -3754,6 +3754,47 @@ label.new-task-checkbox-label {
   gap: 6px;
 }
 
+/* Collapsible per-folder grouping — only rendered once there's more than
+   one group (see VaultView.jsx) so a vault with no folders in use still
+   looks exactly like the plain flat list above. Same shape as
+   .eod-report-month/-header/-count/-items, vault-specific classes since
+   the two features aren't otherwise related. */
+.vault-folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vault-folder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--text-h);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-tactile);
+}
+
+.vault-folder-header:active {
+  transform: scale(0.98);
+}
+
+.vault-folder-count {
+  font-weight: 400;
+  opacity: 0.6;
+  font-size: 13px;
+}
+
+.vault-folder-items {
+  padding-top: 8px;
+}
+
 .vault-entry-row {
   display: flex;
   justify-content: space-between;

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { encryptJSON, generateStrongPassword, createVaultEntry, updateVaultEntry } from '../lib/vault'
+import { encryptJSON, generateStrongPassword, createVaultEntry, updateVaultEntry, VAULT_FOLDERS } from '../lib/vault'
 import Modal from './Modal'
 
 export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, onSaved }) {
@@ -9,6 +9,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
   const [password, setPassword] = useState(entry?.password || '')
   const [url, setUrl] = useState(entry?.url || '')
   const [notes, setNotes] = useState(entry?.notes || '')
+  const [folder, setFolder] = useState(entry?.folder || '')
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -27,7 +28,8 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
       loginMethod !== (entry?.loginMethod || '') ||
       password !== (entry?.password || '') ||
       url !== (entry?.url || '') ||
-      notes !== (entry?.notes || '')
+      notes !== (entry?.notes || '') ||
+      folder !== (entry?.folder || '')
     )
   }
 
@@ -49,6 +51,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
         password,
         url: url.trim(),
         notes: notes.trim(),
+        folder,
       }
       const { ciphertext, iv } = await encryptJSON(vaultKey, value)
       const saved = entry
@@ -78,6 +81,18 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, onClose, on
             value={label}
             onChange={(e) => setLabel(e.target.value)}
           />
+        </label>
+
+        <label>
+          Folder (optional)
+          <select value={folder} onChange={(e) => setFolder(e.target.value)}>
+            <option value="">General</option>
+            {VAULT_FOLDERS.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label>

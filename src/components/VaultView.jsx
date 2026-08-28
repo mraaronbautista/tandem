@@ -1,11 +1,30 @@
 import { useEffect, useState } from 'react'
-import { fetchVaultMeta, setupVault, unlockVault, resetVault, fetchVaultEntries, decryptJSON } from '../lib/vault'
+import {
+  fetchVaultMeta,
+  setupVault,
+  unlockVault,
+  resetVault,
+  fetchVaultEntries,
+  decryptJSON,
+  VAULT_FOLDERS,
+} from '../lib/vault'
 import Modal from './Modal'
 import VaultEntryForm from './VaultEntryForm'
 import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
 
 const RESET_CONFIRM_WORD = 'RESET'
+
+// Named folders first (in VAULT_FOLDERS' own order), "General" (no folder,
+// or a folder value that predates/falls outside the current list) last —
+// folders are the deliberate organization someone opted into, so they sit
+// above the catch-all bucket. Only entries that exist land in the result;
+// an unused folder doesn't get an empty placeholder group.
+function groupByFolder(entries) {
+  const groups = VAULT_FOLDERS.map((name) => ({ name, items: entries.filter((e) => e.folder === name) }))
+  groups.push({ name: 'General', items: entries.filter((e) => !VAULT_FOLDERS.includes(e.folder)) })
+  return groups.filter((g) => g.items.length > 0)
+}
 
 // meta: undefined while loading, null once fetched if no vault exists yet,
 // otherwise the row (salt + canary). vaultKey lives only in this
@@ -17,6 +36,11 @@ export default function VaultView({ me, onClose }) {
   const [vaultKey, setVaultKey] = useState(null)
   const [entries, setEntries] = useState([])
   const [error, setError] = useState('')
+  // Every folder starts open — unlike EodReportsList's month groups, a
+  // vault realistically holds a handful of entries, not an ever-growing
+  // history, so there's little reason to make someone click through each
+  // folder just to see what's there.
+  const [expandedFolders, setExpandedFolders] = useState(() => new Set())
 
   const [masterPassword, setMasterPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -50,9 +74,19 @@ export default function VaultView({ me, onClose }) {
         rows.map(async (row) => ({ ...(await decryptJSON(key, row.ciphertext, row.iv)), id: row.id })),
       )
       setEntries(decrypted)
+      setExpandedFolders(new Set([...VAULT_FOLDERS, 'General']))
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  function toggleFolder(name) {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
   }
 
   async function handleSetup(e) {
@@ -119,6 +153,8 @@ export default function VaultView({ me, onClose }) {
     setSelectedEntry(null)
     loadEntries(vaultKey)
   }
+
+  const folderGroups = groupByFolder(entries)
 
   return (
     <Modal onClose={onClose}>
@@ -254,19 +290,54 @@ export default function VaultView({ me, onClose }) {
 
             {entries.length === 0 && <p className="task-notes-empty">No entries yet.</p>}
 
-            <div className="vault-entry-list">
-              {entries.map((entry) => (
-                <button
-                  type="button"
-                  key={entry.id}
-                  className="vault-entry-row"
-                  onClick={() => setSelectedEntry(entry)}
-                >
-                  <span className="vault-entry-label">{entry.label}</span>
-                  {entry.username && <span className="vault-entry-username">{entry.username}</span>}
-                </button>
-              ))}
-            </div>
+            {/* Nobody's used folders yet (or everything happens to land in
+                General) — the plain flat list from before, no group header
+                for its own sake when there's nothing to separate it from. */}
+            {folderGroups.length <= 1 && (
+              <div className="vault-entry-list">
+                {entries.map((entry) => (
+                  <button
+                    type="button"
+                    key={entry.id}
+                    className="vault-entry-row"
+                    onClick={() => setSelectedEntry(entry)}
+                  >
+                    <span className="vault-entry-label">{entry.label}</span>
+                    {entry.username && <span className="vault-entry-username">{entry.username}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {folderGroups.length > 1 && (
+              <div className="vault-folder-list">
+                {folderGroups.map((group) => (
+                  <div key={group.name} className="vault-folder">
+                    <button type="button" className="vault-folder-header" onClick={() => toggleFolder(group.name)}>
+                      <span>{group.name}</span>
+                      <span className="vault-folder-count">
+                        {group.items.length} {expandedFolders.has(group.name) ? '▾' : '▸'}
+                      </span>
+                    </button>
+                    {expandedFolders.has(group.name) && (
+                      <div className="vault-entry-list vault-folder-items">
+                        {group.items.map((entry) => (
+                          <button
+                            type="button"
+                            key={entry.id}
+                            className="vault-entry-row"
+                            onClick={() => setSelectedEntry(entry)}
+                          >
+                            <span className="vault-entry-label">{entry.label}</span>
+                            {entry.username && <span className="vault-entry-username">{entry.username}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="submission-actions">
               <button type="button" onClick={onClose}>

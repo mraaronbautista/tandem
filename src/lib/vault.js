@@ -3,6 +3,17 @@ import { supabase } from './supabaseClient'
 const PBKDF2_ITERATIONS = 250000
 const CANARY_TEXT = 'tandem-vault-ok'
 
+// A fixed, short list rather than free-text — entries land in one of these
+// intended buckets instead of drifting into typo'd near-duplicates ("Awa
+// Rentalz" vs "Awa Rentals"). Extend this list directly if another folder
+// is ever needed. `folder` itself lives inside the encrypted entry payload
+// (see VaultEntryForm.jsx), not as its own database column — every entry
+// is already decrypted client-side on every load (see VaultView.jsx's
+// loadEntries), so grouping by a field inside that payload needs no schema
+// change and doesn't leak which entries belong to which folder to anyone
+// without the master password, unlike a plaintext column would.
+export const VAULT_FOLDERS = ['Awa Rentalz', 'Azu Rentals']
+
 function bytesToBase64(bytes) {
   let binary = ''
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
