@@ -50,10 +50,13 @@ export default function VaultView({ me, onClose }) {
   const [vaultKey, setVaultKey] = useState(null)
   const [entries, setEntries] = useState([])
   const [error, setError] = useState('')
-  // Every folder starts open — unlike EodReportsList's month groups, a
-  // vault realistically holds a handful of entries, not an ever-growing
-  // history, so there's little reason to make someone click through each
-  // folder just to see what's there.
+  // Every folder starts collapsed, and loadEntries below never resets this
+  // — the vault is a modal (.submission-modal), which sizes itself to
+  // content (same reasoning as the How-to guide's own fixed-size override,
+  // see App.css), so a folder springing open on every entry save/rename/
+  // move made the whole card visibly grow and shrink underneath whatever
+  // you were doing. Collapsed by default, and left exactly as the user
+  // leaves it across reloads, rather than fighting their own toggles.
   const [expandedFolders, setExpandedFolders] = useState(() => new Set())
 
   const [masterPassword, setMasterPassword] = useState('')
@@ -96,7 +99,6 @@ export default function VaultView({ me, onClose }) {
         rows.map(async (row) => ({ ...(await decryptJSON(key, row.ciphertext, row.iv)), id: row.id })),
       )
       setEntries(decrypted)
-      setExpandedFolders(new Set([...VAULT_FOLDERS, 'General']))
     } catch (err) {
       setError(err.message)
     }
