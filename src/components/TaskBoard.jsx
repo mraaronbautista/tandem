@@ -570,7 +570,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 onClick={() => setDatePickerOpen(true)}
                 title="Jump to a date"
               >
-                {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '︿' : '﹀'}</span>
+                {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '▴' : '▾'}</span>
               </button>
             </div>
           )}
