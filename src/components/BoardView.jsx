@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CorkBoardView from './CorkBoardView'
 import InboxView from './InboxView'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 // Cork Board + Inbox, merged into one nav destination (Proposal A) — a
 // navigation-level grouping only. Neither screen's own data/Realtime/CRUD
@@ -15,22 +16,14 @@ export default function BoardView({ me, memberName, tasks, meId, onSelectTask, o
 
   return (
     <>
-      <div className="period-tabs board-section-tabs">
-        <button
-          type="button"
-          className={`period-tab${section === 'pins' ? ' period-tab-active' : ''}`}
-          onClick={() => setSection('pins')}
-        >
+      <PeriodTabs className="board-section-tabs">
+        <PeriodTab active={section === 'pins'} onClick={() => setSection('pins')}>
           📌 Pins
-        </button>
-        <button
-          type="button"
-          className={`period-tab${section === 'inbox' ? ' period-tab-active' : ''}`}
-          onClick={() => setSection('inbox')}
-        >
+        </PeriodTab>
+        <PeriodTab active={section === 'inbox'} onClick={() => setSection('inbox')}>
           📥 Inbox{hasUnseenInbox && ' •'}
-        </button>
-      </div>
+        </PeriodTab>
+      </PeriodTabs>
 
       {section === 'pins' ? (
         <CorkBoardView me={me} memberName={memberName} />

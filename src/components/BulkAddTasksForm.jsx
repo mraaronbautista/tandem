@@ -10,6 +10,7 @@ import {
   DEFAULT_TIMEZONE,
 } from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
@@ -373,22 +374,14 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
           </button>
         </div>
 
-        <div className="period-tabs">
-          <button
-            type="button"
-            className={`period-tab${view === 'add' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('add')}
-          >
+        <PeriodTabs>
+          <PeriodTab active={view === 'add'} onClick={() => setView('add')}>
             Add
-          </button>
-          <button
-            type="button"
-            className={`period-tab${view === 'edit' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('edit')}
-          >
+          </PeriodTab>
+          <PeriodTab active={view === 'edit'} onClick={() => setView('edit')}>
             Edit
-          </button>
-        </div>
+          </PeriodTab>
+        </PeriodTabs>
 
         {view === 'add' ? (
           <>
@@ -534,29 +527,17 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
               <p className="task-notes-empty">No active tasks to edit.</p>
             ) : (
               <>
-                <div className="period-tabs">
-                  <button
-                    type="button"
-                    className={`period-tab${editWhoFilter === 'yours' ? ' period-tab-active' : ''}`}
-                    onClick={() => setEditWhoFilter('yours')}
-                  >
+                <PeriodTabs>
+                  <PeriodTab active={editWhoFilter === 'yours'} onClick={() => setEditWhoFilter('yours')}>
                     {WHO_LABEL.yours}
-                  </button>
-                  <button
-                    type="button"
-                    className={`period-tab${editWhoFilter === 'assistant' ? ' period-tab-active' : ''}`}
-                    onClick={() => setEditWhoFilter('assistant')}
-                  >
+                  </PeriodTab>
+                  <PeriodTab active={editWhoFilter === 'assistant'} onClick={() => setEditWhoFilter('assistant')}>
                     {WHO_LABEL.assistant}
-                  </button>
-                  <button
-                    type="button"
-                    className={`period-tab${editWhoFilter === 'all' ? ' period-tab-active' : ''}`}
-                    onClick={() => setEditWhoFilter('all')}
-                  >
+                  </PeriodTab>
+                  <PeriodTab active={editWhoFilter === 'all'} onClick={() => setEditWhoFilter('all')}>
                     All
-                  </button>
-                </div>
+                  </PeriodTab>
+                </PeriodTabs>
 
                 <div className="bulk-edit-select-row">
                   <span className="submission-field-label">

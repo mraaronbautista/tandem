@@ -59,3 +59,18 @@
      separate, unrelated cleanup, not part of this migration). */
   --color-online: #4caf7d;
 }
+
+/* Outside @theme deliberately — this isn't a reusable design-token scale,
+   just PeriodTab.jsx's one pre-computed active-segment background
+   (App.css:2078-2082's .period-tab-active). Tailwind's arbitrary-value
+   parser mis-splits commas inside bracket syntax (confirmed in the
+   IconButton/ThemeToggle work — a multi-value transition silently lost
+   everything after its comma), so color-mix(in srgb, ...)'s two commas
+   can't safely go inline as bg-[color-mix(...)]; referencing it through
+   this one custom property (bg-[var(--period-tab-active-bg)]) sidesteps
+   that entirely. Kept as `in srgb` to match the original exactly, not
+   Tailwind's own opacity-modifier utilities (bg-accent/18), which mix in
+   oklab instead — a different color space that would round differently. */
+:root {
+  --period-tab-active-bg: color-mix(in srgb, var(--accent) 18%, transparent);
+}

@@ -5,6 +5,7 @@ import { submitEodReport, fetchOwnEodReport } from '../lib/eodReports'
 import { sendEodReportNotification } from '../lib/manualNotify'
 import AttachmentList from './AttachmentList'
 import Modal from './Modal'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 // 'biweekly' is deliberately left out of this picker — Ada/Aaron found
 // it cluttered the tab row without pulling its weight day to day. Not a
@@ -149,18 +150,13 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
       <form className="submission-modal eod-report-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{period[0].toUpperCase() + period.slice(1)} report</h2>
 
-        <div className="period-tabs">
+        <PeriodTabs>
           {PERIODS.map((p) => (
-            <button
-              type="button"
-              key={p.value}
-              className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
-              onClick={() => setPeriod(p.value)}
-            >
+            <PeriodTab key={p.value} active={period === p.value} onClick={() => setPeriod(p.value)}>
               {p.label}
-            </button>
+            </PeriodTab>
           ))}
-        </div>
+        </PeriodTabs>
 
         {error && <p className="error">{error}</p>}
 

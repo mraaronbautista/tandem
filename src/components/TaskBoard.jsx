@@ -41,6 +41,7 @@ import BoardView from './BoardView'
 import MonthView from './MonthView'
 import MobileNav from './MobileNav'
 import IconButton from './IconButton'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -653,18 +654,26 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 </IconButton>
               </div>
 
-              <div className="period-tabs">
+              {/* size="compact": this row also holds the ‹ Today › cluster
+                  and the who-filter, so it uses .view-mode-row's shrunk
+                  sizing rather than a standalone .period-tabs' roomier
+                  default — the only consumer with this override. flex-1
+                  replicates .view-mode-row .period-tabs' own layout rule
+                  (this segment fills the row's remaining space, not a
+                  visual size variant), so it's passed via className
+                  rather than folded into the size prop. */}
+              <PeriodTabs className="flex-1">
                 {VIEW_MODES.map((m) => (
-                  <button
+                  <PeriodTab
                     key={m.key}
-                    type="button"
-                    className={`period-tab${viewMode === m.key ? ' period-tab-active' : ''}`}
+                    size="compact"
+                    active={viewMode === m.key}
                     onClick={() => handleViewModeClick(m.key)}
                   >
                     {m.label}
-                  </button>
+                  </PeriodTab>
                 ))}
-              </div>
+              </PeriodTabs>
 
               <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
                 {WHO_TABS.map((t) => (

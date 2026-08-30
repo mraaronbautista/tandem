@@ -5,6 +5,7 @@ import { whoKeyForName } from '../lib/whoLabels'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
 import PriorityItemsEditor from './PriorityItemsEditor'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 const PERIODS = [
   { value: 'day', label: 'Day' },
@@ -99,18 +100,13 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
       <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>Priorities</h2>
 
-        <div className="period-tabs">
+        <PeriodTabs>
           {PERIODS.map((p) => (
-            <button
-              type="button"
-              key={p.value}
-              className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
-              onClick={() => setPeriod(p.value)}
-            >
+            <PeriodTab key={p.value} active={period === p.value} onClick={() => setPeriod(p.value)}>
               {p.label}
-            </button>
+            </PeriodTab>
           ))}
-        </div>
+        </PeriodTabs>
 
         {error && <p className="error">{error}</p>}
 

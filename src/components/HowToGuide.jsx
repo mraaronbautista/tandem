@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Modal from './Modal'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 // Items starting with 'Tip: ' render distinctly from plain how-to/
 // context bullets (see .how-to-guide-tip in App.css) — the prefix itself
@@ -323,22 +324,14 @@ export default function HowToGuide({ onClose }) {
       <div className="submission-modal how-to-guide-modal" onClick={(e) => e.stopPropagation()}>
         <h2>How this app works</h2>
 
-        <div className="period-tabs">
-          <button
-            type="button"
-            className={`period-tab${view === 'guide' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('guide')}
-          >
+        <PeriodTabs>
+          <PeriodTab active={view === 'guide'} onClick={() => setView('guide')}>
             Guide
-          </button>
-          <button
-            type="button"
-            className={`period-tab${view === 'faq' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('faq')}
-          >
+          </PeriodTab>
+          <PeriodTab active={view === 'faq'} onClick={() => setView('faq')}>
             FAQ
-          </button>
-        </div>
+          </PeriodTab>
+        </PeriodTabs>
 
         {view === 'guide' ? (
           <AccordionList sections={SECTIONS} openTitle={openSection} onToggle={toggleSection} />

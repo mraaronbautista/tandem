@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchEodReports } from '../lib/eodReports'
 import AttachmentList from './AttachmentList'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -103,18 +104,13 @@ export default function EodReportsList({ memberName }) {
       {reports && !reports.length && <p className="task-notes-empty">No reports yet.</p>}
 
       {reports?.length > 0 && (
-        <div className="period-tabs">
+        <PeriodTabs>
           {PERIOD_TABS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
-              onClick={() => handlePeriodChange(p.value)}
-            >
+            <PeriodTab key={p.value} active={period === p.value} onClick={() => handlePeriodChange(p.value)}>
               {p.label}
-            </button>
+            </PeriodTab>
           ))}
-        </div>
+        </PeriodTabs>
       )}
 
       {reports?.length > 0 && groups.length === 0 && (

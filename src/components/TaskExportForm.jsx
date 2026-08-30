@@ -3,6 +3,7 @@ import { isAllDayTask } from '../lib/tasks'
 import { DEFAULT_TIMEZONE, splitDueDateInZone, zoneAbbreviation } from '../lib/timezone'
 import { WHO_LABEL } from '../lib/whoLabels'
 import Modal from './Modal'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 // "Tue, Aug 25, 2026" from a plain 'YYYY-MM-DD' — parsed as local
 // calendar fields (not `new Date(dateStr)`, which reads a bare date as
@@ -123,29 +124,17 @@ export default function TaskExportForm({ tasks, onClose }) {
       <div className="submission-modal task-export-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Export tasks</h2>
 
-        <div className="period-tabs">
-          <button
-            type="button"
-            className={`period-tab${whoFilter === 'yours' ? ' period-tab-active' : ''}`}
-            onClick={() => setWhoFilter('yours')}
-          >
+        <PeriodTabs>
+          <PeriodTab active={whoFilter === 'yours'} onClick={() => setWhoFilter('yours')}>
             {WHO_LABEL.yours}
-          </button>
-          <button
-            type="button"
-            className={`period-tab${whoFilter === 'assistant' ? ' period-tab-active' : ''}`}
-            onClick={() => setWhoFilter('assistant')}
-          >
+          </PeriodTab>
+          <PeriodTab active={whoFilter === 'assistant'} onClick={() => setWhoFilter('assistant')}>
             {WHO_LABEL.assistant}
-          </button>
-          <button
-            type="button"
-            className={`period-tab${whoFilter === 'all' ? ' period-tab-active' : ''}`}
-            onClick={() => setWhoFilter('all')}
-          >
+          </PeriodTab>
+          <PeriodTab active={whoFilter === 'all'} onClick={() => setWhoFilter('all')}>
             All
-          </button>
-        </div>
+          </PeriodTab>
+        </PeriodTabs>
 
         <label className="task-export-include-done">
           <input type="checkbox" checked={includeDone} onChange={(e) => setIncludeDone(e.target.checked)} />

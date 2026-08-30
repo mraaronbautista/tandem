@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getInboxItems, getCompletedSubmissions, getNudgedTasks } from '../lib/tasks'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
 
@@ -237,18 +238,13 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
       {totalCount === 0 && <p className="task-notes-empty">Nothing waiting on you.</p>}
 
       {totalCount > 0 && (
-        <div className="period-tabs">
+        <PeriodTabs>
           {TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              className={`period-tab${view === t.value ? ' period-tab-active' : ''}`}
-              onClick={() => setView(t.value)}
-            >
+            <PeriodTab key={t.value} active={view === t.value} onClick={() => setView(t.value)}>
               {t.label}
-            </button>
+            </PeriodTab>
           ))}
-        </div>
+        </PeriodTabs>
       )}
 
       {/* One section's own list being empty under "All" just means that
