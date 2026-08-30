@@ -45,4 +45,17 @@
      stays JS-gated like the rest of the app's responsive nav), declared
      now so future md: usage lines up automatically. */
   --breakpoint-md: 900px;
+
+  /* Tandem's one easing curve, reused across nearly every hand-authored
+     transition — --ease-* is a real Tailwind v4 theme namespace, so this
+     generates an ease-tactile utility. */
+  --ease-tactile: var(--ease-tactile);
+
+  /* The online-status green (App.css:418/430, WorkingStatusToggle.jsx) —
+     currently a hardcoded #4caf7d literal, not a CSS custom property, in
+     every other place App.css uses it. Tokenized here for this
+     component's own migrated markup only; the other existing #4caf7d
+     literals in App.css are untouched (renaming those everywhere is a
+     separate, unrelated cleanup, not part of this migration). */
+  --color-online: #4caf7d;
 }
