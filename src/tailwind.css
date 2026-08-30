@@ -1,0 +1,12 @@
+/* Confirmed via spike on design/a2-look: full Preflight (@import
+   'tailwindcss') silently strips default browser list bullets on lists
+   that rely on them and never set their own list-style
+   (.bulk-add-hint-list, .priorities-last-set-list, .how-to-guide-items,
+   .cork-board-list) and zeroes out default UA paragraph margins app-wide.
+   Importing just the theme + utilities layers, without preflight, gets
+   Tailwind's utility classes available for new markup (the nav shell,
+   going forward) without touching how any existing, unconverted element
+   in App.css renders — verified byte-for-byte identical list-style/
+   padding/margin computed values against the no-Tailwind baseline. */
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/utilities.css';
