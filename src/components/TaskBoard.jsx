@@ -614,40 +614,34 @@ export default function TaskBoard({ theme, toggleTheme }) {
         {activeTab === 'today' && (
           <PullToRefresh onRefresh={reload}>
             <div className="view-mode-row">
-              {/* The ‹ › step arrows are desktop only — mobile already has a
-                  swipe gesture on .task-list covering the same step-
-                  forward/back job (see handleDaySwipeEnd/
-                  handleMonthSwipeEnd below), so the pair was pure
-                  redundancy there. The Today button in the middle is a
-                  different job — "jump straight back to today," not
-                  "step by one" — which swipe doesn't cover, so it stays
-                  visible on both, unlike the arrows either side of it. */}
+              {/* The ‹ › step arrows render on mobile too, alongside its own
+                  swipe gesture on .task-list (see handleDaySwipeEnd/
+                  handleMonthSwipeEnd below) — swipe and the buttons cover
+                  the same step-forward/back job, but the buttons stay
+                  visible everywhere now so the row reads as one complete
+                  ‹ Today › cluster on every width, not just desktop. */}
               <div className="month-nav-arrows">
-                {isDesktop && (
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => shiftWeek(-1)}
-                    title="Previous week"
-                    aria-label="Previous week"
-                  >
-                    ‹
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => shiftWeek(-1)}
+                  title="Previous week"
+                  aria-label="Previous week"
+                >
+                  ‹
+                </button>
                 <button type="button" className="month-nav-today-button" onClick={resetToToday}>
                   Today
                 </button>
-                {isDesktop && (
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => shiftWeek(1)}
-                    title="Next week"
-                    aria-label="Next week"
-                  >
-                    ›
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => shiftWeek(1)}
+                  title="Next week"
+                  aria-label="Next week"
+                >
+                  ›
+                </button>
               </div>
 
               <div className="period-tabs">

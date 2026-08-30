@@ -2011,6 +2011,36 @@ a.task-submission-file-link:hover {
   flex: 1;
 }
 
+/* This row packs three clusters — Today/‹›, Day/Week/Month, who-filter —
+   onto one line, so each control gets trimmed down from its own default
+   sizing (built for standing alone in a roomier row) to keep the whole
+   group comfortable, especially on a narrow phone. */
+.view-mode-row .month-nav-arrows {
+  gap: 4px;
+}
+
+.view-mode-row .month-nav-arrows .icon-button {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+
+.view-mode-row .month-nav-today-button {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.view-mode-row .period-tab {
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.view-mode-row .who-select {
+  padding: 5px 20px 5px 8px;
+  font-size: 12px;
+  background-position: right 6px center;
+}
+
 /* One shared capsule (padded, fully rounded, --pill-bg) rather than every
    segment carrying its own border/fill — an inactive segment reads as
    plain text sitting inside the group, not its own separate button, so
