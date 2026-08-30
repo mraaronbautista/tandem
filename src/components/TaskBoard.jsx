@@ -37,9 +37,9 @@ import BulkAddTasksForm from './BulkAddTasksForm'
 import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
-import CorkBoardView from './CorkBoardView'
-import InboxView from './InboxView'
+import BoardView from './BoardView'
 import MonthView from './MonthView'
+import MobileNav from './MobileNav'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -69,17 +69,20 @@ function daySectionLabel(day, today) {
   return day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-// Bottom bar on mobile, folded inline into the header row on wide
-// screens (`.header-nav` — see App.css and the isDesktop branch below)
-// — the four sections that are actually places you go browse, as
-// opposed to the "+" menu's one-shot actions (New task, Priorities,
-// Submit report, Nudge, Vault).
+// A floating capsule on mobile (MobileNav.jsx), folded inline into the
+// header row on wide screens (`.header-nav` — see App.css and the
+// isDesktop branch below) — the places you go browse, as opposed to the
+// "+" menu's one-shot actions (New task, Priorities, Submit report,
+// Nudge, Vault). Cork Board and Inbox were two separate tabs here;
+// they're merged into one Board destination (BoardView.jsx, an internal
+// Pins/Inbox segmented toggle) so mobile settles on 4 primary
+// destinations instead of 5 — a navigation-level grouping only, neither
+// screen's own data/logic changed.
 const TABS = [
   { key: 'today', icon: '📋', label: 'Today' },
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
   { key: 'reports', icon: '📄', label: 'Reports' },
-  { key: 'corkboard', icon: '📌', label: 'Cork Board' },
-  { key: 'inbox', icon: '📥', label: 'Inbox' },
+  { key: 'board', icon: '📌', label: 'Board' },
 ]
 
 // The header's page title for every tab except Today (which shows the
@@ -89,8 +92,7 @@ const TABS = [
 const PAGE_LABELS = {
   rentals: 'Awa Rentalz',
   reports: 'Reports',
-  corkboard: 'Cork Board',
-  inbox: 'Inbox',
+  board: 'Board',
 }
 
 function startOfDay(d) {
@@ -125,9 +127,16 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // Bumping this on every visit (not just once ever) is what lets the nav
   // badge clear as soon as you open the tab, and what lets InboxView know
   // which answers are new since the *previous* visit rather than the very
-  // first one.
+  // first one. Inbox now lives inside the merged Board tab (BoardView.jsx,
+  // a Pins/Inbox segmented toggle) rather than being its own top-level
+  // tab — keyed on 'board' rather than a finer within-tab section, same
+  // as before there was no sub-navigation to be more precise about; the
+  // badge lived on (and now clears on opening) the tab as a whole either
+  // way, and BoardView already defaults to the Inbox section whenever
+  // there's something unseen, so this fires exactly when a user would
+  // actually see it in practice.
   useEffect(() => {
-    if (activeTab !== 'inbox') return
+    if (activeTab !== 'board') return
     const now = new Date().toISOString()
     localStorage.setItem(INBOX_LAST_VIEWED_KEY, now)
     setInboxLastViewedAt(now)
@@ -550,7 +559,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     >
       <span className="task-board-nav-icon">
         {tab.icon}
-        {tab.key === 'inbox' && hasUnseenInbox && <span className="task-board-nav-item-badge" />}
+        {tab.key === 'board' && hasUnseenInbox && <span className="task-board-nav-item-badge" />}
       </span>
       {tab.label}
     </button>
@@ -558,7 +567,17 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   return (
     <div className="task-board">
-      {!isDesktop && <nav className="task-board-nav">{navButtons}</nav>}
+      {!isDesktop && (
+        <MobileNav navButtons={navButtons}>
+          <NewTaskForm
+            variant="mobile"
+            onCreate={handleCreate}
+            defaultWho={defaultWho}
+            selectedDate={selectedDate}
+            extraActions={quickActions}
+          />
+        </MobileNav>
+      )}
 
       <div className="task-board-content">
         <header className="task-board-header">
@@ -599,15 +618,16 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
         {activeTab === 'rentals' && <RentalsView me={me} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
-        {activeTab === 'corkboard' && <CorkBoardView me={me} memberName={memberName} />}
-        {activeTab === 'inbox' && (
-          <InboxView
+        {activeTab === 'board' && (
+          <BoardView
+            me={me}
+            memberName={memberName}
             tasks={tasks}
             meId={session.user.id}
-            memberName={memberName}
             onSelectTask={(task) => setPeekTaskId(task.id)}
             onUpdate={handleUpdate}
             lastViewedAt={inboxLastViewedAt}
+            hasUnseenInbox={hasUnseenInbox}
           />
         )}
 
@@ -759,7 +779,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
         )}
       </div>
 
-      <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} selectedDate={selectedDate} extraActions={quickActions} />
+      {/* Mobile gets its own instance inside MobileNav (variant="mobile",
+          rendered as a flex sibling of the nav capsule) — this one is
+          desktop-only now, so there's exactly one mounted FAB/menu/modal
+          at a time rather than two independent instances competing on
+          mobile. */}
+      {isDesktop && (
+        <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} selectedDate={selectedDate} extraActions={quickActions} />
+      )}
 
       {datePickerOpen && (
         <DatePickerModal

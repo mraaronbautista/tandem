@@ -10,3 +10,39 @@
    padding/margin computed values against the no-Tailwind baseline. */
 @import 'tailwindcss/theme.css';
 @import 'tailwindcss/utilities.css';
+
+/* Maps Tailwind's generated utilities onto Tandem's *existing* custom
+   properties by reference (var(--bg), not a duplicated hex value) — new
+   Tailwind-utility markup follows the same light/dark theming already
+   defined in index.css/App.css with zero changes to either file. */
+@theme {
+  --color-bg: var(--bg);
+  --color-card-bg: var(--card-bg);
+  --color-text: var(--text);
+  --color-text-h: var(--text-h);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-h: var(--accent-h);
+  --color-pill-bg: var(--pill-bg);
+
+  /* Override Tailwind's own default radius scale with Tandem's actual
+     values so rounded-sm/-md/-lg match the rest of the app instead of
+     Tailwind's stock 4/6/8px. */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  /* New shadow-* utilities under Tandem's own existing names, not
+     Tailwind's shadow-sm/md/lg scale. */
+  --shadow-resting: var(--shadow-resting);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-floating: var(--shadow-floating);
+  --shadow-press: var(--shadow-press);
+
+  /* Tandem's real desktop breakpoint (App.css:260/:1275/:2313, and the
+     useMediaQuery('(min-width: 900px)') JS checks) — not Tailwind's
+     stock 768px. Not yet used by any md: utility (this step's mobile nav
+     stays JS-gated like the rest of the app's responsive nav), declared
+     now so future md: usage lines up automatically. */
+  --breakpoint-md: 900px;
+}

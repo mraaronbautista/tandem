@@ -149,26 +149,29 @@ select:focus-visible {
 .task-board {
   max-width: 640px;
   margin: 0 auto;
-  /* Clears both the fixed bottom tab bar (mobile/tablet; see
-     .task-board-nav) *and* the floating "+" FAB (.quick-actions) that
-     sits above it — the FAB's own bottom offset (84px) plus its height
-     (56px, see .fab-new-task) means its top edge reaches 140px up from
-     the viewport bottom, well past a padding that was only ever sized
-     for the nav bar underneath it. Content scrolled all the way down
-     used to end up genuinely covered by the button — not just closely
-     adjacent to it — most visible once a single page (Rentals' merged
-     mobile view, for one) runs long enough to actually reach bottom. */
-  padding: 24px 16px calc(160px + env(safe-area-inset-bottom, 0px));
+  /* Clears MobileNav.jsx's floating capsule + inline FAB (mobile/tablet
+     only — .task-board-nav's old full-width bar is unused now, see its
+     own comment). The FAB used to stack *above* the nav bar (own 84px
+     offset + 56px height, reaching 140px up); now it sits inline beside
+     the capsule instead, so the tallest element in the row (the 56px FAB)
+     plus the nav's own bottom padding is the real footprint — smaller
+     than before, but still measured generously so a long list's last item
+     (e.g. Rentals' merged mobile view) doesn't end up hidden behind it. */
+  padding: 24px 16px calc(110px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Today / Rentals / Reports / Cork Board — a fixed bottom bar, mobile
-   only now. Desktop used to mirror this as a sticky left sidebar (one
-   nav, two layouts via CSS, the pattern Modal.jsx still uses for its own
-   mobile/desktop split); it's since moved inline into .task-board-header
-   instead (.header-nav below), reusing these same .task-board-nav-item
-   buttons via a descendant selector rather than a parallel class, so
-   this block is mobile's rendering only — TaskBoard.jsx doesn't even
-   mount <nav className="task-board-nav"> above the 900px breakpoint. */
+/* UNUSED as of the mobile nav redesign — TaskBoard.jsx now renders
+   MobileNav.jsx (a2-inspired floating capsule) below 900px instead of
+   this bar. Kept, not deleted, until every consumer of this class is
+   confirmed gone and the replacement is visually verified (see
+   MIGRATION_PLAN.md's "don't delete legacy CSS" rule) — .task-board-
+   nav-item/-icon/-item-badge below are still live, reused by both
+   MobileNav.jsx and .header-nav (desktop, untouched this step).
+   Original comment, for history: a fixed bottom bar, mobile only.
+   Desktop used to mirror this as a sticky left sidebar (one nav, two
+   layouts via CSS, the pattern Modal.jsx still uses for its own
+   mobile/desktop split); it's since moved inline into
+   .task-board-header instead (.header-nav below). */
 .task-board-nav {
   position: fixed;
   left: 0;
@@ -2078,6 +2081,24 @@ a.task-submission-file-link:hover {
   font-weight: 600;
 }
 
+/* BoardView.jsx renders this above CorkBoardView/InboxView rather than
+   inside a shared .tab-panel — each of those already wraps itself in its
+   own .tab-panel (App.css's usual inter-section .tab-panel gap doesn't
+   apply here), so the switcher needs its own bottom margin matching that
+   same rhythm, or it'd sit flush against whichever section is active. */
+.board-section-tabs {
+  /* No horizontal margin — .task-board's own 16px padding already insets
+     everything in .task-board-content, same as .tab-panel's children get
+     no horizontal margin of their own for the same reason. */
+  margin: 0 0 12px;
+}
+
+@media (max-width: 480px) {
+  .board-section-tabs {
+    margin-bottom: 16px;
+  }
+}
+
 .settings-menu-account {
   margin-top: -6px;
   font-size: 13px;
@@ -2314,6 +2335,37 @@ a.task-submission-file-link:hover {
   .quick-actions {
     bottom: 24px;
   }
+}
+
+/* Mobile-only variant (NewTaskForm.jsx variant="mobile"), rendered as a
+   flex sibling of the nav capsule inside MobileNav.jsx instead of an
+   independently `fixed` element — MobileNav's own <nav> is already fixed
+   to the viewport, so this only needs to behave like a normal flex child
+   within it (position: relative, not .quick-actions' fixed, so the menu
+   override below can anchor to it). flex: none keeps it from being
+   squeezed if the capsule ever needs more room than the row has.
+
+   .quick-actions-menu's own rule (column flex, no positioning of its own)
+   relies on .quick-actions being the fixed-positioned box the menu stacks
+   inside — inline's parent is a plain flex row instead, so without the
+   absolute-position override below, an open menu would grow the row's
+   height and shift the FAB sideways rather than popping up above it. */
+.quick-actions-inline {
+  /* .quick-actions' own right/bottom offsets (20px / 84px+safe-area) are
+     meant for position: fixed — left in place here, they'd still shift
+     this relatively-positioned element away from its normal flex-row
+     spot by that same amount instead of sitting inline with the capsule,
+     so both need clearing explicitly, not just the position value. */
+  position: relative;
+  right: auto;
+  bottom: auto;
+  flex: none;
+}
+
+.quick-actions-inline .quick-actions-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
 }
 
 .fab-new-task {

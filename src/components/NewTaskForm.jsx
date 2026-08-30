@@ -12,7 +12,16 @@ function dateStr(d) {
 // got cluttered fast as more got added. "New task" stays the default/most
 // common action; extraActions are optional and only expand the FAB into a
 // menu when there's something to show.
-export default function NewTaskForm({ onCreate, defaultWho, selectedDate, extraActions = [] }) {
+//
+// variant="desktop" (default) renders exactly as before — an
+// independently `position: fixed` .quick-actions box. variant="mobile" is
+// meant to be placed inside MobileNav.jsx as a flex sibling of the nav
+// capsule (so together they read as one centered group, a2-style) rather
+// than floating above a full-width bar on its own — it drops the fixed
+// positioning via a second class, .quick-actions-inline (App.css), and
+// pops its speed-dial menu as an absolutely-positioned overlay instead so
+// opening the menu can't shift the nav row's layout.
+export default function NewTaskForm({ onCreate, defaultWho, selectedDate, extraActions = [], variant = 'desktop' }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
 
@@ -37,7 +46,7 @@ export default function NewTaskForm({ onCreate, defaultWho, selectedDate, extraA
   return (
     <>
       {!formOpen && (
-        <div className="quick-actions">
+        <div className={variant === 'mobile' ? 'quick-actions quick-actions-inline' : 'quick-actions'}>
           {menuOpen && (
             <div className="quick-actions-menu">
               {extraActions.map((a) => (
