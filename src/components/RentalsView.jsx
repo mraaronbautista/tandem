@@ -11,6 +11,7 @@ import {
 } from '../lib/rentals'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import IconButton from './IconButton'
+import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
@@ -227,7 +228,7 @@ export default function RentalsView({ me }) {
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
             </IconButton>
-            <span className="month-nav-label">{monthLabel}</span>
+            <MonthNavLabel>{monthLabel}</MonthNavLabel>
             <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
               ›
             </IconButton>
@@ -332,15 +333,15 @@ export default function RentalsView({ me }) {
         + Add unit
       </button>
 
-      <div className="month-nav-row">
+      <MonthNavRow>
         <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
           ‹
         </IconButton>
-        <span className="month-nav-label">{monthLabel}</span>
+        <MonthNavLabel>{monthLabel}</MonthNavLabel>
         <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
           ›
         </IconButton>
-      </div>
+      </MonthNavRow>
 
       {/* Overview's cards above are the only unit-switcher here — no
           .rental-unit-tabs strip and no bold $/mo header, both redundant

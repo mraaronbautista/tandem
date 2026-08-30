@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Modal from './Modal'
 import IconButton from './IconButton'
+import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -46,15 +47,15 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
     <Modal onClose={onClose}>
       <div className="submission-modal date-picker-modal">
         <div className="date-picker-modal-header">
-          <div className="month-nav-row">
+          <MonthNavRow>
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
             </IconButton>
-            <span className="month-nav-label">{label}</span>
+            <MonthNavLabel>{label}</MonthNavLabel>
             <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
               ›
             </IconButton>
-          </div>
+          </MonthNavRow>
           {/* .date-picker-close carried no CSS rule of its own (confirmed
               via grep) — dropped, since IconButton alone already
               reproduces .icon-button's full styling with nothing left

@@ -42,6 +42,7 @@ import MonthView from './MonthView'
 import MobileNav from './MobileNav'
 import IconButton from './IconButton'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -584,16 +585,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
       <div className="task-board-content">
         <header className="task-board-header">
           {activeTab === 'today' && (
-            <div className="month-nav-row">
-              <button
-                type="button"
-                className="month-nav-label month-nav-label-button"
-                onClick={() => setDatePickerOpen(true)}
-                title="Jump to a date"
-              >
-                {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '▴' : '▾'}</span>
-              </button>
-            </div>
+            <MonthNavRow>
+              <MonthNavLabel onClick={() => setDatePickerOpen(true)} title="Jump to a date">
+                {monthLabel} <span className="text-[12px] opacity-60">{datePickerOpen ? '▴' : '▾'}</span>
+              </MonthNavLabel>
+            </MonthNavRow>
           )}
           {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
           {/* Nav + account controls grouped together and pinned to the
@@ -642,11 +638,20 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   the same step-forward/back job, but the buttons stay
                   visible everywhere now so the row reads as one complete
                   ‹ Today › cluster on every width, not just desktop. */}
-              <div className="month-nav-arrows">
+              <div className="flex items-center gap-1.5">
                 <IconButton size="weekNav" onClick={() => shiftWeek(-1)} title="Previous week" aria-label="Previous week">
                   ‹
                 </IconButton>
-                <button type="button" className="month-nav-today-button" onClick={resetToToday}>
+                {/* .month-nav-today-button (App.css) is single-consumer —
+                    this is its only usage, always inside .view-mode-row,
+                    so the compact override values (5px/8px padding, 12px
+                    font) are used directly rather than the base 6px/10px/
+                    13px recipe this context always overrides anyway. */}
+                <button
+                  type="button"
+                  onClick={resetToToday}
+                  className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-transparent px-2 py-[5px] text-xs font-semibold text-text [font-family:inherit] [line-height:inherit] transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent active:scale-[0.96]"
+                >
                   Today
                 </button>
                 <IconButton size="weekNav" onClick={() => shiftWeek(1)} title="Next week" aria-label="Next week">
