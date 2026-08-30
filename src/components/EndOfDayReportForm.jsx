@@ -6,6 +6,7 @@ import { sendEodReportNotification } from '../lib/manualNotify'
 import AttachmentList from './AttachmentList'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
 
 // 'biweekly' is deliberately left out of this picker — Ada/Aaron found
 // it cluttered the tab row without pulling its weight day to day. Not a
@@ -147,7 +148,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal eod-report-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" modifier="eod-report-modal" onSubmit={handleSubmit}>
         <h2>{period[0].toUpperCase() + period.slice(1)} report</h2>
 
         <PeriodTabs>
@@ -206,7 +207,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
             {submitting ? 'Sending…' : 'Send to Ada'}
           </button>
         </div>
-      </form>
+      </ModalCard>
     </Modal>
   )
 }

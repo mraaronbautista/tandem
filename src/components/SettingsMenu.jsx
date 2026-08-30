@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone } from '../lib/timezone'
 import Modal from './Modal'
 import HowToGuide from './HowToGuide'
+import ModalCard from './ModalCard'
 
 // Notifications, theme, and sign out — all "set once, rarely touched
 // again" — folded into one settings sheet instead of three permanent
@@ -24,7 +25,7 @@ export default function SettingsMenu({
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal settings-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard modifier="settings-modal">
         <h2>Settings</h2>
 
         {/* Both accounts share the same device/browser sometimes — a quick
@@ -99,7 +100,7 @@ export default function SettingsMenu({
             Close
           </button>
         </div>
-      </div>
+      </ModalCard>
 
       {guideOpen && <HowToGuide onClose={() => setGuideOpen(false)} />}
     </Modal>

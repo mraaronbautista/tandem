@@ -10,6 +10,7 @@ import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
@@ -337,7 +338,7 @@ export default function TaskRow({
 
       {viewSubmissionOpen && (
         <Modal onClose={() => setViewSubmissionOpen(false)}>
-          <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+          <ModalCard>
             <h2>Submission</h2>
             {task.completion_note && <p className="task-submission-note-text">{task.completion_note}</p>}
             {attachments.length > 0 && (
@@ -367,13 +368,13 @@ export default function TaskRow({
                 Close
               </button>
             </div>
-          </div>
+          </ModalCard>
         </Modal>
       )}
 
       {submitOpen && (
         <Modal onClose={() => setSubmitOpen(false)}>
-          <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+          <ModalCard>
             <h2>Submission</h2>
             <label className="submission-field">
               Link, note, or details
@@ -447,7 +448,7 @@ export default function TaskRow({
                 Save
               </button>
             </div>
-          </div>
+          </ModalCard>
         </Modal>
       )}
     </div>

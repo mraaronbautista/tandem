@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
 
 // Items starting with 'Tip: ' render distinctly from plain how-to/
 // context bullets (see .how-to-guide-tip in App.css) — the prefix itself
@@ -321,7 +322,7 @@ export default function HowToGuide({ onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal how-to-guide-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard modifier="how-to-guide-modal">
         <h2>How this app works</h2>
 
         <PeriodTabs>
@@ -344,7 +345,7 @@ export default function HowToGuide({ onClose }) {
             Close
           </button>
         </div>
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

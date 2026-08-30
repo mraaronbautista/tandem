@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createRentalBooking, updateRentalBooking, hasOverlappingBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 
 // 'unspecified' is display-only (see BOOKING_SOURCE_LABEL) — not a real
 // choice here, so it's excluded from the picker itself.
@@ -108,7 +109,7 @@ export default function RentalBookingForm({
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{booking ? 'Edit booking' : 'Add booking'}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -198,7 +199,7 @@ export default function RentalBookingForm({
             {saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}
           </button>
         </div>
-      </form>
+      </ModalCard>
     </Modal>
   )
 }

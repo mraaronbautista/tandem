@@ -11,6 +11,7 @@ import {
   VAULT_FOLDERS,
 } from '../lib/vault'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 import VaultEntryForm from './VaultEntryForm'
 import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
@@ -260,7 +261,7 @@ export default function VaultView({ me, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal vault-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard modifier="vault-modal">
         <h2>Vault</h2>
 
         {error && <p className="error">{error}</p>}
@@ -543,7 +544,7 @@ export default function VaultView({ me, onClose }) {
         )}
 
         {exportOpen && <VaultExportForm entries={entries} onClose={() => setExportOpen(false)} />}
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

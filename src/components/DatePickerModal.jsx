@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from './Modal'
 import IconButton from './IconButton'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
+import ModalCard from './ModalCard'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -45,7 +46,7 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal date-picker-modal">
+      <ModalCard modifier="date-picker-modal">
         <div className="date-picker-modal-header">
           <MonthNavRow>
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
@@ -87,7 +88,7 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
             }),
           )}
         </div>
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

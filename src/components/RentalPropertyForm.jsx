@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createRentalProperty, updateRentalProperty, archiveRentalProperty } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 
 const DEFAULT_COLOR = '#3b82f6'
 
@@ -56,7 +57,7 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{property ? 'Edit unit' : 'New unit'}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -112,7 +113,7 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
             {saving ? 'Saving…' : property ? 'Save changes' : 'Add unit'}
           </button>
         </div>
-      </form>
+      </ModalCard>
     </Modal>
   )
 }

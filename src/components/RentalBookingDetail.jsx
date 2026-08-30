@@ -8,6 +8,7 @@ import {
   BOOKING_SOURCE_LABEL,
 } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 
 function formatDateStr(dateStr) {
   // Parsed as local, not UTC — a bare 'YYYY-MM-DD' parsed via `new Date()`
@@ -78,7 +79,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard>
         <h2>Booking details</h2>
 
         {error && <p className="error">{error}</p>}
@@ -120,7 +121,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
             </button>
           )}
         </div>
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

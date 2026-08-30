@@ -6,6 +6,7 @@ import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
 import PriorityItemsEditor from './PriorityItemsEditor'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
 
 const PERIODS = [
   { value: 'day', label: 'Day' },
@@ -97,7 +98,7 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>Priorities</h2>
 
         <PeriodTabs>
@@ -136,7 +137,7 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
             {saving ? 'Saving…' : 'Save & create tasks'}
           </button>
         </div>
-      </form>
+      </ModalCard>
     </Modal>
   )
 }

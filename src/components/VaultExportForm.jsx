@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 
 const CONFIRM_WORD = 'EXPORT'
 
@@ -44,7 +45,7 @@ export default function VaultExportForm({ entries, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard>
         <h2>Export vault</h2>
 
         <p className="vault-warning">
@@ -71,7 +72,7 @@ export default function VaultExportForm({ entries, onClose }) {
             Download unencrypted CSV
           </button>
         </div>
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createRentalExpense, updateRentalExpense, deleteRentalExpense } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 
 export default function RentalExpenseForm({ company, expense, onClose, onSaved, onDeleted }) {
   const [label, setLabel] = useState(expense?.label || '')
@@ -42,7 +43,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{expense ? 'Edit overhead item' : 'New overhead item'}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -84,7 +85,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
-      </form>
+      </ModalCard>
     </Modal>
   )
 }

@@ -11,6 +11,7 @@ import {
 } from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
@@ -362,11 +363,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
 
   return (
     <Modal onClose={onClose}>
-      <form
-        className="submission-modal bulk-add-modal"
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={view === 'add' ? handleSubmit : handleApply}
-      >
+      <ModalCard as="form" modifier="bulk-add-modal" onSubmit={view === 'add' ? handleSubmit : handleApply}>
         <div className="bulk-add-header-row">
           <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
           <button type="button" className="inbox-mark-read" onClick={() => setExportOpen(true)}>
@@ -777,7 +774,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             </>
           )}
         </div>
-      </form>
+      </ModalCard>
 
       {exportOpen && <TaskExportForm tasks={tasks} onClose={() => setExportOpen(false)} />}
     </Modal>

@@ -4,6 +4,7 @@ import { DEFAULT_TIMEZONE, splitDueDateInZone, zoneAbbreviation } from '../lib/t
 import { WHO_LABEL } from '../lib/whoLabels'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
 
 // "Tue, Aug 25, 2026" from a plain 'YYYY-MM-DD' — parsed as local
 // calendar fields (not `new Date(dateStr)`, which reads a bare date as
@@ -121,7 +122,9 @@ export default function TaskExportForm({ tasks, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal task-export-modal" onClick={(e) => e.stopPropagation()}>
+      {/* task-export-modal carried no CSS rule of its own (confirmed via
+          grep, same as .date-picker-close earlier) — dropped. */}
+      <ModalCard>
         <h2>Export tasks</h2>
 
         <PeriodTabs>
@@ -156,7 +159,7 @@ export default function TaskExportForm({ tasks, onClose }) {
             {copied ? 'Copied!' : 'Copy to clipboard'}
           </button>
         </div>
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

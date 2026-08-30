@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { deleteVaultEntry } from '../lib/vault'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
@@ -53,7 +54,7 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard>
         <h2>{entry.label}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -122,7 +123,7 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
             Edit
           </button>
         </div>
-      </div>
+      </ModalCard>
     </Modal>
   )
 }
