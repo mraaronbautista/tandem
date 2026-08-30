@@ -83,8 +83,9 @@ create table tasks (
   -- after N days" nudge instead of the "about to start" one — set by
   -- either the automatic overdue-nudge cron pass (notify-reminders) or a
   -- manual per-task nudge (manual-notify), whichever fires first, so the
-  -- other doesn't immediately duplicate it. Backend bookkeeping only,
-  -- same as reminder_sent_at — never read by the frontend.
+  -- other doesn't immediately duplicate it. Unlike reminder_sent_at, this
+  -- one is read by the frontend — InboxView.jsx's Nudges section (see
+  -- tasks.js's getNudgedTasks) surfaces any task this is set on.
   overdue_nudge_sent_at timestamptz,
   -- Lightweight Q&A thread for clarifying a vague assignment — same
   -- "doesn't need a child table" reasoning as checklist/

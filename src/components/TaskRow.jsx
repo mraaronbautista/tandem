@@ -126,11 +126,13 @@ export default function TaskRow({
   }
 
   // nudgeSent is purely a local "yep, that went through" confirmation —
-  // doesn't reflect overdue_nudge_sent_at (never fetched by the
-  // frontend, see schema.sql) and resets on the next render of this
-  // task from anywhere else, same low-stakes as any other fire-and-
-  // forget notification button in this app (Nudge Aaron, Ask a
-  // question) not tracking its own delivery state persistently.
+  // doesn't read overdue_nudge_sent_at back (fetched now for Inbox's
+  // Nudges section — see tasks.js's getNudgedTasks — but still not
+  // surfaced as an "already nudged" indicator on the row itself) and
+  // resets on the next render of this task from anywhere else, same
+  // low-stakes as any other fire-and-forget notification button in this
+  // app (Nudge Aaron, Ask a question) not tracking its own delivery
+  // state persistently.
   async function handleNudge(e) {
     e.stopPropagation()
     setNudging(true)

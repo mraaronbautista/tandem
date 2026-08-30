@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from './timezone'
 
 const TASK_COLUMNS =
-  'id, title, who, status, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications'
+  'id, title, who, status, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at'
 
 export async function fetchTasks() {
   const { data, error } = await supabase
@@ -352,6 +352,22 @@ export function getCompletedSubmissions(tasks) {
   return tasks
     .filter((t) => t.status === 'done' && (t.completion_note || t.completion_attachments?.length))
     .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+}
+
+// Tasks whose 🔔 overdue nudge (TaskRow.jsx's per-task nudge button, or
+// the same-column automatic 3-day cron nudge — see manual-notify/
+// notify-reminders) has actually fired, newest first — the same
+// discoverability gap the sections above close, just for "did this land"
+// instead of a conversation or a completion. Full history, same
+// reasoning as submissions: a task can go on to get completed (or nudged
+// again by a later cycle, overwriting this same column) without aging
+// out of findability here in the meantime. Not scoped to a viewer like
+// getCompletedSubmissions above — mutually visible regardless of who
+// sent or received the nudge.
+export function getNudgedTasks(tasks) {
+  return tasks
+    .filter((t) => t.overdue_nudge_sent_at)
+    .sort((a, b) => new Date(b.overdue_nudge_sent_at) - new Date(a.overdue_nudge_sent_at))
 }
 
 // Buckets tasks by the local day they belong to (same done/not-done rule

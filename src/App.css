@@ -4422,6 +4422,13 @@ label.new-task-checkbox-label {
   border-left-color: #4caf7d;
 }
 
+/* Same amber as .rental-negotiating-toggle — this app's other "worth a
+   second glance, not urgent, not done" signal — distinct from the
+   question/answer/submission color-coding above. */
+.inbox-item-nudge {
+  border-left-color: #e0a83e;
+}
+
 .inbox-item-text-muted {
   opacity: 0.6;
   font-style: italic;

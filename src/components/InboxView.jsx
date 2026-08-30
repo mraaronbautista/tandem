@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getInboxItems, getCompletedSubmissions } from '../lib/tasks'
+import { getInboxItems, getCompletedSubmissions, getNudgedTasks } from '../lib/tasks'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
@@ -21,12 +21,14 @@ const TABS = [
   { value: 'question', label: 'Needs your reply' },
   { value: 'resolved', label: 'Resolved' },
   { value: 'submission', label: 'Submissions' },
+  { value: 'nudge', label: 'Nudges' },
 ]
 
 const TAB_EMPTY_LABEL = {
   question: 'Nothing needs a reply right now.',
   resolved: 'Nothing resolved yet.',
   submission: 'No submissions yet.',
+  nudge: 'No nudges sent yet.',
 }
 
 function formatWhen(iso) {
@@ -106,6 +108,28 @@ function SubmissionItem({ task, onSelectTask }) {
   )
 }
 
+// A task whose overdue nudge fired — same .inbox-item card family as
+// SubmissionItem above, keyed by task rather than a conversation, no
+// per-item action. Badged by task.who (who got nudged) for the same
+// reason SubmissionItem is: overdue_nudge_sent_at carries no separate
+// "who sent this" of its own to badge by instead.
+function NudgeItem({ task, onSelectTask }) {
+  return (
+    <li className="inbox-item inbox-item-nudge" onClick={() => onSelectTask(task)}>
+      <div className="inbox-item-top">
+        <span className="inbox-item-title">{task.title}</span>
+        <span className="inbox-item-when">{formatWhen(task.overdue_nudge_sent_at)}</span>
+      </div>
+      <p className="inbox-item-text inbox-item-text-muted">🔔 Still on your plate?</p>
+      <div className="inbox-item-footer">
+        <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
+          {WHO_LABEL[task.who]}
+        </span>
+      </div>
+    </li>
+  )
+}
+
 // Persistent tab content, not a modal — see RentalsView.jsx for why. Unlike
 // CorkBoardView/EodReportsList this isn't self-fetching: fetchTasks() (see
 // tasks.js) already loads every task with no date filter, and TaskBoard.jsx
@@ -135,10 +159,12 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
     .filter((item) => item.kind === 'answer' || item.kind === 'finished')
     .sort((a, b) => new Date(b.at) - new Date(a.at))
   const submissions = getCompletedSubmissions(tasks)
-  const totalCount = questions.length + resolved.length + submissions.length
+  const nudged = getNudgedTasks(tasks)
+  const totalCount = questions.length + resolved.length + submissions.length + nudged.length
   const showQuestions = (view === 'all' || view === 'question') && questions.length > 0
   const showResolved = (view === 'all' || view === 'resolved') && resolved.length > 0
   const showSubmissions = (view === 'all' || view === 'submission') && submissions.length > 0
+  const showNudges = (view === 'all' || view === 'nudge') && nudged.length > 0
 
   // Same "not every clarification is a question" reasoning as
   // TaskClarifications.jsx's own handleResolve — this is the quick path
@@ -229,7 +255,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
           section doesn't render at all (unchanged from before tabs
           existed) — this message is only for a specific tab selected on
           purpose that turns out to have nothing in it right now. */}
-      {view !== 'all' && { question: questions, resolved, submission: submissions }[view].length === 0 && (
+      {view !== 'all' && { question: questions, resolved, submission: submissions, nudge: nudged }[view].length === 0 && (
         <p className="task-notes-empty">{TAB_EMPTY_LABEL[view]}</p>
       )}
 
@@ -262,6 +288,21 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
           <ul className="inbox-list">
             {submissions.map((task) => (
               <SubmissionItem key={task.id} task={task} onSelectTask={onSelectTask} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Full history, same reasoning as Submissions above — a nudge
+          shouldn't age out of findability once sent. Last section: like
+          Submissions, this is a log to browse, not something waiting on
+          you (it already got its own push notification when it fired). */}
+      {showNudges && (
+        <section>
+          <h3 className="task-section-heading">Nudges</h3>
+          <ul className="inbox-list">
+            {nudged.map((task) => (
+              <NudgeItem key={task.id} task={task} onSelectTask={onSelectTask} />
             ))}
           </ul>
         </section>
