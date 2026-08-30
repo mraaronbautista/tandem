@@ -10,6 +10,7 @@ import {
   setUnitNegotiating,
 } from '../lib/rentals'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import IconButton from './IconButton'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
@@ -223,25 +224,13 @@ export default function RentalsView({ me }) {
       <div className="rentals-dashboard">
         <div className="rentals-main">
           <div className="rentals-combined-nav">
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(-1)}
-              title="Previous month"
-              aria-label="Previous month"
-            >
+            <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
-            </button>
+            </IconButton>
             <span className="month-nav-label">{monthLabel}</span>
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(1)}
-              title="Next month"
-              aria-label="Next month"
-            >
+            <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
               ›
-            </button>
+            </IconButton>
             <button
               type="button"
               className="rental-add-booking rental-add-booking-primary rentals-combined-nav-unit"
@@ -344,25 +333,13 @@ export default function RentalsView({ me }) {
       </button>
 
       <div className="month-nav-row">
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => shiftMonth(-1)}
-          title="Previous month"
-          aria-label="Previous month"
-        >
+        <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
           ‹
-        </button>
+        </IconButton>
         <span className="month-nav-label">{monthLabel}</span>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => shiftMonth(1)}
-          title="Next month"
-          aria-label="Next month"
-        >
+        <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
           ›
-        </button>
+        </IconButton>
       </div>
 
       {/* Overview's cards above are the only unit-switcher here — no

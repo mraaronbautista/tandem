@@ -40,6 +40,7 @@ import VaultView from './VaultView'
 import BoardView from './BoardView'
 import MonthView from './MonthView'
 import MobileNav from './MobileNav'
+import IconButton from './IconButton'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -605,13 +606,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
             <div className="header-actions">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {me?.display_name === 'Ada' && (
-                <button className="icon-button" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
+                <IconButton size="header" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
                   👋
-                </button>
+                </IconButton>
               )}
-              <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
+              <IconButton size="header" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
                 ⚙️
-              </button>
+              </IconButton>
             </div>
           </div>
         </header>
@@ -641,27 +642,15 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   visible everywhere now so the row reads as one complete
                   ‹ Today › cluster on every width, not just desktop. */}
               <div className="month-nav-arrows">
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={() => shiftWeek(-1)}
-                  title="Previous week"
-                  aria-label="Previous week"
-                >
+                <IconButton size="weekNav" onClick={() => shiftWeek(-1)} title="Previous week" aria-label="Previous week">
                   ‹
-                </button>
+                </IconButton>
                 <button type="button" className="month-nav-today-button" onClick={resetToToday}>
                   Today
                 </button>
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={() => shiftWeek(1)}
-                  title="Next week"
-                  aria-label="Next week"
-                >
+                <IconButton size="weekNav" onClick={() => shiftWeek(1)} title="Next week" aria-label="Next week">
                   ›
-                </button>
+                </IconButton>
               </div>
 
               <div className="period-tabs">

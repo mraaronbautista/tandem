@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Modal from './Modal'
+import IconButton from './IconButton'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -46,35 +47,21 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
       <div className="submission-modal date-picker-modal">
         <div className="date-picker-modal-header">
           <div className="month-nav-row">
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(-1)}
-              title="Previous month"
-              aria-label="Previous month"
-            >
+            <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
-            </button>
+            </IconButton>
             <span className="month-nav-label">{label}</span>
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(1)}
-              title="Next month"
-              aria-label="Next month"
-            >
+            <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
               ›
-            </button>
+            </IconButton>
           </div>
-          <button
-            type="button"
-            className="icon-button date-picker-close"
-            onClick={onClose}
-            title="Close"
-            aria-label="Close"
-          >
+          {/* .date-picker-close carried no CSS rule of its own (confirmed
+              via grep) — dropped, since IconButton alone already
+              reproduces .icon-button's full styling with nothing left
+              for that modifier to have added. */}
+          <IconButton onClick={onClose} title="Close" aria-label="Close">
             ×
-          </button>
+          </IconButton>
         </div>
 
         <div className="date-picker-grid">
