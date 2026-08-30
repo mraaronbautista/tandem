@@ -2011,33 +2011,41 @@ a.task-submission-file-link:hover {
   flex: 1;
 }
 
+/* One shared capsule (padded, fully rounded, --pill-bg) rather than every
+   segment carrying its own border/fill — an inactive segment reads as
+   plain text sitting inside the group, not its own separate button, so
+   the active one is the only shape that actually stands out. */
 .period-tabs {
   display: flex;
-  gap: 6px;
+  gap: 2px;
+  padding: 3px;
+  background: var(--pill-bg);
+  border-radius: 999px;
 }
 
 .period-tab {
   flex: 1;
   padding: 7px 0;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--pill-bg);
-  color: var(--text-h);
+  border-radius: 999px;
+  border: none;
+  background: none;
+  color: var(--text);
   font-size: 13px;
   cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile), box-shadow var(--dur-base) var(--ease-tactile);
+  transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile), color var(--dur-base) var(--ease-tactile);
 }
 
 .period-tab:active {
   transform: scale(0.97);
 }
 
+/* A soft tint, not a solid fill — quieter than the old full-accent
+   version, matching the segment sitting inside a shared capsule rather
+   than standing alone as its own bordered button. */
 .period-tab-active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-h);
   font-weight: 600;
-  box-shadow: var(--shadow-resting);
 }
 
 .settings-menu-account {
@@ -2848,17 +2856,41 @@ label.new-task-checkbox-label {
   opacity: 0.6;
 }
 
-/* Groups the header's ‹/› week-step arrows as one adjacent pair after the
-   label, tighter than .month-nav-row's own 14px gap so they read as a
-   single paired control rather than flanking the label on both sides.
-   Desktop only now — TaskBoard.jsx gates this whole element behind
-   isDesktop, since mobile's swipe gesture on .task-list already covers
-   the same step-forward/back job without a redundant button pair
-   competing for cramped header width. */
+/* Groups the header's Today button with the ‹/› week-step arrows flanking
+   it, tighter than .month-nav-row's own 14px gap so they read as one
+   cluster rather than scattered across the row. The arrows themselves are
+   desktop-only (TaskBoard.jsx gates just those two behind isDesktop) —
+   mobile's swipe gesture on .task-list already covers the same step-
+   forward/back job, so the pair was pure redundancy there. Today stays
+   visible on both: it's "jump straight back," not "step by one," which
+   swipe doesn't cover. */
 .month-nav-arrows {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.month-nav-today-button {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform var(--dur-fast) var(--ease-tactile), border-color var(--dur-base) var(--ease-tactile), color var(--dur-base) var(--ease-tactile);
+}
+
+.month-nav-today-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.month-nav-today-button:active {
+  transform: scale(0.96);
 }
 
 /* On a narrow phone, the header row's two halves — the date label on the

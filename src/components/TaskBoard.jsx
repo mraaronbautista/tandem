@@ -150,12 +150,18 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // this one tab rather than separate tabs, so this is the only "jump back
   // to today" control needed — you're always already on Today whenever
   // you're deep in Week or Month view, and tapping it again just resets it.
+  // Shared by the Today nav tab (tapping it while already there) and the
+  // header's own "Today" button below — same destination, two different
+  // ways to reach for it depending on whether the bottom nav or the
+  // header is already in front of you.
+  function resetToToday() {
+    setSelectedDate(startOfDay(new Date()))
+    setViewMode('day')
+  }
+
   function handleTabClick(key) {
     setActiveTab(key)
-    if (key === 'today') {
-      setSelectedDate(startOfDay(new Date()))
-      setViewMode('day')
-    }
+    if (key === 'today') resetToToday()
   }
 
   // The 👋 header icon this triggers (see .header-actions below) is a
@@ -566,15 +572,16 @@ export default function TaskBoard({ theme, toggleTheme }) {
               >
                 {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '︿' : '﹀'}</span>
               </button>
-              {/* Desktop only — mobile already has a swipe gesture on
-                  .task-list covering the same step-forward/back job (see
-                  handleDaySwipeEnd/handleMonthSwipeEnd below), so this
-                  button pair was pure redundancy there, competing for
-                  cramped header width with the label's own ▾ tap target
-                  right next to it. Desktop has no swipe equivalent, so
-                  the buttons stay the only way to step there. */}
-              {isDesktop && (
-                <div className="month-nav-arrows">
+              {/* The ‹ › step arrows are desktop only — mobile already has a
+                  swipe gesture on .task-list covering the same step-
+                  forward/back job (see handleDaySwipeEnd/
+                  handleMonthSwipeEnd below), so the pair was pure
+                  redundancy there. The Today button in the middle is a
+                  different job — "jump straight back to today," not
+                  "step by one" — which swipe doesn't cover, so it stays
+                  visible on both, unlike the arrows either side of it. */}
+              <div className="month-nav-arrows">
+                {isDesktop && (
                   <button
                     type="button"
                     className="icon-button"
@@ -584,6 +591,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   >
                     ‹
                   </button>
+                )}
+                <button type="button" className="month-nav-today-button" onClick={resetToToday}>
+                  Today
+                </button>
+                {isDesktop && (
                   <button
                     type="button"
                     className="icon-button"
@@ -593,8 +605,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   >
                     ›
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
           {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
