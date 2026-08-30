@@ -213,8 +213,15 @@ export default function TaskBoard({ theme, toggleTheme }) {
   async function reloadMembers() {
     try {
       setMembers(await fetchMembers())
-    } catch {
-      // Non-critical: attribution just falls back to blank.
+    } catch (err) {
+      // Used to swallow this silently ("attribution just falls back to
+      // blank") — true for task attribution, but `me` (derived from
+      // `members` below) also gates WorkingStatusToggle and a few other
+      // Aaron-only UI bits, which don't degrade to "blank," they just
+      // vanish outright with nothing to explain why. A transient failure
+      // here (e.g. a PWA resuming from the background mid-reconnect) used
+      // to leave `members` empty indefinitely with zero visible trace.
+      setError(err.message)
     }
   }
 
