@@ -582,8 +582,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
         </MobileNav>
       )}
 
-      <div className="task-board-content">
-        <header className="task-board-header">
+      <div className="min-w-0">
+        <header className="mb-4 flex flex-wrap items-center gap-2">
           {activeTab === 'today' && (
             <MonthNavRow>
               <MonthNavLabel onClick={() => setDatePickerOpen(true)} title="Jump to a date">
@@ -591,16 +591,21 @@ export default function TaskBoard({ theme, toggleTheme }) {
               </MonthNavLabel>
             </MonthNavRow>
           )}
-          {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
+          {activeTab !== 'today' && <h1 className="whitespace-nowrap text-[22px]">{PAGE_LABELS[activeTab]}</h1>}
           {/* Nav + account controls grouped together and pinned to the
-              header's right edge as one fixed unit (.header-right-group
-              has margin-left: auto, not the individual pieces) — nav's
+              header's right edge as one fixed unit (this group has
+              margin-left: auto, not the individual pieces) — nav's
               position stays put regardless of how long the title/date on
               the left happens to be, instead of drifting left and right
               as you switch tabs. */}
-          <div className="header-right-group">
+          <div className="ml-auto flex items-center gap-4">
+            {/* Kept as the literal "header-nav" class, not converted —
+                .header-nav .task-board-nav-item (App.css) is a compound
+                selector that needs this exact ancestor class name to keep
+                matching; the nav-item family is explicitly out of scope
+                for this batch. */}
             {isDesktop && <nav className="header-nav">{navButtons}</nav>}
-            <div className="header-actions">
+            <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-2">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {me?.display_name === 'Ada' && (
                 <IconButton size="header" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
@@ -722,7 +727,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 {overdue.length > 0 && (
                   <section>
                     <h2 className="task-section-heading task-section-heading-overdue">Overdue</h2>
-                    <div className="timeline-list">
+                    <div className="flex flex-col">
                       {overdue.map((task, i) => (
                         <TimelineRow
                           key={task.id}
@@ -757,7 +762,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                             meId={session.user.id}
                           />
                         ) : (
-                          <div className="timeline-list">
+                          <div className="flex flex-col">
                             {dTasks.map((task, i) => (
                               <TimelineRow
                                 key={task.id}
