@@ -198,7 +198,7 @@ export default function CorkBoardView({ me, memberName }) {
       {notes && !notes.length && <p className="task-notes-empty">Nothing pinned yet.</p>}
 
       {notes && notes.length > 0 && (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
           {notes.map((note) => {
             const isOwn = note.author_id === me?.id
             const isEditing = editingId === note.id

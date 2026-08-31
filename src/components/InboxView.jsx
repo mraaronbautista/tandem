@@ -29,7 +29,7 @@ const inboxItemKindClasses = {
 // merged, not the underlying data.
 const TABS = [
   { value: 'all', label: 'All' },
-  { value: 'question', label: 'Needs your reply' },
+  { value: 'question', label: 'New' },
   { value: 'resolved', label: 'Resolved' },
   { value: 'submission', label: 'Submissions' },
   { value: 'nudge', label: 'Nudges' },
@@ -270,7 +270,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
       {showQuestions && (
         <section>
           <div className="flex items-center justify-between gap-2">
-            <h3 className="task-section-heading m-0 text-overdue opacity-100">Needs your reply</h3>
+            <h3 className="task-section-heading m-0 text-overdue opacity-100">New</h3>
             <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h" onClick={handleMarkAllRead}>
               Mark all as read
             </button>
