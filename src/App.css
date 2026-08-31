@@ -3061,16 +3061,25 @@ label.new-task-checkbox-label {
   justify-content: space-between;
 }
 
-/* auto-fit + minmax rather than flex-wrap — it packs as many equal-width
-   120px+ columns as actually fit, so 4 units settle into a neat 2x2 grid
-   on a narrow mobile toolbar (where flex-wrap previously stretched each
-   wrapped tab to the full row width, stacking 4 heavy full-width bars)
-   and spread evenly across the row on a wide desktop toolbar (where
-   flex-wrap previously left tabs hugging their own text width with
-   empty space after them) — one rule handles both without a breakpoint.
-   flex-basis: 100% always claims the whole toolbar row for itself —
-   sharing a row with "+ Add booking" (the flex-wrap default) made the
-   grid resolve its column count against whatever scraps of width were
+/* UNUSED — not just superseded, actually unreachable: RentalCalendar.jsx
+   defaults showUnitTabs to true, but its only real caller (RentalsView.jsx,
+   both the desktop and mobile branches) always passes showUnitTabs={false},
+   so this branch's <div className="rental-unit-tabs"> never renders in the
+   current app. The prop/JSX branch itself is left alone (an intentional
+   escape hatch in the component's own API, not a CSS concern) — only this
+   CSS, .rental-unit-tab/-active/:active below, and their mobile shrink
+   block (including .rental-unit-tab .rental-unit-dot) are confirmed dead.
+   Kept, not deleted, until a dedicated dead-CSS cleanup pass.
+   Original comment, for history: auto-fit + minmax rather than flex-wrap —
+   it packs as many equal-width 120px+ columns as actually fit, so 4 units
+   settle into a neat 2x2 grid on a narrow mobile toolbar (where flex-wrap
+   previously stretched each wrapped tab to the full row width, stacking 4
+   heavy full-width bars) and spread evenly across the row on a wide
+   desktop toolbar (where flex-wrap previously left tabs hugging their own
+   text width with empty space after them) — one rule handles both without
+   a breakpoint. flex-basis: 100% always claims the whole toolbar row for
+   itself — sharing a row with "+ Add booking" (the flex-wrap default) made
+   the grid resolve its column count against whatever scraps of width were
    left over, wrapping unit tabs unevenly. Forcing full width gives the
    grid the same predictable width on every screen size, and drops
    "+ Add booking" to its own line below rather than fighting for space. */
@@ -3082,6 +3091,7 @@ label.new-task-checkbox-label {
   min-width: 140px;
 }
 
+/* UNUSED — see .rental-unit-tabs above. */
 .rental-unit-tab {
   display: flex;
   align-items: center;
@@ -3098,20 +3108,25 @@ label.new-task-checkbox-label {
   transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
 }
 
+/* UNUSED — see .rental-unit-tabs above. */
 .rental-unit-tab:active {
   transform: scale(0.97);
 }
 
+/* UNUSED — see .rental-unit-tabs above. */
 .rental-unit-tab-active {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
 }
 
-/* As small as this can reasonably go — this row only ever renders on
-   mobile now (the desktop dashboard suppresses it entirely via
-   showUnitTabs={false}, replaced there by the sidebar list + combined
-   nav row), so there's no wide-screen case to keep it legible for. */
+/* UNUSED — see .rental-unit-tabs above.
+   Original comment, for history (now inaccurate — mobile doesn't render
+   this either, see the corrected note above): as small as this can
+   reasonably go — this row only ever renders on mobile now (the desktop
+   dashboard suppresses it entirely via showUnitTabs={false}, replaced
+   there by the sidebar list + combined nav row), so there's no wide-screen
+   case to keep it legible for. */
 @media (max-width: 899px) {
   .rental-unit-tabs {
     grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
