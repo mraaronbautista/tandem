@@ -38,6 +38,7 @@ import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
 import BoardView from './BoardView'
+import StaffLogsView from './StaffLogsView'
 import MonthView from './MonthView'
 import MobileNav from './MobileNav'
 import IconButton from './IconButton'
@@ -86,6 +87,7 @@ const TABS = [
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
   { key: 'reports', icon: '📄', label: 'Reports' },
   { key: 'board', icon: '📌', label: 'Board' },
+  { key: 'staff', icon: '⏱️', label: 'Staff' },
 ]
 
 // The header's page title for every tab except Today (which shows the
@@ -96,6 +98,7 @@ const PAGE_LABELS = {
   rentals: 'Awa Rentalz',
   reports: 'Reports',
   board: 'Board',
+  staff: 'Staff Hours',
 }
 
 function startOfDay(d) {
@@ -642,6 +645,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
             hasUnseenInbox={hasUnseenInbox}
           />
         )}
+        {activeTab === 'staff' && <StaffLogsView me={me} />}
 
         {activeTab === 'today' && (
           <PullToRefresh onRefresh={reload}>

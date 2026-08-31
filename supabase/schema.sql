@@ -725,3 +725,291 @@ end;
 $$;
 
 grant execute on function add_cork_note_comment(uuid, text) to authenticated;
+
+-- ============================================================
+-- Staff time tracking (property manager / house-manager role)
+-- ============================================================
+-- Deliberately NOT a third `members` row — is_member() grants full
+-- mutual access to tasks/rentals/vault/everything, which this role
+-- must not have. Instead: its own narrowly-scoped table, its own
+-- is_staff() existence check (mirroring is_member()'s shape), and its
+-- own RLS on the two tables below. No existing table's RLS changes.
+--
+-- DEPLOYMENT NOTE: this whole block is additive. On an existing live
+-- project, paste and run only this block in the Supabase SQL editor —
+-- do not re-run the full schema.sql file (it has no "if not exists"
+-- guards anywhere and will fail immediately on `create table members`).
+-- After running it, also run once, by hand:
+--   alter publication supabase_realtime add table time_entries;
+-- (needed for the admin dashboard's live updates — see TaskBoard.jsx's
+-- staff tab / StaffLogsView.jsx). staff/work_sites don't need this —
+-- they change rarely enough that an explicit reload after an admin
+-- edit, same pattern archiveRentalProperty already uses, is enough.
+
+create type staff_rate_type as enum ('standard', 'emergency');
+create type time_entry_status as enum ('pending', 'approved');
+
+-- Mirrors members' shape (id -> auth.users, display_name) but is its
+-- own table — populate manually after inviting the account via
+-- Supabase Auth, same as members itself.
+create table staff (
+  id uuid primary key references auth.users (id) on delete cascade,
+  display_name text not null,
+  hourly_rate numeric(10, 2) not null default 20,
+  emergency_rate numeric(10, 2) not null default 25,
+  -- Soft-disable rather than delete: keeps time_entries history intact
+  -- if a property manager leaves. is_staff() below checks this, so
+  -- deactivating someone revokes clock-in/work-site access immediately.
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table staff enable row level security;
+
+-- security definer, same recursion-avoidance reasoning as is_member().
+-- Checks `active` (unlike is_member(), which has no such flag on
+-- members) — a deactivated property manager loses access immediately,
+-- not just stops being invited to shifts.
+create or replace function is_staff()
+returns boolean as $$
+  select exists (select 1 from staff where id = auth.uid() and active);
+$$ language sql security definer stable;
+
+-- Two SELECT policies (Postgres OR's permissive policies together):
+-- members see the whole roster (for the admin dashboard's staff-name
+-- join and rate display); a staff account can always read its OWN row
+-- regardless of `active` — deliberately NOT gated through is_staff(),
+-- so a deactivated account gets a clear "you're deactivated" state
+-- client-side instead of an ambiguous RLS-denied empty result.
+create policy "members can read all staff"
+  on staff for select
+  using (is_member());
+
+create policy "staff can read own row"
+  on staff for select
+  using (id = auth.uid());
+
+create policy "members can insert staff"
+  on staff for insert
+  with check (is_member());
+
+create policy "members can update staff"
+  on staff for update
+  using (is_member())
+  with check (is_member());
+
+-- Known clock-in locations: existing Awa Rentalz units
+-- (rental_property_id set) plus other non-rental properties in the
+-- area (rental_property_id null). No lat/lng exists anywhere else in
+-- this schema (rental_properties.address is free text) — this is the
+-- first structured-geo table in the app.
+create table work_sites (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  address text,
+  latitude double precision not null,
+  longitude double precision not null,
+  -- Per-site radius, not a global constant — a multi-unit building's
+  -- footprint is bigger than a single house's.
+  geofence_radius_m integer not null default 100,
+  -- Nullable, optional link back to an existing Awa Rentalz unit — a
+  -- work_site is its own row either way (rental_properties has no
+  -- lat/lng to add without a separate migration, and not every
+  -- work_site is a rental unit at all).
+  rental_property_id uuid references rental_properties (id) on delete set null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table work_sites enable row level security;
+
+create policy "members can read all work sites"
+  on work_sites for select
+  using (is_member());
+
+-- Staff only ever needs active sites to clock in at — an archived
+-- site shouldn't appear in their nearest-site picker.
+create policy "staff can read active work sites"
+  on work_sites for select
+  using (is_staff() and active);
+
+create policy "members can insert work sites"
+  on work_sites for insert
+  with check (is_member());
+
+create policy "members can update work sites"
+  on work_sites for update
+  using (is_member())
+  with check (is_member());
+
+create policy "members can delete work sites"
+  on work_sites for delete
+  using (is_member());
+
+-- Haversine great-circle distance in meters. Kept as its own small SQL
+-- function (not inlined into the trigger below) so it's independently
+-- testable via `select haversine_distance_m(...)` in the SQL editor.
+create or replace function haversine_distance_m(
+  lat1 double precision, lng1 double precision,
+  lat2 double precision, lng2 double precision
+)
+returns double precision as $$
+  select 2 * 6371000 * asin(sqrt(
+    sin(radians(lat2 - lat1) / 2) ^ 2 +
+    cos(radians(lat1)) * cos(radians(lat2)) * sin(radians(lng2 - lng1) / 2) ^ 2
+  ));
+$$ language sql immutable;
+
+create table time_entries (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid not null references staff (id) on delete cascade,
+  work_site_id uuid not null references work_sites (id),
+  rate_type staff_rate_type not null default 'standard',
+  -- Stamped server-side by the trigger below from staff.hourly_rate/
+  -- emergency_rate AT THE MOMENT OF CLOCK-IN — never read live off
+  -- `staff` at query time. Deliberate: if hourly_rate is later edited,
+  -- past entries must not silently reprice. Also closes a tampering
+  -- vector — a raw client insert can't set its own rate.
+  rate_amount numeric(10, 2),
+  clock_in_at timestamptz not null default now(),
+  clock_in_lat double precision not null,
+  clock_in_lng double precision not null,
+  clock_in_accuracy_m numeric,
+  -- Both stamped server-side by the trigger below, from the STORED
+  -- clock_in_lat/lng vs. the work site's lat/lng — recomputed
+  -- server-side (not trusted from the client) so the flag Ada/Aaron
+  -- see on the admin dashboard can never be spoofed independently of
+  -- the coordinates sitting right next to it. This doesn't make the
+  -- underlying GPS reading itself any more trustworthy (an inherent
+  -- limit of browser geolocation either way) — it only guarantees the
+  -- flag is always internally consistent with the stored coordinates.
+  distance_from_site_m numeric,
+  flagged boolean not null default false,
+  clock_out_at timestamptz,
+  clock_out_lat double precision,
+  clock_out_lng double precision,
+  status time_entry_status not null default 'pending',
+  approved_by uuid references members (id),
+  approved_at timestamptz,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+-- Prevents a double clock-in (a lost/duplicate Start tap, or two tabs)
+-- from creating two simultaneously "active" (not-yet-clocked-out)
+-- entries for the same staff member — same "enforce the business rule
+-- as a unique index" idiom as eod_reports_unique_bucket elsewhere in
+-- this file.
+create unique index time_entries_one_active_per_staff
+  on time_entries (staff_id)
+  where clock_out_at is null;
+
+create index time_entries_staff_id_idx on time_entries (staff_id);
+create index time_entries_work_site_id_idx on time_entries (work_site_id);
+create index time_entries_status_idx on time_entries (status);
+create index time_entries_clock_in_at_idx on time_entries (clock_in_at);
+
+-- security definer so the rate/geofence stamping is authoritative
+-- regardless of any RLS nuance on staff/work_sites, and so a client
+-- insert can never supply its own rate_amount/distance_from_site_m/
+-- flagged — those three columns are effectively read-only from the
+-- client's perspective even though no column-level privilege blocks
+-- writing them; this trigger unconditionally overwrites whatever was
+-- submitted.
+create or replace function stamp_time_entry_meta()
+returns trigger as $$
+declare
+  v_site work_sites;
+  v_staff staff;
+begin
+  select * into v_site from work_sites where id = new.work_site_id;
+  if v_site.id is null then
+    raise exception 'work site not found';
+  end if;
+
+  select * into v_staff from staff where id = new.staff_id;
+  if v_staff.id is null then
+    raise exception 'staff not found';
+  end if;
+
+  new.rate_amount := case new.rate_type
+    when 'emergency' then v_staff.emergency_rate
+    else v_staff.hourly_rate
+  end;
+
+  new.distance_from_site_m := haversine_distance_m(
+    new.clock_in_lat, new.clock_in_lng, v_site.latitude, v_site.longitude
+  );
+  new.flagged := new.distance_from_site_m > v_site.geofence_radius_m;
+
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create trigger time_entries_stamp_meta
+  before insert on time_entries
+  for each row execute function stamp_time_entry_meta();
+
+alter table time_entries enable row level security;
+
+create policy "members and own staff can read time entries"
+  on time_entries for select
+  using (is_member() or staff_id = auth.uid());
+
+create policy "staff can clock in"
+  on time_entries for insert
+  with check (staff_id = auth.uid() and is_staff());
+
+-- No UPDATE policy for staff at all — clock-out goes exclusively
+-- through staff_clock_out() below. A raw UPDATE grant to staff would
+-- let them rewrite status/approved_by/rate_type after the fact; this
+-- way that's structurally impossible, not just discouraged by the UI.
+create policy "members can update time entries"
+  on time_entries for update
+  using (is_member())
+  with check (is_member());
+
+-- The one RPC a staff account gets, mirroring add_cork_note_comment()'s
+-- shape above: security definer, re-checks ownership inline, and only
+-- ever touches the three clock-out columns — never status, approved_by,
+-- rate_type, or rate_amount. Returns the updated row directly in the
+-- RPC response, so the client updates its own state straight from this
+-- call's result rather than needing a follow-up select. p_lat/p_lng
+-- are nullable and default null — a flaky GPS signal at the END of a
+-- shift shouldn't trap someone unable to clock out (unlike clock-in,
+-- where lat/lng is mandatory).
+create or replace function staff_clock_out(
+  p_entry_id uuid,
+  p_lat double precision default null,
+  p_lng double precision default null
+)
+returns time_entries
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result time_entries;
+begin
+  if not is_staff() then
+    raise exception 'not an active staff member';
+  end if;
+
+  update time_entries
+  set clock_out_at = now(),
+      clock_out_lat = p_lat,
+      clock_out_lng = p_lng
+  where id = p_entry_id
+    and staff_id = auth.uid()
+    and clock_out_at is null
+  returning * into result;
+
+  if result.id is null then
+    raise exception 'time entry not found, not yours, or already clocked out';
+  end if;
+
+  return result;
+end;
+$$;
+
+grant execute on function staff_clock_out(uuid, double precision, double precision) to authenticated;
