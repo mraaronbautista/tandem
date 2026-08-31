@@ -10,7 +10,7 @@
 // No :hover/:active pseudo-class rule exists on either variant in the
 // original CSS — none added here.
 const SIZE_LAYOUT = {
-  mobile: 'flex-1 flex-col gap-0.5 border-0 px-1 py-1.5 text-[11px]',
+  mobile: 'flex-1 flex-col gap-0.5 border-0 px-2.5 py-1.5 text-[11px]',
   desktop: 'flex-none flex-row gap-1.5 border px-3 py-2 text-sm',
 }
 
