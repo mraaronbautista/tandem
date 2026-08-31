@@ -1,3 +1,4 @@
+import { Handshake } from 'lucide-react'
 import { formatDateStr, unitOccupancyStatus } from '../lib/rentals'
 
 // "All units at a glance" — a plain status line per unit rather than a
@@ -109,7 +110,13 @@ export default function RentalOverview({
             aria-pressed={!!p.in_negotiation}
             aria-label={`${p.unit_name}: ${p.in_negotiation ? 'in talks' : 'not in talks'}`}
           >
-            {p.in_negotiation ? '🤝 In talks' : '🤝'}
+            {p.in_negotiation ? (
+              <>
+                <Handshake size={13} className="inline align-[-2px]" /> In talks
+              </>
+            ) : (
+              <Handshake size={13} className="inline align-[-2px]" />
+            )}
           </button>
         )
 

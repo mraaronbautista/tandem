@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Pencil, X } from 'lucide-react'
 import {
   fetchVaultMeta,
   setupVault,
@@ -479,7 +480,7 @@ export default function VaultView({ me, onClose }) {
                                 setRenameDraft(group.name)
                               }}
                             >
-                              ✎
+                              <Pencil size={13} />
                             </button>
                             <button
                               type="button"
@@ -489,7 +490,7 @@ export default function VaultView({ me, onClose }) {
                               disabled={folderBusy}
                               onClick={() => handleDeleteFolder(group.name)}
                             >
-                              ×
+                              <X size={13} />
                             </button>
                           </>
                         )}

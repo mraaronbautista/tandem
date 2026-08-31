@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MapPin } from 'lucide-react'
 import { createWorkSite, updateWorkSite, archiveWorkSite } from '../lib/staff'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -141,7 +142,13 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
           onClick={handleUseCurrentLocation}
           disabled={locating}
         >
-          {locating ? 'Locating…' : '📍 Use my current location'}
+          {locating ? (
+            'Locating…'
+          ) : (
+            <>
+              <MapPin size={14} className="mr-1 inline align-[-2px]" /> Use my current location
+            </>
+          )}
         </button>
         {locationError && <p className="error">{locationError}</p>}
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchRentalProperties,
@@ -227,11 +228,11 @@ export default function RentalsView({ me }) {
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3.5">
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
-              ‹
+              <ChevronLeft size={14} />
             </IconButton>
             <MonthNavLabel>{monthLabel}</MonthNavLabel>
             <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
-              ›
+              <ChevronRight size={14} />
             </IconButton>
             <RentalButton
               variant="primary"
@@ -327,11 +328,11 @@ export default function RentalsView({ me }) {
 
       <MonthNavRow>
         <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
-          ‹
+          <ChevronLeft size={14} />
         </IconButton>
         <MonthNavLabel>{monthLabel}</MonthNavLabel>
         <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
-          ›
+          <ChevronRight size={14} />
         </IconButton>
       </MonthNavRow>
 

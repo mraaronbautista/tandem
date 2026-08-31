@@ -5,7 +5,7 @@ import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge } from '../lib/manualNotify'
-import { EditIcon, PaperclipIcon, DuplicateIcon, ViewIcon, TrashIcon, CheckIcon, BellIcon } from './icons'
+import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, X } from 'lucide-react'
 import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -231,19 +231,23 @@ export default function TaskRow({
         </span>
         <span className={`min-w-0 flex-[1_1_140px] text-sm font-medium text-text-h ${task.status === 'done' ? 'line-through opacity-55' : ''}`}>{task.title}</span>
         {overlapping && (
-          <span className="flex-none text-[11px] font-semibold whitespace-nowrap text-notice" title="Overlaps another task's time">
-            ⚠ Overlap
+          <span className="flex flex-none items-center gap-0.5 text-[11px] font-semibold whitespace-nowrap text-notice" title="Overlaps another task's time">
+            <AlertTriangle size={12} /> Overlap
           </span>
         )}
-        {hasNotes && <span className="text-[13px] opacity-80" title="Has notes">📝</span>}
+        {hasNotes && (
+          <span className="opacity-80" title="Has notes">
+            <StickyNote size={13} />
+          </span>
+        )}
         {checklist.length > 0 && (
-          <span className="text-xs whitespace-nowrap opacity-75" title="Subtasks">
-            ☑ {checklistDone}/{checklist.length}
+          <span className="flex items-center gap-0.5 text-xs whitespace-nowrap opacity-75" title="Subtasks">
+            <CheckSquare size={13} /> {checklistDone}/{checklist.length}
           </span>
         )}
         {hasQuestionForMe && (
-          <span className="text-[13px] opacity-80" title="Has something for you to reply to">
-            💬
+          <span className="opacity-80" title="Has something for you to reply to">
+            <MessageCircle size={13} />
           </span>
         )}
         {task.due_date && (
@@ -296,10 +300,10 @@ export default function TaskRow({
             extraActions={
               <div className="flex gap-2 [&_button]:cursor-pointer [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
                 <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
-                  <EditIcon width={15} height={15} />
+                  <Pencil width={15} height={15} />
                 </button>
                 <button onClick={handleDuplicate} title="Duplicate" aria-label="Duplicate">
-                  <DuplicateIcon width={15} height={15} />
+                  <Copy width={15} height={15} />
                 </button>
                 {canNudge && (
                   <button
@@ -308,12 +312,12 @@ export default function TaskRow({
                     title={nudgeSent ? 'Nudge sent' : 'Nudge — still on your plate?'}
                     aria-label={nudgeSent ? 'Nudge sent' : 'Nudge — still on your plate?'}
                   >
-                    <BellIcon width={15} height={15} />
+                    <Bell width={15} height={15} />
                   </button>
                 )}
                 {task.status === 'done' && hasSubmission && (
                   <button onClick={() => setViewSubmissionOpen(true)} title="View submission" aria-label="View submission">
-                    <ViewIcon width={15} height={15} />
+                    <Eye width={15} height={15} />
                   </button>
                 )}
                 {task.status === 'done' && (
@@ -322,11 +326,11 @@ export default function TaskRow({
                     title={hasSubmission ? 'Edit submission' : 'Submit'}
                     aria-label={hasSubmission ? 'Edit submission' : 'Submit'}
                   >
-                    {hasSubmission ? <EditIcon width={15} height={15} /> : <CheckIcon width={15} height={15} />}
+                    {hasSubmission ? <Pencil width={15} height={15} /> : <Check width={15} height={15} />}
                   </button>
                 )}
                 <button className="!text-overdue" onClick={handleDelete} title="Delete" aria-label="Delete">
-                  <TrashIcon width={15} height={15} />
+                  <Trash2 width={15} height={15} />
                 </button>
               </div>
             }
@@ -354,7 +358,9 @@ export default function TaskRow({
                       rel="noreferrer"
                       key={i}
                     >
-                      <span className="task-submission-file-icon">📎</span>
+                      <span className="task-submission-file-icon">
+                        <Paperclip size={13} />
+                      </span>
                       <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
                     </a>
                   ),
@@ -398,13 +404,15 @@ export default function TaskRow({
                           title="Remove"
                           aria-label="Remove attachment"
                         >
-                          ✕
+                          <X size={12} />
                         </button>
                       </div>
                     ) : (
                       <div className="task-submission-attachment task-submission-file-link" key={i}>
                         <a href={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
-                          <span className="task-submission-file-icon">📎</span>
+                          <span className="task-submission-file-icon">
+                        <Paperclip size={13} />
+                      </span>
                           <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
                         </a>
                         <button
@@ -414,7 +422,7 @@ export default function TaskRow({
                           title="Remove"
                           aria-label="Remove attachment"
                         >
-                          ✕
+                          <X size={12} />
                         </button>
                       </div>
                     ),
@@ -423,7 +431,7 @@ export default function TaskRow({
               )}
 
               <label className="task-submission-upload" title="Attach files">
-                {uploading ? 'Uploading…' : <PaperclipIcon width={16} height={16} />}
+                {uploading ? 'Uploading…' : <Paperclip width={16} height={16} />}
                 <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
               </label>
               {uploadError && <p className="error">{uploadError}</p>}

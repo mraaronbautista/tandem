@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchRentalProperties } from '../lib/rentals'
 import {
@@ -177,7 +178,12 @@ export default function StaffLogsView({ me }) {
               <div className="flex items-center justify-between opacity-80">
                 <span>
                   {e.work_sites?.name} — {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  {e.flagged && <span className="text-overdue"> ⚠ outside geofence</span>}
+                  {e.flagged && (
+                    <span className="text-overdue">
+                      {' '}
+                      <AlertTriangle size={12} className="inline align-[-1px]" /> outside geofence
+                    </span>
+                  )}
                 </span>
                 <span>{formatDuration(e)}</span>
               </div>

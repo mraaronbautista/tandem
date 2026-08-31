@@ -1,3 +1,4 @@
+import { Paperclip, X } from 'lucide-react'
 import { isImageAttachment } from '../lib/attachments'
 
 // Shared between a not-yet-sent draft (has onRemove, so each attachment
@@ -34,7 +35,7 @@ export default function AttachmentList({ attachments, onRemove }) {
         title="Remove"
         aria-label="Remove attachment"
       >
-        ✕
+        <X size={12} />
       </button>
     )
   }
@@ -47,7 +48,9 @@ export default function AttachmentList({ attachments, onRemove }) {
             onRemove ? (
               <div className="task-submission-attachment task-submission-file-link" key={a._i}>
                 <a href={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
-                  <span className="task-submission-file-icon">📎</span>
+                  <span className="task-submission-file-icon">
+                  <Paperclip size={13} />
+                </span>
                   <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
                 </a>
                 {removeButton(a._i)}
@@ -60,7 +63,9 @@ export default function AttachmentList({ attachments, onRemove }) {
                 rel="noreferrer"
                 key={a._i}
               >
-                <span className="task-submission-file-icon">📎</span>
+                <span className="task-submission-file-icon">
+                  <Paperclip size={13} />
+                </span>
                 <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
               </a>
             ),

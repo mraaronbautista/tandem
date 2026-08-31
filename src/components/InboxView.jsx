@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Paperclip, Bell } from 'lucide-react'
 import { getInboxItems, getCompletedSubmissions, getNudgedTasks } from '../lib/tasks'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
@@ -109,8 +110,8 @@ function SubmissionItem({ task, onSelectTask }) {
           {WHO_LABEL[task.who]}
         </span>
         {attachmentCount > 0 && (
-          <span className="flex-none text-xs whitespace-nowrap opacity-70">
-            📎 {attachmentCount} file{attachmentCount > 1 ? 's' : ''}
+          <span className="flex flex-none items-center gap-1 text-xs whitespace-nowrap opacity-70">
+            <Paperclip size={12} /> {attachmentCount} file{attachmentCount > 1 ? 's' : ''}
           </span>
         )}
       </div>
@@ -130,7 +131,9 @@ function NudgeItem({ task, onSelectTask }) {
         <span className="font-semibold text-text-h">{task.title}</span>
         <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(task.overdue_nudge_sent_at)}</span>
       </div>
-      <p className="my-0.5 mb-2 overflow-hidden text-ellipsis italic opacity-60 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">🔔 Still on your plate?</p>
+      <p className="my-0.5 mb-2 flex items-center gap-1 overflow-hidden text-ellipsis italic opacity-60 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">
+        <Bell size={13} /> Still on your plate?
+      </p>
       <div className="flex items-center justify-between gap-2">
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}

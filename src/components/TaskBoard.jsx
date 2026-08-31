@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { GanttChart, Home, FileText, LayoutGrid, Timer, Target, ClipboardList, NotebookPen, Lock, Hand, Settings, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
@@ -82,12 +83,20 @@ function daySectionLabel(day, today) {
 // destination (BoardView.jsx, an internal Pins/Inbox segmented toggle) so
 // mobile settles on 4 primary destinations instead of 5 — a
 // navigation-level grouping only, neither screen's own data/logic changed.
+// icon is the component TYPE, not a rendered element — NavItem sizes it
+// per mount context (mobile capsule vs. desktop header row) via its own
+// ICON_SIZE className, so this array stays size-agnostic.
+//
+// Board uses LayoutGrid, not Pin — Pin is already NewTaskForm.jsx's "New
+// task" quick-action icon (and BoardView.jsx's own "Pins" sub-tab), so
+// reusing it here for the top-level nav destination would give the same
+// glyph two unrelated meanings depending on where you saw it.
 const TABS = [
-  { key: 'today', icon: '📋', label: 'Today' },
-  { key: 'rentals', icon: '🏠', label: 'Rentals' },
-  { key: 'reports', icon: '📄', label: 'Reports' },
-  { key: 'board', icon: '📌', label: 'Board' },
-  { key: 'staff', icon: '⏱️', label: 'Staff' },
+  { key: 'today', icon: GanttChart, label: 'Timeline' },
+  { key: 'rentals', icon: Home, label: 'Rentals' },
+  { key: 'reports', icon: FileText, label: 'Reports' },
+  { key: 'board', icon: LayoutGrid, label: 'Board' },
+  { key: 'staff', icon: Timer, label: 'Staff' },
 ]
 
 // The header's page title for every tab except Today (which shows the
@@ -548,12 +557,12 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // sensitive, so it sits furthest from an accidental tap at the top of
   // the speed-dial rather than sandwiched in the middle.
   const quickActions = [
-    { key: 'bulkAdd', icon: '📋', label: 'Bulk add / edit tasks', onSelect: () => setBulkAddOpen(true) },
-    { key: 'priorities', icon: '🎯', label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
+    { key: 'bulkAdd', icon: <ClipboardList size={16} />, label: 'Bulk add / edit tasks', onSelect: () => setBulkAddOpen(true) },
+    { key: 'priorities', icon: <Target size={16} />, label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
     ...(me?.display_name === 'Aaron'
-      ? [{ key: 'report', icon: '📝', label: 'Submit report', onSelect: () => setReportOpen(true) }]
+      ? [{ key: 'report', icon: <NotebookPen size={16} />, label: 'Submit report', onSelect: () => setReportOpen(true) }]
       : []),
-    { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
+    { key: 'vault', icon: <Lock size={16} />, label: 'Vault', onSelect: () => setVaultOpen(true) },
   ]
 
   // Renders the same TABS/activeTab/badge data through NavItem.jsx at
@@ -621,11 +630,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {me?.display_name === 'Ada' && (
                 <IconButton size="header" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
-                  👋
+                  <Hand size={16} />
                 </IconButton>
               )}
               <IconButton size="header" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
-                ⚙️
+                <Settings size={16} />
               </IconButton>
             </div>
           </div>
@@ -658,7 +667,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   ‹ Today › cluster on every width, not just desktop. */}
               <div className="flex items-center gap-1.5">
                 <IconButton size="weekNav" onClick={() => shiftWeek(-1)} title="Previous week" aria-label="Previous week">
-                  ‹
+                  <ChevronLeft size={14} />
                 </IconButton>
                 {/* .month-nav-today-button (App.css) is single-consumer —
                     this is its only usage, always inside .view-mode-row,
@@ -673,7 +682,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   Today
                 </button>
                 <IconButton size="weekNav" onClick={() => shiftWeek(1)} title="Next week" aria-label="Next week">
-                  ›
+                  <ChevronRight size={14} />
                 </IconButton>
               </div>
 

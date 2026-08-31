@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AlertTriangle, Play, Square } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 import {
   fetchOwnStaffProfile,
@@ -238,7 +239,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
               className="cursor-pointer rounded-[16px] border-0 bg-accent px-4 py-8 text-2xl font-bold text-white active:scale-[0.98]"
               onClick={handleStartTap}
             >
-              ▶ Start
+              <Play size={22} className="mr-1.5 inline align-[-3px]" fill="currentColor" /> Start
             </button>
           )}
 
@@ -326,7 +327,9 @@ export default function StaffClockView({ theme, toggleTheme }) {
               <p className="text-sm opacity-70">Clocked in — {activeEntry.rate_type}</p>
               <p className="text-4xl font-bold text-text-h tabular-nums">{formatElapsed(elapsedMs)}</p>
               {activeEntry.flagged && (
-                <p className="text-xs text-overdue">⚠ Flagged — clock-in was outside the expected radius.</p>
+                <p className="flex items-center gap-1 text-xs text-overdue">
+                  <AlertTriangle size={13} /> Flagged — clock-in was outside the expected radius.
+                </p>
               )}
               <button
                 type="button"
@@ -334,7 +337,13 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 onClick={handleStop}
                 disabled={stopping}
               >
-                {stopping ? 'Stopping…' : '■ Stop'}
+                {stopping ? (
+                  'Stopping…'
+                ) : (
+                  <>
+                    <Square size={16} className="mr-1.5 inline align-[-2px]" fill="currentColor" /> Stop
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -359,7 +368,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 <div key={e.id} className="flex items-center justify-between rounded-sm border border-border px-3 py-2 text-sm">
                   <span>
                     {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                    {e.flagged && ' ⚠'}
+                    {e.flagged && <AlertTriangle size={12} className="ml-1 inline align-[-1px] text-overdue" />}
                   </span>
                   <span>{e.clock_out_at ? money(computeEntryPay(e)) : 'in progress'}</span>
                   <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { Paperclip, Check } from 'lucide-react'
 import { sendClarificationAsked, sendClarificationAnswered } from '../lib/manualNotify'
 import { uploadCompletionAttachment } from '../lib/attachments'
-import { PaperclipIcon } from './icons'
 import AttachmentList from './AttachmentList'
 
 // Its own component so the answer textarea can keep local draft state
@@ -67,7 +67,7 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
       {uploadError && <p className="error">{uploadError}</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
-          {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
+          {uploading ? 'Uploading…' : <Paperclip width={15} height={15} />}
           <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
         </label>
         {(answerDraft.trim() || answerAttachments.length > 0) && (
@@ -196,7 +196,9 @@ export default function TaskClarifications({
                   <AttachmentList attachments={item.answerAttachments} />
                 </>
               ) : item.resolved ? (
-                <p className="text-[13px] opacity-70">✓ {memberName(item.resolvedBy)} marked this finished — no reply needed</p>
+                <p className="flex items-center gap-1 text-[13px] opacity-70">
+                  <Check size={13} /> {memberName(item.resolvedBy)} marked this finished — no reply needed
+                </p>
               ) : item.answerAttachments?.length > 0 ? (
                 <AttachmentList attachments={item.answerAttachments} />
               ) : item.askedBy === meId ? (
@@ -234,7 +236,7 @@ export default function TaskClarifications({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
-              {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
+              {uploading ? 'Uploading…' : <Paperclip width={15} height={15} />}
               <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
             </label>
             {extraActions}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import Modal from './Modal'
 import IconButton from './IconButton'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
@@ -50,11 +51,11 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
         <div className="flex items-center justify-between">
           <MonthNavRow>
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
-              ‹
+              <ChevronLeft size={14} />
             </IconButton>
             <MonthNavLabel>{label}</MonthNavLabel>
             <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
-              ›
+              <ChevronRight size={14} />
             </IconButton>
           </MonthNavRow>
           {/* .date-picker-close carried no CSS rule of its own (confirmed
@@ -62,7 +63,7 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
               reproduces .icon-button's full styling with nothing left
               for that modifier to have added. */}
           <IconButton onClick={onClose} title="Close" aria-label="Close">
-            ×
+            <X size={14} />
           </IconButton>
         </div>
 

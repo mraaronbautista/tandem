@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Check, Target } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
@@ -246,11 +247,17 @@ export default function CorkBoardView({ me, memberName }) {
                         onClick={() => handleFocusToday(note)}
                         disabled={promotingId === note.id || promoted.has(note.id)}
                       >
-                        {promoted.has(note.id)
-                          ? '✓ Added to Today'
-                          : promotingId === note.id
-                            ? 'Adding…'
-                            : '🎯 Focus today'}
+                        {promoted.has(note.id) ? (
+                          <>
+                            <Check size={14} className="inline align-[-2px]" /> Added to Today
+                          </>
+                        ) : promotingId === note.id ? (
+                          'Adding…'
+                        ) : (
+                          <>
+                            <Target size={14} className="inline align-[-2px]" /> Focus today
+                          </>
+                        )}
                       </button>
                       {isOwn && (
                         <>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pin, Inbox as InboxIcon } from 'lucide-react'
 import CorkBoardView from './CorkBoardView'
 import InboxView from './InboxView'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
@@ -18,10 +19,10 @@ export default function BoardView({ me, memberName, tasks, meId, onSelectTask, o
     <>
       <PeriodTabs className="board-section-tabs">
         <PeriodTab active={section === 'pins'} onClick={() => setSection('pins')}>
-          📌 Pins
+          <Pin size={14} className="mr-1 inline align-[-2px]" /> Pins
         </PeriodTab>
         <PeriodTab active={section === 'inbox'} onClick={() => setSection('inbox')}>
-          📥 Inbox{hasUnseenInbox && ' •'}
+          <InboxIcon size={14} className="mr-1 inline align-[-2px]" /> Inbox{hasUnseenInbox && ' •'}
         </PeriodTab>
       </PeriodTabs>
 

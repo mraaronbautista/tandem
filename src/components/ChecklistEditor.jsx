@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Ban, X } from 'lucide-react'
 import { SubmissionButton } from './SubmissionActions'
 
 function newItem(text = '') {
@@ -56,14 +57,18 @@ export default function ChecklistEditor({ items, onChange }) {
                 />
                 <button
                   type="button"
-                  className={`h-[26px] w-[26px] flex-none cursor-pointer rounded-full border bg-pill-bg text-[13px] leading-none ${item.blocked ? 'border-overdue opacity-100' : 'border-border opacity-50'}`}
+                  className={`flex h-[26px] w-[26px] flex-none cursor-pointer items-center justify-center rounded-full border bg-pill-bg leading-none ${item.blocked ? 'border-overdue opacity-100' : 'border-border opacity-50'}`}
                   onClick={() => toggleBlocked(item)}
                   title={item.blocked ? 'Unblock' : "Mark as blocked / can't be done"}
                 >
-                  🚫
+                  <Ban size={13} />
                 </button>
-                <button type="button" className="h-[26px] w-[26px] flex-none cursor-pointer rounded-full border border-border bg-pill-bg text-sm leading-none text-text" onClick={() => removeItem(item.id)}>
-                  ×
+                <button
+                  type="button"
+                  className="flex h-[26px] w-[26px] flex-none cursor-pointer items-center justify-center rounded-full border border-border bg-pill-bg text-text"
+                  onClick={() => removeItem(item.id)}
+                >
+                  <X size={14} />
                 </button>
               </div>
               {item.blocked && (

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Ban } from 'lucide-react'
 
 // Blocked and done are mutually exclusive — something not accomplishable
 // isn't "done," so marking it blocked clears done, and vice versa.
@@ -44,7 +45,7 @@ function ChecklistItemRow({ item, onItemChange }) {
           }}
           title={item.blocked ? 'Unblock' : "Mark as blocked / can't be done"}
         >
-          🚫
+          <Ban size={13} />
         </button>
       </label>
       {item.blocked && (

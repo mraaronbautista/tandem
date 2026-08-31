@@ -14,9 +14,12 @@ const SIZE_LAYOUT = {
   desktop: 'flex-none flex-row gap-1.5 border px-3 py-2 text-sm',
 }
 
+// h-*/w-* rather than text-* now that icon is an SVG component, not an
+// emoji glyph sized off font-size — same visual scale as the original
+// text-xl/text-base (20px/16px).
 const ICON_SIZE = {
-  mobile: 'text-xl',
-  desktop: 'text-base',
+  mobile: 'h-5 w-5',
+  desktop: 'h-4 w-4',
 }
 
 // color/background/border-color computed together, exclusively, per
@@ -33,15 +36,15 @@ function stateClasses(size, active) {
   return active ? 'bg-transparent text-accent font-semibold' : 'bg-transparent text-text'
 }
 
-export default function NavItem({ size = 'mobile', active = false, icon, label, badge = false, className = '', ...props }) {
+export default function NavItem({ size = 'mobile', active = false, icon: Icon, label, badge = false, className = '', ...props }) {
   return (
     <button
       type="button"
       className={`flex cursor-pointer items-center rounded-[8px] [font-family:inherit] [line-height:inherit] transition-colors duration-[180ms] ease-tactile ${SIZE_LAYOUT[size]} ${stateClasses(size, active)} ${className}`}
       {...props}
     >
-      <span className={`relative ${ICON_SIZE[size]}`}>
-        {icon}
+      <span className={`relative flex ${ICON_SIZE[size]}`}>
+        <Icon className="h-full w-full" strokeWidth={2} />
         {badge && (
           <span className="absolute -right-[3px] -top-px h-2 w-2 rounded-full border-[1.5px] border-card-bg bg-[var(--overdue)]" />
         )}

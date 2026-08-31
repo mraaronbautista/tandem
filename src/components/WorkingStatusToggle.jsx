@@ -1,5 +1,13 @@
 import { useState } from 'react'
+import { Circle } from 'lucide-react'
 import { updateWorkingStatus } from '../lib/members'
+
+// fill="currentColor" + strokeWidth={0}: a solid dot that just inherits
+// whichever text-color class the caller already applies (green when
+// online, muted otherwise) — no separate color prop to keep in sync.
+function StatusDot() {
+  return <Circle size={8} fill="currentColor" strokeWidth={0} className="inline align-[1px]" />
+}
 
 function formatSince(iso) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -47,7 +55,7 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
         disabled={busy}
         title={isWorking ? `Online since ${formatSince(me.working_since)} — tap to go offline` : 'Go online'}
       >
-        {isWorking ? '🟢 Online' : '⚪ Offline'}
+        <StatusDot /> {isWorking ? 'Online' : 'Offline'}
       </button>
     )
   }
@@ -66,7 +74,7 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
       }`}
       title={aaronOnline ? `Online since ${formatSince(aaron.working_since)}` : 'Offline'}
     >
-      {aaronOnline ? '🟢 Aaron' : '⚪ Aaron'}
+      <StatusDot /> Aaron
     </span>
   )
 }

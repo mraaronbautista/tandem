@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pin, Plus, X } from 'lucide-react'
 import TaskForm from './TaskForm'
 import Modal from './Modal'
 
@@ -56,13 +57,15 @@ export default function NewTaskForm({ onCreate, defaultWho, selectedDate, extraA
                 </button>
               ))}
               <button type="button" className="quick-action-item" onClick={handleNewTask}>
-                <span className="quick-action-icon">📌</span>
+                <span className="quick-action-icon">
+                  <Pin size={16} />
+                </span>
                 New task
               </button>
             </div>
           )}
           <button className="fab-new-task" onClick={handleFabClick} aria-label={menuOpen ? 'Close menu' : 'Actions'}>
-            {menuOpen ? '×' : '+'}
+            {menuOpen ? <X size={28} strokeWidth={2.5} /> : <Plus size={28} strokeWidth={2.5} />}
           </button>
         </div>
       )}

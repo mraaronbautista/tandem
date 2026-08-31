@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { CheckSquare, StickyNote, MessageCircle } from 'lucide-react'
 import { isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
@@ -378,13 +379,13 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                       {(checklist.length > 0 || hasNotes || hasQuestionForMe) && (
                         <span className="day-timeline-block-meta">
                           {checklist.length > 0 && (
-                            <span className="day-timeline-block-checklist" title="Subtasks">
-                              ☑ {checklistDone}/{checklist.length}
+                            <span className="day-timeline-block-checklist inline-flex items-center gap-0.5" title="Subtasks">
+                              <CheckSquare size={12} /> {checklistDone}/{checklist.length}
                             </span>
                           )}
                           {hasNotes && (
                             <span title="Has notes" aria-label="Has notes">
-                              📝
+                              <StickyNote size={12} />
                             </span>
                           )}
                           {hasQuestionForMe && (
@@ -392,7 +393,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                               title="Has something for you to reply to"
                               aria-label="Has something for you to reply to"
                             >
-                              💬
+                              <MessageCircle size={12} />
                             </span>
                           )}
                         </span>

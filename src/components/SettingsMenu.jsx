@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Bell, BellOff, Moon, Sun, Globe, HelpCircle, LogOut } from 'lucide-react'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone } from '../lib/timezone'
 import Modal from './Modal'
 import HowToGuide from './HowToGuide'
@@ -41,7 +42,7 @@ export default function SettingsMenu({
           {showPush ? (
             <>
               <button type="button" className={settingsItemClasses} onClick={onTogglePush} disabled={pushBusy}>
-                <span className="text-[17px]">{pushEnabled ? '🔔' : '🔕'}</span>
+                <span className="text-[17px]">{pushEnabled ? <Bell size={17} /> : <BellOff size={17} />}</span>
                 {pushEnabled ? 'Notifications on' : 'Notifications off'}
               </button>
               {pushError && <p className="error">{pushError}</p>}
@@ -52,7 +53,9 @@ export default function SettingsMenu({
             // hit on iOS Safari outside a Home Screen install, which can't
             // receive push at all (a platform limit, not fixable here).
             <div className={`${settingsItemClasses} cursor-default opacity-60`}>
-              <span className="text-[17px]">🔕</span>
+              <span className="text-[17px]">
+                <BellOff size={17} />
+              </span>
               <span className="flex flex-1 flex-col">
                 Notifications not supported
                 <span className="text-xs font-normal opacity-60">
@@ -63,13 +66,15 @@ export default function SettingsMenu({
           )}
 
           <button type="button" className={settingsItemClasses} onClick={toggleTheme}>
-            <span className="text-[17px]">{theme === 'dark' ? '🌙' : '☀️'}</span>
+            <span className="text-[17px]">{theme === 'dark' ? <Moon size={17} /> : <Sun size={17} />}</span>
             {theme === 'dark' ? 'Dark mode' : 'Light mode'}
           </button>
 
           {onChangeDefaultTimezone && (
             <div className={`${settingsItemClasses} cursor-default justify-between`}>
-              <span className="text-[17px]">🌐</span>
+              <span className="text-[17px]">
+                <Globe size={17} />
+              </span>
               <span className="flex flex-1 flex-col">
                 Default timezone
                 <span className="text-xs font-normal opacity-60">Used when creating new items.</span>
@@ -89,12 +94,16 @@ export default function SettingsMenu({
           )}
 
           <button type="button" className={settingsItemClasses} onClick={() => setGuideOpen(true)}>
-            <span className="text-[17px]">❓</span>
+            <span className="text-[17px]">
+              <HelpCircle size={17} />
+            </span>
             How to use this app
           </button>
 
           <button type="button" className={`${settingsItemClasses} text-overdue`} onClick={onSignOut}>
-            <span className="text-[17px]">🚪</span>
+            <span className="text-[17px]">
+              <LogOut size={17} />
+            </span>
             Sign out
           </button>
         </div>
