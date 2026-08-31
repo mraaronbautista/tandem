@@ -5,6 +5,22 @@ import ThemeToggle from './ThemeToggle'
 const loginFormClasses =
   'flex flex-col gap-2.5 [&_button]:cursor-pointer [&_button]:rounded-[8px] [&_button]:border-0 [&_button]:bg-accent [&_button]:px-3 [&_button]:py-2.5 [&_button]:font-semibold [&_button]:text-white [&_button:hover]:bg-accent-h [&_input]:rounded-sm [&_input]:border [&_input]:border-border [&_input]:bg-card-bg [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-[15px] [&_input]:text-text-h'
 
+// Every real account (Ada, Aaron, and any staff account) logs in with a
+// short username ("aaron", not an email) rather than a real address —
+// Supabase's password auth is still built around email as the
+// identifier underneath (there's no native "sign in by username" call),
+// so this just appends a fixed placeholder domain before the actual
+// signInWithPassword call, entirely client-side. Typing a full address
+// with an "@" in it still works unchanged — this is additive, not a
+// hard requirement, so an account that still has a real email keeps
+// working during the transition. Magic-link mode is NOT touched by this
+// — it genuinely needs a real, working inbox to deliver the link to, so
+// that field stays a real "Email" field, not a username.
+function toLoginEmail(input) {
+  const trimmed = input.trim()
+  return trimmed.includes('@') ? trimmed : `${trimmed}@tandem.local`
+}
+
 // Password is the default sign-in method — magic link requires bouncing
 // through the device's default browser to click the email link, which
 // breaks entirely for a Home Screen "Add to Home Screen" install on iOS
@@ -36,7 +52,7 @@ export default function Login({ theme, toggleTheme }) {
     setStatus('sending')
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email: toLoginEmail(email), password })
 
     if (error) {
       setStatus('error')
@@ -82,15 +98,15 @@ export default function Login({ theme, toggleTheme }) {
 
       {mode === 'password' && (
         <form onSubmit={handlePasswordSubmit} className={loginFormClasses}>
-          <label className="visually-hidden" htmlFor="login-email">
-            Email
+          <label className="visually-hidden" htmlFor="login-username">
+            Username
           </label>
           <input
-            id="login-email"
-            type="email"
+            id="login-username"
+            type="text"
             required
-            autoComplete="email"
-            placeholder="you@example.com"
+            autoComplete="username"
+            placeholder="Username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
