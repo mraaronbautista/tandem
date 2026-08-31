@@ -77,9 +77,21 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
             week.map((day, col) => {
               if (day === null) return <div key={`${weekIndex}-${col}`} className="invisible flex aspect-square items-center justify-center rounded-[8px] border-0 bg-transparent text-text-h [font:inherit]" />
               const date = new Date(year, month, day)
-              const classes = ['flex aspect-square cursor-pointer items-center justify-center rounded-[8px] border-0 bg-transparent text-text-h [font:inherit]']
+              // bg-accent/bg-transparent (and text-white/text-text-h) must
+              // never both land in the same class string — two utilities
+              // targeting the same CSS property resolve by Tailwind's
+              // generated stylesheet order, not by position here, so
+              // "selected" previously appended bg-accent text-white on top
+              // of the base's own bg-transparent text-text-h and lost the
+              // background (transparent won) while winning the text color
+              // (white won) — invisible white text on no fill. Same class
+              // of bug PeriodTabs.jsx's activeClasses ternary already
+              // avoids; kept mutually exclusive here the same way.
+              const classes = [
+                'flex aspect-square cursor-pointer items-center justify-center rounded-[8px] border-0 [font:inherit]',
+                isSameDay(date, selectedDate) ? 'bg-accent text-white' : 'bg-transparent text-text-h',
+              ]
               if (isSameDay(date, today)) classes.push('font-bold shadow-[inset_0_0_0_1px_var(--accent)]')
-              if (isSameDay(date, selectedDate)) classes.push('bg-accent text-white')
               return (
                 <button key={day} type="button" className={classes.join(' ')} onClick={() => onSelect(date)}>
                   {day}
