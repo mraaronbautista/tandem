@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { GanttChart, Home, FileText, LayoutGrid, Timer, Target, ClipboardList, NotebookPen, Lock, Hand, Settings, ChevronLeft, ChevronRight } from 'lucide-react'
+import { GanttChart, Home, FileText, LayoutGrid, Timer, Target, ClipboardList, NotebookPen, Lock, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
@@ -618,7 +618,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 onClick={() => setDatePickerOpen(true)}
                 title="Jump to a date"
               >
-                {monthLabel} <span className="text-[16px] opacity-60">{datePickerOpen ? '▴' : '▾'}</span>
+                {monthLabel}{' '}
+                <span className="inline-flex opacity-60">
+                  {datePickerOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </span>
               </MonthNavLabel>
             </MonthNavRow>
           )}
@@ -633,7 +636,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
               <select
                 value={rentalsCompany}
                 onChange={(e) => setRentalsCompany(e.target.value)}
-                className="cursor-pointer appearance-none rounded-sm border-0 bg-transparent py-1 pr-5 pl-0 text-[22px] font-bold whitespace-nowrap text-text-h [font-family:inherit]"
+                className="cursor-pointer appearance-none rounded-sm border-0 bg-transparent py-1 pr-6 pl-0 text-[22px] font-bold whitespace-nowrap text-text-h [font-family:inherit]"
               >
                 {Object.entries(COMPANY_LABEL).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -641,7 +644,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-0 text-[16px] opacity-60">▾</span>
+              <span className="pointer-events-none absolute right-0 inline-flex opacity-60">
+                <ChevronDown size={20} />
+              </span>
             </div>
           )}
           {activeTab !== 'today' && activeTab !== 'rentals' && <h1 className="whitespace-nowrap text-[22px]">{PAGE_LABELS[activeTab]}</h1>}

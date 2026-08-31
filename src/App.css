@@ -490,13 +490,13 @@ select:focus-visible {
 
 .who-select {
   flex: none;
-  padding: 8px 26px 8px 14px;
+  padding: 8px 30px 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--pill-bg)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M6 8 0 0h12z'/%3E%3C/svg%3E")
     no-repeat right 10px center;
-  background-size: 9px 6px;
+  background-size: 13px 9px;
   color: var(--text-h);
   font: inherit;
   font-weight: 600;
@@ -2090,9 +2090,10 @@ a.task-submission-file-link:hover {
 }
 
 .view-mode-row .who-select {
-  padding: 5px 20px 5px 8px;
+  padding: 5px 23px 5px 8px;
   font-size: 12px;
   background-position: right 6px center;
+  background-size: 11px 7px;
 }
 
 /* One shared capsule (padded, fully rounded, --pill-bg) rather than every
