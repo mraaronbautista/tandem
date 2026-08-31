@@ -368,7 +368,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
       <ModalCard as="form" modifier="bulk-add-modal" onSubmit={view === 'add' ? handleSubmit : handleApply}>
         <div className="bulk-add-header-row">
           <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
-          <button type="button" className="inbox-mark-read" onClick={() => setExportOpen(true)}>
+          <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h" onClick={() => setExportOpen(true)}>
             Export tasks
           </button>
         </div>
@@ -540,7 +540,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                   </span>
                   <button
                     type="button"
-                    className="inbox-mark-read"
+                    className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h"
                     onClick={toggleSelectAll}
                     disabled={visibleEditableTasks.length === 0}
                   >

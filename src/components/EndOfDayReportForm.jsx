@@ -174,7 +174,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
 
         <label className="submission-field">
           Total time worked this {PERIOD_NOUN[period]}
-          <div className="hours-minutes-row">
+          <div className="flex items-center gap-1.5 [&_input[type=number]]:w-16 [&_span]:text-[13px] [&_span]:opacity-70">
             <input
               type="number"
               min="0"
@@ -183,7 +183,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
               onChange={(e) => setHoursInput(e.target.value)}
             />
             <span>hr</span>
-            <select value={minutesInput} onChange={(e) => setMinutesInput(e.target.value)}>
+            <select className="w-16 rounded-[8px] border border-border bg-bg px-2 py-2.5 text-[15px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]" value={minutesInput} onChange={(e) => setMinutesInput(e.target.value)}>
               <option value="">—</option>
               {MINUTE_OPTIONS.map((m) => (
                 <option key={m} value={m}>

@@ -20,19 +20,19 @@ export default function ScrollSelect({ value, onChange, options, visibleCount = 
 
   return (
     <>
-      <button type="button" className="scroll-select-trigger" onClick={() => setOpen(true)}>
+      <button type="button" className="w-full cursor-pointer rounded-[6px] border border-border bg-bg px-2 py-[7px] text-left text-text-h [font:inherit]" onClick={() => setOpen(true)}>
         {selected?.label ?? '—'}
       </button>
       {open && (
         <Modal onClose={() => setOpen(false)}>
           <div className="scroll-select-modal">
-            <div className="scroll-select-list" style={{ maxHeight: `${visibleCount * 44}px` }}>
+            <div className="flex flex-col gap-0.5 overflow-y-auto" style={{ maxHeight: `${visibleCount * 44}px` }}>
               {options.map((o) => (
                 <button
                   type="button"
                   key={o.value}
                   ref={o.value === value ? selectedRef : null}
-                  className={`scroll-select-option${o.value === value ? ' scroll-select-option-selected' : ''}`}
+                  className={`block w-full flex-none cursor-pointer border-0 px-3 py-2.5 text-left text-sm [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit] hover:bg-bg ${o.value === value ? 'bg-accent text-white' : 'bg-transparent text-text-h'}`}
                   onClick={() => {
                     onChange(o.value)
                     setOpen(false)

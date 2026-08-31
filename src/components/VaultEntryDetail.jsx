@@ -61,8 +61,8 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
         {error && <p className="error">{error}</p>}
 
         {onMoveFolder && (
-          <div className="vault-field-row">
-            <span className="vault-field-label">Folder</span>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-[70px] flex-none text-[13px] opacity-60">Folder</span>
             <select value={entry.folder || ''} onChange={handleFolderChange} disabled={moving}>
               <option value="">General</option>
               {existingFolders.map((name) => (
@@ -75,9 +75,9 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
         )}
 
         {entry.username && (
-          <div className="vault-field-row">
-            <span className="vault-field-label">Username</span>
-            <span className="vault-field-value">{entry.username}</span>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-[70px] flex-none text-[13px] opacity-60">Username</span>
+            <span className="flex-1 break-all text-text-h">{entry.username}</span>
             <button type="button" className="vault-copy" onClick={() => handleCopy('username', entry.username)}>
               {copiedField === 'username' ? 'Copied' : 'Copy'}
             </button>
@@ -85,14 +85,14 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
         )}
 
         {entry.loginMethod ? (
-          <div className="vault-field-row">
-            <span className="vault-field-label">Sign in</span>
-            <span className="vault-field-value">via {entry.loginMethod}</span>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-[70px] flex-none text-[13px] opacity-60">Sign in</span>
+            <span className="flex-1 break-all text-text-h">via {entry.loginMethod}</span>
           </div>
         ) : (
-          <div className="vault-field-row">
-            <span className="vault-field-label">Password</span>
-            <span className="vault-field-value vault-password-value">{revealed ? entry.password : '••••••••••'}</span>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-[70px] flex-none text-[13px] opacity-60">Password</span>
+            <span className="flex-1 break-all font-mono text-text-h">{revealed ? entry.password : '••••••••••'}</span>
             <button type="button" className="vault-copy" onClick={() => setRevealed((v) => !v)}>
               {revealed ? 'Hide' : 'Reveal'}
             </button>
@@ -103,9 +103,9 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
         )}
 
         {entry.url && (
-          <div className="vault-field-row">
-            <span className="vault-field-label">URL</span>
-            <a href={entry.url} target="_blank" rel="noreferrer" className="vault-field-value">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-[70px] flex-none text-[13px] opacity-60">URL</span>
+            <a href={entry.url} target="_blank" rel="noreferrer" className="flex-1 break-all text-text-h">
               {entry.url}
             </a>
           </div>

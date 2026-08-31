@@ -10,7 +10,7 @@ const DEFAULT_COLOR = '#3b82f6'
 // — same fix as RentalSavingsGoalForm.jsx/RentalExpenseForm.jsx. Does NOT
 // apply to the Calendar color field below — that's type="color", outside
 // this selector's scope even in the original CSS, styled by its own
-// .rental-property-color-input class instead (untouched here).
+// compact utilities instead.
 const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
 
@@ -110,7 +110,7 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
           Calendar color
           <input
             type="color"
-            className="rental-property-color-input"
+            className="h-9 w-[60px] self-start cursor-pointer rounded-[6px] border border-border bg-transparent p-0.5"
             value={color}
             onChange={(e) => setColor(e.target.value)}
           />

@@ -4,6 +4,15 @@ import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
+const inboxItemBaseClasses =
+  'cursor-pointer rounded-md border border-border border-l-[3px] border-l-border bg-card-bg px-3.5 py-2.5 shadow-resting transition-all duration-[180ms] ease-tactile hover:-translate-y-px hover:shadow-raised active:translate-y-0 active:shadow-press'
+const inboxItemKindClasses = {
+  question: 'border-l-overdue',
+  answer: 'border-l-accent',
+  finished: 'opacity-70',
+  submission: 'border-l-online',
+  nudge: 'border-l-notice',
+}
 
 // Same .period-tabs pattern EodReportsList.jsx already uses to solve
 // this exact problem (several kinds of item otherwise interleaving into
@@ -46,15 +55,15 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
   const { name, color } = personBadge(item.otherPersonId, memberName)
   return (
     <li
-      className={`inbox-item inbox-item-${kind}${kind === 'answer' && !unread ? ' inbox-item-read' : ''}`}
+      className={`${inboxItemBaseClasses} ${inboxItemKindClasses[kind]} ${kind === 'answer' && !unread ? 'opacity-65' : ''}`}
       onClick={() => task && onSelectTask(task)}
     >
-      <div className="inbox-item-top">
-        <span className="inbox-item-title">{item.taskTitle}</span>
-        <span className="inbox-item-when">{formatWhen(item.at)}</span>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-semibold text-text-h">{item.taskTitle}</span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(item.at)}</span>
       </div>
-      <p className="inbox-item-text">{item.text}</p>
-      <div className="inbox-item-footer">
+      <p className="my-0.5 mb-2 overflow-hidden text-ellipsis [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">{item.text}</p>
+      <div className="flex items-center justify-between gap-2">
         <span className="task-who-badge" style={{ background: color }}>
           {name} {KIND_LABEL[kind]}
         </span>
@@ -85,22 +94,22 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
 function SubmissionItem({ task, onSelectTask }) {
   const attachmentCount = task.completion_attachments?.length || 0
   return (
-    <li className="inbox-item inbox-item-submission" onClick={() => onSelectTask(task)}>
-      <div className="inbox-item-top">
-        <span className="inbox-item-title">{task.title}</span>
-        <span className="inbox-item-when">{formatWhen(task.completed_at)}</span>
+    <li className={`${inboxItemBaseClasses} ${inboxItemKindClasses.submission}`} onClick={() => onSelectTask(task)}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-semibold text-text-h">{task.title}</span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(task.completed_at)}</span>
       </div>
       {task.completion_note ? (
-        <p className="inbox-item-text">{task.completion_note}</p>
+        <p className="my-0.5 mb-2 overflow-hidden text-ellipsis [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">{task.completion_note}</p>
       ) : (
-        <p className="inbox-item-text inbox-item-text-muted">No note — attachments only.</p>
+        <p className="my-0.5 mb-2 overflow-hidden text-ellipsis italic opacity-60 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">No note — attachments only.</p>
       )}
-      <div className="inbox-item-footer">
+      <div className="flex items-center justify-between gap-2">
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}
         </span>
         {attachmentCount > 0 && (
-          <span className="inbox-item-attachment-count">
+          <span className="flex-none text-xs whitespace-nowrap opacity-70">
             📎 {attachmentCount} file{attachmentCount > 1 ? 's' : ''}
           </span>
         )}
@@ -116,13 +125,13 @@ function SubmissionItem({ task, onSelectTask }) {
 // "who sent this" of its own to badge by instead.
 function NudgeItem({ task, onSelectTask }) {
   return (
-    <li className="inbox-item inbox-item-nudge" onClick={() => onSelectTask(task)}>
-      <div className="inbox-item-top">
-        <span className="inbox-item-title">{task.title}</span>
-        <span className="inbox-item-when">{formatWhen(task.overdue_nudge_sent_at)}</span>
+    <li className={`${inboxItemBaseClasses} ${inboxItemKindClasses.nudge}`} onClick={() => onSelectTask(task)}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-semibold text-text-h">{task.title}</span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(task.overdue_nudge_sent_at)}</span>
       </div>
-      <p className="inbox-item-text inbox-item-text-muted">🔔 Still on your plate?</p>
-      <div className="inbox-item-footer">
+      <p className="my-0.5 mb-2 overflow-hidden text-ellipsis italic opacity-60 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">🔔 Still on your plate?</p>
+      <div className="flex items-center justify-between gap-2">
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}
         </span>
@@ -257,20 +266,20 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
 
       {showQuestions && (
         <section>
-          <div className="inbox-section-heading-row">
-            <h3 className="task-section-heading inbox-section-heading-question">Needs your reply</h3>
-            <button type="button" className="inbox-mark-read" onClick={handleMarkAllRead}>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="task-section-heading m-0 text-overdue opacity-100">Needs your reply</h3>
+            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h" onClick={handleMarkAllRead}>
               Mark all as read
             </button>
           </div>
-          <ul className="inbox-list">{questions.map((item) => renderItem(item, 'question'))}</ul>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">{questions.map((item) => renderItem(item, 'question'))}</ul>
         </section>
       )}
 
       {showResolved && (
         <section>
           <h3 className="task-section-heading">Resolved</h3>
-          <ul className="inbox-list">{resolved.map((item) => renderItem(item, item.kind))}</ul>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">{resolved.map((item) => renderItem(item, item.kind))}</ul>
         </section>
       )}
 
@@ -281,7 +290,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
       {showSubmissions && (
         <section>
           <h3 className="task-section-heading">Submissions</h3>
-          <ul className="inbox-list">
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {submissions.map((task) => (
               <SubmissionItem key={task.id} task={task} onSelectTask={onSelectTask} />
             ))}
@@ -296,7 +305,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
       {showNudges && (
         <section>
           <h3 className="task-section-heading">Nudges</h3>
-          <ul className="inbox-list">
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {nudged.map((task) => (
               <NudgeItem key={task.id} task={task} onSelectTask={onSelectTask} />
             ))}

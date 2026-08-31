@@ -140,12 +140,12 @@ export default function TaskExportForm({ tasks, onClose }) {
           </PeriodTab>
         </PeriodTabs>
 
-        <label className="task-export-include-done">
+        <label className="flex items-center gap-2 text-[13px]">
           <input type="checkbox" checked={includeDone} onChange={(e) => setIncludeDone(e.target.checked)} />
           Include completed tasks
         </label>
 
-        <textarea className="task-export-textarea" value={text} readOnly onClick={(e) => e.target.select()} />
+        <textarea className="min-h-[280px] max-h-[480px] w-full resize-y rounded-[8px] border border-border bg-bg px-3 py-2.5 font-mono text-xs text-text-h" value={text} readOnly onClick={(e) => e.target.select()} />
 
         {error && <p className="error">{error}</p>}
 

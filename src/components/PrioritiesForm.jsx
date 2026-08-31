@@ -114,11 +114,11 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
 
         {current && (
           <div>
-            <p className="eod-report-meta">
+            <p className="mb-1 text-xs opacity-60">
               Last set by <strong>{memberName(current.set_by)}</strong> — {formatDate(current.created_at)}
             </p>
             {lastLines.length > 0 && (
-              <ul className="priorities-last-set-list">
+              <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-70">
                 {lastLines.map((line, i) => (
                   <li key={i}>{line}</li>
                 ))}

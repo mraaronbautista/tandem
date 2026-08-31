@@ -52,8 +52,9 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
   }
 
   return (
-    <div className="clarification-answer-row">
+    <div className="flex flex-col gap-2">
       <textarea
+        className="w-full resize-y rounded-[6px] border border-border bg-bg px-2 py-[7px] text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
         rows={2}
         placeholder="Type your reply…"
         value={answerDraft}
@@ -64,15 +65,15 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
         onRemove={(i) => setAnswerAttachments((prev) => prev.filter((_, idx) => idx !== i))}
       />
       {uploadError && <p className="error">{uploadError}</p>}
-      <div className="clarification-compose-actions">
-        <label className="task-submission-upload" title="Attach files">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
           {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
           <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
         </label>
         {(answerDraft.trim() || answerAttachments.length > 0) && (
           <button
             type="button"
-            className="clarification-answer-button"
+            className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-white disabled:cursor-default disabled:opacity-60"
             onClick={handleAnswer}
             disabled={sending || uploading}
           >
@@ -176,36 +177,36 @@ export default function TaskClarifications({
   }
 
   return (
-    <div className="clarifications">
+    <div className="my-1.5 flex flex-col gap-2">
       {clarifications.length > 0 && (
-        <div className="clarifications-thread">
+        <div className="flex flex-col gap-2.5">
           {clarifications.map((item) => (
-            <div key={item.id} className="clarification-item">
+            <div key={item.id} className="flex flex-col gap-1 rounded-[8px] border border-border bg-pill-bg px-2.5 py-2">
               {item.question && (
-                <p className="clarification-question">
+                <p className="break-words text-sm whitespace-pre-wrap">
                   <strong>{memberName(item.askedBy)}:</strong> {item.question}
                 </p>
               )}
               <AttachmentList attachments={item.questionAttachments} />
               {item.answer ? (
                 <>
-                  <p className="clarification-answer">
+                  <p className="break-words text-sm whitespace-pre-wrap">
                     <strong>{memberName(item.answeredBy)}:</strong> {item.answer}
                   </p>
                   <AttachmentList attachments={item.answerAttachments} />
                 </>
               ) : item.resolved ? (
-                <p className="clarification-finished">✓ {memberName(item.resolvedBy)} marked this finished — no reply needed</p>
+                <p className="text-[13px] opacity-70">✓ {memberName(item.resolvedBy)} marked this finished — no reply needed</p>
               ) : item.answerAttachments?.length > 0 ? (
                 <AttachmentList attachments={item.answerAttachments} />
               ) : item.askedBy === meId ? (
-                <p className="clarification-waiting">Waiting for a reply…</p>
+                <p className="text-[13px] italic opacity-60">Waiting for a reply…</p>
               ) : (
                 <>
                   <AnswerRow item={item} onChange={handleEntryAnswered} taskTitle={taskTitle} taskId={taskId} />
                   <input
                     type="checkbox"
-                    className="task-done-checkbox clarification-resolve-check"
+                    className="task-done-checkbox self-start"
                     title="Mark as handled — no reply needed"
                     aria-label="Mark as handled — no reply needed"
                     onChange={() => handleResolve(item)}
@@ -217,8 +218,9 @@ export default function TaskClarifications({
         </div>
       )}
 
-      <div className="clarification-ask-row">
+      <div className="flex flex-col gap-2">
         <textarea
+          className="w-full resize-y rounded-[6px] border border-border bg-bg px-2 py-[7px] text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
           rows={2}
           placeholder="Ask a question or leave a comment…"
           value={questionDraft}
@@ -229,9 +231,9 @@ export default function TaskClarifications({
           onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
         />
         {uploadError && <p className="error">{uploadError}</p>}
-        <div className="clarification-compose-actions">
-          <div className="clarification-compose-left">
-            <label className="task-submission-upload" title="Attach files">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
               {uploading ? 'Uploading…' : <PaperclipIcon width={15} height={15} />}
               <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
             </label>
@@ -242,7 +244,7 @@ export default function TaskClarifications({
               Delete/Duplicate row (extraActions, to its left) was an easy
               misclick target when reaching for one of those instead. */}
           {(questionDraft.trim() || questionAttachments.length > 0) && (
-            <button type="button" className="clarification-ask-button" onClick={handleAsk} disabled={asking || uploading}>
+            <button type="button" className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-white disabled:cursor-default disabled:opacity-60" onClick={handleAsk} disabled={asking || uploading}>
               {asking ? 'Sending…' : 'Send'}
             </button>
           )}

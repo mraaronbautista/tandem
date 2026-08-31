@@ -277,19 +277,19 @@ const FAQS = [
 // accordion's own open/closed state into the other's.
 function AccordionList({ sections, openTitle, onToggle }) {
   return (
-    <div className="how-to-guide-list">
+    <div className="flex flex-col gap-1.5">
       {sections.map((section) => (
-        <div key={section.title} className="how-to-guide-section">
-          <button type="button" className="how-to-guide-header" onClick={() => onToggle(section.title)}>
+        <div key={section.title} className="overflow-hidden rounded-[8px] border border-border">
+          <button type="button" className="flex w-full cursor-pointer items-center justify-between border-0 bg-pill-bg px-3 py-2.5 text-left text-sm font-semibold text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [line-height:inherit] transition-colors duration-[180ms] ease-tactile" onClick={() => onToggle(section.title)}>
             <span>{section.title}</span>
             <span>{openTitle === section.title ? '▾' : '▸'}</span>
           </button>
           {openTitle === section.title && (
-            <ul className="how-to-guide-items">
+            <ul className="m-0 flex flex-col gap-1.5 py-2.5 pr-4 pb-3 pl-[30px] text-[13px] opacity-85">
               {section.items.map((item, i) => {
                 const isTip = item.startsWith('Tip: ')
                 return (
-                  <li key={i} className={isTip ? 'how-to-guide-tip' : undefined}>
+                  <li key={i} className={isTip ? "text-accent [list-style:'💡_']" : undefined}>
                     {isTip ? item.slice('Tip: '.length) : item}
                   </li>
                 )

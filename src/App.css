@@ -66,6 +66,8 @@ select:focus-visible {
 }
 
 /* Login */
+/* UNUSED as of the Login.jsx Tailwind conversion — this complete feature
+   family through .login-mode-toggle below migrated together. */
 .login-screen {
   max-width: 360px;
   margin: 20svh auto 0;
@@ -354,6 +356,8 @@ select:focus-visible {
   font-size: 16px;
 }
 
+/* INTENTIONALLY RETAINED with PullToRefresh's gesture math: measured height,
+   threshold progress and spinner animation form one behavior contract. */
 .pull-to-refresh-indicator {
   display: flex;
   align-items: center;
@@ -502,6 +506,8 @@ select:focus-visible {
   -webkit-appearance: none;
 }
 
+/* INTENTIONALLY RETAINED shared semantic/status primitives — used across
+   many unrelated components; one centralized rule is the better abstraction. */
 .error {
   color: var(--overdue);
 }
@@ -679,6 +685,10 @@ select:focus-visible {
    side-by-side columns rather than just carrying an "⚠ Overlap" badge
    with nothing visually linking them. Not used by Week mode's 7
    day-sections, which keep the flat .timeline-list/TimelineRow layout. */
+/* INTENTIONALLY RETAINED as one behavior-sensitive timeline system. Its
+   measured positioning, overlap/truncation states, hour grid, checkbox and
+   badge context overrides must evolve together; splitting these into per-node
+   utilities would obscure rather than reduce the layout contract. */
 .day-timeline-wrap {
   display: flex;
   flex-direction: column;
@@ -954,6 +964,9 @@ select:focus-visible {
   transform: none;
 }
 
+/* INTENTIONALLY RETAINED shared expandable-card root. Peek, editing, hover,
+   pressed and modal contexts all override this literal hook; TaskRow's safe
+   internal presentation has migrated to Tailwind. */
 .task-row {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -976,6 +989,9 @@ select:focus-visible {
   transform: translateY(0);
 }
 
+/* UNUSED as of TaskRow.jsx's safe presentation-layer Tailwind conversion —
+   through .task-completed-at below. The live .task-row card root and shared
+   badge/checkbox abstractions remain intentionally CSS. */
 .task-row-done .task-title {
   text-decoration: line-through;
   opacity: 0.55;
@@ -1078,6 +1094,9 @@ select:focus-visible {
 }
 
 /* Date strip — horizontal day picker, Structured-style */
+/* UNUSED as of the DateStrip.jsx Tailwind conversion — this complete
+   seven-day picker family through the selected state below migrated
+   together. */
 .date-strip {
   margin-bottom: 18px;
 }
@@ -1153,6 +1172,9 @@ select:focus-visible {
    the grid itself risked clipping actual weeks off a taller month
    (5-6 rows) instead of just rounding a corner. Square corners, plain
    border, no clipping risk. */
+/* INTENTIONALLY RETAINED as one behavior-sensitive month-grid system. Cell
+   sizing, desktop/mobile density, task-chip truncation, selected/today states,
+   and the swipe hit area are structurally coupled. */
 .month-view-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1295,6 +1317,8 @@ select:focus-visible {
   }
 }
 
+/* UNUSED as of TaskRow.jsx's safe detail-layer Tailwind conversion — through
+   .task-meta below. Shared .task-notes-empty remains live app-wide. */
 .task-row-details {
   margin-top: 10px;
   padding-top: 10px;
@@ -1329,6 +1353,9 @@ select:focus-visible {
    header row — .submission-modal's own flex column already spaces this
    row from the tabs below it, so only the row's own internal layout
    needs setting here. */
+/* INTENTIONALLY RETAINED as the cohesive Bulk Add/Edit form system. Its modal
+   descendant selectors, preview/error lists, selection state, and responsive
+   multi-field editor are tightly coupled and remain clearer in shared CSS. */
 .bulk-add-header-row {
   display: flex;
   align-items: center;
@@ -1364,6 +1391,7 @@ select:focus-visible {
 /* Overrides .submission-modal label's default flex-stretch (every other
    field in these forms wants full-width, but a full-width color swatch
    would read as an odd stretched bar rather than a compact picker). */
+/* UNUSED as of the RentalPropertyForm.jsx Tailwind conversion. */
 .rental-property-color-input {
   align-self: flex-start;
   width: 60px;
@@ -1429,6 +1457,8 @@ select:focus-visible {
    .bulk-add-modal's own input textarea (280px/480px vs. 120px/240px)
    since this is the modal's one and only field, meant to be scanned as
    a whole list rather than glanced at alongside several other fields. */
+/* UNUSED as of the TaskExportForm.jsx Tailwind conversion — the textarea
+   and include-completed label migrated together. */
 .task-export-textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
@@ -1769,6 +1799,8 @@ select:focus-visible {
   min-height: 70px;
 }
 
+/* UNUSED as of the EndOfDayReportForm.jsx Tailwind conversion — this
+   complete compact time-input family migrated together. */
 .hours-minutes-row {
   display: flex;
   align-items: center;
@@ -1817,6 +1849,8 @@ select:focus-visible {
   opacity: 0.85;
 }
 
+/* UNUSED as of the EodReportsList.jsx Tailwind conversion — this complete
+   contiguous family through .eod-report-meta below migrated together. */
 .eod-reports-list {
   display: flex;
   flex-direction: column;
@@ -1872,6 +1906,7 @@ select:focus-visible {
   margin-bottom: 4px;
 }
 
+/* UNUSED as of the PrioritiesForm.jsx Tailwind conversion. */
 .priorities-last-set-list {
   margin: 0 0 4px;
   padding-left: 20px;
@@ -1882,12 +1917,16 @@ select:focus-visible {
   gap: 2px;
 }
 
+/* UNUSED as of the PriorityItemsEditor.jsx Tailwind conversion. */
 .priority-who-toggle {
   border: none;
   cursor: pointer;
   font: inherit;
 }
 
+/* INTENTIONALLY RETAINED shared attachment system. Draft/saved files, images,
+   removers, uploads, TaskRow, clarifications and reports all consume the same
+   responsive thumbnail/pill contract. */
 .task-submission-attachments {
   display: flex;
   flex-direction: column;
@@ -2111,6 +2150,8 @@ a.task-submission-file-link:hover {
   }
 }
 
+/* UNUSED as of the SettingsMenu.jsx Tailwind conversion — this complete
+   family through .settings-menu-item-danger below migrated together. */
 .settings-menu-account {
   margin-top: -6px;
   font-size: 13px;
@@ -2189,6 +2230,8 @@ a.task-submission-file-link:hover {
    scroll container (max-height: 88vh on mobile, where it's a slide-up
    sheet). A second nested scroll box here squeezed the section list into
    a small cramped area instead of letting the sheet itself grow. */
+/* UNUSED as of the HowToGuide.jsx Tailwind conversion — this complete
+   accordion family through .how-to-guide-tip below migrated together. */
 .how-to-guide-list {
   display: flex;
   flex-direction: column;
@@ -2281,6 +2324,8 @@ a.task-submission-file-link:hover {
 /* No margin-top here anymore — this now renders inside
    .clarification-compose-left (see TaskClarifications.jsx's extraActions
    prop) alongside the Attach button, not as its own block below. */
+/* UNUSED as of TaskRow.jsx's action-row Tailwind conversion — through
+   .task-delete below. */
 .task-row-actions {
   display: flex;
   gap: 8px;
@@ -2329,6 +2374,9 @@ a.task-submission-file-link:hover {
 }
 
 /* New task form */
+/* INTENTIONALLY RETAINED speed-dial positioning system: fixed desktop and
+   inline mobile variants plus the absolute pop-up menu form one structural
+   contract with MobileNav. */
 .quick-actions {
   position: fixed;
   right: 20px;
@@ -2439,6 +2487,9 @@ a.task-submission-file-link:hover {
   font-size: 16px;
 }
 
+/* INTENTIONALLY RETAINED task-form/modal contract. The literal root is used by
+   Modal's desktop sizing, mobile slide-up animation, editing state, and scoped
+   direct-child field rules; converting it piecemeal would break that contract. */
 .new-task-form {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -2454,6 +2505,9 @@ a.task-submission-file-link:hover {
 /* Popup for + New task: desktop gets a centered modal, narrow screens get
    a bottom sheet that slides up — the card itself (.new-task-form) supplies
    the visual chrome, the backdrop just positions and dims. */
+/* INTENTIONALLY RETAINED application-wide modal positioning system. Portal
+   backdrop, focus-managed modal variants, desktop caps, mobile bottom-sheet
+   animation and literal modifier hooks are deliberately centralized here. */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -2675,6 +2729,9 @@ label.new-task-checkbox-label {
    native <select>'s unstylable popover. Opens via the shared Modal
    overlay (see .scroll-select-modal in the modal sizing rules above)
    instead of an absolutely-positioned panel. */
+/* UNUSED as of the ScrollSelect.jsx Tailwind conversion — trigger, list,
+   option, hover, and selected-state rules migrated together. The live
+   .scroll-select-modal sizing hook remains intentionally in CSS. */
 .scroll-select-trigger {
   width: 100%;
   padding: 7px 8px;
@@ -2725,6 +2782,9 @@ label.new-task-checkbox-label {
 }
 
 /* Checklist — editor (inside the task form) */
+/* UNUSED as of the shared ChecklistEditor/ChecklistView/PriorityItemsEditor
+   Tailwind conversion — this complete family through
+   .checklist-view-blocked below migrated together. */
 .checklist-editor-items {
   display: flex;
   flex-direction: column;
@@ -3004,6 +3064,9 @@ label.new-task-checkbox-label {
   }
 }
 
+/* UNUSED as of the DatePickerModal.jsx Tailwind conversion — this complete
+   internal grid family through .date-picker-day-selected below migrated
+   together. The live date-picker-modal sizing modifier remains CSS. */
 .date-picker-modal-header {
   display: flex;
   align-items: center;
@@ -3053,6 +3116,9 @@ label.new-task-checkbox-label {
   color: #fff;
 }
 
+/* INTENTIONALLY RETAINED cross-component Rentals toolbar/overview contract.
+   These ancestor selectors control the embedded desktop card grid and must
+   remain coupled to RentalOverview's live list/item hooks. */
 .rental-calendar-toolbar {
   display: flex;
   gap: 8px;
@@ -3223,6 +3289,9 @@ label.new-task-checkbox-label {
   margin-right: 6px;
 }
 
+/* INTENTIONALLY RETAINED Rentals booking-calendar rendering system. Booking
+   continuity, cell status, dynamic colors, month boundaries and responsive
+   density are behavior-sensitive and remain a deliberate CSS abstraction. */
 .rental-month-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -3364,6 +3433,8 @@ label.new-task-checkbox-label {
    follow it — the unit name label used to sit here and carry this
    margin, but was dropped as redundant (the selected unit is already
    clear from the highlighted row in the unit list below). */
+/* UNUSED as of the RentalsView.jsx Tailwind conversion — its single
+   desktop navigation consumer now carries `ml-2.5`. */
 .rentals-combined-nav-unit {
   margin-left: 10px;
 }
@@ -3641,6 +3712,9 @@ label.new-task-checkbox-label {
   gap: 12px;
 }
 
+/* UNUSED as of the RentalSavingsGoal.jsx Tailwind conversion — this
+   complete savings-card family through .rental-savings-amounts below
+   migrated together (the edit rule was already unused). */
 .rental-savings-list {
   display: flex;
   flex-direction: column;
@@ -3971,6 +4045,9 @@ label.new-task-checkbox-label {
 
 /* Vault */
 
+/* INTENTIONALLY RETAINED Vault shared primitives: warnings, responsive copy
+   controls and password rows are reused across setup, unlock, entry and export
+   flows and encode useful responsive behavior centrally. */
 .vault-warning {
   border: 1px solid var(--overdue);
   border-radius: 8px;
@@ -3980,6 +4057,8 @@ label.new-task-checkbox-label {
   background: color-mix(in srgb, var(--overdue) 10%, transparent);
 }
 
+/* UNUSED as of the VaultView.jsx Tailwind conversion — its single consumer
+   now carries this exact link-button recipe directly. */
 .vault-forgot-link {
   align-self: center;
   margin-top: 8px;
@@ -3991,11 +4070,15 @@ label.new-task-checkbox-label {
   text-decoration: underline;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — its single
+   consumer now renders `flex gap-2`. Kept, not deleted, until cleanup. */
 .vault-toolbar {
   display: flex;
   gap: 8px;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — both list
+   consumers now carry the same flex-column recipe directly. */
 .vault-entry-list {
   display: flex;
   flex-direction: column;
@@ -4007,6 +4090,8 @@ label.new-task-checkbox-label {
    looks exactly like the plain flat list above. Same shape as
    .eod-report-month/-header/-count/-items, vault-specific classes since
    the two features aren't otherwise related. */
+/* UNUSED as of the VaultView.jsx Tailwind conversion — its single consumer
+   now renders `flex flex-col gap-2`. */
 .vault-folder-list {
   display: flex;
   flex-direction: column;
@@ -4018,6 +4103,9 @@ label.new-task-checkbox-label {
    space with .vault-folder-action so those can be plain sibling buttons
    rather than nested inside the toggle (a <button> can't validly contain
    another interactive control). */
+/* UNUSED as of the VaultView.jsx folder-system Tailwind conversion — through
+   the rename-action override below. The coupled folder controls migrated as
+   one feature slice rather than breaking their selector contract piecemeal. */
 .vault-folder-header-row {
   display: flex;
   align-items: center;
@@ -4093,10 +4181,15 @@ label.new-task-checkbox-label {
   opacity: 1;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — the expanded
+   list combines its list and top-padding utilities at the call site. */
 .vault-folder-items {
   padding-top: 8px;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — through
+   .vault-entry-username below. Both flat and grouped entry cards share the
+   local vaultEntryRowClasses recipe. */
 .vault-entry-row {
   display: flex;
   justify-content: space-between;
@@ -4132,6 +4225,9 @@ label.new-task-checkbox-label {
   opacity: 0.7;
 }
 
+/* UNUSED as of the VaultEntryDetail.jsx Tailwind conversion — through
+   .vault-password-value below. These selectors were single-component and
+   presentation-only; shared .vault-copy remains live. */
 .vault-field-row {
   display: flex;
   align-items: center;
@@ -4188,11 +4284,15 @@ label.new-task-checkbox-label {
 
 /* Task clarifications (ask-a-question thread) */
 
+/* UNUSED as of TaskRow.jsx's safe presentation-layer Tailwind conversion. */
 .task-question-badge {
   font-size: 13px;
   opacity: 0.8;
 }
 
+/* UNUSED as of the TaskClarifications.jsx Tailwind conversion — this
+   complete thread/composer family through the answer-button disabled state
+   below migrated together. Shared attachment/upload chrome remains live. */
 .clarifications {
   display: flex;
   flex-direction: column;
@@ -4315,6 +4415,8 @@ label.new-task-checkbox-label {
    this compact comment-thread context wants. */
 
 /* Cork Board */
+/* UNUSED as of the CorkBoardView.jsx Tailwind conversion — this complete
+   feature family through the comment-form disabled rule migrated together. */
 .cork-board-subtitle {
   opacity: 0.65;
   font-size: 13px;
@@ -4515,6 +4617,8 @@ label.new-task-checkbox-label {
   cursor: default;
 }
 
+/* UNUSED as of the InboxView.jsx Tailwind conversion — this complete family
+   through the footer checkbox rule below migrated as one feature slice. */
 .inbox-section-heading-question {
   color: var(--overdue);
   opacity: 1;

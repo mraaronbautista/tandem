@@ -235,7 +235,7 @@ export default function RentalsView({ me }) {
             </IconButton>
             <RentalButton
               variant="primary"
-              className="rentals-combined-nav-unit"
+              className="ml-2.5"
               onClick={() => calendarRef.current?.openAddBooking()}
             >
               + Add booking

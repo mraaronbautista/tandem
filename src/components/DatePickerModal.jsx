@@ -47,7 +47,7 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
   return (
     <Modal onClose={onClose}>
       <ModalCard modifier="date-picker-modal">
-        <div className="date-picker-modal-header">
+        <div className="flex items-center justify-between">
           <MonthNavRow>
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
@@ -66,20 +66,20 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
           </IconButton>
         </div>
 
-        <div className="date-picker-grid">
+        <div className="grid grid-cols-7 gap-1">
           {WEEKDAY_LABELS.map((wd) => (
-            <div key={wd} className="date-picker-weekday">
+            <div key={wd} className="pb-1 text-center text-[11px] font-semibold opacity-55">
               {wd}
             </div>
           ))}
 
           {weeks.map((week, weekIndex) =>
             week.map((day, col) => {
-              if (day === null) return <div key={`${weekIndex}-${col}`} className="date-picker-day-empty" />
+              if (day === null) return <div key={`${weekIndex}-${col}`} className="invisible flex aspect-square items-center justify-center rounded-[8px] border-0 bg-transparent text-text-h [font:inherit]" />
               const date = new Date(year, month, day)
-              const classes = ['date-picker-day']
-              if (isSameDay(date, today)) classes.push('date-picker-day-today')
-              if (isSameDay(date, selectedDate)) classes.push('date-picker-day-selected')
+              const classes = ['flex aspect-square cursor-pointer items-center justify-center rounded-[8px] border-0 bg-transparent text-text-h [font:inherit]']
+              if (isSameDay(date, today)) classes.push('font-bold shadow-[inset_0_0_0_1px_var(--accent)]')
+              if (isSameDay(date, selectedDate)) classes.push('bg-accent text-white')
               return (
                 <button key={day} type="button" className={classes.join(' ')} onClick={() => onSelect(date)}>
                   {day}
