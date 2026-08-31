@@ -3,6 +3,15 @@ import { createRentalExpense, updateRentalExpense, deleteRentalExpense } from '.
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 
+// Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
+// — same fix as RentalSavingsGoalForm.jsx: this form's fields were bare
+// <label><input/></label> pairs rendering as unstyled native browser
+// chrome instead of the app's actual input look. w-full is explicit here
+// (the original relies on the parent label's flex-stretch instead) as a
+// more robust guarantee of the same full-width result.
+const FIELD_INPUT_CLASS =
+  'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
+
 export default function RentalExpenseForm({ company, expense, onClose, onSaved, onDeleted }) {
   const [label, setLabel] = useState(expense?.label || '')
   const [amount, setAmount] = useState(expense?.amount ?? '')
@@ -56,6 +65,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
             placeholder="e.g. Mortgage, Utilities"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
@@ -69,6 +79,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
             placeholder="e.g. 1200"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
