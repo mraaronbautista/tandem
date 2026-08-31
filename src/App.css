@@ -3143,11 +3143,13 @@ label.new-task-checkbox-label {
   }
 }
 
-/* Still live — RentalButton.jsx (App.css comment there, and its own
-   header comment) replaced this class in RentalsView.jsx,
-   RentalCalendar.jsx, and RentalFinancials.jsx, but RentalSavingsGoal.jsx
-   and VaultView.jsx (2 usages) still render this literal class directly
-   and were out of scope for that extraction — so this base rule is NOT
+/* Still live — RentalButton.jsx now covers RentalsView.jsx,
+   RentalCalendar.jsx, RentalFinancials.jsx, and RentalSavingsGoal.jsx,
+   but VaultView.jsx (2 usages) still renders this literal class
+   directly. Deliberately left there, not migrated to RentalButton —
+   VaultView isn't part of the Rentals feature, so importing a
+   Rental-named component into it would be a misleading dependency, even
+   though the visual result would match exactly. So this base rule is NOT
    unused, only its two modifiers below are. */
 .rental-add-booking {
   padding: 8px 14px;

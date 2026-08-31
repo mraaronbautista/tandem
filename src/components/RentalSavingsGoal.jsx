@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import RentalButton from './RentalButton'
 import RentalSavingsGoalForm from './RentalSavingsGoalForm'
 
 function money(n) {
@@ -49,9 +50,7 @@ export default function RentalSavingsGoal({ company, goals, onGoalsChanged }) {
         )
       })}
 
-      <button type="button" className="rental-add-booking" onClick={openNew}>
-        + Add goal
-      </button>
+      <RentalButton onClick={openNew}>+ Add goal</RentalButton>
 
       {formOpen && (
         <RentalSavingsGoalForm
