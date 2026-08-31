@@ -19,12 +19,16 @@ import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
 import RentalPropertyForm from './RentalPropertyForm'
 
-const COMPANY = 'awa'
-
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
-// dismiss, you just switch tabs. The page title ("Awa Rentalz") lives in
-// TaskBoard.jsx's shared header now, not here — see PAGE_LABELS.
+// dismiss, you just switch tabs. The page title lives in TaskBoard.jsx's
+// shared header now, not here — a company picker (Awa Rentalz/Azu
+// Rentals) in place of a static label, since `company` (which rental
+// business's units/bookings/financials this whole tab is scoped to) is
+// owned by TaskBoard.jsx now too, not local state here — the picker that
+// changes it lives in the header, and RentalsView.jsx just re-fetches
+// whenever it's handed a new value, the same way it already reacts to
+// monthDate changing.
 //
 // Two genuinely different layouts, not one repositioned via CSS: mobile
 // stacks Overview, Calendar, and Financials into one scrollable column
@@ -40,7 +44,7 @@ const COMPANY = 'awa'
 // (.rental-calendar-toolbar .rental-overview-list) is tuned for a wide
 // row, not a narrow column, so the two layouts solve the same redundancy
 // in different ways on purpose.
-export default function RentalsView({ me }) {
+export default function RentalsView({ me, company }) {
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
@@ -61,8 +65,8 @@ export default function RentalsView({ me }) {
   // desktop dashboard) trigger the form RentalCalendar still owns.
   const calendarRef = useRef(null)
   // Property add/edit lives at this level (not inside RentalCalendar,
-  // which only ever deals with bookings) — properties/COMPANY are
-  // already owned here, and both layouts need to reach it.
+  // which only ever deals with bookings) — properties is already owned
+  // here, and both layouts need to reach it.
   const [propertyFormOpen, setPropertyFormOpen] = useState(false)
   const [editingProperty, setEditingProperty] = useState(null)
 
@@ -81,20 +85,34 @@ export default function RentalsView({ me }) {
     setEditingProperty(null)
   }
 
+  // Re-runs on `company` too, not just mount — switching Awa Rentalz/Azu
+  // Rentals in the header needs a full refetch of everything scoped to
+  // it. properties/selectedUnitId reset first so the old company's data
+  // and unit selection can't hang around mid-switch (properties -> null
+  // shows the existing "Loading…" state; selectedUnitId -> '' lets the
+  // "default to the first unit" effect below re-fire for the new list
+  // rather than pointing at a unit id that only existed in the old one).
   useEffect(() => {
+    setProperties(null)
+    setSelectedUnitId('')
     reloadProperties()
     reloadExpenses()
     reloadGoals()
     reloadUpcoming()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [company])
 
   // Rentals didn't get the same live-update treatment tasks/members/Cork
   // Board already have (see TaskBoard.jsx/CorkBoardView.jsx) — without
   // this, Ada adding a booking from her phone wouldn't show up for Aaron
   // until something else forced a refetch (e.g. changing months). One
   // channel covers every rental_* table this view reads; re-subscribed
-  // on monthDate change so the bookings handler always refetches the
-  // month actually being browsed, not whatever it was on mount.
+  // on monthDate *or company* change so the handlers always refetch the
+  // month/company actually being browsed, not whatever it was when the
+  // subscription was set up — without `company` here, switching
+  // companies wouldn't tear down this closure, and a realtime event
+  // arriving afterward would refetch the company you just switched away
+  // from.
   useEffect(() => {
     const channel = supabase
       .channel('rentals-changes')
@@ -108,12 +126,13 @@ export default function RentalsView({ me }) {
     // Deliberately not listing reload*/handleBookingsChanged — they're
     // plain functions redefined every render, not memoized, so listing
     // them would resubscribe this channel on every render instead of
-    // just on the month changes that actually require a fresh range.
+    // just on the month/company changes that actually require a fresh
+    // range/scope.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthDate])
+  }, [monthDate, company])
 
   function reloadProperties() {
-    fetchRentalProperties(COMPANY)
+    fetchRentalProperties(company)
       .then(setProperties)
       .catch((err) => setError(err.message))
   }
@@ -128,7 +147,7 @@ export default function RentalsView({ me }) {
   }
 
   function reloadExpenses() {
-    fetchRentalExpenses(COMPANY)
+    fetchRentalExpenses(company)
       .then(setExpenses)
       .catch((err) => setError(err.message))
   }
@@ -140,14 +159,14 @@ export default function RentalsView({ me }) {
   }, [properties, selectedUnitId])
 
   function reloadGoals() {
-    fetchSavingsGoals(COMPANY)
+    fetchSavingsGoals(company)
       .then(setGoals)
       .catch((err) => setError(err.message))
   }
 
   function reloadBookings() {
     const { start, end } = monthRangeStrings(monthDate)
-    fetchRentalBookings(COMPANY, start, end)
+    fetchRentalBookings(company, start, end)
       .then(setBookings)
       .catch((err) => setError(err.message))
   }
@@ -156,7 +175,7 @@ export default function RentalsView({ me }) {
   // needs a unit's real occupied-through date even when it runs past the
   // currently browsed month.
   function reloadUpcoming() {
-    fetchUpcomingRentalBookings(COMPANY)
+    fetchUpcomingRentalBookings(company)
       .then(setUpcomingBookings)
       .catch((err) => setError(err.message))
   }
@@ -166,7 +185,13 @@ export default function RentalsView({ me }) {
     reloadUpcoming()
   }
 
-  useEffect(reloadBookings, [monthDate])
+  // Also re-fires on `company` — otherwise switching companies without
+  // also changing months would leave the calendar showing the previous
+  // company's bookings for the currently-browsed month (the company-
+  // change effect above reloads properties/expenses/goals/upcoming, but
+  // month-scoped `bookings` has always lived in its own effect since it
+  // additionally depends on monthDate).
+  useEffect(reloadBookings, [monthDate, company])
 
   function shiftMonth(delta) {
     setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + delta, 1))
@@ -282,7 +307,7 @@ export default function RentalsView({ me }) {
         <div className="flex flex-col gap-3">
           <h3 className="task-section-heading">Financials</h3>
           <RentalFinancials
-            company={COMPANY}
+            company={company}
             properties={properties}
             bookings={bookings}
             allBookings={upcomingBookings}
@@ -296,7 +321,7 @@ export default function RentalsView({ me }) {
 
         {propertyFormOpen && (
           <RentalPropertyForm
-            company={COMPANY}
+            company={company}
             property={editingProperty}
             onClose={closePropertyForm}
             onSaved={() => {
@@ -365,7 +390,7 @@ export default function RentalsView({ me }) {
 
       <h3 className="task-section-heading">Financials</h3>
       <RentalFinancials
-        company={COMPANY}
+        company={company}
         properties={properties}
         bookings={bookings}
         allBookings={upcomingBookings}
@@ -378,7 +403,7 @@ export default function RentalsView({ me }) {
 
       {propertyFormOpen && (
         <RentalPropertyForm
-          company={COMPANY}
+          company={company}
           property={editingProperty}
           onClose={closePropertyForm}
           onSaved={() => {

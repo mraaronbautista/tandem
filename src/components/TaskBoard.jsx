@@ -100,15 +100,19 @@ const TABS = [
 ]
 
 // The header's page title for every tab except Today (which shows the
-// month navigator instead) — "Awa Rentalz" rather than "Rentals" for the
-// company name shown inside RentalsView.jsx, so it doesn't just repeat
-// the nav item's own label.
+// month navigator instead) and Rentals (which shows a company picker
+// instead — see COMPANY_LABEL/rentalsCompany below).
 const PAGE_LABELS = {
-  rentals: 'Awa Rentalz',
   reports: 'Reports',
   board: 'Board',
   staff: 'Staff Hours',
 }
+
+// rental_company enum values (schema.sql) -> display name. Awa Rentalz
+// is Ada's existing business; Azu Rentals (her mom's, separate and
+// unrelated) reuses the exact same schema/UI, just its own company row
+// on every rental_* table — see the Rentals section of CLAUDE.md.
+const COMPANY_LABEL = { awa: 'Awa Rentalz', azu: 'Azu Rentals' }
 
 function startOfDay(d) {
   const x = new Date(d)
@@ -135,6 +139,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
+  // Which rental company the Rentals tab is browsing — Awa Rentalz and
+  // Azu Rentals are two separate sets of units/bookings/financials (see
+  // rental_company enum in schema.sql), switched via the header's own
+  // company picker in place of a static page title (see COMPANY_LABEL
+  // below) rather than a tab of its own, since it's a view filter on one
+  // destination, not a second nav-level place to go.
+  const [rentalsCompany, setRentalsCompany] = useState('awa')
   const [viewMode, setViewMode] = useState('day')
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [inboxLastViewedAt, setInboxLastViewedAt] = useState(() => localStorage.getItem(INBOX_LAST_VIEWED_KEY) || '')
@@ -611,7 +622,29 @@ export default function TaskBoard({ theme, toggleTheme }) {
               </MonthNavLabel>
             </MonthNavRow>
           )}
-          {activeTab !== 'today' && <h1 className="whitespace-nowrap text-[22px]">{PAGE_LABELS[activeTab]}</h1>}
+          {activeTab === 'rentals' && (
+            // Same "the page title itself is the control" pattern as the
+            // Today tab's own MonthNavLabel — a plain h1 here would need a
+            // separate picker UI bolted on somewhere; making the title a
+            // real <select> means there's nothing else to build, and
+            // switching companies happens from the exact place you'd
+            // instinctively click to see what you're browsing.
+            <div className="relative inline-flex items-center">
+              <select
+                value={rentalsCompany}
+                onChange={(e) => setRentalsCompany(e.target.value)}
+                className="cursor-pointer appearance-none rounded-sm border-0 bg-transparent py-1 pr-5 pl-0 text-[22px] font-bold whitespace-nowrap text-text-h [font-family:inherit]"
+              >
+                {Object.entries(COMPANY_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-0 text-[12px] opacity-60">▾</span>
+            </div>
+          )}
+          {activeTab !== 'today' && activeTab !== 'rentals' && <h1 className="whitespace-nowrap text-[22px]">{PAGE_LABELS[activeTab]}</h1>}
           {/* Nav + account controls grouped together and pinned to the
               header's right edge as one fixed unit (this group has
               margin-left: auto, not the individual pieces) — nav's
@@ -640,7 +673,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
           </div>
         </header>
 
-        {activeTab === 'rentals' && <RentalsView me={me} />}
+        {activeTab === 'rentals' && <RentalsView me={me} company={rentalsCompany} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
         {activeTab === 'board' && (
           <BoardView
