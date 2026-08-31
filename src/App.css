@@ -3448,10 +3448,15 @@ label.new-task-checkbox-label {
   margin-top: 5px;
 }
 
-/* Present wherever a unit row gets a sibling control beside the card
-   itself — mobile's standalone Overview tab gets both Edit and the
-   negotiating toggle; the desktop toolbar reuse of this same list gets
-   just the toggle (no Edit button there) — see RentalOverview.jsx. */
+/* UNUSED as of the RentalOverview.jsx Tailwind conversion — now
+   `flex items-stretch gap-1.5`, computed inline in JSX rather than a
+   literal class since it's conditional (onEditUnit ? ... : undefined).
+   Kept, not deleted, until a dedicated dead-CSS cleanup pass.
+   Original comment, for history: present wherever a unit row gets a
+   sibling control beside the card itself — mobile's standalone Overview
+   tab gets both Edit and the negotiating toggle; the desktop toolbar
+   reuse of this same list gets just the toggle (no Edit button there) —
+   see RentalOverview.jsx. */
 .rental-overview-row {
   display: flex;
   align-items: stretch;
@@ -3476,6 +3481,14 @@ label.new-task-checkbox-label {
    its own. Amber rather than the app's usual accent gold, so it doesn't
    get visually confused with .rental-overview-item-selected's own
    accent border on the same card. */
+/* UNUSED, through .rental-negotiating-toggle-on below — as of the
+   RentalOverview.jsx Tailwind conversion, computed as
+   negotiatingToggleClasses (mutually-exclusive on/off state, same
+   discipline as NavItem.jsx/PeriodTab.jsx). The split --dur-fast
+   (transform) / --dur-base (everything else) transition collapsed to one
+   uniform 120ms, same documented compromise ThemeToggle.jsx/
+   WorkingStatusToggle.jsx already use. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-negotiating-toggle {
   position: absolute;
   top: 50%;
@@ -3513,6 +3526,9 @@ label.new-task-checkbox-label {
   opacity: 1;
 }
 
+/* UNUSED, through .rental-overview-status below — as of the
+   RentalOverview.jsx Tailwind conversion. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-overview-name {
   font-weight: 600;
   color: var(--text-h);
@@ -3599,6 +3615,10 @@ label.new-task-checkbox-label {
   font-size: 12px;
 }
 
+/* UNUSED, through .rental-overview-status-vacant below — as of the
+   RentalOverview.jsx Tailwind conversion (combined inline with
+   .rental-overview-status above per usage, since both migrated together).
+   Kept, not deleted, until a dedicated dead-CSS cleanup pass. */
 .rental-overview-status-occupied {
   opacity: 1;
   color: var(--text-h);
@@ -3643,6 +3663,11 @@ label.new-task-checkbox-label {
   margin-bottom: 8px;
 }
 
+/* UNUSED as of the RentalOverview.jsx Tailwind conversion — both
+   consumers (RentalOverview.jsx and RentalSavingsGoal.jsx) now render
+   `cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold
+   text-accent`. Kept, not deleted, until a dedicated dead-CSS cleanup
+   pass. */
 .rental-savings-edit {
   background: none;
   border: none;

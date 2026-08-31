@@ -36,7 +36,11 @@ export default function RentalSavingsGoal({ company, goals, onGoalsChanged }) {
           <div key={goal.id} className="rental-savings">
             <div className="rental-savings-header">
               <span>{goal.label}</span>
-              <button type="button" className="rental-savings-edit" onClick={() => openEdit(goal)}>
+              <button
+                type="button"
+                className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-accent"
+                onClick={() => openEdit(goal)}
+              >
                 Edit
               </button>
             </div>

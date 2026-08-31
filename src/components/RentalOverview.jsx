@@ -49,20 +49,20 @@ export default function RentalOverview({
           <>
             <span className="rental-overview-top">
               <span className="rental-unit-dot" style={{ background: p.color }} />
-              <span className="rental-overview-name">{p.unit_name}</span>
-              <span className="rental-overview-price">${Number(p.monthly_rent).toLocaleString()}/mo</span>
+              <span className="font-semibold text-text-h">{p.unit_name}</span>
+              <span className="text-xs opacity-60">${Number(p.monthly_rent).toLocaleString()}/mo</span>
             </span>
             {status.occupied ? (
-              <span className="rental-overview-status rental-overview-status-occupied">
+              <span className="text-[13px] text-text-h opacity-100">
                 Occupied through {formatDateStr(status.through)} — {status.guest}
               </span>
             ) : status.next ? (
-              <span className="rental-overview-status">
+              <span className="text-[13px] opacity-75">
                 Vacant — next {status.next.pending ? 'request' : 'guest'} {formatDateStr(status.next.checkIn)} —{' '}
                 {status.next.guest}
               </span>
             ) : (
-              <span className="rental-overview-status rental-overview-status-vacant">Vacant</span>
+              <span className="text-[13px] opacity-50">Vacant</span>
             )}
           </>
         )
@@ -76,10 +76,28 @@ export default function RentalOverview({
         // Icon-only at rest, grows to include "In talks" once on — same
         // element serves as both the control and the display, rather
         // than a separate read-only badge plus a separate toggle.
+        // border/background/color/padding computed together, exclusively,
+        // per on/off state — never split into an unconditional base class
+        // plus a conditional override, since both states set the same
+        // longhands (the mutual-exclusivity discipline NavItem.jsx/
+        // PeriodTab.jsx already established for this exact class of bug).
+        // duration-[120ms]: the original splits transform at --dur-fast
+        // (120ms) from border-color/background/opacity/padding at
+        // --dur-base (180ms) — collapsed to one uniform 120ms transition,
+        // same documented compromise ThemeToggle.jsx/WorkingStatusToggle.jsx
+        // already use for this exact shape of problem (Tailwind can't
+        // combine two transition-* utilities with different durations on
+        // one element).
+        const negotiatingToggleClasses = `absolute right-2 top-1/2 flex h-6 min-w-6 -translate-y-1/2 cursor-pointer items-center justify-center gap-1 rounded-full border py-0 text-[11px] font-semibold leading-none whitespace-nowrap transition-all duration-[120ms] ease-tactile active:scale-90 ${
+          p.in_negotiation
+            ? 'border-[#e0a83e] bg-[#e0a83e] px-2.5 text-white opacity-100'
+            : 'border-border bg-card-bg px-[5px] text-text-h opacity-45'
+        }`
+
         const negotiatingToggle = onToggleNegotiating && (
           <button
             type="button"
-            className={`rental-negotiating-toggle${p.in_negotiation ? ' rental-negotiating-toggle-on' : ''}`}
+            className={negotiatingToggleClasses}
             onClick={(e) => {
               // Stops this from also bubbling up into the card's own
               // onClick/onKeyDown (select-unit) — needed now that the
@@ -100,7 +118,7 @@ export default function RentalOverview({
           // Overview tab (see RentalsView.jsx) — the desktop toolbar
           // reuse of this same list stays exactly as compact as before,
           // no extra button crowding that row.
-          <li key={p.id} className={onEditUnit ? 'rental-overview-row' : undefined}>
+          <li key={p.id} className={onEditUnit ? 'flex items-stretch gap-1.5' : undefined}>
             {onSelectUnit ? (
               // A <div role="button"> here, not a real <button> — the
               // negotiating toggle now needs to live *inside* this card
@@ -130,7 +148,11 @@ export default function RentalOverview({
               </div>
             )}
             {onEditUnit && (
-              <button type="button" className="rental-savings-edit" onClick={() => onEditUnit(p)}>
+              <button
+                type="button"
+                className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-accent"
+                onClick={() => onEditUnit(p)}
+              >
                 Edit
               </button>
             )}
