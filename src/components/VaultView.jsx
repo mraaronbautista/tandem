@@ -11,11 +11,19 @@ import {
   VAULT_FOLDERS,
 } from '../lib/vault'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import VaultEntryForm from './VaultEntryForm'
 import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
 
 const RESET_CONFIRM_WORD = 'RESET'
+
+const vaultEntryRowClasses =
+  'flex cursor-pointer items-center justify-between rounded-md border border-border bg-card-bg px-3 py-2.5 text-left text-text-h shadow-resting [font:inherit] transition-all duration-[180ms] ease-tactile hover:-translate-y-px hover:shadow-raised active:translate-y-0 active:shadow-press'
+const vaultFolderActionClasses =
+  'flex-none cursor-pointer border-0 bg-transparent px-1.5 py-1 text-sm text-text opacity-60 transition-opacity duration-[180ms] ease-tactile hover:opacity-100 disabled:cursor-default disabled:opacity-35'
+const vaultFolderRenameActionClasses = `${vaultFolderActionClasses} rounded-sm border border-border px-2.5 py-1.5 opacity-100`
 
 // Folders aren't their own stored entity — there's no folder table/row,
 // just a `folder` string on each entry (see lib/vault.js). So the full
@@ -260,7 +268,7 @@ export default function VaultView({ me, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal vault-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard modifier="vault-modal">
         <h2>Vault</h2>
 
         {error && <p className="error">{error}</p>}
@@ -298,14 +306,12 @@ export default function VaultView({ me, onClose }) {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </label>
-            <div className="submission-actions">
-              <button type="button" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="submission-save" disabled={unlocking}>
+            <SubmissionActions>
+              <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+              <SubmissionButton type="submit" variant="primary" disabled={unlocking}>
                 {unlocking ? 'Setting up…' : 'Set up vault'}
-              </button>
-            </div>
+              </SubmissionButton>
+            </SubmissionActions>
           </form>
         )}
 
@@ -326,15 +332,17 @@ export default function VaultView({ me, onClose }) {
                 </button>
               </div>
             </label>
-            <div className="submission-actions">
-              <button type="button" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="submission-save" disabled={unlocking}>
+            <SubmissionActions>
+              <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+              <SubmissionButton type="submit" variant="primary" disabled={unlocking}>
                 {unlocking ? 'Unlocking…' : 'Unlock'}
-              </button>
-            </div>
-            <button type="button" className="vault-forgot-link" onClick={() => setShowReset(true)}>
+              </SubmissionButton>
+            </SubmissionActions>
+            <button
+              type="button"
+              className="mt-2 self-center cursor-pointer border-0 bg-transparent text-[13px] text-accent underline"
+              onClick={() => setShowReset(true)}
+            >
               Forgot master password?
             </button>
           </form>
@@ -354,25 +362,22 @@ export default function VaultView({ me, onClose }) {
                 placeholder={RESET_CONFIRM_WORD}
               />
             </label>
-            <div className="submission-actions">
-              <button type="button" onClick={() => setShowReset(false)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="rental-delete-booking"
+            <SubmissionActions>
+              <SubmissionButton onClick={() => setShowReset(false)}>Cancel</SubmissionButton>
+              <SubmissionButton
+                variant="destructive"
                 disabled={resetConfirmText !== RESET_CONFIRM_WORD || resetting}
                 onClick={handleReset}
               >
                 {resetting ? 'Resetting…' : 'Reset vault'}
-              </button>
-            </div>
+              </SubmissionButton>
+            </SubmissionActions>
           </div>
         )}
 
         {vaultKey && (
           <>
-            <div className="vault-toolbar">
+            <div className="flex gap-2">
               <button
                 type="button"
                 className="rental-add-booking"
@@ -396,31 +401,32 @@ export default function VaultView({ me, onClose }) {
                 General) — the plain flat list from before, no group header
                 for its own sake when there's nothing to separate it from. */}
             {folderGroups.length <= 1 && (
-              <div className="vault-entry-list">
+              <div className="flex flex-col gap-1.5">
                 {entries.map((entry) => (
                   <button
                     type="button"
                     key={entry.id}
-                    className="vault-entry-row"
+                    className={vaultEntryRowClasses}
                     onClick={() => setSelectedEntry(entry)}
                   >
-                    <span className="vault-entry-label">{entry.label}</span>
-                    {entry.username && <span className="vault-entry-username">{entry.username}</span>}
+                    <span className="font-semibold">{entry.label}</span>
+                    {entry.username && <span className="text-[13px] opacity-70">{entry.username}</span>}
                   </button>
                 ))}
               </div>
             )}
 
             {folderGroups.length > 1 && (
-              <div className="vault-folder-list">
+              <div className="flex flex-col gap-2">
                 {folderGroups.map((group) => (
-                  <div key={group.name} className="vault-folder">
+                  <div key={group.name}>
                     {renamingFolder === group.name ? (
                       // Swapped in place of the header row while renaming
                       // — same "editing" idea CorkBoardView.jsx uses for a
                       // pin, just for a folder name instead of a note body.
-                      <div className="vault-folder-header-row vault-folder-rename-row">
+                      <div className="flex items-center gap-1.5">
                         <input
+                          className="min-w-0 flex-1 rounded-sm border border-border bg-card-bg px-2.5 py-[7px] text-text-h [font:inherit]"
                           autoFocus
                           value={renameDraft}
                           disabled={folderBusy}
@@ -432,25 +438,29 @@ export default function VaultView({ me, onClose }) {
                         />
                         <button
                           type="button"
-                          className="vault-folder-action"
+                          className={vaultFolderRenameActionClasses}
                           disabled={folderBusy}
                           onClick={() => handleRenameFolder(group.name, renameDraft)}
                         >
                           Save
                         </button>
-                        <button type="button" className="vault-folder-action" onClick={() => setRenamingFolder(null)}>
+                        <button
+                          type="button"
+                          className={vaultFolderRenameActionClasses}
+                          onClick={() => setRenamingFolder(null)}
+                        >
                           Cancel
                         </button>
                       </div>
                     ) : (
-                      <div className="vault-folder-header-row">
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          className="vault-folder-header"
+                          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between rounded-sm border border-border bg-pill-bg px-2.5 py-2 font-semibold text-text-h [font-family:inherit] [font-size:inherit] [font-style:inherit] [font-variant:inherit] [line-height:inherit] transition-transform duration-[120ms] ease-tactile active:scale-[0.98]"
                           onClick={() => toggleFolder(group.name)}
                         >
                           <span>{group.name}</span>
-                          <span className="vault-folder-count">
+                          <span className="text-[13px] font-normal opacity-60">
                             {group.items.length} {expandedFolders.has(group.name) ? '▾' : '▸'}
                           </span>
                         </button>
@@ -460,7 +470,7 @@ export default function VaultView({ me, onClose }) {
                           <>
                             <button
                               type="button"
-                              className="vault-folder-action"
+                              className={vaultFolderActionClasses}
                               title="Rename folder"
                               aria-label={`Rename ${group.name}`}
                               disabled={folderBusy}
@@ -473,7 +483,7 @@ export default function VaultView({ me, onClose }) {
                             </button>
                             <button
                               type="button"
-                              className="vault-folder-action"
+                              className={vaultFolderActionClasses}
                               title="Remove folder"
                               aria-label={`Remove ${group.name}`}
                               disabled={folderBusy}
@@ -486,16 +496,16 @@ export default function VaultView({ me, onClose }) {
                       </div>
                     )}
                     {expandedFolders.has(group.name) && (
-                      <div className="vault-entry-list vault-folder-items">
+                      <div className="flex flex-col gap-1.5 pt-2">
                         {group.items.map((entry) => (
                           <button
                             type="button"
                             key={entry.id}
-                            className="vault-entry-row"
+                            className={vaultEntryRowClasses}
                             onClick={() => setSelectedEntry(entry)}
                           >
-                            <span className="vault-entry-label">{entry.label}</span>
-                            {entry.username && <span className="vault-entry-username">{entry.username}</span>}
+                            <span className="font-semibold">{entry.label}</span>
+                            {entry.username && <span className="text-[13px] opacity-70">{entry.username}</span>}
                           </button>
                         ))}
                       </div>
@@ -505,11 +515,9 @@ export default function VaultView({ me, onClose }) {
               </div>
             )}
 
-            <div className="submission-actions">
-              <button type="button" onClick={onClose}>
-                Close
-              </button>
-            </div>
+            <SubmissionActions>
+              <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+            </SubmissionActions>
           </>
         )}
 
@@ -543,7 +551,7 @@ export default function VaultView({ me, onClose }) {
         )}
 
         {exportOpen && <VaultExportForm entries={entries} onClose={() => setExportOpen(false)} />}
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

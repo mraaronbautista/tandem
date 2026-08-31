@@ -1,6 +1,17 @@
 import { useState } from 'react'
 import { createRentalExpense, updateRentalExpense, deleteRentalExpense } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+
+// Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
+// — same fix as RentalSavingsGoalForm.jsx: this form's fields were bare
+// <label><input/></label> pairs rendering as unstyled native browser
+// chrome instead of the app's actual input look. w-full is explicit here
+// (the original relies on the parent label's flex-stretch instead) as a
+// more robust guarantee of the same full-width result.
+const FIELD_INPUT_CLASS =
+  'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
 
 export default function RentalExpenseForm({ company, expense, onClose, onSaved, onDeleted }) {
   const [label, setLabel] = useState(expense?.label || '')
@@ -42,7 +53,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{expense ? 'Edit overhead item' : 'New overhead item'}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -55,6 +66,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
             placeholder="e.g. Mortgage, Utilities"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
@@ -68,23 +80,22 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
             placeholder="e.g. 1200"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {expense && (
-            <button type="button" className="rental-delete-booking" onClick={handleDelete} disabled={deleting}>
+            <SubmissionButton variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Deleting…' : 'Delete'}
-            </button>
+            </SubmissionButton>
           )}
-          <button type="submit" className="submission-save" disabled={saving}>
+          <SubmissionButton type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </form>
+          </SubmissionButton>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }

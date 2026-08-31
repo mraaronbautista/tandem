@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchEodReports } from '../lib/eodReports'
 import AttachmentList from './AttachmentList'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -103,18 +104,13 @@ export default function EodReportsList({ memberName }) {
       {reports && !reports.length && <p className="task-notes-empty">No reports yet.</p>}
 
       {reports?.length > 0 && (
-        <div className="period-tabs">
+        <PeriodTabs>
           {PERIOD_TABS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
-              onClick={() => handlePeriodChange(p.value)}
-            >
+            <PeriodTab key={p.value} active={period === p.value} onClick={() => handlePeriodChange(p.value)}>
               {p.label}
-            </button>
+            </PeriodTab>
           ))}
-        </div>
+        </PeriodTabs>
       )}
 
       {reports?.length > 0 && groups.length === 0 && (
@@ -122,21 +118,25 @@ export default function EodReportsList({ memberName }) {
       )}
 
       {groups.length > 0 && (
-        <div className="eod-reports-list">
+        <div className="flex flex-col gap-2">
           {groups.map((group) => (
-            <div key={group.key} className="eod-report-month">
-              <button type="button" className="eod-report-month-header" onClick={() => toggleMonth(group.key)}>
+            <div key={group.key}>
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center justify-between rounded-sm border border-border bg-pill-bg px-2.5 py-2 font-semibold text-text-h [font-family:inherit] [font-size:inherit] [font-style:inherit] [font-variant:inherit] [line-height:inherit] transition-transform duration-[120ms] ease-tactile active:scale-[0.98]"
+                onClick={() => toggleMonth(group.key)}
+              >
                 <span>{monthLabel(group.key)}</span>
-                <span className="eod-report-month-count">
+                <span className="text-[13px] font-normal opacity-60">
                   {group.items.length} {expanded.has(group.key) ? '▾' : '▸'}
                 </span>
               </button>
 
               {expanded.has(group.key) && (
-                <div className="eod-report-month-items">
+                <div className="flex flex-col gap-3.5 px-1 pt-2.5">
                   {group.items.map((r) => (
-                    <div className="eod-report-item" key={r.id}>
-                      <p className="eod-report-meta">
+                    <div className="border-b border-border pb-3 last:border-b-0 last:pb-0" key={r.id}>
+                      <p className="mb-1 text-xs opacity-60">
                         <strong>{memberName(r.submitted_by)}</strong> — {r.period} — updated{' '}
                         {formatDate(r.updated_at)}
                         {r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}

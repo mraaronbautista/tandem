@@ -50,22 +50,40 @@ export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
       : endTimeLabel
 
   return (
-    <div className="timeline-row">
-      <div className="timeline-time">
+    // .timeline-* (App.css) had exactly one consumer — this component
+    // (.timeline-list, the parent wrapper in TaskBoard.jsx, is untouched).
+    // Several offsets here are genuinely off Tailwind's 4px grid (13px/
+    // 15px/3px) and are kept as arbitrary values rather than rounded to
+    // the nearest step — they're load-bearing for the hand-tuned
+    // start-dot/span/end-dot alignment described in App.css's own
+    // comments, so exact pixel match matters more than tidiness here.
+    <div className="flex gap-2.5 max-[480px]:gap-1.5">
+      <div className="flex w-[54px] flex-none flex-col whitespace-nowrap pt-[13px] text-right text-xs opacity-70 max-[480px]:w-10 max-[480px]:text-[11px]">
         <span>{label}</span>
-        {hasSpan && <span className="timeline-time-end">{endLabel}</span>}
+        {/* Lines up with the end dot below — both this margin and the
+            connector's height are the same 28px (mt-7), so the two
+            independently-flowing columns land at a matching vertical
+            offset for the end point without sharing layout machinery. */}
+        {hasSpan && <span className="mt-7">{endLabel}</span>}
       </div>
-      <div className="timeline-rail">
-        <span className="timeline-dot" style={{ background: dotColor }} title={dotTitle} />
+      <div className="flex w-2.5 flex-none flex-col items-center">
+        <span className="mt-[15px] h-2 w-2 flex-none rounded-full" style={{ background: dotColor }} title={dotTitle} />
         {hasSpan && (
           <>
-            <span className="timeline-span-connector" />
-            <span className="timeline-dot timeline-dot-end" style={{ background: dotColor }} title={dotTitle} />
+            <span className="mt-[3px] h-7 w-0.5 flex-none bg-border" />
+            {/* The end dot's margin-top:0 relies on .timeline-span-connector
+                immediately above it already supplying the vertical gap —
+                the start dot's own 15px margin only exists to offset the
+                *first* dot down from the row's top edge. Kept as a
+                separate branch (not the same element with a conditional
+                class) so the two mt-[…] values never compete on the same
+                element. */}
+            <span className="h-2 w-2 flex-none rounded-full" style={{ background: dotColor }} title={dotTitle} />
           </>
         )}
-        {!isLast && <span className="timeline-connector" />}
+        {!isLast && <span className="mt-1 min-h-2 w-0.5 flex-1 bg-border" />}
       </div>
-      <div className="timeline-content">
+      <div className="min-w-0 flex-1 pb-2">
         <TaskRow task={task} hidePriorityDot {...taskRowProps} />
       </div>
     </div>

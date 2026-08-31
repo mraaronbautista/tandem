@@ -5,6 +5,9 @@ import { whoKeyForName } from '../lib/whoLabels'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
 import PriorityItemsEditor from './PriorityItemsEditor'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const PERIODS = [
   { value: 'day', label: 'Day' },
@@ -96,31 +99,26 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>Priorities</h2>
 
-        <div className="period-tabs">
+        <PeriodTabs>
           {PERIODS.map((p) => (
-            <button
-              type="button"
-              key={p.value}
-              className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
-              onClick={() => setPeriod(p.value)}
-            >
+            <PeriodTab key={p.value} active={period === p.value} onClick={() => setPeriod(p.value)}>
               {p.label}
-            </button>
+            </PeriodTab>
           ))}
-        </div>
+        </PeriodTabs>
 
         {error && <p className="error">{error}</p>}
 
         {current && (
           <div>
-            <p className="eod-report-meta">
+            <p className="mb-1 text-xs opacity-60">
               Last set by <strong>{memberName(current.set_by)}</strong> — {formatDate(current.created_at)}
             </p>
             {lastLines.length > 0 && (
-              <ul className="priorities-last-set-list">
+              <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-70">
                 {lastLines.map((line, i) => (
                   <li key={i}>{line}</li>
                 ))}
@@ -132,15 +130,13 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
         <span className="submission-field-label">What are we prioritizing this {period}?</span>
         <PriorityItemsEditor items={items} onChange={setItems} defaultWho={defaultWho} />
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="submission-save" disabled={saving || !items.some((i) => i.text.trim())}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+          <SubmissionButton type="submit" variant="primary" disabled={saving || !items.some((i) => i.text.trim())}>
             {saving ? 'Saving…' : 'Save & create tasks'}
-          </button>
-        </div>
-      </form>
+          </SubmissionButton>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }

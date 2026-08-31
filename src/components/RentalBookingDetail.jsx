@@ -8,6 +8,8 @@ import {
   BOOKING_SOURCE_LABEL,
 } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 function formatDateStr(dateStr) {
   // Parsed as local, not UTC — a bare 'YYYY-MM-DD' parsed via `new Date()`
@@ -78,49 +80,51 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <ModalCard>
         <h2>Booking details</h2>
 
         {error && <p className="error">{error}</p>}
 
-        {isPending && <span className="rental-pending-badge">Pending request</span>}
-        <p className="rental-booking-detail-guest">{booking.guest_name}</p>
-        <p className="rental-booking-detail-dates">
+        {isPending && (
+          <span className="inline-block self-start rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
+            Pending request
+          </span>
+        )}
+        <p className="text-[17px] font-semibold text-text-h">{booking.guest_name}</p>
+        <p className="opacity-75">
           {formatDateStr(booking.check_in)} – {formatDateStr(booking.check_out)}
         </p>
         {nextUnpaidCharge && (
-          <p className="rental-booking-detail-charge">Next charge: {formatDateStr(nextUnpaidCharge)}</p>
+          <p className="text-[13px] opacity-65">Next charge: {formatDateStr(nextUnpaidCharge)}</p>
         )}
         {booking.source && (
-          <p className="rental-booking-detail-source">
+          <p className="text-[13px] opacity-65">
             Source: {BOOKING_SOURCE_LABEL[booking.source]}
             {booking.source === 'other' && booking.source_note ? ` — ${booking.source_note}` : ''}
           </p>
         )}
-        {booking.notes && <p className="rental-booking-detail-notes">{booking.notes}</p>}
+        {booking.notes && (
+          <p className="break-words border-t border-border pt-1 text-sm whitespace-pre-wrap">{booking.notes}</p>
+        )}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-          <button type="button" onClick={() => onEdit(booking)}>
-            Edit
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+          <SubmissionButton onClick={() => onEdit(booking)}>Edit</SubmissionButton>
           {nextUnpaidCharge && (
-            <button type="button" onClick={handleMarkPaid} disabled={markingPaid}>
+            <SubmissionButton onClick={handleMarkPaid} disabled={markingPaid}>
               {markingPaid ? 'Marking…' : `Mark ${formatDateStr(nextUnpaidCharge)} paid`}
-            </button>
+            </SubmissionButton>
           )}
-          <button type="button" className="rental-delete-booking" onClick={handleDelete} disabled={deleting}>
+          <SubmissionButton variant="destructive" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting…' : isPending ? 'Decline' : 'Delete booking'}
-          </button>
+          </SubmissionButton>
           {isPending && (
-            <button type="button" className="submission-save" onClick={handleConfirm} disabled={confirming}>
+            <SubmissionButton variant="primary" onClick={handleConfirm} disabled={confirming}>
               {confirming ? 'Confirming…' : 'Confirm booking'}
-            </button>
+            </SubmissionButton>
           )}
-        </div>
-      </div>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }

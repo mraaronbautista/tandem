@@ -10,6 +10,9 @@ import TaskForm from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
+import PriorityDot from './PriorityDot'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
@@ -209,10 +212,10 @@ export default function TaskRow({
 
   return (
     <div
-      className={`task-row ${task.status === 'done' ? 'task-row-done' : ''} ${overlapping ? 'task-row-overlapping' : ''}`}
+      className={`task-row ${overlapping ? 'border-l-[3px] border-l-notice' : ''}`}
       onClick={() => setOpen((v) => !v)}
     >
-      <div className="task-row-main">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <input
           type="checkbox"
           className="task-done-checkbox"
@@ -221,34 +224,30 @@ export default function TaskRow({
           onChange={handleStatusToggle}
         />
         {!hidePriorityDot && (
-          <span
-            className="task-priority-dot"
-            style={{ background: PRIORITY_COLOR[task.priority] }}
-            title={PRIORITY_LABEL[task.priority]}
-          />
+          <PriorityDot color={PRIORITY_COLOR[task.priority]} title={PRIORITY_LABEL[task.priority]} />
         )}
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}
         </span>
-        <span className="task-title">{task.title}</span>
+        <span className={`min-w-0 flex-[1_1_140px] text-sm font-medium text-text-h ${task.status === 'done' ? 'line-through opacity-55' : ''}`}>{task.title}</span>
         {overlapping && (
-          <span className="task-overlap-badge" title="Overlaps another task's time">
+          <span className="flex-none text-[11px] font-semibold whitespace-nowrap text-notice" title="Overlaps another task's time">
             ⚠ Overlap
           </span>
         )}
-        {hasNotes && <span className="task-notes-icon" title="Has notes">📝</span>}
+        {hasNotes && <span className="text-[13px] opacity-80" title="Has notes">📝</span>}
         {checklist.length > 0 && (
-          <span className="task-checklist-badge" title="Subtasks">
+          <span className="text-xs whitespace-nowrap opacity-75" title="Subtasks">
             ☑ {checklistDone}/{checklist.length}
           </span>
         )}
         {hasQuestionForMe && (
-          <span className="task-question-badge" title="Has something for you to reply to">
+          <span className="text-[13px] opacity-80" title="Has something for you to reply to">
             💬
           </span>
         )}
         {task.due_date && (
-          <span className={`task-due ${overdue ? 'task-due-overdue' : ''}`}>{dueLabel(task)}</span>
+          <span className={`text-xs whitespace-nowrap ${overdue ? 'font-semibold text-overdue opacity-100' : 'opacity-70'}`}>{dueLabel(task)}</span>
         )}
         {/* Names the zone dueLabel above is already showing the time in
             (see localLabel) — the two have to agree, since a badge next
@@ -263,14 +262,14 @@ export default function TaskRow({
           </span>
         )}
         {task.status === 'done' && task.completed_at && (
-          <span className="task-completed-at">Completed {localLabel(task.completed_at)}</span>
+          <span className="text-[11px] whitespace-nowrap opacity-50">Completed {localLabel(task.completed_at)}</span>
         )}
       </div>
 
       {open && (
-        <div className="task-row-details" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-2.5 cursor-default border-t border-border pt-2.5 text-[13px] [&_p]:mb-1.5" onClick={(e) => e.stopPropagation()}>
           {creatorName && (
-            <p className="task-meta">Added by {creatorName}</p>
+            <p className="text-xs opacity-60">Added by {creatorName}</p>
           )}
           {sourceLabel && (
             <p>
@@ -278,10 +277,10 @@ export default function TaskRow({
               {task.source_note ? ` — ${task.source_note}` : ''}
             </p>
           )}
-          {task.notes && <p className="task-notes-text">{task.notes}</p>}
+          {task.notes && <p className="break-words whitespace-pre-wrap">{task.notes}</p>}
           <ChecklistView items={checklist} onItemChange={handleChecklistItemChange} />
           {task.recurrence !== 'none' && (
-            <p className="task-recurrence">Repeats {task.recurrence}</p>
+            <p>Repeats {task.recurrence}</p>
           )}
           {!sourceLabel && !task.notes && !checklist.length && task.recurrence === 'none' && !creatorName && (
             <p className="task-notes-empty">No additional details.</p>
@@ -295,7 +294,7 @@ export default function TaskRow({
             taskTitle={task.title}
             taskId={task.id}
             extraActions={
-              <div className="task-row-actions">
+              <div className="flex gap-2 [&_button]:cursor-pointer [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
                 <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
                   <EditIcon width={15} height={15} />
                 </button>
@@ -326,7 +325,7 @@ export default function TaskRow({
                     {hasSubmission ? <EditIcon width={15} height={15} /> : <CheckIcon width={15} height={15} />}
                   </button>
                 )}
-                <button className="task-delete" onClick={handleDelete} title="Delete" aria-label="Delete">
+                <button className="!text-overdue" onClick={handleDelete} title="Delete" aria-label="Delete">
                   <TrashIcon width={15} height={15} />
                 </button>
               </div>
@@ -337,7 +336,7 @@ export default function TaskRow({
 
       {viewSubmissionOpen && (
         <Modal onClose={() => setViewSubmissionOpen(false)}>
-          <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+          <ModalCard>
             <h2>Submission</h2>
             {task.completion_note && <p className="task-submission-note-text">{task.completion_note}</p>}
             {attachments.length > 0 && (
@@ -362,18 +361,16 @@ export default function TaskRow({
                 )}
               </div>
             )}
-            <div className="submission-actions">
-              <button type="button" onClick={() => setViewSubmissionOpen(false)}>
-                Close
-              </button>
-            </div>
-          </div>
+            <SubmissionActions>
+              <SubmissionButton onClick={() => setViewSubmissionOpen(false)}>Close</SubmissionButton>
+            </SubmissionActions>
+          </ModalCard>
         </Modal>
       )}
 
       {submitOpen && (
         <Modal onClose={() => setSubmitOpen(false)}>
-          <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+          <ModalCard>
             <h2>Submission</h2>
             <label className="submission-field">
               Link, note, or details
@@ -432,9 +429,8 @@ export default function TaskRow({
               {uploadError && <p className="error">{uploadError}</p>}
             </div>
 
-            <div className="submission-actions">
-              <button
-                type="button"
+            <SubmissionActions>
+              <SubmissionButton
                 onClick={() => {
                   setNoteDraft(task.completion_note || '')
                   setUploadError('')
@@ -442,12 +438,12 @@ export default function TaskRow({
                 }}
               >
                 Cancel
-              </button>
-              <button type="button" className="submission-save" onClick={handleSaveNote}>
+              </SubmissionButton>
+              <SubmissionButton variant="primary" onClick={handleSaveNote}>
                 Save
-              </button>
-            </div>
-          </div>
+              </SubmissionButton>
+            </SubmissionActions>
+          </ModalCard>
         </Modal>
       )}
     </div>

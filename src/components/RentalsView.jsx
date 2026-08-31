@@ -10,6 +10,9 @@ import {
   setUnitNegotiating,
 } from '../lib/rentals'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import IconButton from './IconButton'
+import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
+import RentalButton from './RentalButton'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
@@ -220,46 +223,27 @@ export default function RentalsView({ me }) {
 
   if (isDesktop) {
     return (
-      <div className="rentals-dashboard">
-        <div className="rentals-main">
-          <div className="rentals-combined-nav">
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(-1)}
-              title="Previous month"
-              aria-label="Previous month"
-            >
+      <div className="grid grid-cols-[1fr_340px] items-start gap-6">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3.5">
+            <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
-            </button>
-            <span className="month-nav-label">{monthLabel}</span>
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(1)}
-              title="Next month"
-              aria-label="Next month"
-            >
+            </IconButton>
+            <MonthNavLabel>{monthLabel}</MonthNavLabel>
+            <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
               ›
-            </button>
-            <button
-              type="button"
-              className="rental-add-booking rental-add-booking-primary rentals-combined-nav-unit"
+            </IconButton>
+            <RentalButton
+              variant="primary"
+              className="ml-2.5"
               onClick={() => calendarRef.current?.openAddBooking()}
             >
               + Add booking
-            </button>
-            <button
-              type="button"
-              className="rental-add-booking"
-              onClick={() => openEditProperty(selectedUnit)}
-              disabled={!selectedUnit}
-            >
+            </RentalButton>
+            <RentalButton onClick={() => openEditProperty(selectedUnit)} disabled={!selectedUnit}>
               Edit unit
-            </button>
-            <button type="button" className="rental-add-booking" onClick={openNewProperty}>
-              + Add unit
-            </button>
+            </RentalButton>
+            <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
           </div>
 
           {/* The per-unit status list renders in place of the (hidden)
@@ -294,7 +278,7 @@ export default function RentalsView({ me }) {
           />
         </div>
 
-        <div className="rentals-financials-col">
+        <div className="flex flex-col gap-3">
           <h3 className="task-section-heading">Financials</h3>
           <RentalFinancials
             company={COMPANY}
@@ -339,31 +323,17 @@ export default function RentalsView({ me }) {
         onEditUnit={openEditProperty}
         onToggleNegotiating={handleToggleNegotiating}
       />
-      <button type="button" className="rental-add-booking" onClick={openNewProperty}>
-        + Add unit
-      </button>
+      <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
 
-      <div className="month-nav-row">
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => shiftMonth(-1)}
-          title="Previous month"
-          aria-label="Previous month"
-        >
+      <MonthNavRow>
+        <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
           ‹
-        </button>
-        <span className="month-nav-label">{monthLabel}</span>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => shiftMonth(1)}
-          title="Next month"
-          aria-label="Next month"
-        >
+        </IconButton>
+        <MonthNavLabel>{monthLabel}</MonthNavLabel>
+        <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
           ›
-        </button>
-      </div>
+        </IconButton>
+      </MonthNavRow>
 
       {/* Overview's cards above are the only unit-switcher here — no
           .rental-unit-tabs strip and no bold $/mo header, both redundant

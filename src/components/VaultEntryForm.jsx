@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { encryptJSON, generateStrongPassword, createVaultEntry, updateVaultEntry } from '../lib/vault'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFolders = [], onClose, onSaved }) {
   const [label, setLabel] = useState(entry?.label || '')
@@ -67,7 +69,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFol
 
   return (
     <Modal onClose={handleClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{entry ? 'Edit entry' : 'New entry'}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -145,15 +147,13 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFol
           <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={handleClose}>
-            Cancel
-          </button>
-          <button type="submit" className="submission-save" disabled={saving}>
+        <SubmissionActions>
+          <SubmissionButton onClick={handleClose}>Cancel</SubmissionButton>
+          <SubmissionButton type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </form>
+          </SubmissionButton>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }

@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import Modal from './Modal'
+import IconButton from './IconButton'
+import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
+import ModalCard from './ModalCard'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -43,54 +46,40 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal date-picker-modal">
-        <div className="date-picker-modal-header">
-          <div className="month-nav-row">
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(-1)}
-              title="Previous month"
-              aria-label="Previous month"
-            >
+      <ModalCard modifier="date-picker-modal">
+        <div className="flex items-center justify-between">
+          <MonthNavRow>
+            <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
-            </button>
-            <span className="month-nav-label">{label}</span>
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => shiftMonth(1)}
-              title="Next month"
-              aria-label="Next month"
-            >
+            </IconButton>
+            <MonthNavLabel>{label}</MonthNavLabel>
+            <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
               ›
-            </button>
-          </div>
-          <button
-            type="button"
-            className="icon-button date-picker-close"
-            onClick={onClose}
-            title="Close"
-            aria-label="Close"
-          >
+            </IconButton>
+          </MonthNavRow>
+          {/* .date-picker-close carried no CSS rule of its own (confirmed
+              via grep) — dropped, since IconButton alone already
+              reproduces .icon-button's full styling with nothing left
+              for that modifier to have added. */}
+          <IconButton onClick={onClose} title="Close" aria-label="Close">
             ×
-          </button>
+          </IconButton>
         </div>
 
-        <div className="date-picker-grid">
+        <div className="grid grid-cols-7 gap-1">
           {WEEKDAY_LABELS.map((wd) => (
-            <div key={wd} className="date-picker-weekday">
+            <div key={wd} className="pb-1 text-center text-[11px] font-semibold opacity-55">
               {wd}
             </div>
           ))}
 
           {weeks.map((week, weekIndex) =>
             week.map((day, col) => {
-              if (day === null) return <div key={`${weekIndex}-${col}`} className="date-picker-day-empty" />
+              if (day === null) return <div key={`${weekIndex}-${col}`} className="invisible flex aspect-square items-center justify-center rounded-[8px] border-0 bg-transparent text-text-h [font:inherit]" />
               const date = new Date(year, month, day)
-              const classes = ['date-picker-day']
-              if (isSameDay(date, today)) classes.push('date-picker-day-today')
-              if (isSameDay(date, selectedDate)) classes.push('date-picker-day-selected')
+              const classes = ['flex aspect-square cursor-pointer items-center justify-center rounded-[8px] border-0 bg-transparent text-text-h [font:inherit]']
+              if (isSameDay(date, today)) classes.push('font-bold shadow-[inset_0_0_0_1px_var(--accent)]')
+              if (isSameDay(date, selectedDate)) classes.push('bg-accent text-white')
               return (
                 <button key={day} type="button" className={classes.join(' ')} onClick={() => onSelect(date)}>
                   {day}
@@ -99,7 +88,7 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
             }),
           )}
         </div>
-      </div>
+      </ModalCard>
     </Modal>
   )
 }

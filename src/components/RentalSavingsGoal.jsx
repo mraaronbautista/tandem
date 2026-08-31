@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import RentalButton from './RentalButton'
 import RentalSavingsGoalForm from './RentalSavingsGoalForm'
 
 function money(n) {
@@ -27,31 +28,33 @@ export default function RentalSavingsGoal({ company, goals, onGoalsChanged }) {
   }
 
   return (
-    <div className="rental-savings-list">
+    <div className="flex flex-col gap-2.5">
       {goals.map((goal) => {
         const saved = Number(goal.saved_amount)
         const pct = Math.max(0, Math.min(100, (saved / Number(goal.target_amount)) * 100))
         return (
-          <div key={goal.id} className="rental-savings">
-            <div className="rental-savings-header">
+          <div key={goal.id} className="rounded-md border border-border px-3.5 py-3">
+            <div className="mb-2 flex items-center justify-between text-[13px] font-semibold text-text-h">
               <span>{goal.label}</span>
-              <button type="button" className="rental-savings-edit" onClick={() => openEdit(goal)}>
+              <button
+                type="button"
+                className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-accent"
+                onClick={() => openEdit(goal)}
+              >
                 Edit
               </button>
             </div>
-            <div className="rental-savings-bar">
-              <div className="rental-savings-bar-fill" style={{ width: `${pct}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-pill-bg">
+              <div className="h-full rounded-full bg-accent transition-[width] duration-200 ease-[ease]" style={{ width: `${pct}%` }} />
             </div>
-            <p className="rental-savings-amounts">
+            <p className="mt-1.5 text-right text-[13px] opacity-80">
               {money(saved)} / {money(goal.target_amount)} ({Math.round(pct)}%)
             </p>
           </div>
         )
       })}
 
-      <button type="button" className="rental-add-booking" onClick={openNew}>
-        + Add goal
-      </button>
+      <RentalButton onClick={openNew}>+ Add goal</RentalButton>
 
       {formOpen && (
         <RentalSavingsGoalForm

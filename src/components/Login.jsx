@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import ThemeToggle from './ThemeToggle'
 
+const loginFormClasses =
+  'flex flex-col gap-2.5 [&_button]:cursor-pointer [&_button]:rounded-[8px] [&_button]:border-0 [&_button]:bg-accent [&_button]:px-3 [&_button]:py-2.5 [&_button]:font-semibold [&_button]:text-white [&_button:hover]:bg-accent-h [&_input]:rounded-sm [&_input]:border [&_input]:border-border [&_input]:bg-card-bg [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-[15px] [&_input]:text-text-h'
+
 // Password is the default sign-in method — magic link requires bouncing
 // through the device's default browser to click the email link, which
 // breaks entirely for a Home Screen "Add to Home Screen" install on iOS
@@ -70,15 +73,15 @@ export default function Login({ theme, toggleTheme }) {
   }
 
   return (
-    <div className="login-screen">
-      <div className="login-theme-toggle">
+    <div className="mx-auto mt-[20svh] max-w-[360px] px-6 text-center">
+      <div className="mb-1 flex justify-end">
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
-      <h1>Tandem</h1>
-      <p className="login-tagline">A web app built for Ada</p>
+      <h1 className="mb-2 text-[28px]">Tandem</h1>
+      <p className="mb-5 text-sm opacity-65">A web app built for Ada</p>
 
       {mode === 'password' && (
-        <form onSubmit={handlePasswordSubmit} className="login-form">
+        <form onSubmit={handlePasswordSubmit} className={loginFormClasses}>
           <label className="visually-hidden" htmlFor="login-email">
             Email
           </label>
@@ -106,21 +109,21 @@ export default function Login({ theme, toggleTheme }) {
           <button type="submit" disabled={status === 'sending'}>
             {status === 'sending' ? 'Signing in…' : 'Sign in'}
           </button>
-          {status === 'error' && <p className="login-error">{error}</p>}
+          {status === 'error' && <p className="mb-5 text-sm text-overdue">{error}</p>}
         </form>
       )}
 
       {mode === 'magic-link' &&
         (magicLinkSent ? (
-          <div className="login-form">
-            <p className="login-sent">Check {email} for a sign-in link.</p>
+          <div className={loginFormClasses}>
+            <p className="mb-5 rounded-[8px] border border-border bg-card-bg p-4">Check {email} for a sign-in link.</p>
             <button type="button" onClick={sendMagicLink} disabled={status === 'sending'}>
               {status === 'sending' ? 'Resending…' : 'Resend link'}
             </button>
-            {status === 'error' && <p className="login-error">{error}</p>}
+            {status === 'error' && <p className="mb-5 text-sm text-overdue">{error}</p>}
           </div>
         ) : (
-          <form onSubmit={handleMagicLinkSubmit} className="login-form">
+          <form onSubmit={handleMagicLinkSubmit} className={loginFormClasses}>
             <label className="visually-hidden" htmlFor="login-email">
               Email
             </label>
@@ -136,11 +139,11 @@ export default function Login({ theme, toggleTheme }) {
             <button type="submit" disabled={status === 'sending'}>
               {status === 'sending' ? 'Sending link…' : 'Send sign-in link'}
             </button>
-            {status === 'error' && <p className="login-error">{error}</p>}
+            {status === 'error' && <p className="mb-5 text-sm text-overdue">{error}</p>}
           </form>
         ))}
 
-      <button type="button" className="login-mode-toggle" onClick={switchMode}>
+      <button type="button" className="mx-auto mt-3.5 block cursor-pointer border-0 bg-transparent text-[13px] text-accent underline" onClick={switchMode}>
         {mode === 'password' ? 'Use a magic link instead' : 'Use a password instead'}
       </button>
     </div>

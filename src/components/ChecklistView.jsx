@@ -20,8 +20,8 @@ function ChecklistItemRow({ item, onItemChange }) {
   }
 
   return (
-    <div className="checklist-view-item">
-      <label className="checklist-view-row">
+    <div className="flex flex-col gap-1">
+      <label className="flex cursor-pointer items-center gap-2 [&_input[type=checkbox]]:h-[15px] [&_input[type=checkbox]]:w-[15px]">
         <input
           type="checkbox"
           checked={item.done}
@@ -29,15 +29,15 @@ function ChecklistItemRow({ item, onItemChange }) {
           onChange={() => onItemChange(item.id, { done: !item.done })}
         />
         <span
-          className={`checklist-view-text${item.done ? ' checklist-view-done' : ''}${
-            item.blocked ? ' checklist-view-blocked' : ''
+          className={`flex-1 text-[13px] ${item.done ? 'line-through opacity-55' : ''} ${
+            item.blocked ? 'line-through text-overdue opacity-80' : ''
           }`}
         >
           {item.text}
         </span>
         <button
           type="button"
-          className={`checklist-blocked-toggle${item.blocked ? ' checklist-blocked-toggle-active' : ''}`}
+          className={`h-[26px] w-[26px] flex-none cursor-pointer rounded-full border bg-pill-bg text-[13px] leading-none ${item.blocked ? 'border-overdue opacity-100' : 'border-border opacity-50'}`}
           onClick={(e) => {
             e.preventDefault()
             toggleBlocked(item, onItemChange)
@@ -50,7 +50,7 @@ function ChecklistItemRow({ item, onItemChange }) {
       {item.blocked && (
         <input
           type="text"
-          className="checklist-blocked-reason-input"
+          className="ml-6 rounded-[6px] border border-border bg-bg px-2 py-1.5 text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
           placeholder="Why is this blocked? (optional)"
           value={reasonDraft}
           onChange={(e) => setReasonDraft(e.target.value)}
@@ -65,7 +65,7 @@ export default function ChecklistView({ items, onItemChange }) {
   if (!items.length) return null
 
   return (
-    <div className="checklist-view">
+    <div className="mb-1.5 flex flex-col gap-1.5">
       {items.map((item) => (
         <ChecklistItemRow key={item.id} item={item} onItemChange={onItemChange} />
       ))}

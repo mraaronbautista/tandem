@@ -37,9 +37,13 @@ import BulkAddTasksForm from './BulkAddTasksForm'
 import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
-import CorkBoardView from './CorkBoardView'
-import InboxView from './InboxView'
+import BoardView from './BoardView'
 import MonthView from './MonthView'
+import MobileNav from './MobileNav'
+import IconButton from './IconButton'
+import NavItem from './NavItem'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
 
 const WHO_TABS = [
   { key: 'all', label: 'All' },
@@ -69,17 +73,19 @@ function daySectionLabel(day, today) {
   return day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-// Bottom bar on mobile, folded inline into the header row on wide
-// screens (`.header-nav` — see App.css and the isDesktop branch below)
-// — the four sections that are actually places you go browse, as
-// opposed to the "+" menu's one-shot actions (New task, Priorities,
-// Submit report, Nudge, Vault).
+// A floating capsule on mobile (MobileNav.jsx), folded inline into the
+// header row on wide screens (see the isDesktop branch below) — the
+// places you go browse, as opposed to the "+" menu's one-shot actions
+// (New task, Priorities, Submit report, Nudge, Vault). Cork Board and
+// Inbox were two separate tabs here; they're merged into one Board
+// destination (BoardView.jsx, an internal Pins/Inbox segmented toggle) so
+// mobile settles on 4 primary destinations instead of 5 — a
+// navigation-level grouping only, neither screen's own data/logic changed.
 const TABS = [
   { key: 'today', icon: '📋', label: 'Today' },
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
   { key: 'reports', icon: '📄', label: 'Reports' },
-  { key: 'corkboard', icon: '📌', label: 'Cork Board' },
-  { key: 'inbox', icon: '📥', label: 'Inbox' },
+  { key: 'board', icon: '📌', label: 'Board' },
 ]
 
 // The header's page title for every tab except Today (which shows the
@@ -89,8 +95,7 @@ const TABS = [
 const PAGE_LABELS = {
   rentals: 'Awa Rentalz',
   reports: 'Reports',
-  corkboard: 'Cork Board',
-  inbox: 'Inbox',
+  board: 'Board',
 }
 
 function startOfDay(d) {
@@ -125,9 +130,16 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // Bumping this on every visit (not just once ever) is what lets the nav
   // badge clear as soon as you open the tab, and what lets InboxView know
   // which answers are new since the *previous* visit rather than the very
-  // first one.
+  // first one. Inbox now lives inside the merged Board tab (BoardView.jsx,
+  // a Pins/Inbox segmented toggle) rather than being its own top-level
+  // tab — keyed on 'board' rather than a finer within-tab section, same
+  // as before there was no sub-navigation to be more precise about; the
+  // badge lived on (and now clears on opening) the tab as a whole either
+  // way, and BoardView already defaults to the Inbox section whenever
+  // there's something unseen, so this fires exactly when a user would
+  // actually see it in practice.
   useEffect(() => {
-    if (activeTab !== 'inbox') return
+    if (activeTab !== 'board') return
     const now = new Date().toISOString()
     localStorage.setItem(INBOX_LAST_VIEWED_KEY, now)
     setInboxLastViewedAt(now)
@@ -541,73 +553,93 @@ export default function TaskBoard({ theme, toggleTheme }) {
     { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
   ]
 
-  const navButtons = TABS.map((tab) => (
-    <button
-      key={tab.key}
-      type="button"
-      className={`task-board-nav-item${activeTab === tab.key ? ' task-board-nav-item-active' : ''}`}
-      onClick={() => handleTabClick(tab.key)}
-    >
-      <span className="task-board-nav-icon">
-        {tab.icon}
-        {tab.key === 'inbox' && hasUnseenInbox && <span className="task-board-nav-item-badge" />}
-      </span>
-      {tab.label}
-    </button>
-  ))
+  // Renders the same TABS/activeTab/badge data through NavItem.jsx at
+  // either mount size — MobileNav's capsule (size="mobile") and the
+  // desktop .header-nav row (size="desktop") each call this rather than
+  // sharing one pre-built array, so the context-specific presentation
+  // lives in NavItem, not stuffed into the TABS data model itself.
+  function renderNavButtons(size) {
+    return TABS.map((tab) => (
+      <NavItem
+        key={tab.key}
+        size={size}
+        active={activeTab === tab.key}
+        icon={tab.icon}
+        label={tab.label}
+        badge={tab.key === 'board' && hasUnseenInbox}
+        onClick={() => handleTabClick(tab.key)}
+      />
+    ))
+  }
 
   return (
-    <div className="task-board">
-      {!isDesktop && <nav className="task-board-nav">{navButtons}</nav>}
+    <div className="max-w-[640px] mx-auto pt-6 px-4 pb-[calc(110px+env(safe-area-inset-bottom,0px))] md:max-w-[1100px] md:p-6">
+      {!isDesktop && (
+        <MobileNav navButtons={renderNavButtons('mobile')}>
+          <NewTaskForm
+            variant="mobile"
+            onCreate={handleCreate}
+            defaultWho={defaultWho}
+            selectedDate={selectedDate}
+            extraActions={quickActions}
+          />
+        </MobileNav>
+      )}
 
-      <div className="task-board-content">
-        <header className="task-board-header">
+      <div className="min-w-0">
+        <header className="mb-4 flex flex-wrap items-center gap-2">
           {activeTab === 'today' && (
-            <div className="month-nav-row">
-              <button
-                type="button"
-                className="month-nav-label month-nav-label-button"
+            <MonthNavRow>
+              <MonthNavLabel
+                className="text-[26px] max-[480px]:text-[22px]"
                 onClick={() => setDatePickerOpen(true)}
                 title="Jump to a date"
               >
-                {monthLabel} <span className="month-nav-caret">{datePickerOpen ? '▴' : '▾'}</span>
-              </button>
-            </div>
+                {monthLabel} <span className="text-[12px] opacity-60">{datePickerOpen ? '▴' : '▾'}</span>
+              </MonthNavLabel>
+            </MonthNavRow>
           )}
-          {activeTab !== 'today' && <h1>{PAGE_LABELS[activeTab]}</h1>}
+          {activeTab !== 'today' && <h1 className="whitespace-nowrap text-[22px]">{PAGE_LABELS[activeTab]}</h1>}
           {/* Nav + account controls grouped together and pinned to the
-              header's right edge as one fixed unit (.header-right-group
-              has margin-left: auto, not the individual pieces) — nav's
+              header's right edge as one fixed unit (this group has
+              margin-left: auto, not the individual pieces) — nav's
               position stays put regardless of how long the title/date on
               the left happens to be, instead of drifting left and right
               as you switch tabs. */}
-          <div className="header-right-group">
-            {isDesktop && <nav className="header-nav">{navButtons}</nav>}
-            <div className="header-actions">
+          <div className="ml-auto flex items-center gap-4">
+            {/* .header-nav's own recipe was just display:flex; gap:4px —
+                its last dependent, so converted directly rather than kept
+                as a literal class. .header-nav itself and the compound
+                .task-board-nav-item* overrides it used to carry (App.css)
+                are now fully orphaned, left in place until a dedicated
+                dead-CSS cleanup pass. */}
+            {isDesktop && <nav className="flex gap-1">{renderNavButtons('desktop')}</nav>}
+            <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-2">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {me?.display_name === 'Ada' && (
-                <button className="icon-button" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
+                <IconButton size="header" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
                   👋
-                </button>
+                </IconButton>
               )}
-              <button className="icon-button" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
+              <IconButton size="header" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
                 ⚙️
-              </button>
+              </IconButton>
             </div>
           </div>
         </header>
 
         {activeTab === 'rentals' && <RentalsView me={me} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
-        {activeTab === 'corkboard' && <CorkBoardView me={me} memberName={memberName} />}
-        {activeTab === 'inbox' && (
-          <InboxView
+        {activeTab === 'board' && (
+          <BoardView
+            me={me}
+            memberName={memberName}
             tasks={tasks}
             meId={session.user.id}
-            memberName={memberName}
             onSelectTask={(task) => setPeekTaskId(task.id)}
             onUpdate={handleUpdate}
             lastViewedAt={inboxLastViewedAt}
+            hasUnseenInbox={hasUnseenInbox}
           />
         )}
 
@@ -620,42 +652,47 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   the same step-forward/back job, but the buttons stay
                   visible everywhere now so the row reads as one complete
                   ‹ Today › cluster on every width, not just desktop. */}
-              <div className="month-nav-arrows">
+              <div className="flex items-center gap-1.5">
+                <IconButton size="weekNav" onClick={() => shiftWeek(-1)} title="Previous week" aria-label="Previous week">
+                  ‹
+                </IconButton>
+                {/* .month-nav-today-button (App.css) is single-consumer —
+                    this is its only usage, always inside .view-mode-row,
+                    so the compact override values (5px/8px padding, 12px
+                    font) are used directly rather than the base 6px/10px/
+                    13px recipe this context always overrides anyway. */}
                 <button
                   type="button"
-                  className="icon-button"
-                  onClick={() => shiftWeek(-1)}
-                  title="Previous week"
-                  aria-label="Previous week"
+                  onClick={resetToToday}
+                  className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-transparent px-2 py-[5px] text-xs font-semibold text-text [font-family:inherit] [line-height:inherit] transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent active:scale-[0.96]"
                 >
-                  ‹
-                </button>
-                <button type="button" className="month-nav-today-button" onClick={resetToToday}>
                   Today
                 </button>
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={() => shiftWeek(1)}
-                  title="Next week"
-                  aria-label="Next week"
-                >
+                <IconButton size="weekNav" onClick={() => shiftWeek(1)} title="Next week" aria-label="Next week">
                   ›
-                </button>
+                </IconButton>
               </div>
 
-              <div className="period-tabs">
+              {/* size="compact": this row also holds the ‹ Today › cluster
+                  and the who-filter, so it uses .view-mode-row's shrunk
+                  sizing rather than a standalone .period-tabs' roomier
+                  default — the only consumer with this override. flex-1
+                  replicates .view-mode-row .period-tabs' own layout rule
+                  (this segment fills the row's remaining space, not a
+                  visual size variant), so it's passed via className
+                  rather than folded into the size prop. */}
+              <PeriodTabs className="flex-1">
                 {VIEW_MODES.map((m) => (
-                  <button
+                  <PeriodTab
                     key={m.key}
-                    type="button"
-                    className={`period-tab${viewMode === m.key ? ' period-tab-active' : ''}`}
+                    size="compact"
+                    active={viewMode === m.key}
                     onClick={() => handleViewModeClick(m.key)}
                   >
                     {m.label}
-                  </button>
+                  </PeriodTab>
                 ))}
-              </div>
+              </PeriodTabs>
 
               <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
                 {WHO_TABS.map((t) => (
@@ -699,7 +736,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 {overdue.length > 0 && (
                   <section>
                     <h2 className="task-section-heading task-section-heading-overdue">Overdue</h2>
-                    <div className="timeline-list">
+                    <div className="flex flex-col">
                       {overdue.map((task, i) => (
                         <TimelineRow
                           key={task.id}
@@ -734,7 +771,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                             meId={session.user.id}
                           />
                         ) : (
-                          <div className="timeline-list">
+                          <div className="flex flex-col">
                             {dTasks.map((task, i) => (
                               <TimelineRow
                                 key={task.id}
@@ -759,7 +796,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
         )}
       </div>
 
-      <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} selectedDate={selectedDate} extraActions={quickActions} />
+      {/* Mobile gets its own instance inside MobileNav (variant="mobile",
+          rendered as a flex sibling of the nav capsule) — this one is
+          desktop-only now, so there's exactly one mounted FAB/menu/modal
+          at a time rather than two independent instances competing on
+          mobile. */}
+      {isDesktop && (
+        <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} selectedDate={selectedDate} extraActions={quickActions} />
+      )}
 
       {datePickerOpen && (
         <DatePickerModal

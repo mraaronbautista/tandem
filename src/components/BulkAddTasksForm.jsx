@@ -10,6 +10,10 @@ import {
   DEFAULT_TIMEZONE,
 } from '../lib/timezone'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import PriorityDot from './PriorityDot'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
@@ -361,34 +365,22 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
 
   return (
     <Modal onClose={onClose}>
-      <form
-        className="submission-modal bulk-add-modal"
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={view === 'add' ? handleSubmit : handleApply}
-      >
+      <ModalCard as="form" modifier="bulk-add-modal" onSubmit={view === 'add' ? handleSubmit : handleApply}>
         <div className="bulk-add-header-row">
           <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
-          <button type="button" className="inbox-mark-read" onClick={() => setExportOpen(true)}>
+          <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h" onClick={() => setExportOpen(true)}>
             Export tasks
           </button>
         </div>
 
-        <div className="period-tabs">
-          <button
-            type="button"
-            className={`period-tab${view === 'add' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('add')}
-          >
+        <PeriodTabs>
+          <PeriodTab active={view === 'add'} onClick={() => setView('add')}>
             Add
-          </button>
-          <button
-            type="button"
-            className={`period-tab${view === 'edit' ? ' period-tab-active' : ''}`}
-            onClick={() => setView('edit')}
-          >
+          </PeriodTab>
+          <PeriodTab active={view === 'edit'} onClick={() => setView('edit')}>
             Edit
-          </button>
-        </div>
+          </PeriodTab>
+        </PeriodTabs>
 
         {view === 'add' ? (
           <>
@@ -449,11 +441,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                                 at the ordinary 'med' default silently, so
                                 a dot on every row would just be noise. */}
                             {t.priority && (
-                              <span
-                                className="task-priority-dot"
-                                style={{ background: PRIORITY_COLOR[t.priority] }}
-                                title={PRIORITY_LABEL[t.priority]}
-                              />
+                              <PriorityDot color={PRIORITY_COLOR[t.priority]} title={PRIORITY_LABEL[t.priority]} />
                             )}
                             <span className="bulk-add-preview-title">{t.title}</span>
                             {t.due_time && (
@@ -534,29 +522,17 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
               <p className="task-notes-empty">No active tasks to edit.</p>
             ) : (
               <>
-                <div className="period-tabs">
-                  <button
-                    type="button"
-                    className={`period-tab${editWhoFilter === 'yours' ? ' period-tab-active' : ''}`}
-                    onClick={() => setEditWhoFilter('yours')}
-                  >
+                <PeriodTabs>
+                  <PeriodTab active={editWhoFilter === 'yours'} onClick={() => setEditWhoFilter('yours')}>
                     {WHO_LABEL.yours}
-                  </button>
-                  <button
-                    type="button"
-                    className={`period-tab${editWhoFilter === 'assistant' ? ' period-tab-active' : ''}`}
-                    onClick={() => setEditWhoFilter('assistant')}
-                  >
+                  </PeriodTab>
+                  <PeriodTab active={editWhoFilter === 'assistant'} onClick={() => setEditWhoFilter('assistant')}>
                     {WHO_LABEL.assistant}
-                  </button>
-                  <button
-                    type="button"
-                    className={`period-tab${editWhoFilter === 'all' ? ' period-tab-active' : ''}`}
-                    onClick={() => setEditWhoFilter('all')}
-                  >
+                  </PeriodTab>
+                  <PeriodTab active={editWhoFilter === 'all'} onClick={() => setEditWhoFilter('all')}>
                     All
-                  </button>
-                </div>
+                  </PeriodTab>
+                </PeriodTabs>
 
                 <div className="bulk-edit-select-row">
                   <span className="submission-field-label">
@@ -564,7 +540,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                   </span>
                   <button
                     type="button"
-                    className="inbox-mark-read"
+                    className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h"
                     onClick={toggleSelectAll}
                     disabled={visibleEditableTasks.length === 0}
                   >
@@ -764,39 +740,36 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
           </>
         )}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {view === 'add' ? (
-            <button type="submit" className="submission-save" disabled={saving || parsedTasks.length === 0}>
+            <SubmissionButton type="submit" variant="primary" disabled={saving || parsedTasks.length === 0}>
               {saving
                 ? 'Creating…'
                 : parsedTasks.length
                   ? `Create ${parsedTasks.length} task${parsedTasks.length === 1 ? '' : 's'}`
                   : 'Create tasks'}
-            </button>
+            </SubmissionButton>
           ) : (
             <>
-              <button
-                type="button"
-                className="submission-delete"
+              <SubmissionButton
+                variant="destructive"
                 onClick={handleDelete}
                 disabled={deleting || applying || !selectedIds.size}
               >
                 {deleting ? 'Deleting…' : `Delete ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
-              </button>
-              <button
+              </SubmissionButton>
+              <SubmissionButton
                 type="submit"
-                className="submission-save"
+                variant="primary"
                 disabled={applying || deleting || !selectedIds.size || !hasFieldToApply}
               >
                 {applying ? 'Applying…' : `Apply to ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
-              </button>
+              </SubmissionButton>
             </>
           )}
-        </div>
-      </form>
+        </SubmissionActions>
+      </ModalCard>
 
       {exportOpen && <TaskExportForm tasks={tasks} onClose={() => setExportOpen(false)} />}
     </Modal>

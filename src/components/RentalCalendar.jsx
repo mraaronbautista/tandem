@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import RentalBookingForm from './RentalBookingForm'
 import RentalBookingDetail from './RentalBookingDetail'
+import RentalButton from './RentalButton'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -116,7 +117,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
   }
 
   return (
-    <div className="rental-calendar">
+    <div>
       <div className="rental-calendar-toolbar">
         {showUnitTabs ? (
           <div className="rental-unit-tabs">
@@ -138,7 +139,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
       </div>
 
       {showUnitHeader && (
-        <div className="rental-unit-header">
+        <div className="mt-3 mb-2 flex items-center text-sm font-semibold text-text-h">
           ${Number(unit.monthly_rent).toLocaleString()}/mo
         </div>
       )}
@@ -248,16 +249,16 @@ const RentalCalendar = forwardRef(function RentalCalendar(
           to it" sitting right after it, rather than floating above
           content you haven't scrolled to yet. */}
       {showAddBooking && (
-        <button
-          type="button"
-          className="rental-add-booking rental-add-booking-primary rental-add-booking-below-grid"
+        <RentalButton
+          variant="primary"
+          className="mt-2.5 max-[900px]:w-full max-[900px]:text-center"
           onClick={() => {
             setPrefillCheckIn(null)
             setFormOpen(true)
           }}
         >
           + Add booking
-        </button>
+        </RentalButton>
       )}
 
       {(formOpen || editingBooking) && (

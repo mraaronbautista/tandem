@@ -29,19 +29,29 @@ export default function DateStrip({ selectedDate, onSelect }) {
   const days = getWeekDays(selectedDate)
 
   return (
-    <div className="date-strip">
-      <div className="date-strip-scroller">
+    <div className="mb-[18px]">
+      <div className="grid grid-cols-7 gap-1">
         {days.map((d) => {
           const selected = isSameDay(d, selectedDate)
           const isToday = isSameDay(d, today)
           return (
             <button
               key={d.toISOString()}
-              className={`date-strip-day${selected ? ' date-strip-day-selected' : ''}${isToday ? ' date-strip-day-today' : ''}`}
+              className="flex cursor-pointer flex-col items-center gap-1 rounded-[12px] border-0 bg-transparent py-1.5 text-text [font:inherit] transition-transform duration-[120ms] ease-tactile active:scale-[0.94]"
               onClick={() => onSelect(startOfDay(d))}
             >
-              <span className="date-strip-weekday">{WEEKDAY[d.getDay()]}</span>
-              <span className="date-strip-number">{d.getDate()}</span>
+              <span className="text-[11px] uppercase opacity-60">{WEEKDAY[d.getDay()]}</span>
+              <span
+                className={`flex h-[30px] w-[30px] items-center justify-center rounded-full border font-semibold text-[15px] ${
+                  selected
+                    ? 'border-transparent bg-accent text-white'
+                    : isToday
+                      ? 'border-accent text-text-h'
+                      : 'border-transparent text-text-h'
+                }`}
+              >
+                {d.getDate()}
+              </span>
             </button>
           )
         })}

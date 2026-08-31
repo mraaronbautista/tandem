@@ -1,6 +1,22 @@
 import { useEffect, useState } from 'react'
 import { createRentalBooking, updateRentalBooking, hasOverlappingBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+
+// Matches .submission-field input[type='text'/'number']/textarea
+// (App.css:1366-1382) — same fix as the other 3 Rental forms. Deliberately
+// does NOT extend to the <select> or type="date" fields below: there's no
+// equivalent established convention for those anywhere in the app (bare
+// `select` only carries the same shared focus-visible rule as bare
+// `input`, same as before this form's text fields were fixed; the only
+// styled <select> patterns that exist, like .who-select, are a visually
+// distinct pill-filter look for a different context, not a general form
+// field). Styling those would be inventing a new look rather than
+// applying an existing one, out of scope for this pass.
+const FIELD_INPUT_CLASS =
+  'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
+const FIELD_TEXTAREA_CLASS = `${FIELD_INPUT_CLASS} min-h-[90px] resize-y`
 
 // 'unspecified' is display-only (see BOOKING_SOURCE_LABEL) — not a real
 // choice here, so it's excluded from the picker itself.
@@ -108,7 +124,7 @@ export default function RentalBookingForm({
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{booking ? 'Edit booking' : 'Add booking'}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -132,6 +148,7 @@ export default function RentalBookingForm({
             placeholder="Who's staying?"
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
@@ -176,6 +193,7 @@ export default function RentalBookingForm({
               placeholder="e.g. neighbor referral, Craigslist"
               value={sourceNote}
               onChange={(e) => setSourceNote(e.target.value)}
+              className={FIELD_INPUT_CLASS}
             />
           </label>
         )}
@@ -187,18 +205,17 @@ export default function RentalBookingForm({
             placeholder="Anything else worth remembering about this booking…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            className={FIELD_TEXTAREA_CLASS}
           />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="submission-save" disabled={saving}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+          <SubmissionButton type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}
-          </button>
-        </div>
-      </form>
+          </SubmissionButton>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }

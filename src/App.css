@@ -66,6 +66,8 @@ select:focus-visible {
 }
 
 /* Login */
+/* UNUSED as of the Login.jsx Tailwind conversion — this complete feature
+   family through .login-mode-toggle below migrated together. */
 .login-screen {
   max-width: 360px;
   margin: 20svh auto 0;
@@ -146,29 +148,39 @@ select:focus-visible {
 }
 
 /* Board */
+/* UNUSED as of the .task-board Tailwind conversion — TaskBoard.jsx's root
+   div is now `max-w-[640px] mx-auto pt-6 px-4
+   pb-[calc(110px+env(safe-area-inset-bottom,0px))] md:max-w-[1100px]
+   md:p-6`, its one and only consumer. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. The bottom-padding comment below still
+   explains the *value* (110px + safe-area), which the Tailwind class
+   reproduces exactly. */
 .task-board {
   max-width: 640px;
   margin: 0 auto;
-  /* Clears both the fixed bottom tab bar (mobile/tablet; see
-     .task-board-nav) *and* the floating "+" FAB (.quick-actions) that
-     sits above it — the FAB's own bottom offset (84px) plus its height
-     (56px, see .fab-new-task) means its top edge reaches 140px up from
-     the viewport bottom, well past a padding that was only ever sized
-     for the nav bar underneath it. Content scrolled all the way down
-     used to end up genuinely covered by the button — not just closely
-     adjacent to it — most visible once a single page (Rentals' merged
-     mobile view, for one) runs long enough to actually reach bottom. */
-  padding: 24px 16px calc(160px + env(safe-area-inset-bottom, 0px));
+  /* Clears MobileNav.jsx's floating capsule + inline FAB (mobile/tablet
+     only — .task-board-nav's old full-width bar is unused now, see its
+     own comment). The FAB used to stack *above* the nav bar (own 84px
+     offset + 56px height, reaching 140px up); now it sits inline beside
+     the capsule instead, so the tallest element in the row (the 56px FAB)
+     plus the nav's own bottom padding is the real footprint — smaller
+     than before, but still measured generously so a long list's last item
+     (e.g. Rentals' merged mobile view) doesn't end up hidden behind it. */
+  padding: 24px 16px calc(110px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Today / Rentals / Reports / Cork Board — a fixed bottom bar, mobile
-   only now. Desktop used to mirror this as a sticky left sidebar (one
-   nav, two layouts via CSS, the pattern Modal.jsx still uses for its own
-   mobile/desktop split); it's since moved inline into .task-board-header
-   instead (.header-nav below), reusing these same .task-board-nav-item
-   buttons via a descendant selector rather than a parallel class, so
-   this block is mobile's rendering only — TaskBoard.jsx doesn't even
-   mount <nav className="task-board-nav"> above the 900px breakpoint. */
+/* UNUSED as of the mobile nav redesign — TaskBoard.jsx now renders
+   MobileNav.jsx (a2-inspired floating capsule) below 900px instead of
+   this bar. Kept, not deleted, until every consumer of this class is
+   confirmed gone and the replacement is visually verified (see
+   MIGRATION_PLAN.md's "don't delete legacy CSS" rule) — .task-board-
+   nav-item/-icon/-item-badge below are ALSO now unused, superseded by
+   NavItem.jsx (see its own header comment just above that block).
+   Original comment, for history: a fixed bottom bar, mobile only.
+   Desktop used to mirror this as a sticky left sidebar (one nav, two
+   layouts via CSS, the pattern Modal.jsx still uses for its own
+   mobile/desktop split); it's since moved inline into
+   .task-board-header instead (.header-nav below). */
 .task-board-nav {
   position: fixed;
   left: 0;
@@ -196,6 +208,15 @@ select:focus-visible {
   }
 }
 
+/* UNUSED as of the nav-item Tailwind migration — TaskBoard.jsx's
+   renderNavButtons() now renders NavItem.jsx (mobile/desktop size
+   variants) instead of this literal class family, at both mount sizes.
+   Kept, not deleted, until this batch is visually verified (same "don't
+   delete legacy CSS" rule as .task-board-nav above) — the .header-nav
+   .task-board-nav-item* compound overrides below are unused for the same
+   reason, and .header-nav itself (below) is now unused too, since its
+   last dependent was converted straight to Tailwind (flex gap-1) rather
+   than kept as a literal class. */
 .task-board-nav-item {
   flex: 1;
   display: flex;
@@ -258,6 +279,9 @@ select:focus-visible {
 /* No sidebar to seat beside .task-board-content anymore (see .header-nav
    below) — just a wider centered single column. */
 @media (min-width: 900px) {
+  /* UNUSED — see the .task-board comment above (line 149-ish); its
+     desktop override moved to the md:max-w-[1100px] md:p-6 utilities on
+     the same className. */
   .task-board {
     max-width: 1100px;
     padding: 24px 24px 24px;
@@ -303,6 +327,12 @@ select:focus-visible {
   margin-left: auto;
 }
 
+/* UNUSED as of the .header-nav Tailwind conversion — TaskBoard.jsx's
+   desktop nav wrapper is now a plain `flex gap-1` (Tailwind's spacing
+   scale gap-1 = 4px, matching the gap value below exactly), its one and
+   only consumer. Kept, not deleted, until a dedicated dead-CSS cleanup
+   pass — see the .task-board-nav-item comment above for the same
+   reasoning applied to the compound overrides just below. */
 .header-nav {
   display: flex;
   gap: 4px;
@@ -326,6 +356,8 @@ select:focus-visible {
   font-size: 16px;
 }
 
+/* INTENTIONALLY RETAINED with PullToRefresh's gesture math: measured height,
+   threshold progress and spinner animation form one behavior contract. */
 .pull-to-refresh-indicator {
   display: flex;
   align-items: center;
@@ -474,6 +506,8 @@ select:focus-visible {
   -webkit-appearance: none;
 }
 
+/* INTENTIONALLY RETAINED shared semantic/status primitives — used across
+   many unrelated components; one centralized rule is the better abstraction. */
 .error {
   color: var(--overdue);
 }
@@ -594,10 +628,13 @@ select:focus-visible {
   flex-direction: column;
 }
 
-/* Lines up with .timeline-dot-end below — both this margin and the
-   connector's height are the same 28px, so the two independently-flowing
-   columns (time labels, rail dots) land at a matching vertical offset
-   for the end point without needing to share layout machinery. */
+/* Lines up with the rail's end dot (TimelineRow.jsx, mt-[15px]/mt-0 on
+   each dot directly — .timeline-dot/.timeline-dot-end, which used to
+   define this, were removed as fully orphaned once that component's own
+   conversion to Tailwind utilities replaced them) — both this margin and
+   the connector's height are the same 28px, so the two independently-
+   flowing columns (time labels, rail dots) land at a matching vertical
+   offset for the end point without needing to share layout machinery. */
 .timeline-time-end {
   margin-top: 28px;
 }
@@ -608,22 +645,6 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.timeline-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  /* background set inline per-task from PRIORITY_COLOR */
-  margin-top: 15px;
-}
-
-/* Follows directly after .timeline-span-connector, which already
-   supplies the vertical gap — the 15px .timeline-dot margin above only
-   exists to offset the *first* dot down from the row's top edge. */
-.timeline-dot-end {
-  margin-top: 0;
 }
 
 .timeline-span-connector {
@@ -664,6 +685,10 @@ select:focus-visible {
    side-by-side columns rather than just carrying an "⚠ Overlap" badge
    with nothing visually linking them. Not used by Week mode's 7
    day-sections, which keep the flat .timeline-list/TimelineRow layout. */
+/* INTENTIONALLY RETAINED as one behavior-sensitive timeline system. Its
+   measured positioning, overlap/truncation states, hour grid, checkbox and
+   badge context overrides must evolve together; splitting these into per-node
+   utilities would obscure rather than reduce the layout contract. */
 .day-timeline-wrap {
   display: flex;
   flex-direction: column;
@@ -939,6 +964,9 @@ select:focus-visible {
   transform: none;
 }
 
+/* INTENTIONALLY RETAINED shared expandable-card root. Peek, editing, hover,
+   pressed and modal contexts all override this literal hook; TaskRow's safe
+   internal presentation has migrated to Tailwind. */
 .task-row {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -961,6 +989,9 @@ select:focus-visible {
   transform: translateY(0);
 }
 
+/* UNUSED as of TaskRow.jsx's safe presentation-layer Tailwind conversion —
+   through .task-completed-at below. The live .task-row card root and shared
+   badge/checkbox abstractions remain intentionally CSS. */
 .task-row-done .task-title {
   text-decoration: line-through;
   opacity: 0.55;
@@ -1063,6 +1094,9 @@ select:focus-visible {
 }
 
 /* Date strip — horizontal day picker, Structured-style */
+/* UNUSED as of the DateStrip.jsx Tailwind conversion — this complete
+   seven-day picker family through the selected state below migrated
+   together. */
 .date-strip {
   margin-bottom: 18px;
 }
@@ -1138,6 +1172,9 @@ select:focus-visible {
    the grid itself risked clipping actual weeks off a taller month
    (5-6 rows) instead of just rounding a corner. Square corners, plain
    border, no clipping risk. */
+/* INTENTIONALLY RETAINED as one behavior-sensitive month-grid system. Cell
+   sizing, desktop/mobile density, task-chip truncation, selected/today states,
+   and the swipe hit area are structurally coupled. */
 .month-view-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1280,6 +1317,8 @@ select:focus-visible {
   }
 }
 
+/* UNUSED as of TaskRow.jsx's safe detail-layer Tailwind conversion — through
+   .task-meta below. Shared .task-notes-empty remains live app-wide. */
 .task-row-details {
   margin-top: 10px;
   padding-top: 10px;
@@ -1314,6 +1353,9 @@ select:focus-visible {
    header row — .submission-modal's own flex column already spaces this
    row from the tabs below it, so only the row's own internal layout
    needs setting here. */
+/* INTENTIONALLY RETAINED as the cohesive Bulk Add/Edit form system. Its modal
+   descendant selectors, preview/error lists, selection state, and responsive
+   multi-field editor are tightly coupled and remain clearer in shared CSS. */
 .bulk-add-header-row {
   display: flex;
   align-items: center;
@@ -1349,6 +1391,7 @@ select:focus-visible {
 /* Overrides .submission-modal label's default flex-stretch (every other
    field in these forms wants full-width, but a full-width color swatch
    would read as an odd stretched bar rather than a compact picker). */
+/* UNUSED as of the RentalPropertyForm.jsx Tailwind conversion. */
 .rental-property-color-input {
   align-self: flex-start;
   width: 60px;
@@ -1414,6 +1457,8 @@ select:focus-visible {
    .bulk-add-modal's own input textarea (280px/480px vs. 120px/240px)
    since this is the modal's one and only field, meant to be scanned as
    a whole list rather than glanced at alongside several other fields. */
+/* UNUSED as of the TaskExportForm.jsx Tailwind conversion — the textarea
+   and include-completed label migrated together. */
 .task-export-textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
@@ -1754,6 +1799,8 @@ select:focus-visible {
   min-height: 70px;
 }
 
+/* UNUSED as of the EndOfDayReportForm.jsx Tailwind conversion — this
+   complete compact time-input family migrated together. */
 .hours-minutes-row {
   display: flex;
   align-items: center;
@@ -1802,6 +1849,8 @@ select:focus-visible {
   opacity: 0.85;
 }
 
+/* UNUSED as of the EodReportsList.jsx Tailwind conversion — this complete
+   contiguous family through .eod-report-meta below migrated together. */
 .eod-reports-list {
   display: flex;
   flex-direction: column;
@@ -1857,6 +1906,7 @@ select:focus-visible {
   margin-bottom: 4px;
 }
 
+/* UNUSED as of the PrioritiesForm.jsx Tailwind conversion. */
 .priorities-last-set-list {
   margin: 0 0 4px;
   padding-left: 20px;
@@ -1867,12 +1917,16 @@ select:focus-visible {
   gap: 2px;
 }
 
+/* UNUSED as of the PriorityItemsEditor.jsx Tailwind conversion. */
 .priority-who-toggle {
   border: none;
   cursor: pointer;
   font: inherit;
 }
 
+/* INTENTIONALLY RETAINED shared attachment system. Draft/saved files, images,
+   removers, uploads, TaskRow, clarifications and reports all consume the same
+   responsive thumbnail/pill contract. */
 .task-submission-attachments {
   display: flex;
   flex-direction: column;
@@ -2078,6 +2132,26 @@ a.task-submission-file-link:hover {
   font-weight: 600;
 }
 
+/* BoardView.jsx renders this above CorkBoardView/InboxView rather than
+   inside a shared .tab-panel — each of those already wraps itself in its
+   own .tab-panel (App.css's usual inter-section .tab-panel gap doesn't
+   apply here), so the switcher needs its own bottom margin matching that
+   same rhythm, or it'd sit flush against whichever section is active. */
+.board-section-tabs {
+  /* No horizontal margin — .task-board's own 16px padding already insets
+     everything in .task-board-content, same as .tab-panel's children get
+     no horizontal margin of their own for the same reason. */
+  margin: 0 0 12px;
+}
+
+@media (max-width: 480px) {
+  .board-section-tabs {
+    margin-bottom: 16px;
+  }
+}
+
+/* UNUSED as of the SettingsMenu.jsx Tailwind conversion — this complete
+   family through .settings-menu-item-danger below migrated together. */
 .settings-menu-account {
   margin-top: -6px;
   font-size: 13px;
@@ -2156,6 +2230,8 @@ a.task-submission-file-link:hover {
    scroll container (max-height: 88vh on mobile, where it's a slide-up
    sheet). A second nested scroll box here squeezed the section list into
    a small cramped area instead of letting the sheet itself grow. */
+/* UNUSED as of the HowToGuide.jsx Tailwind conversion — this complete
+   accordion family through .how-to-guide-tip below migrated together. */
 .how-to-guide-list {
   display: flex;
   flex-direction: column;
@@ -2248,6 +2324,8 @@ a.task-submission-file-link:hover {
 /* No margin-top here anymore — this now renders inside
    .clarification-compose-left (see TaskClarifications.jsx's extraActions
    prop) alongside the Attach button, not as its own block below. */
+/* UNUSED as of TaskRow.jsx's action-row Tailwind conversion — through
+   .task-delete below. */
 .task-row-actions {
   display: flex;
   gap: 8px;
@@ -2296,6 +2374,9 @@ a.task-submission-file-link:hover {
 }
 
 /* New task form */
+/* INTENTIONALLY RETAINED speed-dial positioning system: fixed desktop and
+   inline mobile variants plus the absolute pop-up menu form one structural
+   contract with MobileNav. */
 .quick-actions {
   position: fixed;
   right: 20px;
@@ -2314,6 +2395,37 @@ a.task-submission-file-link:hover {
   .quick-actions {
     bottom: 24px;
   }
+}
+
+/* Mobile-only variant (NewTaskForm.jsx variant="mobile"), rendered as a
+   flex sibling of the nav capsule inside MobileNav.jsx instead of an
+   independently `fixed` element — MobileNav's own <nav> is already fixed
+   to the viewport, so this only needs to behave like a normal flex child
+   within it (position: relative, not .quick-actions' fixed, so the menu
+   override below can anchor to it). flex: none keeps it from being
+   squeezed if the capsule ever needs more room than the row has.
+
+   .quick-actions-menu's own rule (column flex, no positioning of its own)
+   relies on .quick-actions being the fixed-positioned box the menu stacks
+   inside — inline's parent is a plain flex row instead, so without the
+   absolute-position override below, an open menu would grow the row's
+   height and shift the FAB sideways rather than popping up above it. */
+.quick-actions-inline {
+  /* .quick-actions' own right/bottom offsets (20px / 84px+safe-area) are
+     meant for position: fixed — left in place here, they'd still shift
+     this relatively-positioned element away from its normal flex-row
+     spot by that same amount instead of sitting inline with the capsule,
+     so both need clearing explicitly, not just the position value. */
+  position: relative;
+  right: auto;
+  bottom: auto;
+  flex: none;
+}
+
+.quick-actions-inline .quick-actions-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
 }
 
 .fab-new-task {
@@ -2375,6 +2487,9 @@ a.task-submission-file-link:hover {
   font-size: 16px;
 }
 
+/* INTENTIONALLY RETAINED task-form/modal contract. The literal root is used by
+   Modal's desktop sizing, mobile slide-up animation, editing state, and scoped
+   direct-child field rules; converting it piecemeal would break that contract. */
 .new-task-form {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -2390,6 +2505,9 @@ a.task-submission-file-link:hover {
 /* Popup for + New task: desktop gets a centered modal, narrow screens get
    a bottom sheet that slides up — the card itself (.new-task-form) supplies
    the visual chrome, the backdrop just positions and dims. */
+/* INTENTIONALLY RETAINED application-wide modal positioning system. Portal
+   backdrop, focus-managed modal variants, desktop caps, mobile bottom-sheet
+   animation and literal modifier hooks are deliberately centralized here. */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -2611,6 +2729,9 @@ label.new-task-checkbox-label {
    native <select>'s unstylable popover. Opens via the shared Modal
    overlay (see .scroll-select-modal in the modal sizing rules above)
    instead of an absolutely-positioned panel. */
+/* UNUSED as of the ScrollSelect.jsx Tailwind conversion — trigger, list,
+   option, hover, and selected-state rules migrated together. The live
+   .scroll-select-modal sizing hook remains intentionally in CSS. */
 .scroll-select-trigger {
   width: 100%;
   padding: 7px 8px;
@@ -2661,6 +2782,9 @@ label.new-task-checkbox-label {
 }
 
 /* Checklist — editor (inside the task form) */
+/* UNUSED as of the shared ChecklistEditor/ChecklistView/PriorityItemsEditor
+   Tailwind conversion — this complete family through
+   .checklist-view-blocked below migrated together. */
 .checklist-editor-items {
   display: flex;
   flex-direction: column;
@@ -2940,6 +3064,9 @@ label.new-task-checkbox-label {
   }
 }
 
+/* UNUSED as of the DatePickerModal.jsx Tailwind conversion — this complete
+   internal grid family through .date-picker-day-selected below migrated
+   together. The live date-picker-modal sizing modifier remains CSS. */
 .date-picker-modal-header {
   display: flex;
   align-items: center;
@@ -2989,6 +3116,9 @@ label.new-task-checkbox-label {
   color: #fff;
 }
 
+/* INTENTIONALLY RETAINED cross-component Rentals toolbar/overview contract.
+   These ancestor selectors control the embedded desktop card grid and must
+   remain coupled to RentalOverview's live list/item hooks. */
 .rental-calendar-toolbar {
   display: flex;
   gap: 8px;
@@ -2997,16 +3127,25 @@ label.new-task-checkbox-label {
   justify-content: space-between;
 }
 
-/* auto-fit + minmax rather than flex-wrap — it packs as many equal-width
-   120px+ columns as actually fit, so 4 units settle into a neat 2x2 grid
-   on a narrow mobile toolbar (where flex-wrap previously stretched each
-   wrapped tab to the full row width, stacking 4 heavy full-width bars)
-   and spread evenly across the row on a wide desktop toolbar (where
-   flex-wrap previously left tabs hugging their own text width with
-   empty space after them) — one rule handles both without a breakpoint.
-   flex-basis: 100% always claims the whole toolbar row for itself —
-   sharing a row with "+ Add booking" (the flex-wrap default) made the
-   grid resolve its column count against whatever scraps of width were
+/* UNUSED — not just superseded, actually unreachable: RentalCalendar.jsx
+   defaults showUnitTabs to true, but its only real caller (RentalsView.jsx,
+   both the desktop and mobile branches) always passes showUnitTabs={false},
+   so this branch's <div className="rental-unit-tabs"> never renders in the
+   current app. The prop/JSX branch itself is left alone (an intentional
+   escape hatch in the component's own API, not a CSS concern) — only this
+   CSS, .rental-unit-tab/-active/:active below, and their mobile shrink
+   block (including .rental-unit-tab .rental-unit-dot) are confirmed dead.
+   Kept, not deleted, until a dedicated dead-CSS cleanup pass.
+   Original comment, for history: auto-fit + minmax rather than flex-wrap —
+   it packs as many equal-width 120px+ columns as actually fit, so 4 units
+   settle into a neat 2x2 grid on a narrow mobile toolbar (where flex-wrap
+   previously stretched each wrapped tab to the full row width, stacking 4
+   heavy full-width bars) and spread evenly across the row on a wide
+   desktop toolbar (where flex-wrap previously left tabs hugging their own
+   text width with empty space after them) — one rule handles both without
+   a breakpoint. flex-basis: 100% always claims the whole toolbar row for
+   itself — sharing a row with "+ Add booking" (the flex-wrap default) made
+   the grid resolve its column count against whatever scraps of width were
    left over, wrapping unit tabs unevenly. Forcing full width gives the
    grid the same predictable width on every screen size, and drops
    "+ Add booking" to its own line below rather than fighting for space. */
@@ -3018,6 +3157,7 @@ label.new-task-checkbox-label {
   min-width: 140px;
 }
 
+/* UNUSED — see .rental-unit-tabs above. */
 .rental-unit-tab {
   display: flex;
   align-items: center;
@@ -3034,20 +3174,25 @@ label.new-task-checkbox-label {
   transition: transform var(--dur-fast) var(--ease-tactile), background var(--dur-base) var(--ease-tactile);
 }
 
+/* UNUSED — see .rental-unit-tabs above. */
 .rental-unit-tab:active {
   transform: scale(0.97);
 }
 
+/* UNUSED — see .rental-unit-tabs above. */
 .rental-unit-tab-active {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
 }
 
-/* As small as this can reasonably go — this row only ever renders on
-   mobile now (the desktop dashboard suppresses it entirely via
-   showUnitTabs={false}, replaced there by the sidebar list + combined
-   nav row), so there's no wide-screen case to keep it legible for. */
+/* UNUSED — see .rental-unit-tabs above.
+   Original comment, for history (now inaccurate — mobile doesn't render
+   this either, see the corrected note above): as small as this can
+   reasonably go — this row only ever renders on mobile now (the desktop
+   dashboard suppresses it entirely via showUnitTabs={false}, replaced
+   there by the sidebar list + combined nav row), so there's no wide-screen
+   case to keep it legible for. */
 @media (max-width: 899px) {
   .rental-unit-tabs {
     grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
@@ -3067,17 +3212,26 @@ label.new-task-checkbox-label {
     margin-right: 0;
   }
 
-  /* "+ Add booking" sits below the calendar grid on mobile (see
-     .rental-add-booking-below-grid) rather than in this toolbar — the
-     toolbar itself renders empty here (unit tabs are hidden, Overview's
-     cards are the unit-switcher instead — see RentalsView.jsx), so
-     nothing else needs styling in this block for that case. */
+  /* UNUSED — see .rental-add-booking below. RentalCalendar.jsx's below-
+     grid button now carries this responsively directly on its own
+     className (`max-[900px]:w-full max-[900px]:text-center` — note the
+     900px, not 899px: Tailwind's max-[N] variant means width < N, so
+     matching this rule's inclusive `max-width: 899px` needs N+1, not the
+     original rule's own literal number), not this class. */
   .rental-add-booking-below-grid {
     width: 100%;
     text-align: center;
   }
 }
 
+/* Still live — RentalButton.jsx now covers RentalsView.jsx,
+   RentalCalendar.jsx, RentalFinancials.jsx, and RentalSavingsGoal.jsx,
+   but VaultView.jsx (2 usages) still renders this literal class
+   directly. Deliberately left there, not migrated to RentalButton —
+   VaultView isn't part of the Rentals feature, so importing a
+   Rental-named component into it would be a misleading dependency, even
+   though the visual result would match exactly. So this base rule is NOT
+   unused, only its two modifiers below are. */
 .rental-add-booking {
   padding: 8px 14px;
   border-radius: 8px;
@@ -3089,11 +3243,16 @@ label.new-task-checkbox-label {
   white-space: nowrap;
 }
 
-/* .rental-add-booking is reused for several plain actions in this
-   toolbar (Edit unit, + Add unit, Export…) — this modifier singles out
-   "+ Add booking" specifically, the one actually used every time this
-   view is opened, with the same filled-accent look .submission-save
-   already uses for a form's primary action. */
+/* UNUSED as of the RentalButton.jsx extraction — RentalsView.jsx and
+   RentalCalendar.jsx's primary-look buttons now render
+   RentalButton variant="primary" instead. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass.
+   Original comment, for history: .rental-add-booking is reused for
+   several plain actions in this toolbar (Edit unit, + Add unit,
+   Export…) — this modifier singles out "+ Add booking" specifically,
+   the one actually used every time this view is opened, with the same
+   filled-accent look .submission-save already uses for a form's primary
+   action. */
 .rental-add-booking-primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -3101,14 +3260,18 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 
-/* RentalCalendar.jsx's own "+ Add booking" (mobile only — see the
-   caller-side showAddBooking prop) sits right after .rental-month-grid
-   as a plain block-level sibling, not inside the flex toolbar above the
-   grid — needs its own top spacing since nothing else provides it here. */
+/* UNUSED as of the RentalButton.jsx extraction — RentalCalendar.jsx's own
+   "+ Add booking" now carries this spacing directly on its own
+   className (`mt-2.5`), not this class. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-add-booking-below-grid {
   margin-top: 10px;
 }
 
+/* UNUSED as of the Rentals shell Tailwind conversion — RentalCalendar.jsx
+   now renders `mt-3 mb-2 flex items-center text-sm font-semibold
+   text-text-h`, its one and only consumer. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-unit-header {
   display: flex;
   align-items: center;
@@ -3126,6 +3289,9 @@ label.new-task-checkbox-label {
   margin-right: 6px;
 }
 
+/* INTENTIONALLY RETAINED Rentals booking-calendar rendering system. Booking
+   continuity, cell status, dynamic colors, month boundaries and responsive
+   density are behavior-sensitive and remain a deliberate CSS abstraction. */
 .rental-month-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -3223,11 +3389,15 @@ label.new-task-checkbox-label {
    arbitrary flat cap needed. Mobile (below the breakpoint) was never
    affected by this rule either way. */
 
-/* Rentals desktop dashboard (RentalsView.jsx, only ever rendered once
-   useMediaQuery('(min-width: 900px)') is true — see useMediaQuery.js —
-   so this isn't wrapped in its own media query, the JS gating already
-   handles that). Calendar, its unit-status Overview below it, and
-   financials all mounted and visible together, no tab-switching. */
+/* UNUSED as of the Rentals shell Tailwind conversion — RentalsView.jsx's
+   desktop dashboard root is now `grid grid-cols-[1fr_340px] items-start
+   gap-6`, its one and only consumer. Kept, not deleted, until a dedicated
+   dead-CSS cleanup pass.
+   Original comment, for history: Rentals desktop dashboard (RentalsView.jsx,
+   only ever rendered once useMediaQuery('(min-width: 900px)') is true — see
+   useMediaQuery.js — so this isn't wrapped in its own media query, the JS
+   gating already handles that). Calendar, its unit-status Overview below
+   it, and financials all mounted and visible together, no tab-switching. */
 .rentals-dashboard {
   display: grid;
   grid-template-columns: 1fr 340px;
@@ -3235,6 +3405,8 @@ label.new-task-checkbox-label {
   align-items: start;
 }
 
+/* UNUSED — see .rentals-dashboard above. Now `flex min-w-0 flex-col
+   gap-3`. */
 .rentals-main {
   display: flex;
   flex-direction: column;
@@ -3242,12 +3414,14 @@ label.new-task-checkbox-label {
   min-width: 0;
 }
 
-/* One flat row — month nav, then the unit name + its actions — rather
-   than two separate .month-nav-row blocks stacked on their own lines.
-   Two nested rows used to wrap as whole blocks below ~1000px-ish main-
-   column widths even with room to spare for individual items; flattened
-   so wrapping (still kept for genuinely narrow cases) happens per-item
-   instead. */
+/* UNUSED — see .rentals-dashboard above. Now `flex flex-wrap items-center
+   gap-3.5`.
+   Original comment, for history: one flat row — month nav, then the unit
+   name + its actions — rather than two separate .month-nav-row blocks
+   stacked on their own lines. Two nested rows used to wrap as whole blocks
+   below ~1000px-ish main-column widths even with room to spare for
+   individual items; flattened so wrapping (still kept for genuinely narrow
+   cases) happens per-item instead. */
 .rentals-combined-nav {
   display: flex;
   align-items: center;
@@ -3259,10 +3433,13 @@ label.new-task-checkbox-label {
    follow it — the unit name label used to sit here and carry this
    margin, but was dropped as redundant (the selected unit is already
    clear from the highlighted row in the unit list below). */
+/* UNUSED as of the RentalsView.jsx Tailwind conversion — its single
+   desktop navigation consumer now carries `ml-2.5`. */
 .rentals-combined-nav-unit {
   margin-left: 10px;
 }
 
+/* UNUSED — see .rentals-dashboard above. Now `flex flex-col gap-3`. */
 .rentals-financials-col {
   display: flex;
   flex-direction: column;
@@ -3342,10 +3519,15 @@ label.new-task-checkbox-label {
   margin-top: 5px;
 }
 
-/* Present wherever a unit row gets a sibling control beside the card
-   itself — mobile's standalone Overview tab gets both Edit and the
-   negotiating toggle; the desktop toolbar reuse of this same list gets
-   just the toggle (no Edit button there) — see RentalOverview.jsx. */
+/* UNUSED as of the RentalOverview.jsx Tailwind conversion — now
+   `flex items-stretch gap-1.5`, computed inline in JSX rather than a
+   literal class since it's conditional (onEditUnit ? ... : undefined).
+   Kept, not deleted, until a dedicated dead-CSS cleanup pass.
+   Original comment, for history: present wherever a unit row gets a
+   sibling control beside the card itself — mobile's standalone Overview
+   tab gets both Edit and the negotiating toggle; the desktop toolbar
+   reuse of this same list gets just the toggle (no Edit button there) —
+   see RentalOverview.jsx. */
 .rental-overview-row {
   display: flex;
   align-items: stretch;
@@ -3370,6 +3552,14 @@ label.new-task-checkbox-label {
    its own. Amber rather than the app's usual accent gold, so it doesn't
    get visually confused with .rental-overview-item-selected's own
    accent border on the same card. */
+/* UNUSED, through .rental-negotiating-toggle-on below — as of the
+   RentalOverview.jsx Tailwind conversion, computed as
+   negotiatingToggleClasses (mutually-exclusive on/off state, same
+   discipline as NavItem.jsx/PeriodTab.jsx). The split --dur-fast
+   (transform) / --dur-base (everything else) transition collapsed to one
+   uniform 120ms, same documented compromise ThemeToggle.jsx/
+   WorkingStatusToggle.jsx already use. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-negotiating-toggle {
   position: absolute;
   top: 50%;
@@ -3407,6 +3597,9 @@ label.new-task-checkbox-label {
   opacity: 1;
 }
 
+/* UNUSED, through .rental-overview-status below — as of the
+   RentalOverview.jsx Tailwind conversion. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-overview-name {
   font-weight: 600;
   color: var(--text-h);
@@ -3493,6 +3686,10 @@ label.new-task-checkbox-label {
   font-size: 12px;
 }
 
+/* UNUSED, through .rental-overview-status-vacant below — as of the
+   RentalOverview.jsx Tailwind conversion (combined inline with
+   .rental-overview-status above per usage, since both migrated together).
+   Kept, not deleted, until a dedicated dead-CSS cleanup pass. */
 .rental-overview-status-occupied {
   opacity: 1;
   color: var(--text-h);
@@ -3502,12 +3699,22 @@ label.new-task-checkbox-label {
   opacity: 0.5;
 }
 
+/* UNUSED as of the RentalFinancials.jsx Tailwind conversion — its root
+   div is now `flex flex-col gap-3`. Note this file's other classes are
+   interleaved below with RentalSavingsGoal.jsx's and
+   RentalBookingDetail.jsx's own (untouched) CSS, not contiguous — each
+   migrated rule below is marked individually, don't assume a whole block
+   is covered by one comment. Kept, not deleted, until a dedicated
+   dead-CSS cleanup pass. */
 .rental-financials {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+/* UNUSED as of the RentalSavingsGoal.jsx Tailwind conversion — this
+   complete savings-card family through .rental-savings-amounts below
+   migrated together (the edit rule was already unused). */
 .rental-savings-list {
   display: flex;
   flex-direction: column;
@@ -3530,6 +3737,11 @@ label.new-task-checkbox-label {
   margin-bottom: 8px;
 }
 
+/* UNUSED as of the RentalOverview.jsx Tailwind conversion — both
+   consumers (RentalOverview.jsx and RentalSavingsGoal.jsx) now render
+   `cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold
+   text-accent`. Kept, not deleted, until a dedicated dead-CSS cleanup
+   pass. */
 .rental-savings-edit {
   background: none;
   border: none;
@@ -3561,6 +3773,10 @@ label.new-task-checkbox-label {
   opacity: 0.8;
 }
 
+/* UNUSED as of the RentalFinancials.jsx Tailwind conversion — through
+   .rental-deficit below (this contiguous run only; RentalBookingDetail.jsx's
+   unrelated classes start again right after). See .rental-financials
+   above. */
 .rental-financials-summary {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -3592,6 +3808,9 @@ label.new-task-checkbox-label {
   color: #dc2626;
 }
 
+/* UNUSED as of the RentalBookingDetail.jsx Tailwind conversion — its one
+   consumer now carries this exact badge recipe directly. Kept, not deleted,
+   until a dedicated dead-CSS cleanup pass. */
 .rental-pending-badge {
   display: inline-block;
   align-self: flex-start;
@@ -3603,26 +3822,31 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-guest {
   font-size: 17px;
   font-weight: 600;
   color: var(--text-h);
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-dates {
   opacity: 0.75;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-source {
   font-size: 13px;
   opacity: 0.65;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-charge {
   font-size: 13px;
   opacity: 0.65;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-notes {
   font-size: 14px;
   white-space: pre-wrap;
@@ -3631,6 +3855,10 @@ label.new-task-checkbox-label {
   border-top: 1px solid var(--border);
 }
 
+/* UNUSED as of the SubmissionActions/SubmissionButton migration — repo-wide
+   verification found no JSX consumers of either legacy destructive class.
+   RentalBookingDetail.jsx already uses variant="destructive". Kept, not
+   deleted, until a dedicated dead-CSS cleanup pass. */
 .submission-actions button.rental-delete-booking,
 .submission-actions button.submission-delete {
   background: #dc2626;
@@ -3639,6 +3867,13 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 
+/* UNUSED as of the RentalFinancials.jsx Tailwind conversion — through
+   .rental-financials-subheading-chevron below. See .rental-financials
+   above. Note the toggle button's own `font: inherit` here silently
+   overrides this rule's font-size for the two toggle buttons (cascade
+   order, not JSX class order) — real behavior the Tailwind replacement
+   had to replicate with an explicit [font-size:inherit], not a literal
+   text-[13px], confirmed via computed-style diff. */
 .rental-financials-subheading {
   font-size: 13px;
   opacity: 0.6;
@@ -3678,6 +3913,13 @@ label.new-task-checkbox-label {
   opacity: 1;
 }
 
+/* UNUSED, this whole contiguous run through .rental-fill-next-badge
+   below (the rest of App.css from here to that point is entirely
+   RentalFinancials.jsx's own domain, no other component's classes
+   interleaved) — as of the RentalFinancials.jsx Tailwind conversion.
+   .rental-unit-dot (used throughout via inline style={{background}}) is
+   the one exception, kept as CSS deliberately per its own earlier audit,
+   not part of this migration. See .rental-financials above. */
 .rental-expense-row,
 /* Wraps .rental-unit-status-row plus the .rental-unit-availability line
    below it — vertical spacing lives here now instead of on the row
@@ -3744,7 +3986,12 @@ label.new-task-checkbox-label {
 
 /* .rental-expense-row is a <button> (opens RentalExpenseForm to edit)
    rather than a plain <div> — reset button chrome so it reads
-   identically, same reasoning as .rental-overview-item. */
+   identically, same reasoning as .rental-overview-item. Same font:
+   inherit cascade note as .rental-financials-subheading-toggle above —
+   this rule's own font: inherit overrides .rental-expense-row's
+   font-size:14px, so the real rendered size is inherited (16px), which
+   the Tailwind replacement matches via [font-size:inherit], not
+   text-sm. */
 .rental-expense-row-editable {
   width: 100%;
   border: none;
@@ -3798,6 +4045,9 @@ label.new-task-checkbox-label {
 
 /* Vault */
 
+/* INTENTIONALLY RETAINED Vault shared primitives: warnings, responsive copy
+   controls and password rows are reused across setup, unlock, entry and export
+   flows and encode useful responsive behavior centrally. */
 .vault-warning {
   border: 1px solid var(--overdue);
   border-radius: 8px;
@@ -3807,6 +4057,8 @@ label.new-task-checkbox-label {
   background: color-mix(in srgb, var(--overdue) 10%, transparent);
 }
 
+/* UNUSED as of the VaultView.jsx Tailwind conversion — its single consumer
+   now carries this exact link-button recipe directly. */
 .vault-forgot-link {
   align-self: center;
   margin-top: 8px;
@@ -3818,11 +4070,15 @@ label.new-task-checkbox-label {
   text-decoration: underline;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — its single
+   consumer now renders `flex gap-2`. Kept, not deleted, until cleanup. */
 .vault-toolbar {
   display: flex;
   gap: 8px;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — both list
+   consumers now carry the same flex-column recipe directly. */
 .vault-entry-list {
   display: flex;
   flex-direction: column;
@@ -3834,6 +4090,8 @@ label.new-task-checkbox-label {
    looks exactly like the plain flat list above. Same shape as
    .eod-report-month/-header/-count/-items, vault-specific classes since
    the two features aren't otherwise related. */
+/* UNUSED as of the VaultView.jsx Tailwind conversion — its single consumer
+   now renders `flex flex-col gap-2`. */
 .vault-folder-list {
   display: flex;
   flex-direction: column;
@@ -3845,6 +4103,9 @@ label.new-task-checkbox-label {
    space with .vault-folder-action so those can be plain sibling buttons
    rather than nested inside the toggle (a <button> can't validly contain
    another interactive control). */
+/* UNUSED as of the VaultView.jsx folder-system Tailwind conversion — through
+   the rename-action override below. The coupled folder controls migrated as
+   one feature slice rather than breaking their selector contract piecemeal. */
 .vault-folder-header-row {
   display: flex;
   align-items: center;
@@ -3920,10 +4181,15 @@ label.new-task-checkbox-label {
   opacity: 1;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — the expanded
+   list combines its list and top-padding utilities at the call site. */
 .vault-folder-items {
   padding-top: 8px;
 }
 
+/* UNUSED as of the safe VaultView.jsx Tailwind layout batch — through
+   .vault-entry-username below. Both flat and grouped entry cards share the
+   local vaultEntryRowClasses recipe. */
 .vault-entry-row {
   display: flex;
   justify-content: space-between;
@@ -3959,6 +4225,9 @@ label.new-task-checkbox-label {
   opacity: 0.7;
 }
 
+/* UNUSED as of the VaultEntryDetail.jsx Tailwind conversion — through
+   .vault-password-value below. These selectors were single-component and
+   presentation-only; shared .vault-copy remains live. */
 .vault-field-row {
   display: flex;
   align-items: center;
@@ -4015,11 +4284,15 @@ label.new-task-checkbox-label {
 
 /* Task clarifications (ask-a-question thread) */
 
+/* UNUSED as of TaskRow.jsx's safe presentation-layer Tailwind conversion. */
 .task-question-badge {
   font-size: 13px;
   opacity: 0.8;
 }
 
+/* UNUSED as of the TaskClarifications.jsx Tailwind conversion — this
+   complete thread/composer family through the answer-button disabled state
+   below migrated together. Shared attachment/upload chrome remains live. */
 .clarifications {
   display: flex;
   flex-direction: column;
@@ -4142,6 +4415,8 @@ label.new-task-checkbox-label {
    this compact comment-thread context wants. */
 
 /* Cork Board */
+/* UNUSED as of the CorkBoardView.jsx Tailwind conversion — this complete
+   feature family through the comment-form disabled rule migrated together. */
 .cork-board-subtitle {
   opacity: 0.65;
   font-size: 13px;
@@ -4342,6 +4617,8 @@ label.new-task-checkbox-label {
   cursor: default;
 }
 
+/* UNUSED as of the InboxView.jsx Tailwind conversion — this complete family
+   through the footer checkbox rule below migrated as one feature slice. */
 .inbox-section-heading-question {
   color: var(--overdue);
   opacity: 1;

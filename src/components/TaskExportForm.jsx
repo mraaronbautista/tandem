@@ -3,6 +3,9 @@ import { isAllDayTask } from '../lib/tasks'
 import { DEFAULT_TIMEZONE, splitDueDateInZone, zoneAbbreviation } from '../lib/timezone'
 import { WHO_LABEL } from '../lib/whoLabels'
 import Modal from './Modal'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // "Tue, Aug 25, 2026" from a plain 'YYYY-MM-DD' — parsed as local
 // calendar fields (not `new Date(dateStr)`, which reads a bare date as
@@ -120,54 +123,40 @@ export default function TaskExportForm({ tasks, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <div className="submission-modal task-export-modal" onClick={(e) => e.stopPropagation()}>
+      {/* task-export-modal carried no CSS rule of its own (confirmed via
+          grep, same as .date-picker-close earlier) — dropped. */}
+      <ModalCard>
         <h2>Export tasks</h2>
 
-        <div className="period-tabs">
-          <button
-            type="button"
-            className={`period-tab${whoFilter === 'yours' ? ' period-tab-active' : ''}`}
-            onClick={() => setWhoFilter('yours')}
-          >
+        <PeriodTabs>
+          <PeriodTab active={whoFilter === 'yours'} onClick={() => setWhoFilter('yours')}>
             {WHO_LABEL.yours}
-          </button>
-          <button
-            type="button"
-            className={`period-tab${whoFilter === 'assistant' ? ' period-tab-active' : ''}`}
-            onClick={() => setWhoFilter('assistant')}
-          >
+          </PeriodTab>
+          <PeriodTab active={whoFilter === 'assistant'} onClick={() => setWhoFilter('assistant')}>
             {WHO_LABEL.assistant}
-          </button>
-          <button
-            type="button"
-            className={`period-tab${whoFilter === 'all' ? ' period-tab-active' : ''}`}
-            onClick={() => setWhoFilter('all')}
-          >
+          </PeriodTab>
+          <PeriodTab active={whoFilter === 'all'} onClick={() => setWhoFilter('all')}>
             All
-          </button>
-        </div>
+          </PeriodTab>
+        </PeriodTabs>
 
-        <label className="task-export-include-done">
+        <label className="flex items-center gap-2 text-[13px]">
           <input type="checkbox" checked={includeDone} onChange={(e) => setIncludeDone(e.target.checked)} />
           Include completed tasks
         </label>
 
-        <textarea className="task-export-textarea" value={text} readOnly onClick={(e) => e.target.select()} />
+        <textarea className="min-h-[280px] max-h-[480px] w-full resize-y rounded-[8px] border border-border bg-bg px-3 py-2.5 font-mono text-xs text-text-h" value={text} readOnly onClick={(e) => e.target.select()} />
 
         {error && <p className="error">{error}</p>}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-          <button type="button" onClick={handleDownload}>
-            Download .txt
-          </button>
-          <button type="button" className="submission-save" onClick={handleCopy}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+          <SubmissionButton onClick={handleDownload}>Download .txt</SubmissionButton>
+          <SubmissionButton variant="primary" onClick={handleCopy}>
             {copied ? 'Copied!' : 'Copy to clipboard'}
-          </button>
-        </div>
-      </div>
+          </SubmissionButton>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }

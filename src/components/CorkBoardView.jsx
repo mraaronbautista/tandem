@@ -5,6 +5,9 @@ import { createTask } from '../lib/tasks'
 import { whoKeyForName } from '../lib/whoLabels'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 
+const composeClasses = 'flex flex-col gap-2 [&_textarea]:min-h-[70px] [&_textarea]:resize-y [&_textarea]:rounded-[8px] [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-card-bg [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-[15px] [&_textarea]:text-text-h [&_textarea]:[font-family:inherit] [&_textarea]:[font-style:inherit] [&_textarea]:[font-variant:inherit] [&_textarea]:[font-weight:inherit] [&_textarea]:[line-height:inherit]'
+const itemActionClasses = 'cursor-pointer rounded-[6px] border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h'
+
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
@@ -169,21 +172,21 @@ export default function CorkBoardView({ me, memberName }) {
 
   return (
     <div className="tab-panel">
-      <p className="cork-board-subtitle">Pin something with no deadline, so it doesn't get lost.</p>
+      <p className="text-[13px] opacity-65">Pin something with no deadline, so it doesn't get lost.</p>
 
-      <form className="cork-board-compose" onSubmit={handlePost}>
+      <form className={composeClasses} onSubmit={handlePost}>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Pin a task or note…"
           maxLength={2000}
         />
-        <div className="cork-board-compose-actions">
-          <label className="cork-board-share-toggle">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="flex cursor-pointer items-center gap-1.5 text-[13px] opacity-85">
             <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
             Share to both boards
           </label>
-          <button type="submit" disabled={posting || !body.trim() || !me}>
+          <button type="submit" className="cursor-pointer rounded-[8px] border-0 bg-accent px-4 py-2 font-semibold text-white disabled:cursor-default disabled:opacity-60" disabled={posting || !body.trim() || !me}>
             {posting ? 'Pinning…' : 'Pin it'}
           </button>
         </div>
@@ -194,14 +197,14 @@ export default function CorkBoardView({ me, memberName }) {
       {notes && !notes.length && <p className="task-notes-empty">Nothing pinned yet.</p>}
 
       {notes && notes.length > 0 && (
-        <ul className="cork-board-list">
+        <ul className="flex flex-col gap-2.5">
           {notes.map((note) => {
             const isOwn = note.author_id === me?.id
             const isEditing = editingId === note.id
             return (
-              <li key={note.id} className="cork-board-item">
+              <li key={note.id} className="rounded-md border border-border bg-card-bg px-3.5 py-3 shadow-resting">
                 {isEditing ? (
-                  <div className="cork-board-compose">
+                  <div className={`${composeClasses} mb-2`}>
                     <textarea
                       value={editDraft}
                       onChange={(e) => setEditDraft(e.target.value)}
@@ -210,28 +213,28 @@ export default function CorkBoardView({ me, memberName }) {
                     />
                   </div>
                 ) : (
-                  <p className="cork-board-item-body">{note.body}</p>
+                  <p className="mb-2 break-words whitespace-pre-wrap">{note.body}</p>
                 )}
-                <div className="cork-board-item-meta">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs opacity-65">
                   <span>
                     {memberName(note.author_id)} · {formatDate(note.created_at)}
                   </span>
-                  <span className={`cork-board-badge${note.shared ? ' cork-board-badge-shared' : ''}`}>
+                  <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared ? 'border-accent text-accent' : 'border-border'}`}>
                     {note.shared ? 'Shared' : 'Only you'}
                   </span>
                 </div>
-                <div className="cork-board-item-actions">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {isEditing ? (
                     <>
                       <button
                         type="button"
-                        className="cork-board-save-edit"
+                        className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
                         onClick={() => handleSaveEdit(note)}
                         disabled={saving || !editDraft.trim()}
                       >
                         {saving ? 'Saving…' : 'Save'}
                       </button>
-                      <button type="button" onClick={cancelEdit} disabled={saving}>
+                      <button type="button" className={itemActionClasses} onClick={cancelEdit} disabled={saving}>
                         Cancel
                       </button>
                     </>
@@ -239,7 +242,7 @@ export default function CorkBoardView({ me, memberName }) {
                     <>
                       <button
                         type="button"
-                        className="cork-board-focus-today"
+                        className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
                         onClick={() => handleFocusToday(note)}
                         disabled={promotingId === note.id || promoted.has(note.id)}
                       >
@@ -251,13 +254,13 @@ export default function CorkBoardView({ me, memberName }) {
                       </button>
                       {isOwn && (
                         <>
-                          <button type="button" onClick={() => startEdit(note)}>
+                          <button type="button" className={itemActionClasses} onClick={() => startEdit(note)}>
                             Edit
                           </button>
-                          <button type="button" onClick={() => handleToggleShare(note)}>
+                          <button type="button" className={itemActionClasses} onClick={() => handleToggleShare(note)}>
                             {note.shared ? 'Make private' : 'Share'}
                           </button>
-                          <button type="button" onClick={() => handleDelete(note)}>
+                          <button type="button" className={itemActionClasses} onClick={() => handleDelete(note)}>
                             Unpin
                           </button>
                         </>
@@ -266,25 +269,26 @@ export default function CorkBoardView({ me, memberName }) {
                   )}
                 </div>
                 {!isEditing && (
-                  <div className="cork-board-comments">
+                  <div className="mt-2.5 flex flex-col gap-2 border-t border-border pt-2.5">
                     {note.comments?.length > 0 && (
-                      <ul className="cork-board-comment-list">
+                      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
                         {note.comments.map((c) => (
-                          <li key={c.id} className="cork-board-comment">
-                            <span className="cork-board-comment-author">{memberName(c.authorId)}</span>
-                            <span className="cork-board-comment-body">{c.body}</span>
+                          <li key={c.id} className="flex items-baseline gap-1.5 text-[13px]">
+                            <span className="flex-none font-semibold opacity-75">{memberName(c.authorId)}</span>
+                            <span className="break-words whitespace-pre-wrap">{c.body}</span>
                           </li>
                         ))}
                       </ul>
                     )}
                     <form
-                      className="cork-board-comment-form"
+                      className="flex gap-2"
                       onSubmit={(e) => {
                         e.preventDefault()
                         handleAddComment(note)
                       }}
                     >
                       <input
+                        className="min-w-0 flex-1 rounded-[8px] border border-border bg-card-bg px-2.5 py-[7px] text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
                         type="text"
                         value={commentDrafts[note.id] || ''}
                         onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [note.id]: e.target.value }))}
@@ -293,6 +297,7 @@ export default function CorkBoardView({ me, memberName }) {
                       />
                       <button
                         type="submit"
+                        className="flex-none cursor-pointer rounded-[8px] border border-border bg-pill-bg px-3 py-[7px] text-[13px] text-text-h disabled:cursor-default disabled:opacity-60"
                         disabled={postingCommentId === note.id || !(commentDrafts[note.id] || '').trim()}
                       >
                         {postingCommentId === note.id ? '…' : 'Add'}

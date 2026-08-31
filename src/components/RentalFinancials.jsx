@@ -10,6 +10,7 @@ import {
 } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
+import RentalButton from './RentalButton'
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -193,22 +194,22 @@ export default function RentalFinancials({
   const sourceRows = [...sourceBreakdown.entries()].sort((a, b) => b[1].revenue - a[1].revenue)
 
   return (
-    <div className="rental-financials">
+    <div className="flex flex-col gap-3">
       <RentalSavingsGoal company={company} goals={goals} onGoalsChanged={onGoalsChanged} />
 
-      <div className="rental-financials-summary">
-        <div className="rental-financials-row">
+      <div className="flex flex-col gap-1.5 rounded-md border border-border px-3.5 py-3">
+        <div className="flex justify-between text-sm">
           <span>
             Revenue ({billed.length}/{properties.length} units billed)
           </span>
           <span>{money(revenue)}</span>
         </div>
-        <div className="rental-financials-row">
+        <div className="flex justify-between text-sm">
           <span>Overhead</span>
           <span>-{money(overhead)}</span>
         </div>
         <div
-          className={`rental-financials-row rental-financials-total ${surplus >= 0 ? 'rental-surplus' : 'rental-deficit'}`}
+          className={`flex justify-between border-t border-border mt-1 pt-2 text-[15px] font-bold ${surplus >= 0 ? 'text-[#22c55e]' : 'text-[#dc2626]'}`}
         >
           <span>{surplus >= 0 ? 'Surplus' : 'Shortfall'}</span>
           <span>{surplus >= 0 ? money(surplus) : `-${money(Math.abs(surplus))}`}</span>
@@ -219,15 +220,17 @@ export default function RentalFinancials({
         <>
           <button
             type="button"
-            className="rental-financials-subheading rental-financials-subheading-toggle"
+            className="mt-1 -mb-1 flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent px-1.5 py-1 -ml-1.5 opacity-60 [font-family:inherit] [font-size:inherit] [line-height:inherit] hover:bg-pill-bg"
             onClick={() => setSourceOpen((v) => !v)}
           >
             Bookings by source
-            <span className="rental-financials-subheading-chevron">{sourceOpen ? '▾' : '▸'}</span>
+            <span className="text-[18px] font-bold leading-none text-accent opacity-100">
+              {sourceOpen ? '▾' : '▸'}
+            </span>
           </button>
           {sourceOpen &&
             sourceRows.map(([key, { count, revenue: sourceRevenue }]) => (
-              <div key={key} className="rental-financials-row">
+              <div key={key} className="flex justify-between text-sm">
                 <span>{BOOKING_SOURCE_LABEL[key]}</span>
                 <span>
                   {count} {count === 1 ? 'booking' : 'bookings'} — {money(sourceRevenue)}
@@ -239,11 +242,13 @@ export default function RentalFinancials({
 
       <button
         type="button"
-        className="rental-financials-subheading rental-financials-subheading-toggle"
+        className="mt-1 -mb-1 flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent px-1.5 py-1 -ml-1.5 opacity-60 [font-family:inherit] [font-size:inherit] [line-height:inherit] hover:bg-pill-bg"
         onClick={() => setOverheadOpen((v) => !v)}
       >
         Overhead breakdown
-        <span className="rental-financials-subheading-chevron">{overheadOpen ? '▾' : '▸'}</span>
+        <span className="text-[18px] font-bold leading-none text-accent opacity-100">
+          {overheadOpen ? '▾' : '▸'}
+        </span>
       </button>
       {overheadOpen && (
         <>
@@ -251,16 +256,14 @@ export default function RentalFinancials({
             <button
               type="button"
               key={e.id}
-              className="rental-expense-row rental-expense-row-editable"
+              className="flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent py-1 text-left text-inherit transition-colors duration-[180ms] ease-tactile [font-family:inherit] [font-size:inherit] [line-height:inherit] hover:bg-pill-bg active:bg-border"
               onClick={() => openEditExpense(e)}
             >
               <span>{e.label}</span>
               <span>{money(e.amount)}</span>
             </button>
           ))}
-          <button type="button" className="rental-add-booking" onClick={openNewExpense}>
-            + Add overhead
-          </button>
+          <RentalButton onClick={openNewExpense}>+ Add overhead</RentalButton>
         </>
       )}
 
@@ -280,31 +283,33 @@ export default function RentalFinancials({
         />
       )}
 
-      <h3 className="rental-financials-subheading">Units</h3>
+      <h3 className="mt-1 -mb-1 text-[13px] opacity-60">Units</h3>
       {billed.map((p) => {
         const { count, bookingIds } = chargesByProperty.get(p.id)
         const tenantCount = bookingIds.size
         return (
-          <div key={p.id} className="rental-unit-block">
-            <div className="rental-unit-status-row">
+          <div key={p.id} className="py-1">
+            <div className="flex items-center justify-between text-sm">
               <span>
                 <span className="rental-unit-dot" style={{ background: p.color }} />
                 {p.unit_name}
               </span>
-              <span className="rental-unit-badge rental-unit-badge-billed">
+              <span className="text-[13px] text-[#22c55e]">
                 Billed{count > 1 ? ` ×${count}` : ''}
                 {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(Number(p.monthly_rent) * count)}
               </span>
             </div>
-            <div className="rental-unit-availability">{unitSubLine(nextAvailability(allBookings, p.id))}</div>
+            <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
+              {unitSubLine(nextAvailability(allBookings, p.id))}
+            </div>
           </div>
         )
       })}
       {occupiedNoCharge.map((p) => {
         const upcoming = upcomingChargeByProperty.get(p.id)
         return (
-          <div key={p.id} className="rental-unit-block">
-            <div className="rental-unit-status-row">
+          <div key={p.id} className="py-1">
+            <div className="flex items-center justify-between text-sm">
               <span>
                 <span className="rental-unit-dot" style={{ background: p.color }} />
                 {p.unit_name}
@@ -313,13 +318,13 @@ export default function RentalFinancials({
                   — the tenant name on the line below already confirms
                   it's occupied, so spelling that out twice just made this
                   the longest badge in the list for no extra information. */}
-              <span className="rental-unit-badge rental-unit-badge-nocharge">
+              <span className="text-[13px] italic opacity-60">
                 {upcoming
                   ? `Occupied — ${money(p.monthly_rent)} due ${formatDateStr(upcoming.date)}`
                   : 'Occupied — no charge this month'}
               </span>
             </div>
-            <div className="rental-unit-availability">
+            <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
               <span>{unitSubLine(nextAvailability(allBookings, p.id))}</span>
               {/* Advance/early payment — the normal date-driven revenue
                   calc otherwise never counts this charge until its due
@@ -329,7 +334,7 @@ export default function RentalFinancials({
               {upcoming && (
                 <button
                   type="button"
-                  className="rental-mark-paid"
+                  className="flex-none cursor-pointer rounded-full border border-border bg-pill-bg px-2 py-0.5 text-[11px] text-text disabled:cursor-default disabled:opacity-60"
                   disabled={markingPaidId === upcoming.booking.id}
                   onClick={() => handleMarkPaid(upcoming.booking, upcoming.date)}
                 >
@@ -341,32 +346,38 @@ export default function RentalFinancials({
         )
       })}
       {pendingOnly.map((p) => (
-        <div key={p.id} className="rental-unit-block">
-          <div className="rental-unit-status-row">
+        <div key={p.id} className="py-1">
+          <div className="flex items-center justify-between text-sm">
             <span>
               <span className="rental-unit-dot" style={{ background: p.color }} />
               {p.unit_name}
             </span>
-            <span className="rental-unit-badge rental-unit-badge-request">
-              Pending — {money(p.monthly_rent)} if accepted
-            </span>
+            <span className="text-[13px] text-accent">Pending — {money(p.monthly_rent)} if accepted</span>
           </div>
-          <div className="rental-unit-availability">{unitSubLine(nextAvailability(allBookings, p.id))}</div>
+          <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
+            {unitSubLine(nextAvailability(allBookings, p.id))}
+          </div>
         </div>
       ))}
       {vacant.map((p, i) => (
-        <div key={p.id} className="rental-unit-block">
-          <div className="rental-unit-status-row">
+        <div key={p.id} className="py-1">
+          <div className="flex items-center justify-between text-sm">
             <span>
               <span className="rental-unit-dot" style={{ background: p.color }} />
               {p.unit_name}
             </span>
-            <span className="rental-unit-badge rental-unit-badge-vacant">
+            <span className="text-[13px] opacity-75">
               Vacant — {money(p.monthly_rent)}
-              {i === 0 && <span className="rental-fill-next-badge">Fill next</span>}
+              {i === 0 && (
+                <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
+                  Fill next
+                </span>
+              )}
             </span>
           </div>
-          <div className="rental-unit-availability">{unitSubLine(nextAvailability(allBookings, p.id))}</div>
+          <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
+            {unitSubLine(nextAvailability(allBookings, p.id))}
+          </div>
         </div>
       ))}
     </div>

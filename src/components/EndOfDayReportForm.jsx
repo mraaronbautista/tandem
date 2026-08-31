@@ -5,6 +5,9 @@ import { submitEodReport, fetchOwnEodReport } from '../lib/eodReports'
 import { sendEodReportNotification } from '../lib/manualNotify'
 import AttachmentList from './AttachmentList'
 import Modal from './Modal'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // 'biweekly' is deliberately left out of this picker — Ada/Aaron found
 // it cluttered the tab row without pulling its weight day to day. Not a
@@ -146,21 +149,16 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal eod-report-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" modifier="eod-report-modal" onSubmit={handleSubmit}>
         <h2>{period[0].toUpperCase() + period.slice(1)} report</h2>
 
-        <div className="period-tabs">
+        <PeriodTabs>
           {PERIODS.map((p) => (
-            <button
-              type="button"
-              key={p.value}
-              className={`period-tab${period === p.value ? ' period-tab-active' : ''}`}
-              onClick={() => setPeriod(p.value)}
-            >
+            <PeriodTab key={p.value} active={period === p.value} onClick={() => setPeriod(p.value)}>
               {p.label}
-            </button>
+            </PeriodTab>
           ))}
-        </div>
+        </PeriodTabs>
 
         {error && <p className="error">{error}</p>}
 
@@ -176,7 +174,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
 
         <label className="submission-field">
           Total time worked this {PERIOD_NOUN[period]}
-          <div className="hours-minutes-row">
+          <div className="flex items-center gap-1.5 [&_input[type=number]]:w-16 [&_span]:text-[13px] [&_span]:opacity-70">
             <input
               type="number"
               min="0"
@@ -185,7 +183,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
               onChange={(e) => setHoursInput(e.target.value)}
             />
             <span>hr</span>
-            <select value={minutesInput} onChange={(e) => setMinutesInput(e.target.value)}>
+            <select className="w-16 rounded-[8px] border border-border bg-bg px-2 py-2.5 text-[15px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]" value={minutesInput} onChange={(e) => setMinutesInput(e.target.value)}>
               <option value="">—</option>
               {MINUTE_OPTIONS.map((m) => (
                 <option key={m} value={m}>
@@ -202,15 +200,13 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
           <textarea rows={5} value={body} onChange={(e) => setBody(e.target.value)} disabled={loading} />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="submission-save" disabled={submitting || loading}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+          <SubmissionButton type="submit" variant="primary" disabled={submitting || loading}>
             {submitting ? 'Sending…' : 'Send to Ada'}
-          </button>
-        </div>
-      </form>
+          </SubmissionButton>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }

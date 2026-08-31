@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import { createRentalProperty, updateRentalProperty, archiveRentalProperty } from '../lib/rentals'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const DEFAULT_COLOR = '#3b82f6'
+
+// Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
+// — same fix as RentalSavingsGoalForm.jsx/RentalExpenseForm.jsx. Does NOT
+// apply to the Calendar color field below — that's type="color", outside
+// this selector's scope even in the original CSS, styled by its own
+// compact utilities instead.
+const FIELD_INPUT_CLASS =
+  'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
 
 // Same "one form, initialValues decide create vs. edit" pattern as
 // RentalBookingForm.jsx/RentalExpenseForm.jsx. Properties had no in-app
@@ -56,7 +66,7 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
 
   return (
     <Modal onClose={onClose}>
-      <form className="submission-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{property ? 'Edit unit' : 'New unit'}</h2>
 
         {error && <p className="error">{error}</p>}
@@ -69,12 +79,18 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
             placeholder="e.g. Healthcare Haven"
             value={unitName}
             onChange={(e) => setUnitName(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
         <label>
           Address (optional)
-          <input placeholder="e.g. 123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <input
+            placeholder="e.g. 123 Main St"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={FIELD_INPUT_CLASS}
+          />
         </label>
 
         <label>
@@ -86,6 +102,7 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
             placeholder="e.g. 1800"
             value={monthlyRent}
             onChange={(e) => setMonthlyRent(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
@@ -93,26 +110,24 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
           Calendar color
           <input
             type="color"
-            className="rental-property-color-input"
+            className="h-9 w-[60px] self-start cursor-pointer rounded-[6px] border border-border bg-transparent p-0.5"
             value={color}
             onChange={(e) => setColor(e.target.value)}
           />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {property && (
-            <button type="button" className="rental-delete-booking" onClick={handleArchive} disabled={archiving}>
+            <SubmissionButton variant="destructive" onClick={handleArchive} disabled={archiving}>
               {archiving ? 'Removing…' : 'Remove unit'}
-            </button>
+            </SubmissionButton>
           )}
-          <button type="submit" className="submission-save" disabled={saving}>
+          <SubmissionButton type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : property ? 'Save changes' : 'Add unit'}
-          </button>
-        </div>
-      </form>
+          </SubmissionButton>
+        </SubmissionActions>
+      </ModalCard>
     </Modal>
   )
 }
