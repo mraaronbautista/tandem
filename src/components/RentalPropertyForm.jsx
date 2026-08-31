@@ -5,6 +5,14 @@ import ModalCard from './ModalCard'
 
 const DEFAULT_COLOR = '#3b82f6'
 
+// Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
+// — same fix as RentalSavingsGoalForm.jsx/RentalExpenseForm.jsx. Does NOT
+// apply to the Calendar color field below — that's type="color", outside
+// this selector's scope even in the original CSS, styled by its own
+// .rental-property-color-input class instead (untouched here).
+const FIELD_INPUT_CLASS =
+  'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
+
 // Same "one form, initialValues decide create vs. edit" pattern as
 // RentalBookingForm.jsx/RentalExpenseForm.jsx. Properties had no in-app
 // way to add or edit at all before this — creating/renaming a unit
@@ -70,12 +78,18 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
             placeholder="e.g. Healthcare Haven"
             value={unitName}
             onChange={(e) => setUnitName(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
         <label>
           Address (optional)
-          <input placeholder="e.g. 123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <input
+            placeholder="e.g. 123 Main St"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={FIELD_INPUT_CLASS}
+          />
         </label>
 
         <label>
@@ -87,6 +101,7 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
             placeholder="e.g. 1800"
             value={monthlyRent}
             onChange={(e) => setMonthlyRent(e.target.value)}
+            className={FIELD_INPUT_CLASS}
           />
         </label>
 
