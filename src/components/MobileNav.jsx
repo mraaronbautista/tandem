@@ -8,8 +8,8 @@
 // elements the way the old bar + FAB used to be.
 export default function MobileNav({ navButtons, children }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-3 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)]">
-      <div className="flex items-center gap-2 rounded-full border border-border bg-card-bg p-2 shadow-floating">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-3 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
+      <div className="flex items-center gap-1.5 rounded-full border border-border bg-card-bg p-1.5 shadow-floating">
         {navButtons}
       </div>
       {children}

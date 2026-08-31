@@ -2435,7 +2435,8 @@ a.task-submission-file-link:hover {
   border: none;
   background: var(--accent);
   color: #fff;
-  font-size: 28px;
+  font-size: 34px;
+  font-weight: 500;
   line-height: 1;
   cursor: pointer;
   display: flex;

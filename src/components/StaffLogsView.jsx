@@ -127,24 +127,31 @@ export default function StaffLogsView({ me }) {
       {error && <p className="error">{error}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <PeriodTabs>
+        {/* flex-1: PeriodTabs has no width of its own to fill (unlike
+            TaskBoard.jsx's view-mode-row usage, this row's other sibling
+            is a fixed-width button group, not another flex-1 element) —
+            without it, each PeriodTab (px-0 by design, sized purely by
+            flex-1 within PeriodTabs' own intrinsic content width) had
+            almost no room to breathe, reading as "AllPendingApproved"
+            packed together. */}
+        <PeriodTabs className="min-w-0 flex-1">
           {STATUS_TABS.map((t) => (
             <PeriodTab key={t.key} active={statusFilter === t.key} onClick={() => setStatusFilter(t.key)}>
               {t.label}
             </PeriodTab>
           ))}
         </PeriodTabs>
-        <div className="flex gap-2">
+        <div className="flex flex-none gap-1.5">
           <button
             type="button"
-            className="cursor-pointer rounded-sm border border-border bg-pill-bg px-3 py-1.5 text-sm text-text-h"
+            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
             onClick={() => setAddingSite(true)}
           >
             + Add site
           </button>
           <button
             type="button"
-            className="cursor-pointer rounded-sm border border-border bg-pill-bg px-3 py-1.5 text-sm text-text-h"
+            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
             onClick={() => setExportOpen(true)}
           >
             Export CSV
