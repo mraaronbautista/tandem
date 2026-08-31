@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SubmissionButton } from './SubmissionActions'
 
 function newItem(text = '') {
   return { id: crypto.randomUUID(), text, done: false, blocked: false, blockedReason: '' }
@@ -102,9 +103,9 @@ export default function ChecklistEditor({ items, onChange }) {
             >
               Cancel
             </button>
-            <button type="button" className="submission-save" onClick={addBulk} disabled={!bulkLines.length}>
+            <SubmissionButton variant="primary" onClick={addBulk} disabled={!bulkLines.length}>
               Add {bulkLines.length || ''} subtask{bulkLines.length === 1 ? '' : 's'}
-            </button>
+            </SubmissionButton>
           </div>
         </div>
       ) : (
