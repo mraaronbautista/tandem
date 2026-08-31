@@ -597,10 +597,13 @@ select:focus-visible {
   flex-direction: column;
 }
 
-/* Lines up with .timeline-dot-end below — both this margin and the
-   connector's height are the same 28px, so the two independently-flowing
-   columns (time labels, rail dots) land at a matching vertical offset
-   for the end point without needing to share layout machinery. */
+/* Lines up with the rail's end dot (TimelineRow.jsx, mt-[15px]/mt-0 on
+   each dot directly — .timeline-dot/.timeline-dot-end, which used to
+   define this, were removed as fully orphaned once that component's own
+   conversion to Tailwind utilities replaced them) — both this margin and
+   the connector's height are the same 28px, so the two independently-
+   flowing columns (time labels, rail dots) land at a matching vertical
+   offset for the end point without needing to share layout machinery. */
 .timeline-time-end {
   margin-top: 28px;
 }
@@ -611,22 +614,6 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.timeline-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  /* background set inline per-task from PRIORITY_COLOR */
-  margin-top: 15px;
-}
-
-/* Follows directly after .timeline-span-connector, which already
-   supplies the vertical gap — the 15px .timeline-dot margin above only
-   exists to offset the *first* dot down from the row's top edge. */
-.timeline-dot-end {
-  margin-top: 0;
 }
 
 .timeline-span-connector {

@@ -12,6 +12,7 @@ import {
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
+import PriorityDot from './PriorityDot'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
@@ -439,11 +440,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                                 at the ordinary 'med' default silently, so
                                 a dot on every row would just be noise. */}
                             {t.priority && (
-                              <span
-                                className="task-priority-dot"
-                                style={{ background: PRIORITY_COLOR[t.priority] }}
-                                title={PRIORITY_LABEL[t.priority]}
-                              />
+                              <PriorityDot color={PRIORITY_COLOR[t.priority]} title={PRIORITY_LABEL[t.priority]} />
                             )}
                             <span className="bulk-add-preview-title">{t.title}</span>
                             {t.due_time && (

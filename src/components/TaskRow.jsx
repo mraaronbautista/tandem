@@ -11,6 +11,7 @@ import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import PriorityDot from './PriorityDot'
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
@@ -222,11 +223,7 @@ export default function TaskRow({
           onChange={handleStatusToggle}
         />
         {!hidePriorityDot && (
-          <span
-            className="task-priority-dot"
-            style={{ background: PRIORITY_COLOR[task.priority] }}
-            title={PRIORITY_LABEL[task.priority]}
-          />
+          <PriorityDot color={PRIORITY_COLOR[task.priority]} title={PRIORITY_LABEL[task.priority]} />
         )}
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}
