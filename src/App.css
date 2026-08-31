@@ -3173,6 +3173,10 @@ label.new-task-checkbox-label {
   margin-top: 10px;
 }
 
+/* UNUSED as of the Rentals shell Tailwind conversion — RentalCalendar.jsx
+   now renders `mt-3 mb-2 flex items-center text-sm font-semibold
+   text-text-h`, its one and only consumer. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-unit-header {
   display: flex;
   align-items: center;
@@ -3287,11 +3291,15 @@ label.new-task-checkbox-label {
    arbitrary flat cap needed. Mobile (below the breakpoint) was never
    affected by this rule either way. */
 
-/* Rentals desktop dashboard (RentalsView.jsx, only ever rendered once
-   useMediaQuery('(min-width: 900px)') is true — see useMediaQuery.js —
-   so this isn't wrapped in its own media query, the JS gating already
-   handles that). Calendar, its unit-status Overview below it, and
-   financials all mounted and visible together, no tab-switching. */
+/* UNUSED as of the Rentals shell Tailwind conversion — RentalsView.jsx's
+   desktop dashboard root is now `grid grid-cols-[1fr_340px] items-start
+   gap-6`, its one and only consumer. Kept, not deleted, until a dedicated
+   dead-CSS cleanup pass.
+   Original comment, for history: Rentals desktop dashboard (RentalsView.jsx,
+   only ever rendered once useMediaQuery('(min-width: 900px)') is true — see
+   useMediaQuery.js — so this isn't wrapped in its own media query, the JS
+   gating already handles that). Calendar, its unit-status Overview below
+   it, and financials all mounted and visible together, no tab-switching. */
 .rentals-dashboard {
   display: grid;
   grid-template-columns: 1fr 340px;
@@ -3299,6 +3307,8 @@ label.new-task-checkbox-label {
   align-items: start;
 }
 
+/* UNUSED — see .rentals-dashboard above. Now `flex min-w-0 flex-col
+   gap-3`. */
 .rentals-main {
   display: flex;
   flex-direction: column;
@@ -3306,12 +3316,14 @@ label.new-task-checkbox-label {
   min-width: 0;
 }
 
-/* One flat row — month nav, then the unit name + its actions — rather
-   than two separate .month-nav-row blocks stacked on their own lines.
-   Two nested rows used to wrap as whole blocks below ~1000px-ish main-
-   column widths even with room to spare for individual items; flattened
-   so wrapping (still kept for genuinely narrow cases) happens per-item
-   instead. */
+/* UNUSED — see .rentals-dashboard above. Now `flex flex-wrap items-center
+   gap-3.5`.
+   Original comment, for history: one flat row — month nav, then the unit
+   name + its actions — rather than two separate .month-nav-row blocks
+   stacked on their own lines. Two nested rows used to wrap as whole blocks
+   below ~1000px-ish main-column widths even with room to spare for
+   individual items; flattened so wrapping (still kept for genuinely narrow
+   cases) happens per-item instead. */
 .rentals-combined-nav {
   display: flex;
   align-items: center;
@@ -3327,6 +3339,7 @@ label.new-task-checkbox-label {
   margin-left: 10px;
 }
 
+/* UNUSED — see .rentals-dashboard above. Now `flex flex-col gap-3`. */
 .rentals-financials-col {
   display: flex;
   flex-direction: column;

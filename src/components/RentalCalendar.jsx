@@ -116,7 +116,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
   }
 
   return (
-    <div className="rental-calendar">
+    <div>
       <div className="rental-calendar-toolbar">
         {showUnitTabs ? (
           <div className="rental-unit-tabs">
@@ -138,7 +138,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
       </div>
 
       {showUnitHeader && (
-        <div className="rental-unit-header">
+        <div className="mt-3 mb-2 flex items-center text-sm font-semibold text-text-h">
           ${Number(unit.monthly_rent).toLocaleString()}/mo
         </div>
       )}

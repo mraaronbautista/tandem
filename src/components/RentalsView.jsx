@@ -222,9 +222,9 @@ export default function RentalsView({ me }) {
 
   if (isDesktop) {
     return (
-      <div className="rentals-dashboard">
-        <div className="rentals-main">
-          <div className="rentals-combined-nav">
+      <div className="grid grid-cols-[1fr_340px] items-start gap-6">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3.5">
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               ‹
             </IconButton>
@@ -284,7 +284,7 @@ export default function RentalsView({ me }) {
           />
         </div>
 
-        <div className="rentals-financials-col">
+        <div className="flex flex-col gap-3">
           <h3 className="task-section-heading">Financials</h3>
           <RentalFinancials
             company={COMPANY}
