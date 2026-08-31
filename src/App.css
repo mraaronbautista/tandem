@@ -3608,6 +3608,13 @@ label.new-task-checkbox-label {
   opacity: 0.5;
 }
 
+/* UNUSED as of the RentalFinancials.jsx Tailwind conversion — its root
+   div is now `flex flex-col gap-3`. Note this file's other classes are
+   interleaved below with RentalSavingsGoal.jsx's and
+   RentalBookingDetail.jsx's own (untouched) CSS, not contiguous — each
+   migrated rule below is marked individually, don't assume a whole block
+   is covered by one comment. Kept, not deleted, until a dedicated
+   dead-CSS cleanup pass. */
 .rental-financials {
   display: flex;
   flex-direction: column;
@@ -3667,6 +3674,10 @@ label.new-task-checkbox-label {
   opacity: 0.8;
 }
 
+/* UNUSED as of the RentalFinancials.jsx Tailwind conversion — through
+   .rental-deficit below (this contiguous run only; RentalBookingDetail.jsx's
+   unrelated classes start again right after). See .rental-financials
+   above. */
 .rental-financials-summary {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -3745,6 +3756,13 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 
+/* UNUSED as of the RentalFinancials.jsx Tailwind conversion — through
+   .rental-financials-subheading-chevron below. See .rental-financials
+   above. Note the toggle button's own `font: inherit` here silently
+   overrides this rule's font-size for the two toggle buttons (cascade
+   order, not JSX class order) — real behavior the Tailwind replacement
+   had to replicate with an explicit [font-size:inherit], not a literal
+   text-[13px], confirmed via computed-style diff. */
 .rental-financials-subheading {
   font-size: 13px;
   opacity: 0.6;
@@ -3784,6 +3802,13 @@ label.new-task-checkbox-label {
   opacity: 1;
 }
 
+/* UNUSED, this whole contiguous run through .rental-fill-next-badge
+   below (the rest of App.css from here to that point is entirely
+   RentalFinancials.jsx's own domain, no other component's classes
+   interleaved) — as of the RentalFinancials.jsx Tailwind conversion.
+   .rental-unit-dot (used throughout via inline style={{background}}) is
+   the one exception, kept as CSS deliberately per its own earlier audit,
+   not part of this migration. See .rental-financials above. */
 .rental-expense-row,
 /* Wraps .rental-unit-status-row plus the .rental-unit-availability line
    below it — vertical spacing lives here now instead of on the row
@@ -3850,7 +3875,12 @@ label.new-task-checkbox-label {
 
 /* .rental-expense-row is a <button> (opens RentalExpenseForm to edit)
    rather than a plain <div> — reset button chrome so it reads
-   identically, same reasoning as .rental-overview-item. */
+   identically, same reasoning as .rental-overview-item. Same font:
+   inherit cascade note as .rental-financials-subheading-toggle above —
+   this rule's own font: inherit overrides .rental-expense-row's
+   font-size:14px, so the real rendered size is inherited (16px), which
+   the Tailwind replacement matches via [font-size:inherit], not
+   text-sm. */
 .rental-expense-row-editable {
   width: 100%;
   border: none;
