@@ -183,14 +183,14 @@ export default function TaskClarifications({
           {clarifications.map((item) => (
             <div key={item.id} className="flex flex-col gap-1 rounded-[8px] border border-border bg-pill-bg px-2.5 py-2">
               {item.question && (
-                <p className="break-words text-sm whitespace-pre-wrap">
+                <p className="break-words text-[13px] whitespace-pre-wrap">
                   <strong>{memberName(item.askedBy)}:</strong> {item.question}
                 </p>
               )}
               <AttachmentList attachments={item.questionAttachments} />
               {item.answer ? (
                 <>
-                  <p className="break-words text-sm whitespace-pre-wrap">
+                  <p className="break-words text-[13px] whitespace-pre-wrap">
                     <strong>{memberName(item.answeredBy)}:</strong> {item.answer}
                   </p>
                   <AttachmentList attachments={item.answerAttachments} />

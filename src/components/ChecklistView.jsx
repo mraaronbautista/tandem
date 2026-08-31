@@ -29,7 +29,7 @@ function ChecklistItemRow({ item, onItemChange }) {
           onChange={() => onItemChange(item.id, { done: !item.done })}
         />
         <span
-          className={`flex-1 text-sm ${item.done ? 'line-through opacity-55' : ''} ${
+          className={`flex-1 text-[13px] ${item.done ? 'line-through opacity-55' : ''} ${
             item.blocked ? 'line-through text-overdue opacity-80' : ''
           }`}
         >

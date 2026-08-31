@@ -590,7 +590,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <header className="mb-4 flex flex-wrap items-center gap-2">
           {activeTab === 'today' && (
             <MonthNavRow>
-              <MonthNavLabel onClick={() => setDatePickerOpen(true)} title="Jump to a date">
+              <MonthNavLabel
+                className="text-[26px] max-[480px]:text-[22px]"
+                onClick={() => setDatePickerOpen(true)}
+                title="Jump to a date"
+              >
                 {monthLabel} <span className="text-[12px] opacity-60">{datePickerOpen ? '▴' : '▾'}</span>
               </MonthNavLabel>
             </MonthNavRow>

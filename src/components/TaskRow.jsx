@@ -229,7 +229,7 @@ export default function TaskRow({
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}
         </span>
-        <span className={`min-w-0 flex-[1_1_140px] font-medium text-text-h ${task.status === 'done' ? 'line-through opacity-55' : ''}`}>{task.title}</span>
+        <span className={`min-w-0 flex-[1_1_140px] text-sm font-medium text-text-h ${task.status === 'done' ? 'line-through opacity-55' : ''}`}>{task.title}</span>
         {overlapping && (
           <span className="flex-none text-[11px] font-semibold whitespace-nowrap text-notice" title="Overlaps another task's time">
             ⚠ Overlap
@@ -247,7 +247,7 @@ export default function TaskRow({
           </span>
         )}
         {task.due_date && (
-          <span className={`text-[13px] whitespace-nowrap ${overdue ? 'font-semibold text-overdue opacity-100' : 'opacity-70'}`}>{dueLabel(task)}</span>
+          <span className={`text-xs whitespace-nowrap ${overdue ? 'font-semibold text-overdue opacity-100' : 'opacity-70'}`}>{dueLabel(task)}</span>
         )}
         {/* Names the zone dueLabel above is already showing the time in
             (see localLabel) — the two have to agree, since a badge next
@@ -267,9 +267,9 @@ export default function TaskRow({
       </div>
 
       {open && (
-        <div className="mt-2.5 cursor-default border-t border-border pt-2.5 text-sm [&_p]:mb-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-2.5 cursor-default border-t border-border pt-2.5 text-[13px] [&_p]:mb-1.5" onClick={(e) => e.stopPropagation()}>
           {creatorName && (
-            <p className="text-[13px] opacity-60">Added by {creatorName}</p>
+            <p className="text-xs opacity-60">Added by {creatorName}</p>
           )}
           {sourceLabel && (
             <p>
@@ -294,7 +294,7 @@ export default function TaskRow({
             taskTitle={task.title}
             taskId={task.id}
             extraActions={
-              <div className="flex gap-2 [&_button]:cursor-pointer [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-[13px] [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
+              <div className="flex gap-2 [&_button]:cursor-pointer [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
                 <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
                   <EditIcon width={15} height={15} />
                 </button>
