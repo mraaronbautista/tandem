@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createRentalExpense, updateRentalExpense, deleteRentalExpense } from '../lib/rentals'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
 // — same fix as RentalSavingsGoalForm.jsx: this form's fields were bare
@@ -83,19 +84,17 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
           />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {expense && (
-            <button type="button" className="rental-delete-booking" onClick={handleDelete} disabled={deleting}>
+            <SubmissionButton variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Deleting…' : 'Delete'}
-            </button>
+            </SubmissionButton>
           )}
-          <button type="submit" className="submission-save" disabled={saving}>
+          <SubmissionButton type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

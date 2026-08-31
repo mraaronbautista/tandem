@@ -12,6 +12,7 @@ import {
 } from '../lib/vault'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import VaultEntryForm from './VaultEntryForm'
 import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
@@ -299,14 +300,12 @@ export default function VaultView({ me, onClose }) {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </label>
-            <div className="submission-actions">
-              <button type="button" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="submission-save" disabled={unlocking}>
+            <SubmissionActions>
+              <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+              <SubmissionButton type="submit" variant="primary" disabled={unlocking}>
                 {unlocking ? 'Setting up…' : 'Set up vault'}
-              </button>
-            </div>
+              </SubmissionButton>
+            </SubmissionActions>
           </form>
         )}
 
@@ -327,14 +326,12 @@ export default function VaultView({ me, onClose }) {
                 </button>
               </div>
             </label>
-            <div className="submission-actions">
-              <button type="button" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="submission-save" disabled={unlocking}>
+            <SubmissionActions>
+              <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+              <SubmissionButton type="submit" variant="primary" disabled={unlocking}>
                 {unlocking ? 'Unlocking…' : 'Unlock'}
-              </button>
-            </div>
+              </SubmissionButton>
+            </SubmissionActions>
             <button type="button" className="vault-forgot-link" onClick={() => setShowReset(true)}>
               Forgot master password?
             </button>
@@ -355,19 +352,16 @@ export default function VaultView({ me, onClose }) {
                 placeholder={RESET_CONFIRM_WORD}
               />
             </label>
-            <div className="submission-actions">
-              <button type="button" onClick={() => setShowReset(false)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="rental-delete-booking"
+            <SubmissionActions>
+              <SubmissionButton onClick={() => setShowReset(false)}>Cancel</SubmissionButton>
+              <SubmissionButton
+                variant="destructive"
                 disabled={resetConfirmText !== RESET_CONFIRM_WORD || resetting}
                 onClick={handleReset}
               >
                 {resetting ? 'Resetting…' : 'Reset vault'}
-              </button>
-            </div>
+              </SubmissionButton>
+            </SubmissionActions>
           </div>
         )}
 
@@ -506,11 +500,9 @@ export default function VaultView({ me, onClose }) {
               </div>
             )}
 
-            <div className="submission-actions">
-              <button type="button" onClick={onClose}>
-                Close
-              </button>
-            </div>
+            <SubmissionActions>
+              <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+            </SubmissionActions>
           </>
         )}
 

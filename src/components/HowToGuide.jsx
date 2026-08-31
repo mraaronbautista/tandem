@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // Items starting with 'Tip: ' render distinctly from plain how-to/
 // context bullets (see .how-to-guide-tip in App.css) — the prefix itself
@@ -340,11 +341,9 @@ export default function HowToGuide({ onClose }) {
           <AccordionList sections={FAQS} openTitle={openFaq} onToggle={toggleFaq} />
         )}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

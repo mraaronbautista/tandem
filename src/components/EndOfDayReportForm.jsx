@@ -7,6 +7,7 @@ import AttachmentList from './AttachmentList'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // 'biweekly' is deliberately left out of this picker — Ada/Aaron found
 // it cluttered the tab row without pulling its weight day to day. Not a
@@ -199,14 +200,12 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
           <textarea rows={5} value={body} onChange={(e) => setBody(e.target.value)} disabled={loading} />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="submission-save" disabled={submitting || loading}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+          <SubmissionButton type="submit" variant="primary" disabled={submitting || loading}>
             {submitting ? 'Sending…' : 'Send to Ada'}
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

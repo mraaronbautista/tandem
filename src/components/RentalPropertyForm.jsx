@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createRentalProperty, updateRentalProperty, archiveRentalProperty } from '../lib/rentals'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const DEFAULT_COLOR = '#3b82f6'
 
@@ -115,19 +116,17 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
           />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {property && (
-            <button type="button" className="rental-delete-booking" onClick={handleArchive} disabled={archiving}>
+            <SubmissionButton variant="destructive" onClick={handleArchive} disabled={archiving}>
               {archiving ? 'Removing…' : 'Remove unit'}
-            </button>
+            </SubmissionButton>
           )}
-          <button type="submit" className="submission-save" disabled={saving}>
+          <SubmissionButton type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : property ? 'Save changes' : 'Add unit'}
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const CONFIRM_WORD = 'EXPORT'
 
@@ -59,19 +60,12 @@ export default function VaultExportForm({ entries, onClose }) {
           <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={CONFIRM_WORD} />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="rental-delete-booking"
-            disabled={confirmText !== CONFIRM_WORD}
-            onClick={handleExport}
-          >
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+          <SubmissionButton variant="destructive" disabled={confirmText !== CONFIRM_WORD} onClick={handleExport}>
             Download unencrypted CSV
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

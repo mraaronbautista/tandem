@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createRentalBooking, updateRentalBooking, hasOverlappingBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // Matches .submission-field input[type='text'/'number']/textarea
 // (App.css:1366-1382) — same fix as the other 3 Rental forms. Deliberately
@@ -208,14 +209,12 @@ export default function RentalBookingForm({
           />
         </label>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="submission-save" disabled={saving}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+          <SubmissionButton type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

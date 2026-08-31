@@ -7,6 +7,7 @@ import Modal from './Modal'
 import PriorityItemsEditor from './PriorityItemsEditor'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const PERIODS = [
   { value: 'day', label: 'Day' },
@@ -129,14 +130,12 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
         <span className="submission-field-label">What are we prioritizing this {period}?</span>
         <PriorityItemsEditor items={items} onChange={setItems} defaultWho={defaultWho} />
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="submission-save" disabled={saving || !items.some((i) => i.text.trim())}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
+          <SubmissionButton type="submit" variant="primary" disabled={saving || !items.some((i) => i.text.trim())}>
             {saving ? 'Saving…' : 'Save & create tasks'}
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

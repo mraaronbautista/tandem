@@ -3,6 +3,7 @@ import { TIMEZONE_OPTIONS, detectDefaultTimezone } from '../lib/timezone'
 import Modal from './Modal'
 import HowToGuide from './HowToGuide'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // Notifications, theme, and sign out — all "set once, rarely touched
 // again" — folded into one settings sheet instead of three permanent
@@ -95,11 +96,9 @@ export default function SettingsMenu({
           </button>
         </div>
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
 
       {guideOpen && <HowToGuide onClose={() => setGuideOpen(false)} />}

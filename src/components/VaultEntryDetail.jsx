@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { deleteVaultEntry } from '../lib/vault'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
@@ -112,17 +113,15 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
 
         {entry.notes && <p className="task-submission-note-text">{entry.notes}</p>}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-          <button type="button" className="rental-delete-booking" onClick={handleDelete} disabled={deleting}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+          <SubmissionButton variant="destructive" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-          <button type="button" className="submission-save" onClick={onEdit}>
+          </SubmissionButton>
+          <SubmissionButton variant="primary" onClick={onEdit}>
             Edit
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )

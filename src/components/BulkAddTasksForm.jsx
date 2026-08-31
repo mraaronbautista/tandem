@@ -12,6 +12,7 @@ import {
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import PriorityDot from './PriorityDot'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
@@ -739,38 +740,35 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
           </>
         )}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {view === 'add' ? (
-            <button type="submit" className="submission-save" disabled={saving || parsedTasks.length === 0}>
+            <SubmissionButton type="submit" variant="primary" disabled={saving || parsedTasks.length === 0}>
               {saving
                 ? 'Creating…'
                 : parsedTasks.length
                   ? `Create ${parsedTasks.length} task${parsedTasks.length === 1 ? '' : 's'}`
                   : 'Create tasks'}
-            </button>
+            </SubmissionButton>
           ) : (
             <>
-              <button
-                type="button"
-                className="submission-delete"
+              <SubmissionButton
+                variant="destructive"
                 onClick={handleDelete}
                 disabled={deleting || applying || !selectedIds.size}
               >
                 {deleting ? 'Deleting…' : `Delete ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
-              </button>
-              <button
+              </SubmissionButton>
+              <SubmissionButton
                 type="submit"
-                className="submission-save"
+                variant="primary"
                 disabled={applying || deleting || !selectedIds.size || !hasFieldToApply}
               >
                 {applying ? 'Applying…' : `Apply to ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}`}
-              </button>
+              </SubmissionButton>
             </>
           )}
-        </div>
+        </SubmissionActions>
       </ModalCard>
 
       {exportOpen && <TaskExportForm tasks={tasks} onClose={() => setExportOpen(false)} />}

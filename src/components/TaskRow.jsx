@@ -12,6 +12,7 @@ import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import PriorityDot from './PriorityDot'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
@@ -360,11 +361,9 @@ export default function TaskRow({
                 )}
               </div>
             )}
-            <div className="submission-actions">
-              <button type="button" onClick={() => setViewSubmissionOpen(false)}>
-                Close
-              </button>
-            </div>
+            <SubmissionActions>
+              <SubmissionButton onClick={() => setViewSubmissionOpen(false)}>Close</SubmissionButton>
+            </SubmissionActions>
           </ModalCard>
         </Modal>
       )}
@@ -430,9 +429,8 @@ export default function TaskRow({
               {uploadError && <p className="error">{uploadError}</p>}
             </div>
 
-            <div className="submission-actions">
-              <button
-                type="button"
+            <SubmissionActions>
+              <SubmissionButton
                 onClick={() => {
                   setNoteDraft(task.completion_note || '')
                   setUploadError('')
@@ -440,11 +438,11 @@ export default function TaskRow({
                 }}
               >
                 Cancel
-              </button>
-              <button type="button" className="submission-save" onClick={handleSaveNote}>
+              </SubmissionButton>
+              <SubmissionButton variant="primary" onClick={handleSaveNote}>
                 Save
-              </button>
-            </div>
+              </SubmissionButton>
+            </SubmissionActions>
           </ModalCard>
         </Modal>
       )}

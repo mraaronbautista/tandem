@@ -5,6 +5,7 @@ import { WHO_LABEL } from '../lib/whoLabels'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // "Tue, Aug 25, 2026" from a plain 'YYYY-MM-DD' — parsed as local
 // calendar fields (not `new Date(dateStr)`, which reads a bare date as
@@ -148,17 +149,13 @@ export default function TaskExportForm({ tasks, onClose }) {
 
         {error && <p className="error">{error}</p>}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-          <button type="button" onClick={handleDownload}>
-            Download .txt
-          </button>
-          <button type="button" className="submission-save" onClick={handleCopy}>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+          <SubmissionButton onClick={handleDownload}>Download .txt</SubmissionButton>
+          <SubmissionButton variant="primary" onClick={handleCopy}>
             {copied ? 'Copied!' : 'Copy to clipboard'}
-          </button>
-        </div>
+          </SubmissionButton>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )
