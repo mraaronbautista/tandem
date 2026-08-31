@@ -10,6 +10,7 @@ import {
 } from '../lib/rentals'
 import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
+import RentalButton from './RentalButton'
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -258,9 +259,7 @@ export default function RentalFinancials({
               <span>{money(e.amount)}</span>
             </button>
           ))}
-          <button type="button" className="rental-add-booking" onClick={openNewExpense}>
-            + Add overhead
-          </button>
+          <RentalButton onClick={openNewExpense}>+ Add overhead</RentalButton>
         </>
       )}
 

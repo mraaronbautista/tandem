@@ -3131,17 +3131,24 @@ label.new-task-checkbox-label {
     margin-right: 0;
   }
 
-  /* "+ Add booking" sits below the calendar grid on mobile (see
-     .rental-add-booking-below-grid) rather than in this toolbar — the
-     toolbar itself renders empty here (unit tabs are hidden, Overview's
-     cards are the unit-switcher instead — see RentalsView.jsx), so
-     nothing else needs styling in this block for that case. */
+  /* UNUSED — see .rental-add-booking below. RentalCalendar.jsx's below-
+     grid button now carries this responsively directly on its own
+     className (`max-[900px]:w-full max-[900px]:text-center` — note the
+     900px, not 899px: Tailwind's max-[N] variant means width < N, so
+     matching this rule's inclusive `max-width: 899px` needs N+1, not the
+     original rule's own literal number), not this class. */
   .rental-add-booking-below-grid {
     width: 100%;
     text-align: center;
   }
 }
 
+/* Still live — RentalButton.jsx (App.css comment there, and its own
+   header comment) replaced this class in RentalsView.jsx,
+   RentalCalendar.jsx, and RentalFinancials.jsx, but RentalSavingsGoal.jsx
+   and VaultView.jsx (2 usages) still render this literal class directly
+   and were out of scope for that extraction — so this base rule is NOT
+   unused, only its two modifiers below are. */
 .rental-add-booking {
   padding: 8px 14px;
   border-radius: 8px;
@@ -3153,11 +3160,16 @@ label.new-task-checkbox-label {
   white-space: nowrap;
 }
 
-/* .rental-add-booking is reused for several plain actions in this
-   toolbar (Edit unit, + Add unit, Export…) — this modifier singles out
-   "+ Add booking" specifically, the one actually used every time this
-   view is opened, with the same filled-accent look .submission-save
-   already uses for a form's primary action. */
+/* UNUSED as of the RentalButton.jsx extraction — RentalsView.jsx and
+   RentalCalendar.jsx's primary-look buttons now render
+   RentalButton variant="primary" instead. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass.
+   Original comment, for history: .rental-add-booking is reused for
+   several plain actions in this toolbar (Edit unit, + Add unit,
+   Export…) — this modifier singles out "+ Add booking" specifically,
+   the one actually used every time this view is opened, with the same
+   filled-accent look .submission-save already uses for a form's primary
+   action. */
 .rental-add-booking-primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -3165,10 +3177,10 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 
-/* RentalCalendar.jsx's own "+ Add booking" (mobile only — see the
-   caller-side showAddBooking prop) sits right after .rental-month-grid
-   as a plain block-level sibling, not inside the flex toolbar above the
-   grid — needs its own top spacing since nothing else provides it here. */
+/* UNUSED as of the RentalButton.jsx extraction — RentalCalendar.jsx's own
+   "+ Add booking" now carries this spacing directly on its own
+   className (`mt-2.5`), not this class. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. */
 .rental-add-booking-below-grid {
   margin-top: 10px;
 }

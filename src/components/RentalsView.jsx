@@ -12,6 +12,7 @@ import {
 import { useMediaQuery } from '../lib/useMediaQuery'
 import IconButton from './IconButton'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
+import RentalButton from './RentalButton'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
@@ -232,24 +233,17 @@ export default function RentalsView({ me }) {
             <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
               ›
             </IconButton>
-            <button
-              type="button"
-              className="rental-add-booking rental-add-booking-primary rentals-combined-nav-unit"
+            <RentalButton
+              variant="primary"
+              className="rentals-combined-nav-unit"
               onClick={() => calendarRef.current?.openAddBooking()}
             >
               + Add booking
-            </button>
-            <button
-              type="button"
-              className="rental-add-booking"
-              onClick={() => openEditProperty(selectedUnit)}
-              disabled={!selectedUnit}
-            >
+            </RentalButton>
+            <RentalButton onClick={() => openEditProperty(selectedUnit)} disabled={!selectedUnit}>
               Edit unit
-            </button>
-            <button type="button" className="rental-add-booking" onClick={openNewProperty}>
-              + Add unit
-            </button>
+            </RentalButton>
+            <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
           </div>
 
           {/* The per-unit status list renders in place of the (hidden)
@@ -329,9 +323,7 @@ export default function RentalsView({ me }) {
         onEditUnit={openEditProperty}
         onToggleNegotiating={handleToggleNegotiating}
       />
-      <button type="button" className="rental-add-booking" onClick={openNewProperty}>
-        + Add unit
-      </button>
+      <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
 
       <MonthNavRow>
         <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
