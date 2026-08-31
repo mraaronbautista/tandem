@@ -9,6 +9,7 @@ import {
 } from '../lib/rentals'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 function formatDateStr(dateStr) {
   // Parsed as local, not UTC — a bare 'YYYY-MM-DD' parsed via `new Date()`
@@ -100,27 +101,23 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
         )}
         {booking.notes && <p className="rental-booking-detail-notes">{booking.notes}</p>}
 
-        <div className="submission-actions">
-          <button type="button" onClick={onClose}>
-            Close
-          </button>
-          <button type="button" onClick={() => onEdit(booking)}>
-            Edit
-          </button>
+        <SubmissionActions>
+          <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+          <SubmissionButton onClick={() => onEdit(booking)}>Edit</SubmissionButton>
           {nextUnpaidCharge && (
-            <button type="button" onClick={handleMarkPaid} disabled={markingPaid}>
+            <SubmissionButton onClick={handleMarkPaid} disabled={markingPaid}>
               {markingPaid ? 'Marking…' : `Mark ${formatDateStr(nextUnpaidCharge)} paid`}
-            </button>
+            </SubmissionButton>
           )}
-          <button type="button" className="rental-delete-booking" onClick={handleDelete} disabled={deleting}>
+          <SubmissionButton variant="destructive" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting…' : isPending ? 'Decline' : 'Delete booking'}
-          </button>
+          </SubmissionButton>
           {isPending && (
-            <button type="button" className="submission-save" onClick={handleConfirm} disabled={confirming}>
+            <SubmissionButton variant="primary" onClick={handleConfirm} disabled={confirming}>
               {confirming ? 'Confirming…' : 'Confirm booking'}
-            </button>
+            </SubmissionButton>
           )}
-        </div>
+        </SubmissionActions>
       </ModalCard>
     </Modal>
   )
