@@ -85,21 +85,27 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
 
         {error && <p className="error">{error}</p>}
 
-        {isPending && <span className="rental-pending-badge">Pending request</span>}
-        <p className="rental-booking-detail-guest">{booking.guest_name}</p>
-        <p className="rental-booking-detail-dates">
+        {isPending && (
+          <span className="inline-block self-start rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
+            Pending request
+          </span>
+        )}
+        <p className="text-[17px] font-semibold text-text-h">{booking.guest_name}</p>
+        <p className="opacity-75">
           {formatDateStr(booking.check_in)} – {formatDateStr(booking.check_out)}
         </p>
         {nextUnpaidCharge && (
-          <p className="rental-booking-detail-charge">Next charge: {formatDateStr(nextUnpaidCharge)}</p>
+          <p className="text-[13px] opacity-65">Next charge: {formatDateStr(nextUnpaidCharge)}</p>
         )}
         {booking.source && (
-          <p className="rental-booking-detail-source">
+          <p className="text-[13px] opacity-65">
             Source: {BOOKING_SOURCE_LABEL[booking.source]}
             {booking.source === 'other' && booking.source_note ? ` — ${booking.source_note}` : ''}
           </p>
         )}
-        {booking.notes && <p className="rental-booking-detail-notes">{booking.notes}</p>}
+        {booking.notes && (
+          <p className="break-words border-t border-border pt-1 text-sm whitespace-pre-wrap">{booking.notes}</p>
+        )}
 
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Close</SubmissionButton>

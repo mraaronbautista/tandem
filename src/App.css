@@ -3734,6 +3734,9 @@ label.new-task-checkbox-label {
   color: #dc2626;
 }
 
+/* UNUSED as of the RentalBookingDetail.jsx Tailwind conversion — its one
+   consumer now carries this exact badge recipe directly. Kept, not deleted,
+   until a dedicated dead-CSS cleanup pass. */
 .rental-pending-badge {
   display: inline-block;
   align-self: flex-start;
@@ -3745,26 +3748,31 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-guest {
   font-size: 17px;
   font-weight: 600;
   color: var(--text-h);
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-dates {
   opacity: 0.75;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-source {
   font-size: 13px;
   opacity: 0.65;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-charge {
   font-size: 13px;
   opacity: 0.65;
 }
 
+/* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-notes {
   font-size: 14px;
   white-space: pre-wrap;
@@ -3773,6 +3781,10 @@ label.new-task-checkbox-label {
   border-top: 1px solid var(--border);
 }
 
+/* UNUSED as of the SubmissionActions/SubmissionButton migration — repo-wide
+   verification found no JSX consumers of either legacy destructive class.
+   RentalBookingDetail.jsx already uses variant="destructive". Kept, not
+   deleted, until a dedicated dead-CSS cleanup pass. */
 .submission-actions button.rental-delete-booking,
 .submission-actions button.submission-delete {
   background: #dc2626;
