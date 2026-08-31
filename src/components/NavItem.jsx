@@ -9,9 +9,17 @@
 //
 // No :hover/:active pseudo-class rule exists on either variant in the
 // original CSS — none added here.
+// rounded-full (not rounded-[8px]) for mobile specifically: MobileNav.jsx
+// wraps these in a fully-rounded floating capsule, and the browser's own
+// tap-highlight overlay follows each *button's* border-radius, not its
+// parent's — with a square-ish 8px radius on a button sitting flush
+// against the capsule's much rounder outer edge, the two end items
+// (first/last in the row) showed a visible dark square corner poking
+// past the pill's curve on tap. Desktop's nav is a plain flex row with
+// no enclosing pill to clash with, so it keeps the original 8px.
 const SIZE_LAYOUT = {
-  mobile: 'flex-1 flex-col gap-0.5 border-0 px-2.5 py-1 text-[11px]',
-  desktop: 'flex-none flex-row gap-1.5 border px-3 py-2 text-sm',
+  mobile: 'flex-1 flex-col gap-0.5 rounded-full border-0 px-2.5 py-1 text-[11px]',
+  desktop: 'flex-none flex-row gap-1.5 rounded-[8px] border px-3 py-2 text-sm',
 }
 
 // h-*/w-* rather than text-* now that icon is an SVG component, not an
@@ -40,7 +48,7 @@ export default function NavItem({ size = 'mobile', active = false, icon: Icon, l
   return (
     <button
       type="button"
-      className={`flex cursor-pointer items-center rounded-[8px] [font-family:inherit] [line-height:inherit] transition-colors duration-[180ms] ease-tactile ${SIZE_LAYOUT[size]} ${stateClasses(size, active)} ${className}`}
+      className={`flex cursor-pointer items-center [font-family:inherit] [line-height:inherit] transition-colors duration-[180ms] ease-tactile ${SIZE_LAYOUT[size]} ${stateClasses(size, active)} ${className}`}
       {...props}
     >
       <span className={`relative flex ${ICON_SIZE[size]}`}>

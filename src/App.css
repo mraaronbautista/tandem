@@ -2429,8 +2429,8 @@ a.task-submission-file-link:hover {
 }
 
 .fab-new-task {
-  width: 56px;
-  height: 56px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   border: none;
   background: var(--accent);

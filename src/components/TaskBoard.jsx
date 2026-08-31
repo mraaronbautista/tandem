@@ -618,7 +618,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 onClick={() => setDatePickerOpen(true)}
                 title="Jump to a date"
               >
-                {monthLabel} <span className="text-[12px] opacity-60">{datePickerOpen ? '▴' : '▾'}</span>
+                {monthLabel} <span className="text-[16px] opacity-60">{datePickerOpen ? '▴' : '▾'}</span>
               </MonthNavLabel>
             </MonthNavRow>
           )}
@@ -641,7 +641,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-0 text-[12px] opacity-60">▾</span>
+              <span className="pointer-events-none absolute right-0 text-[16px] opacity-60">▾</span>
             </div>
           )}
           {activeTab !== 'today' && activeTab !== 'rentals' && <h1 className="whitespace-nowrap text-[22px]">{PAGE_LABELS[activeTab]}</h1>}
