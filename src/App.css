@@ -205,8 +205,9 @@ select:focus-visible {
    Kept, not deleted, until this batch is visually verified (same "don't
    delete legacy CSS" rule as .task-board-nav above) — the .header-nav
    .task-board-nav-item* compound overrides below are unused for the same
-   reason; .header-nav itself is still live for its own display:flex/
-   gap:4px layout rule. */
+   reason, and .header-nav itself (below) is now unused too, since its
+   last dependent was converted straight to Tailwind (flex gap-1) rather
+   than kept as a literal class. */
 .task-board-nav-item {
   flex: 1;
   display: flex;
@@ -314,6 +315,12 @@ select:focus-visible {
   margin-left: auto;
 }
 
+/* UNUSED as of the .header-nav Tailwind conversion — TaskBoard.jsx's
+   desktop nav wrapper is now a plain `flex gap-1` (Tailwind's spacing
+   scale gap-1 = 4px, matching the gap value below exactly), its one and
+   only consumer. Kept, not deleted, until a dedicated dead-CSS cleanup
+   pass — see the .task-board-nav-item comment above for the same
+   reasoning applied to the compound overrides just below. */
 .header-nav {
   display: flex;
   gap: 4px;

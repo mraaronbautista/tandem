@@ -74,14 +74,13 @@ function daySectionLabel(day, today) {
 }
 
 // A floating capsule on mobile (MobileNav.jsx), folded inline into the
-// header row on wide screens (`.header-nav` — see App.css and the
-// isDesktop branch below) — the places you go browse, as opposed to the
-// "+" menu's one-shot actions (New task, Priorities, Submit report,
-// Nudge, Vault). Cork Board and Inbox were two separate tabs here;
-// they're merged into one Board destination (BoardView.jsx, an internal
-// Pins/Inbox segmented toggle) so mobile settles on 4 primary
-// destinations instead of 5 — a navigation-level grouping only, neither
-// screen's own data/logic changed.
+// header row on wide screens (see the isDesktop branch below) — the
+// places you go browse, as opposed to the "+" menu's one-shot actions
+// (New task, Priorities, Submit report, Nudge, Vault). Cork Board and
+// Inbox were two separate tabs here; they're merged into one Board
+// destination (BoardView.jsx, an internal Pins/Inbox segmented toggle) so
+// mobile settles on 4 primary destinations instead of 5 — a
+// navigation-level grouping only, neither screen's own data/logic changed.
 const TABS = [
   { key: 'today', icon: '📋', label: 'Today' },
   { key: 'rentals', icon: '🏠', label: 'Rentals' },
@@ -604,14 +603,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
               the left happens to be, instead of drifting left and right
               as you switch tabs. */}
           <div className="ml-auto flex items-center gap-4">
-            {/* Kept as the literal "header-nav" class, not converted —
-                .header-nav's own display:flex/gap:4px rule still lays out
-                this row. Its compound .task-board-nav-item* overrides
-                (App.css) are now orphaned, since NavItem.jsx supplies
-                desktop sizing directly, but that legacy CSS is left in
-                place rather than deleted until it's confirmed unused
-                elsewhere and this batch is visually verified. */}
-            {isDesktop && <nav className="header-nav">{renderNavButtons('desktop')}</nav>}
+            {/* .header-nav's own recipe was just display:flex; gap:4px —
+                its last dependent, so converted directly rather than kept
+                as a literal class. .header-nav itself and the compound
+                .task-board-nav-item* overrides it used to carry (App.css)
+                are now fully orphaned, left in place until a dedicated
+                dead-CSS cleanup pass. */}
+            {isDesktop && <nav className="flex gap-1">{renderNavButtons('desktop')}</nav>}
             <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-2">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {me?.display_name === 'Ada' && (
