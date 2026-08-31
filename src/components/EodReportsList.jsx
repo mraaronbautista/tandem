@@ -56,10 +56,7 @@ export default function EodReportsList({ memberName }) {
 
   useEffect(() => {
     fetchEodReports()
-      .then((data) => {
-        setReports(data)
-        if (data.length) setExpanded(new Set([monthKey(data[0].report_date)]))
-      })
+      .then(setReports)
       .catch((err) => setError(err.message))
   }, [])
 
@@ -72,15 +69,13 @@ export default function EodReportsList({ memberName }) {
     })
   }
 
-  // Re-derives which month is auto-open for the newly filtered set —
-  // switching to Week, say, shouldn't leave the previously-open month
-  // expanded if it turns out to have no week reports at all, or leave
-  // everything collapsed if the top month under the old filter isn't
-  // the top month under the new one.
+  // Every month starts collapsed, including the most recent one — clears
+  // whatever was expanded under the old filter rather than leaving a
+  // stale month open that might not even appear in the new one (e.g.
+  // switching to Week when the currently-open month has no week reports).
   function handlePeriodChange(next) {
     setPeriod(next)
-    const filtered = next === 'all' ? reports : reports?.filter((r) => r.period === next)
-    setExpanded(filtered?.length ? new Set([monthKey(filtered[0].report_date)]) : new Set())
+    setExpanded(new Set())
   }
 
   const filteredReports = period === 'all' ? reports : reports?.filter((r) => r.period === period)

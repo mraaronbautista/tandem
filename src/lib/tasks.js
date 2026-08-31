@@ -159,44 +159,87 @@ export function getOverdueTasks(tasks) {
 // would silently misalign every later cutoff too.
 const BIWEEKLY_ANCHOR = new Date(2026, 6, 26)
 
-// Start of the current day/week/month/biweekly period, in the viewer's
-// own local timezone. Week starts Sunday, matching DateStrip's weekday
-// order. Biweekly counts whole 14-day blocks elapsed since
-// BIWEEKLY_ANCHOR, so every cycle stays aligned to that one fixed
+// Start of the current (offset 0) or a past (`offset` whole periods back
+// — -1 means "one period ago", etc.) day/week/month/biweekly bucket, in
+// the viewer's own local timezone. Week starts Sunday, matching
+// DateStrip's weekday order. Biweekly counts whole 14-day blocks elapsed
+// since BIWEEKLY_ANCHOR, so every cycle stays aligned to that one fixed
 // reference no matter how far past it "now" is — same reasoning as
 // rentals.js's addCalendarMonths always computing from a booking's
-// original check-in rather than the previous cycle.
-function startOfPeriod(period) {
+// original check-in rather than the previous cycle. `setDate(1)` before
+// applying a month offset (rather than after) matters: shifting months
+// from an arbitrary day-of-month can land on the wrong month when the
+// target month has fewer days (e.g. Aug 31 minus a month isn't a real
+// date in some months) — day 1 always exists, so pinning to it first
+// makes the offset safe regardless of today's date-of-month.
+function startOfPeriod(period, offset = 0) {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
-  if (period === 'week') d.setDate(d.getDate() - d.getDay())
-  if (period === 'month') d.setDate(1)
+  if (period === 'day') d.setDate(d.getDate() + offset)
+  if (period === 'week') d.setDate(d.getDate() - d.getDay() + offset * 7)
+  if (period === 'month') {
+    d.setDate(1)
+    d.setMonth(d.getMonth() + offset)
+  }
   if (period === 'biweekly') {
     const daysSinceAnchor = Math.floor((d.getTime() - BIWEEKLY_ANCHOR.getTime()) / 86400000)
     const cyclesElapsed = Math.floor(daysSinceAnchor / 14)
     d.setTime(BIWEEKLY_ANCHOR.getTime())
-    d.setDate(d.getDate() + cyclesElapsed * 14)
+    d.setDate(d.getDate() + (cyclesElapsed + offset) * 14)
   }
   return d
+}
+
+// A short label for a day/week/month/biweekly bucket — "This month" for
+// the current one (offset 0), the actual date/range otherwise, so
+// EndOfDayReportForm.jsx can make clear which bucket a backdated report
+// is actually landing on (see getCompletedInPeriod/reportDateForPeriod
+// below) rather than leaving it implicit the way "this ___" phrasing
+// already does for the current period.
+export function periodBucketLabel(period, offset = 0) {
+  const start = startOfPeriod(period, offset)
+  if (period === 'day') {
+    return offset === 0 ? 'Today' : start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+  if (period === 'week') {
+    if (offset === 0) return 'This week'
+    const end = new Date(start)
+    end.setDate(end.getDate() + 6)
+    const startLabel = start.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    const endLabel = end.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    return `${startLabel} – ${endLabel}`
+  }
+  if (period === 'month') {
+    return offset === 0 ? 'This month' : start.toLocaleDateString([], { month: 'long', year: 'numeric' })
+  }
+  if (period === 'biweekly') {
+    return offset === 0 ? 'This pay period' : start.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+  return ''
 }
 
 // The report_date to bucket an eod_reports row under, in the submitter's
 // own local timezone — passed explicitly rather than relying on the
 // database's `current_date` default, which evaluates in UTC and would be
 // wrong for a meaningful part of every day for Aaron (UTC+8).
-export function reportDateForPeriod(period) {
-  return localDayKey(startOfPeriod(period))
+export function reportDateForPeriod(period, offset = 0) {
+  return localDayKey(startOfPeriod(period, offset))
 }
 
-// Completed tasks belonging to a given `who` within the current day/week/
-// month — the starting draft for a fresh end-of-day/week/month report.
-export function getCompletedInPeriod(tasks, whoKey, period) {
-  const start = startOfPeriod(period)
-  const now = new Date()
+// Completed tasks belonging to a given `who` within a day/week/month
+// bucket — the starting draft for a fresh end-of-day/week/month report.
+// The current bucket (offset 0) is still bounded by "now", same as
+// before (the period isn't over yet); a past bucket (offset < 0, e.g.
+// submitting August's report in September because it got missed) is
+// bounded by the start of the *next* bucket instead, so it doesn't
+// silently pull in everything completed between then and today too.
+export function getCompletedInPeriod(tasks, whoKey, period, offset = 0) {
+  const start = startOfPeriod(period, offset)
+  const end = offset === 0 ? new Date() : startOfPeriod(period, offset + 1)
   return tasks.filter((t) => {
     if (t.who !== whoKey || t.status !== 'done' || !t.completed_at) return false
     const completedAt = new Date(t.completed_at)
-    return completedAt >= start && completedAt <= now
+    return completedAt >= start && completedAt < end
   })
 }
 

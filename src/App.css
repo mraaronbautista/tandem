@@ -1442,7 +1442,7 @@ select:focus-visible {
 /* Capped at max-height (not just min-height) — uncapped resize: vertical
    let a manually-dragged textarea grow tall enough to push the preview
    list, hint text, and Create button below it out of the modal's own
-   scroll area (.modal-backdrop .submission-modal, max-height: 85vh).
+   scroll area (.modal-backdrop .submission-modal, max-height: 85dvh).
    120px/rows=6 as the default is enough to see a few lines of a pasted
    schedule at once without the field itself dominating the modal. */
 .bulk-add-modal textarea {
@@ -2227,7 +2227,7 @@ a.task-submission-file-link:hover {
 }
 
 /* No max-height/overflow of its own — .submission-modal is already the
-   scroll container (max-height: 88vh on mobile, where it's a slide-up
+   scroll container (max-height: 88dvh on mobile, where it's a slide-up
    sheet). A second nested scroll box here squeezed the section list into
    a small cramped area instead of letting the sheet itself grow. */
 /* UNUSED as of the HowToGuide.jsx Tailwind conversion — this complete
@@ -2525,7 +2525,15 @@ a.task-submission-file-link:hover {
 .modal-backdrop .submission-modal {
   max-width: 480px;
   width: 100%;
-  max-height: 85vh;
+  /* dvh, not vh: vh is pinned to the layout viewport and doesn't shrink
+     when the on-screen keyboard opens, so a field near the bottom of a
+     still-85vh-tall scroll container needed a much bigger scroll to
+     clear the keyboard than the *visible* space actually required —
+     and that scroll position stuck around after the keyboard closed,
+     leaving the modal looking scrolled halfway down for no visible
+     reason. dvh tracks the actual visual viewport, keyboard included,
+     so there's nothing extra to scroll past in the first place. */
+  max-height: 85dvh;
   overflow-y: auto;
   margin-bottom: 0;
 }
@@ -2569,7 +2577,9 @@ a.task-submission-file-link:hover {
   .modal-backdrop .peek-task,
   .modal-backdrop .submission-modal {
     max-width: 100%;
-    max-height: 88vh;
+    /* dvh here too — see the base rule above for why; this is the slide-
+       up sheet where the keyboard-scroll issue actually shows up. */
+    max-height: 88dvh;
     animation: modal-slide-up 0.2s ease-out;
   }
 

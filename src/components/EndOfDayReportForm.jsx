@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { getCompletedInPeriod, getCompletedSince, reportDateForPeriod } from '../lib/tasks'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { getCompletedInPeriod, getCompletedSince, reportDateForPeriod, periodBucketLabel } from '../lib/tasks'
+import IconButton from './IconButton'
 import { whoKeyForName } from '../lib/whoLabels'
 import { submitEodReport, fetchOwnEodReport } from '../lib/eodReports'
 import { sendEodReportNotification } from '../lib/manualNotify'
@@ -34,10 +36,10 @@ const MINUTE_OPTIONS = ['00', '15', '30', '45']
 // Same "since last submission" vs. "whole period" branch the draft body
 // and the actual attachment snapshot both need — factored out so they
 // can't quietly disagree about which tasks this submission covers.
-function getRelevantCompletedTasks(tasks, whoKey, period, existingReport) {
+function getRelevantCompletedTasks(tasks, whoKey, period, offset, existingReport) {
   return existingReport
     ? getCompletedSince(tasks, whoKey, new Date(existingReport.updated_at))
-    : getCompletedInPeriod(tasks, whoKey, period)
+    : getCompletedInPeriod(tasks, whoKey, period, offset)
 }
 
 // Flattens completion_attachments off whichever tasks this submission's
@@ -77,6 +79,14 @@ function formatTimeNow() {
 export default function EndOfDayReportForm({ tasks, me, onClose }) {
   const whoKey = whoKeyForName(me?.display_name)
   const [period, setPeriod] = useState('day')
+  // Whole periods back from the current one (0 = current, -1 = one
+  // period ago, etc.) — lets a bucket that got missed entirely (e.g. it
+  // turned September before Aaron submitted August's month report) still
+  // get submitted, instead of the form only ever being able to reach
+  // whichever bucket "now" falls in. Reset to 0 whenever the period tab
+  // itself changes — carrying "one month back" over as "one week back"
+  // when switching tabs wouldn't mean anything.
+  const [offset, setOffset] = useState(0)
   const [existingReport, setExistingReport] = useState(undefined) // undefined = still loading
   const [body, setBody] = useState('')
   const [hoursInput, setHoursInput] = useState('')
@@ -84,17 +94,22 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  function handlePeriodClick(value) {
+    setPeriod(value)
+    setOffset(0)
+  }
+
   useEffect(() => {
     let cancelled = false
     setExistingReport(undefined)
 
-    fetchOwnEodReport(me.id, period, reportDateForPeriod(period))
+    fetchOwnEodReport(me.id, period, reportDateForPeriod(period, offset))
       .then((existing) => {
         if (cancelled) return
         setExistingReport(existing)
 
         if (existing) {
-          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, existing), period, true))
+          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, offset, existing), period, true))
           if (existing.minutes_logged != null) {
             setHoursInput(String(Math.floor(existing.minutes_logged / 60)))
             setMinutesInput(String(existing.minutes_logged % 60).padStart(2, '0'))
@@ -103,7 +118,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
             setMinutesInput('')
           }
         } else {
-          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, null), period, false))
+          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, offset, null), period, false))
           setHoursInput('')
           setMinutesInput('')
         }
@@ -117,7 +132,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
     // convenience computed when you land on/switch a tab, not something
     // that should shift under you mid-edit as realtime task updates come in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period, me.id])
+  }, [period, offset, me.id])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -130,13 +145,19 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
       // Re-derived at submit time rather than reused from the initial
       // draft state — matches whichever tasks are actually completed
       // right now, not a stale snapshot from when the form was opened.
-      const attachments = collectAttachments(getRelevantCompletedTasks(tasks, whoKey, period, existingReport))
+      const attachments = collectAttachments(getRelevantCompletedTasks(tasks, whoKey, period, offset, existingReport))
 
-      await submitEodReport(period, reportDateForPeriod(period), { bodyChunk, minutesLogged, attachments })
+      await submitEodReport(period, reportDateForPeriod(period, offset), { bodyChunk, minutesLogged, attachments })
 
       const hoursText =
         minutesLogged != null ? `${Math.floor(minutesLogged / 60)}h ${minutesLogged % 60}m logged — ` : ''
-      await sendEodReportNotification(`${hoursText}${existingReport ? 'updated' : 'submitted'} ${period} report.`)
+      // Names the actual bucket for a backdated submission (offset !== 0)
+      // — otherwise "submitted month report" arriving in September, about
+      // August, reads as if it just happened today.
+      const bucketText = offset !== 0 ? ` (${periodBucketLabel(period, offset)})` : ''
+      await sendEodReportNotification(
+        `${hoursText}${existingReport ? 'updated' : 'submitted'} ${period} report${bucketText}.`,
+      )
       onClose()
     } catch (err) {
       setError(err.message)
@@ -150,15 +171,38 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
   return (
     <Modal onClose={onClose}>
       <ModalCard as="form" modifier="eod-report-modal" onSubmit={handleSubmit}>
-        <h2>{period[0].toUpperCase() + period.slice(1)} report</h2>
+        <h2>
+          {period[0].toUpperCase() + period.slice(1)} report{offset !== 0 ? ` — ${periodBucketLabel(period, offset)}` : ''}
+        </h2>
 
         <PeriodTabs>
           {PERIODS.map((p) => (
-            <PeriodTab key={p.value} active={period === p.value} onClick={() => setPeriod(p.value)}>
+            <PeriodTab key={p.value} active={period === p.value} onClick={() => handlePeriodClick(p.value)}>
               {p.label}
             </PeriodTab>
           ))}
         </PeriodTabs>
+
+        {/* Steps to a past bucket that never got submitted (e.g. it's
+            September and Aaron never sent August's month report) —
+            capped at offset 0 since a future bucket has no data to
+            report on yet. Reaches every past bucket, not just "one back",
+            since more than one could realistically get missed in a row. */}
+        <div className="flex items-center justify-center gap-1.5 text-sm text-text">
+          <IconButton size="weekNav" onClick={() => setOffset((o) => o - 1)} title="Previous" aria-label="Previous period">
+            <ChevronLeft size={14} />
+          </IconButton>
+          <span className="min-w-[110px] text-center font-semibold whitespace-nowrap">{periodBucketLabel(period, offset)}</span>
+          <IconButton
+            size="weekNav"
+            onClick={() => setOffset((o) => Math.min(0, o + 1))}
+            disabled={offset >= 0}
+            title="Next"
+            aria-label="Next period"
+          >
+            <ChevronRight size={14} />
+          </IconButton>
+        </div>
 
         {error && <p className="error">{error}</p>}
 
