@@ -41,6 +41,7 @@ import BoardView from './BoardView'
 import MonthView from './MonthView'
 import MobileNav from './MobileNav'
 import IconButton from './IconButton'
+import NavItem from './NavItem'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
 
@@ -553,25 +554,29 @@ export default function TaskBoard({ theme, toggleTheme }) {
     { key: 'vault', icon: '🔐', label: 'Vault', onSelect: () => setVaultOpen(true) },
   ]
 
-  const navButtons = TABS.map((tab) => (
-    <button
-      key={tab.key}
-      type="button"
-      className={`task-board-nav-item${activeTab === tab.key ? ' task-board-nav-item-active' : ''}`}
-      onClick={() => handleTabClick(tab.key)}
-    >
-      <span className="task-board-nav-icon">
-        {tab.icon}
-        {tab.key === 'board' && hasUnseenInbox && <span className="task-board-nav-item-badge" />}
-      </span>
-      {tab.label}
-    </button>
-  ))
+  // Renders the same TABS/activeTab/badge data through NavItem.jsx at
+  // either mount size — MobileNav's capsule (size="mobile") and the
+  // desktop .header-nav row (size="desktop") each call this rather than
+  // sharing one pre-built array, so the context-specific presentation
+  // lives in NavItem, not stuffed into the TABS data model itself.
+  function renderNavButtons(size) {
+    return TABS.map((tab) => (
+      <NavItem
+        key={tab.key}
+        size={size}
+        active={activeTab === tab.key}
+        icon={tab.icon}
+        label={tab.label}
+        badge={tab.key === 'board' && hasUnseenInbox}
+        onClick={() => handleTabClick(tab.key)}
+      />
+    ))
+  }
 
   return (
     <div className="task-board">
       {!isDesktop && (
-        <MobileNav navButtons={navButtons}>
+        <MobileNav navButtons={renderNavButtons('mobile')}>
           <NewTaskForm
             variant="mobile"
             onCreate={handleCreate}
@@ -600,11 +605,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
               as you switch tabs. */}
           <div className="ml-auto flex items-center gap-4">
             {/* Kept as the literal "header-nav" class, not converted —
-                .header-nav .task-board-nav-item (App.css) is a compound
-                selector that needs this exact ancestor class name to keep
-                matching; the nav-item family is explicitly out of scope
-                for this batch. */}
-            {isDesktop && <nav className="header-nav">{navButtons}</nav>}
+                .header-nav's own display:flex/gap:4px rule still lays out
+                this row. Its compound .task-board-nav-item* overrides
+                (App.css) are now orphaned, since NavItem.jsx supplies
+                desktop sizing directly, but that legacy CSS is left in
+                place rather than deleted until it's confirmed unused
+                elsewhere and this batch is visually verified. */}
+            {isDesktop && <nav className="header-nav">{renderNavButtons('desktop')}</nav>}
             <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-2">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {me?.display_name === 'Ada' && (

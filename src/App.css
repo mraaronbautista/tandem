@@ -165,8 +165,8 @@ select:focus-visible {
    this bar. Kept, not deleted, until every consumer of this class is
    confirmed gone and the replacement is visually verified (see
    MIGRATION_PLAN.md's "don't delete legacy CSS" rule) — .task-board-
-   nav-item/-icon/-item-badge below are still live, reused by both
-   MobileNav.jsx and .header-nav (desktop, untouched this step).
+   nav-item/-icon/-item-badge below are ALSO now unused, superseded by
+   NavItem.jsx (see its own header comment just above that block).
    Original comment, for history: a fixed bottom bar, mobile only.
    Desktop used to mirror this as a sticky left sidebar (one nav, two
    layouts via CSS, the pattern Modal.jsx still uses for its own
@@ -199,6 +199,14 @@ select:focus-visible {
   }
 }
 
+/* UNUSED as of the nav-item Tailwind migration — TaskBoard.jsx's
+   renderNavButtons() now renders NavItem.jsx (mobile/desktop size
+   variants) instead of this literal class family, at both mount sizes.
+   Kept, not deleted, until this batch is visually verified (same "don't
+   delete legacy CSS" rule as .task-board-nav above) — the .header-nav
+   .task-board-nav-item* compound overrides below are unused for the same
+   reason; .header-nav itself is still live for its own display:flex/
+   gap:4px layout rule. */
 .task-board-nav-item {
   flex: 1;
   display: flex;
