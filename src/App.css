@@ -146,6 +146,13 @@ select:focus-visible {
 }
 
 /* Board */
+/* UNUSED as of the .task-board Tailwind conversion — TaskBoard.jsx's root
+   div is now `max-w-[640px] mx-auto pt-6 px-4
+   pb-[calc(110px+env(safe-area-inset-bottom,0px))] md:max-w-[1100px]
+   md:p-6`, its one and only consumer. Kept, not deleted, until a
+   dedicated dead-CSS cleanup pass. The bottom-padding comment below still
+   explains the *value* (110px + safe-area), which the Tailwind class
+   reproduces exactly. */
 .task-board {
   max-width: 640px;
   margin: 0 auto;
@@ -270,6 +277,9 @@ select:focus-visible {
 /* No sidebar to seat beside .task-board-content anymore (see .header-nav
    below) — just a wider centered single column. */
 @media (min-width: 900px) {
+  /* UNUSED — see the .task-board comment above (line 149-ish); its
+     desktop override moved to the md:max-w-[1100px] md:p-6 utilities on
+     the same className. */
   .task-board {
     max-width: 1100px;
     padding: 24px 24px 24px;

@@ -573,7 +573,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }
 
   return (
-    <div className="task-board">
+    <div className="max-w-[640px] mx-auto pt-6 px-4 pb-[calc(110px+env(safe-area-inset-bottom,0px))] md:max-w-[1100px] md:p-6">
       {!isDesktop && (
         <MobileNav navButtons={renderNavButtons('mobile')}>
           <NewTaskForm
