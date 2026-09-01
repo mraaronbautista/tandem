@@ -62,9 +62,9 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 
 - [x] Audit the existing staff feature and document the revised product direction.
 - [x] Finish the reliability/mobile baseline: clock-in retry, no-location state, staff profile editing, and overflow-safe cards.
-- [ ] Replace the raw empty state with the Hours overview/onboarding layout.
-- [ ] Load and present properties from both Awa and Azu.
-- [ ] Replace “Add site” with “Manage clock-in locations” and property-first configuration.
+- [x] Replace the raw empty state with the Hours overview/onboarding layout.
+- [x] Load and present properties from both Awa and Azu.
+- [x] Replace “Add site” with “Manage clock-in locations” and property-first configuration.
 - [ ] Add address lookup and hide technical coordinates by default.
 - [ ] Add on-site capture with member approval fallback.
 - [ ] Add payroll-period filtering, summary metrics, and filter-aware CSV export.
@@ -78,4 +78,4 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 
 ### Next action
 
-Complete and verify the reliability/mobile baseline, then build the property-first empty/onboarding state before adding an address-lookup provider.
+Choose and integrate an address-lookup provider so a saved rental address can configure its map point without Aaron supplying coordinates.

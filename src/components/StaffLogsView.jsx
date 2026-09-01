@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Clock3, MapPin } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchRentalProperties } from '../lib/rentals'
 import {
@@ -14,8 +14,8 @@ import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import StaffWorkSitesForm from './StaffWorkSitesForm'
 import StaffPayrollExport from './StaffPayrollExport'
 import StaffProfileForm from './StaffProfileForm'
+import StaffLocationsManager from './StaffLocationsManager'
 
-const COMPANY = 'awa'
 const STATUS_TABS = [
   { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
@@ -49,7 +49,9 @@ export default function StaffLogsView({ me }) {
   const [error, setError] = useState('')
   const [approvingId, setApprovingId] = useState(null)
   const [editingSite, setEditingSite] = useState(null)
+  const [configuringProperty, setConfiguringProperty] = useState(null)
   const [addingSite, setAddingSite] = useState(false)
+  const [locationsOpen, setLocationsOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
 
@@ -63,14 +65,19 @@ export default function StaffLogsView({ me }) {
 
   async function reloadAll() {
     try {
-      const [rosterData, sitesData, rentalPropertiesData] = await Promise.all([
+      const [rosterData, sitesData, awaProperties, azuProperties] = await Promise.all([
         fetchStaffRoster(),
         fetchWorkSites(),
-        fetchRentalProperties(COMPANY),
+        fetchRentalProperties('awa'),
+        fetchRentalProperties('azu'),
       ])
       setRoster(rosterData)
       setSites(sitesData)
-      setRentalProperties(rentalPropertiesData)
+      setRentalProperties(
+        [...awaProperties, ...azuProperties].sort((a, b) =>
+          `${a.company}-${a.unit_name}`.localeCompare(`${b.company}-${b.unit_name}`),
+        ),
+      )
       await reloadEntries()
     } catch (err) {
       setError(err.message)
@@ -122,6 +129,9 @@ export default function StaffLogsView({ me }) {
   }
 
   const totalPay = entries.reduce((sum, e) => sum + (computeEntryPay(e) || 0), 0)
+  const readyLocationCount = sites.filter((site) => site.active).length
+  const configuredRentalIds = new Set(sites.filter((site) => site.active).map((site) => site.rental_property_id))
+  const needsSetupCount = rentalProperties.filter((property) => !configuredRentalIds.has(property.id)).length
 
   if (loading) return <p className="loading">Loading…</p>
 
@@ -148,9 +158,9 @@ export default function StaffLogsView({ me }) {
           <button
             type="button"
             className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
-            onClick={() => setAddingSite(true)}
+            onClick={() => setLocationsOpen(true)}
           >
-            + Add site
+            <MapPin size={12} className="mr-1 inline align-[-2px]" /> Locations
           </button>
           <button
             type="button"
@@ -168,7 +178,24 @@ export default function StaffLogsView({ me }) {
       </div>
 
       {entries.length === 0 ? (
-        <p className="empty">No time entries yet.</p>
+        <div className="flex flex-col items-center gap-3 rounded-[12px] border border-dashed border-border bg-card-bg px-5 py-8 text-center">
+          <Clock3 size={26} className="text-accent opacity-90" />
+          <div>
+            <h2 className="text-base font-semibold text-text-h">No shifts recorded yet</h2>
+            <p className="mt-1 text-sm opacity-65">
+              {readyLocationCount > 0
+                ? 'Clock-in is ready. Shifts will appear here after the property manager starts tracking time.'
+                : 'Configure at least one property for clock-in, then the property manager can begin tracking time.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="cursor-pointer rounded-sm border border-accent bg-accent px-3.5 py-2 text-sm font-semibold text-white"
+            onClick={() => setLocationsOpen(true)}
+          >
+            {readyLocationCount > 0 ? 'Manage clock-in locations' : 'Set up clock-in locations'}
+          </button>
+        </div>
       ) : (
         <div className="flex flex-col gap-2">
           {entries.map((e) => (
@@ -240,31 +267,56 @@ export default function StaffLogsView({ me }) {
         ))}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <h3 className="text-[13px] opacity-60">Work sites</h3>
-        {sites.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className="cursor-pointer rounded-sm border border-border px-3 py-2 text-left text-sm text-text-h"
-            onClick={() => setEditingSite(s)}
-          >
-            {s.name} {!s.active && '(inactive)'}
-          </button>
-        ))}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[8px] border border-border px-3 py-3 text-sm">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-text-h">Clock-in locations</h3>
+          <p className="mt-0.5 text-xs opacity-65">
+            {readyLocationCount} ready{needsSetupCount > 0 ? ` · ${needsSetupCount} rental ${needsSetupCount === 1 ? 'property needs' : 'properties need'} setup` : ''}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h"
+          onClick={() => setLocationsOpen(true)}
+        >
+          Manage
+        </button>
       </div>
 
-      {(addingSite || editingSite) && (
+      {locationsOpen && (
+        <StaffLocationsManager
+          properties={rentalProperties}
+          sites={sites}
+          onClose={() => setLocationsOpen(false)}
+          onConfigureProperty={(property) => {
+            setLocationsOpen(false)
+            setConfiguringProperty(property)
+          }}
+          onEditSite={(site) => {
+            setLocationsOpen(false)
+            setEditingSite(site)
+          }}
+          onAddOther={() => {
+            setLocationsOpen(false)
+            setAddingSite(true)
+          }}
+        />
+      )}
+
+      {(addingSite || editingSite || configuringProperty) && (
         <StaffWorkSitesForm
           site={editingSite}
+          rentalProperty={configuringProperty}
           rentalProperties={rentalProperties}
           onClose={() => {
             setAddingSite(false)
             setEditingSite(null)
+            setConfiguringProperty(null)
           }}
           onSaved={async () => {
             setAddingSite(false)
             setEditingSite(null)
+            setConfiguringProperty(null)
             setSites(await fetchWorkSites())
           }}
           onArchived={async () => {

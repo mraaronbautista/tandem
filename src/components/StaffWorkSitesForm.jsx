@@ -19,18 +19,27 @@ const FIELD_INPUT_CLASS =
 // property and capture exact coordinates with one tap, the same
 // getCurrentPosition call StaffClockView.jsx uses for clock-in. Manual
 // entry stays available as a fallback (e.g. adding a site remotely).
-export default function StaffWorkSitesForm({ site, rentalProperties, onClose, onSaved, onArchived }) {
-  const [name, setName] = useState(site?.name || '')
-  const [address, setAddress] = useState(site?.address || '')
+export default function StaffWorkSitesForm({ site, rentalProperty, rentalProperties, onClose, onSaved, onArchived }) {
+  const [name, setName] = useState(site?.name || rentalProperty?.unit_name || '')
+  const [address, setAddress] = useState(site?.address || rentalProperty?.address || '')
   const [latitude, setLatitude] = useState(site?.latitude ?? '')
   const [longitude, setLongitude] = useState(site?.longitude ?? '')
-  const [radiusM, setRadiusM] = useState(site?.geofence_radius_m ?? 100)
-  const [rentalPropertyId, setRentalPropertyId] = useState(site?.rental_property_id || '')
+  const [radiusM, setRadiusM] = useState(site?.geofence_radius_m ?? 150)
+  const [rentalPropertyId, setRentalPropertyId] = useState(site?.rental_property_id || rentalProperty?.id || '')
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState('')
   const [saving, setSaving] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState('')
+
+  function handleRentalPropertyChange(propertyId) {
+    setRentalPropertyId(propertyId)
+    if (site || !propertyId) return
+    const property = rentalProperties.find((candidate) => candidate.id === propertyId)
+    if (!property) return
+    setName(property.unit_name)
+    setAddress(property.address || '')
+  }
 
   function handleUseCurrentLocation() {
     if (!navigator.geolocation) {
@@ -92,67 +101,81 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
   return (
     <Modal onClose={onClose}>
       <ModalCard as="form" onSubmit={handleSubmit}>
-        <h2>{site ? 'Edit work site' : 'New work site'}</h2>
+        <h2>{site ? 'Edit clock-in location' : rentalProperty ? 'Configure clock-in location' : 'Other clock-in location'}</h2>
 
         {error && <p className="error">{error}</p>}
 
-        <label>
-          Site name
-          <input
-            required
-            autoFocus
-            placeholder="e.g. Rachel St."
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={FIELD_INPUT_CLASS}
-          />
-        </label>
+        {rentalProperty ? (
+          <div className="rounded-[8px] border border-border bg-card-bg px-3 py-2.5">
+            <strong className="block text-sm font-semibold text-text-h">{rentalProperty.unit_name}</strong>
+            <span className="text-xs opacity-65">{rentalProperty.address || 'No address saved for this property'}</span>
+          </div>
+        ) : (
+          <>
+            <label>
+              Location name
+              <input
+                required
+                autoFocus
+                placeholder="e.g. Family house"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={FIELD_INPUT_CLASS}
+              />
+            </label>
 
-        <label>
-          Address (optional)
-          <input
-            placeholder="e.g. 123 Rachel St."
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className={FIELD_INPUT_CLASS}
-          />
-        </label>
+            <label>
+              Address (optional)
+              <input
+                placeholder="e.g. 123 Rachel St."
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className={FIELD_INPUT_CLASS}
+              />
+            </label>
+          </>
+        )}
 
         {rentalProperties?.length > 0 && (
           <label>
-            Linked Awa Rentalz unit (optional)
+            Linked rental property (optional)
             <select
               value={rentalPropertyId}
-              onChange={(e) => setRentalPropertyId(e.target.value)}
+              onChange={(e) => handleRentalPropertyChange(e.target.value)}
               className={FIELD_INPUT_CLASS}
+              disabled={Boolean(rentalProperty)}
             >
               <option value="">Not a rental unit</option>
               {rentalProperties.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.unit_name}
+                  {p.company === 'azu' ? 'Azu' : 'Awa'} · {p.unit_name}
                 </option>
               ))}
             </select>
           </label>
         )}
 
-        <button
-          type="button"
-          className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h"
-          onClick={handleUseCurrentLocation}
-          disabled={locating}
-        >
-          {locating ? (
-            'Locating…'
-          ) : (
-            <>
-              <MapPin size={14} className="mr-1 inline align-[-2px]" /> Use my current location
-            </>
-          )}
-        </button>
-        {locationError && <p className="error">{locationError}</p>}
+        <details className="rounded-[8px] border border-border px-3 py-2" open={latitude === '' || longitude === ''}>
+          <summary className="cursor-pointer text-sm font-medium text-text-h">Location details</summary>
+          <div className="mt-3 flex flex-col gap-3">
+            <p className="text-xs opacity-65">Address lookup will be added next. Current coordinates are kept here as an advanced fallback.</p>
+            <button
+              type="button"
+              className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h"
+              onClick={handleUseCurrentLocation}
+              disabled={locating}
+            >
+              {locating ? (
+                'Locating…'
+              ) : (
+                <>
+                  <MapPin size={14} className="mr-1 inline align-[-2px]" /> Use this device's current location
+                </>
+              )}
+            </button>
+            {locationError && <p className="error">{locationError}</p>}
 
-        <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
           <label className="min-w-0">
             Latitude
             <input
@@ -175,19 +198,21 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               className={FIELD_INPUT_CLASS}
             />
           </label>
-        </div>
+            </div>
 
-        <label>
-          Geofence radius (meters)
-          <input
-            type="number"
-            min="10"
-            step="10"
-            value={radiusM}
-            onChange={(e) => setRadiusM(e.target.value)}
-            className={FIELD_INPUT_CLASS}
-          />
-        </label>
+            <label>
+              Allowed radius (meters)
+              <input
+                type="number"
+                min="10"
+                step="10"
+                value={radiusM}
+                onChange={(e) => setRadiusM(e.target.value)}
+                className={FIELD_INPUT_CLASS}
+              />
+            </label>
+          </div>
+        </details>
 
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
@@ -197,7 +222,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
             </SubmissionButton>
           )}
           <SubmissionButton type="submit" variant="primary" disabled={saving}>
-            {saving ? 'Saving…' : site ? 'Save changes' : 'Add site'}
+            {saving ? 'Saving…' : site ? 'Save changes' : rentalProperty ? 'Save location' : 'Add location'}
           </SubmissionButton>
         </SubmissionActions>
       </ModalCard>
