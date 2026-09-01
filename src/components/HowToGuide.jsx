@@ -12,7 +12,7 @@ const SECTIONS = [
   {
     title: 'Getting around',
     items: [
-      'Five tabs — Today, Rentals, Reports, Cork Board, Inbox. On a phone they sit in a bar along the bottom; on a tablet or wider screen they fold into the top header next to Settings instead, since there\'s no separate sidebar.',
+      'Five tabs — Timeline, Rentals, Reports, Board, and Staff. On a phone they sit in a bar along the bottom; on a tablet or wider screen they fold into the top header next to Settings instead, since there\'s no separate sidebar.',
       'The + button (bottom right) is for one-shot actions, not another tab you browse — Priorities, Bulk add/edit tasks, Vault, plus Submit report (Aaron only) or Nudge (Ada only).',
       'The ⚙️ icon opens Settings: who\'s signed in, notifications, theme, default timezone, and this guide.',
     ],
@@ -88,6 +88,19 @@ const SECTIONS = [
       'The auto-filled draft only lists what you completed since your last submission for that bucket, not the whole day again, so reopening it doesn\'t duplicate old entries.',
       'Tip: minutes logged is overwritten each time, not added up — match it to your actual time tracker\'s running total rather than trying to sum sessions yourself.',
       'Any files attached as proof of a completed task carry through into the report automatically.',
+    ],
+  },
+  {
+    title: 'Staff hours',
+    items: [
+      'The Staff tab is Aaron and Ada\'s payroll and attendance view. The property manager has a separate phone-first clock-in screen and cannot see Tandem\'s tasks, rentals, reports, Board, vault, or this settings guide.',
+      'Clock-in choices are physical locations such as Rachel or Parkside, not individual rental units and not companies. One location can contain several Awa or Azu units, and a future acquisition can become another location later.',
+      'Open Locations, then Add physical location. Give it a simple place name and select every rental unit physically located there. Rachel, for example, can hold Healthcare Haven, Laminate Loft, Main Floor Manor, and Peaceful Cottage under one clock-in choice.',
+      'A location can be saved before its clock-in point is configured. It shows “Needs setup” to Aaron/Ada and stays hidden from the property manager until it has coordinates and is ready.',
+      'Tip: latitude, longitude, and radius belong to the physical location only—you never configure GPS separately for every unit. The default allowed radius is 150 meters, and an outside-radius clock-in is recorded but flagged for review rather than blocked.',
+      'Pending shifts can be approved after reviewing the location, duration, rate, pay, and any outside-geofence warning. Export CSV downloads the shifts currently shown by the active filter.',
+      'Use Edit in the Property manager card to change the display name or standard/emergency rates. A rate change only affects future clock-ins; previous shifts keep the rate captured when they started.',
+      'Deactivate pauses future staff access without deleting historical shifts. Physical locations are also deactivated rather than deleted so old payroll records keep their original location.',
     ],
   },
   {
@@ -248,6 +261,25 @@ const FAQS = [
     title: 'Does the rental savings goal update itself from bookings?',
     items: [
       "No — it's a plain number you update by hand in the goal's own edit form. Two earlier attempts at calculating it automatically from booking revenue both turned out to be more hassle than just editing the total directly.",
+    ],
+  },
+  {
+    title: 'Do I need a separate clock-in location for every rental unit?',
+    items: [
+      'No. Create one location per physical place. Link Healthcare Haven, Laminate Loft, Main Floor Manor, and Peaceful Cottage to Rachel; link Parkside units to Parkside. Staff chooses the place, not the unit.',
+      'A future property becomes a new physical location once it is operational. It does not need to be tied permanently to Awa or Azu, so the same model keeps working as the businesses grow.',
+    ],
+  },
+  {
+    title: 'Why can\'t the property manager see a location I created?',
+    items: [
+      'A newly-created physical location can exist in “Needs setup” state without coordinates. It only appears on the property manager\'s clock-in screen after its clock-in point is configured and the location is active.',
+    ],
+  },
+  {
+    title: 'What happens to old shifts when I change a staff pay rate?',
+    items: [
+      'Nothing changes retroactively. Tandem saves the applicable standard or emergency rate when each shift starts, so editing the profile only changes future clock-ins.',
     ],
   },
   {
