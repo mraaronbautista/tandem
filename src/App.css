@@ -2112,6 +2112,15 @@ a.task-submission-file-link:hover {
   flex: 1;
 }
 
+/* Day/Week/Month has only three short labels, so letting it absorb every
+   spare pixel made the capsule look oversized—especially after the
+   desktop shell widened. Keep this one Timeline control compact while
+   shared period-tabs elsewhere retain their normal fill behavior. */
+.view-mode-row .timeline-view-tabs {
+  flex: 0 0 138px;
+  width: 138px;
+}
+
 /* This row packs three clusters — Today/‹›, Day/Week/Month, who-filter —
    onto one line, so each control gets trimmed down from its own default
    sizing (built for standing alone in a roomier row) to keep the whole

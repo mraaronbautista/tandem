@@ -747,12 +747,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
               {/* size="compact": this row also holds the ‹ Today › cluster
                   and the who-filter, so it uses .view-mode-row's shrunk
                   sizing rather than a standalone .period-tabs' roomier
-                  default — the only consumer with this override. flex-1
-                  replicates .view-mode-row .period-tabs' own layout rule
-                  (this segment fills the row's remaining space, not a
-                  visual size variant), so it's passed via className
-                  rather than folded into the size prop. */}
-              <PeriodTabs className="flex-1">
+                  default — the only consumer with this override. The
+                  Timeline-only class also keeps the three short labels
+                  in a compact 138px capsule instead of filling every
+                  spare pixel in the now-wider desktop shell. */}
+              <PeriodTabs className="timeline-view-tabs">
                 {VIEW_MODES.map((m) => (
                   <PeriodTab
                     key={m.key}
