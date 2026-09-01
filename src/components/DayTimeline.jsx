@@ -269,12 +269,29 @@ function layoutClusters(clusters, overlappingIds) {
     let stackTop = clusterPxStart
     let clusterRealEnd = cluster[0].end
     cluster.forEach((item, idx) => {
-      if (idx > 0) {
-        const prev = cluster[idx - 1]
-        if (overlappingIds?.has(prev.task.id) && overlappingIds?.has(item.task.id)) {
-          overlapLabels.push({ top: stackTop, height: OVERLAP_LABEL_HEIGHT })
-          stackTop += OVERLAP_LABEL_HEIGHT
-        }
+      // Checked against every earlier member of this stack, not just the
+      // item directly above it — a stack can hold more than 2 tasks (this
+      // is a two-person board; a third, unrelated task easily sorts
+      // in between two people's genuinely-conflicting ones by start
+      // time), and the immediate-neighbor-only version of this check
+      // missed a real conflict whenever that happened, even though both
+      // tasks' own amber borders (driven by the same overlappingIds
+      // prop, checked independently per block below) still rendered
+      // correctly. Still requires both ids in overlappingIds (not just a
+      // recomputed time-overlap) so this stays consistent with that
+      // detector's own filters — e.g. a point task with no real
+      // duration_minutes never counts, matching getOverlappingTaskIds.
+      const conflictsWithEarlier = cluster.slice(0, idx).some(
+        (other) =>
+          overlappingIds?.has(other.task.id) &&
+          overlappingIds?.has(item.task.id) &&
+          other.task.who === item.task.who &&
+          item.start.getTime() < other.end.getTime() &&
+          other.start.getTime() < item.end.getTime(),
+      )
+      if (conflictsWithEarlier) {
+        overlapLabels.push({ top: stackTop, height: OVERLAP_LABEL_HEIGHT })
+        stackTop += OVERLAP_LABEL_HEIGHT
       }
       const height = ((item.clusterEnd.getTime() - item.start.getTime()) / 60000) * PX_PER_MINUTE
       positioned.push({ ...item, top: stackTop, height })
