@@ -608,11 +608,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }
 
   return (
-    <div
-      className={`max-w-[640px] mx-auto pt-6 px-4 pb-[calc(110px+env(safe-area-inset-bottom,0px))] md:p-6 ${
-        activeTab === 'rentals' ? 'md:max-w-[1360px]' : 'md:max-w-[1100px]'
-      }`}
-    >
+    <div className="max-w-[640px] mx-auto pt-6 px-4 pb-[calc(110px+env(safe-area-inset-bottom,0px))] md:max-w-[1360px] md:p-6">
       {!isDesktop && (
         <MobileNav navButtons={renderNavButtons('mobile')}>
           <NewTaskForm
