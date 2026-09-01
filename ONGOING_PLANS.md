@@ -68,7 +68,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 - [x] Load and present properties from both Awa and Azu.
 - [x] Replace “Add site” with “Manage clock-in locations” and property-first configuration.
 - [x] Replace one-location-per-unit with physical location groups that can contain multiple Awa/Azu units and future acquisitions.
-- [ ] Add address lookup and hide technical coordinates by default.
+- [x] Add user-triggered address lookup and hide technical coordinates by default.
 - [ ] Add on-site capture with member approval fallback.
 - [ ] Add payroll-period filtering, summary metrics, and filter-aware CSV export.
 - [ ] Verify member desktop/mobile and staff mobile flows against the live Supabase project.
@@ -81,7 +81,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 
 ### Next action
 
-Choose and integrate an address-lookup provider so a saved rental address can configure its map point without Aaron supplying coordinates.
+Add on-site location capture with an Aaron/Ada approval state as the fallback when address lookup cannot identify the property accurately.
 
 ## Rentals — multiple tenants per booking
 

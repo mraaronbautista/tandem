@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { MapPin } from 'lucide-react'
+import { Check, MapPin, Search } from 'lucide-react'
 import { createWorkSite, updateWorkSite, archiveWorkSite, assignRentalPropertiesToWorkSite } from '../lib/staff'
+import { searchUsAddresses } from '../lib/geocoding'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -18,6 +19,9 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
     rentalProperties.filter((property) => property.work_site_id === site?.id).map((property) => property.id),
   )
   const [locating, setLocating] = useState(false)
+  const [searchingAddress, setSearchingAddress] = useState(false)
+  const [addressResults, setAddressResults] = useState([])
+  const [selectedAddressLabel, setSelectedAddressLabel] = useState(site?.address || '')
   const [locationError, setLocationError] = useState('')
   const [saving, setSaving] = useState(false)
   const [archiving, setArchiving] = useState(false)
@@ -43,11 +47,36 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
         setLocating(false)
       },
       () => {
-        setLocationError("Couldn't get this device's location. Address lookup will be added next.")
+        setLocationError("Couldn't get this device's location. Check this browser's location permission or search the address instead.")
         setLocating(false)
       },
       { enableHighAccuracy: true, timeout: 15000 },
     )
+  }
+
+  async function handleAddressSearch() {
+    if (!address.trim()) return
+    setSearchingAddress(true)
+    setLocationError('')
+    setAddressResults([])
+    try {
+      const results = await searchUsAddresses(address)
+      setAddressResults(results)
+      if (!results.length) setLocationError('No matching address found. Add the city, state, or ZIP code and try again.')
+    } catch (err) {
+      setLocationError(err.message)
+    } finally {
+      setSearchingAddress(false)
+    }
+  }
+
+  function selectAddressResult(result) {
+    setAddress(result.label)
+    setSelectedAddressLabel(result.label)
+    setLatitude(result.latitude)
+    setLongitude(result.longitude)
+    setAddressResults([])
+    setLocationError('')
   }
 
   async function handleSubmit(event) {
@@ -101,10 +130,55 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
           <input required autoFocus placeholder="e.g. Rachel or Parkside" value={name} onChange={(event) => setName(event.target.value)} className={FIELD_INPUT_CLASS} />
         </label>
 
-        <label>
-          Address (optional for now)
-          <input placeholder="Street address for this physical location" value={address} onChange={(event) => setAddress(event.target.value)} className={FIELD_INPUT_CLASS} />
-        </label>
+        <div className="flex flex-col gap-2">
+          <label>
+            Street address
+            <input
+              placeholder="Street, city, state, ZIP code"
+              value={address}
+              onChange={(event) => {
+                setAddress(event.target.value)
+                setSelectedAddressLabel('')
+              }}
+              className={FIELD_INPUT_CLASS}
+            />
+          </label>
+          <button
+            type="button"
+            className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h"
+            onClick={handleAddressSearch}
+            disabled={searchingAddress || !address.trim()}
+          >
+            <Search size={14} className="mr-1 inline align-[-2px]" />
+            {searchingAddress ? 'Searching…' : 'Find clock-in point'}
+          </button>
+          {addressResults.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-[8px] border border-border bg-card-bg p-1.5">
+              {addressResults.map((result) => (
+                <button
+                  key={result.id}
+                  type="button"
+                  className="cursor-pointer rounded-sm border-0 bg-transparent px-2.5 py-2 text-left text-sm text-text-h hover:bg-pill-bg"
+                  onClick={() => selectAddressResult(result)}
+                >
+                  {result.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {selectedAddressLabel && latitude !== '' && longitude !== '' && (
+            <p className="flex items-start gap-1.5 text-xs text-online">
+              <Check size={13} className="mt-0.5 flex-none" /> Clock-in point ready for this address.
+            </p>
+          )}
+          <p className="text-[11px] opacity-50">
+            Address search by{' '}
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline">
+              OpenStreetMap
+            </a>
+          </p>
+          {locationError && <p className="error">{locationError}</p>}
+        </div>
 
         <fieldset className="rounded-[8px] border border-border px-3 py-2">
           <legend className="px-1 text-sm font-medium text-text-h">Rental units at this location</legend>
@@ -127,8 +201,8 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
           {rentalProperties.length === 0 && <p className="py-2 text-sm opacity-60">No active rental units yet.</p>}
         </fieldset>
 
-        <details className="rounded-[8px] border border-border px-3 py-2" open={latitude === '' || longitude === ''}>
-          <summary className="cursor-pointer text-sm font-medium text-text-h">Clock-in point</summary>
+        <details className="rounded-[8px] border border-border px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium text-text-h">Advanced clock-in details</summary>
           <div className="mt-3 flex flex-col gap-3">
             <p className="text-xs opacity-65">
               You can save this group before GPS is configured. It will show Needs setup and will not appear to staff yet.
@@ -136,7 +210,6 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
             <button type="button" className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h" onClick={handleUseCurrentLocation} disabled={locating}>
               {locating ? 'Locating…' : <><MapPin size={14} className="mr-1 inline align-[-2px]" /> Use this device's current location</>}
             </button>
-            {locationError && <p className="error">{locationError}</p>}
             <div className="grid grid-cols-2 gap-2">
               <label className="min-w-0">
                 Latitude
