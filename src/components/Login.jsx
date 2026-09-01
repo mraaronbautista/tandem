@@ -14,8 +14,18 @@ const loginFormClasses =
 // with an "@" in it still works unchanged — this is additive, not a
 // hard requirement, so an account that still has a real email keeps
 // working during the transition.
+//
+// Lowercased explicitly, not just trimmed — a plain type="text" input
+// (needed so a bare username is allowed at all, unlike type="email")
+// doesn't get the browser's usual case handling for free, and mobile
+// keyboards commonly auto-capitalize the first letter of a fresh text
+// field by default. autoCapitalize="none" below already asks the
+// keyboard not to do that, but this is the actual guarantee — it can't
+// silently send e.g. "Aaron@tandem.local" (a login that looks valid but
+// won't match the tandem.local row Aaron's real account uses) no matter
+// what any given keyboard/OS/autofill does upstream of it.
 function toLoginEmail(input) {
-  const trimmed = input.trim()
+  const trimmed = input.trim().toLowerCase()
   return trimmed.includes('@') ? trimmed : `${trimmed}@tandem.local`
 }
 
@@ -64,6 +74,9 @@ export default function Login({ theme, toggleTheme }) {
           type="text"
           required
           autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck="false"
           placeholder="Username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
