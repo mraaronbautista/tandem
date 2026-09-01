@@ -1113,3 +1113,91 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+-- ---------------------------------------------------------------------------
+-- On-site location capture with member approval (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once after the "Physical staff locations" block above, on an
+-- existing project. Lets the on-site property manager propose a GPS point for
+-- a work_site address lookup couldn't place accurately, without ever granting
+-- staff write access to work_sites itself — the same RPC-only discipline
+-- staff_clock_out() already established above. Five flat columns, not a
+-- child table: a work_site has at most one live geofence point regardless of
+-- how many capture attempts led to it, so a second capture before approval
+-- simply overwrites the first (self-correcting a bad tap) rather than
+-- needing a proposal history to reconcile — the same "pending state on the
+-- row itself" shape rental_bookings.status and time_entries.status already
+-- use elsewhere in this file.
+
+alter table work_sites
+  add column pending_latitude double precision,
+  add column pending_longitude double precision,
+  add column pending_accuracy_m numeric,
+  add column pending_captured_by uuid references staff (id),
+  add column pending_captured_at timestamptz;
+
+-- Third SELECT policy on work_sites (Postgres OR's permissive policies
+-- together — see "staff can read active work sites" above). Deliberately
+-- scoped to "never configured yet" only (active = false AND both real
+-- coordinates still null) — an archived site that used to be ready
+-- (active = false WITH real coordinates) must stay invisible to staff,
+-- unchanged from before this migration. A site with a pending capture still
+-- matches this policy (active is still false, latitude/longitude are still
+-- null — only pending_* is set), so staff keeps seeing it as "awaiting
+-- approval" rather than the row vanishing after they submit a capture.
+create policy "staff can read needs-setup work sites"
+  on work_sites for select
+  using (is_staff() and not active and latitude is null and longitude is null);
+
+-- The one write path staff gets on work_sites, mirroring staff_clock_out()'s
+-- shape exactly: security definer, re-checks is_staff() and re-checks the
+-- site is still unconfigured inline (never trusts the client's premise), and
+-- only ever touches the four pending_* columns — never latitude, longitude,
+-- or active. A second call before approval is allowed on purpose and simply
+-- overwrites the previous attempt (see migration comment above).
+create or replace function staff_submit_location_capture(
+  p_work_site_id uuid,
+  p_lat double precision,
+  p_lng double precision,
+  p_accuracy_m numeric default null
+)
+returns work_sites
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result work_sites;
+begin
+  if not is_staff() then
+    raise exception 'not an active staff member';
+  end if;
+
+  update work_sites
+  set pending_latitude = p_lat,
+      pending_longitude = p_lng,
+      pending_accuracy_m = p_accuracy_m,
+      pending_captured_by = auth.uid(),
+      pending_captured_at = now()
+  where id = p_work_site_id
+    and not active
+    and latitude is null
+    and longitude is null
+  returning * into result;
+
+  if result.id is null then
+    raise exception 'work site not found or already configured';
+  end if;
+
+  return result;
+end;
+$$;
+
+grant execute on function staff_submit_location_capture(uuid, double precision, double precision, numeric) to authenticated;
+
+-- Approve/reject deliberately get no RPC — members already hold unrestricted
+-- update RLS on work_sites ("members can update work sites" above), the same
+-- reason approveTimeEntry() in src/lib/staff.js is a plain client update on
+-- time_entries rather than an RPC. The RPC-only discipline above exists
+-- specifically for the staff write path, where the RLS gap is real; there's
+-- no equivalent gap on the member side to work around here.

@@ -1,21 +1,31 @@
-import { Building2, CircleCheck, MapPin, Plus } from 'lucide-react'
+import { Building2, CircleCheck, Clock, MapPin, Plus } from 'lucide-react'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { workSiteStatus } from '../lib/staff'
 
 const COMPANY_LABEL = { awa: 'Awa', azu: 'Azu' }
 
+// Driven by the shared workSiteStatus() (src/lib/staff.js) rather than
+// inline booleans — this used to duplicate the same 3-state logic
+// StaffLogsView.jsx's own summary counts computed independently, which was
+// already a real risk of drift; a 4th state (an on-site capture awaiting
+// approval) made that worth fixing. "Awaiting approval" gets its own accent
+// color, distinct from the green "Ready" pill, so it doesn't read as
+// already-done — a member still needs to act on it.
 function StatusBadge({ site }) {
-  const ready = site.active && site.latitude != null && site.longitude != null
-  const needsSetup = site.latitude == null || site.longitude == null
-  const label = ready ? 'Ready' : needsSetup ? 'Needs setup' : 'Inactive'
+  const status = workSiteStatus(site)
+  const label = { ready: 'Ready', pendingApproval: 'Awaiting approval', needsSetup: 'Needs setup', inactive: 'Inactive' }[status]
+  const className =
+    status === 'ready'
+      ? 'bg-[color-mix(in_srgb,var(--online)_14%,transparent)] text-online'
+      : status === 'pendingApproval'
+        ? 'bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-accent-h'
+        : 'bg-pill-bg text-text'
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-        ready ? 'bg-[color-mix(in_srgb,var(--online)_14%,transparent)] text-online' : 'bg-pill-bg text-text'
-      }`}
-    >
-      {ready && <CircleCheck size={11} />}
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${className}`}>
+      {status === 'ready' && <CircleCheck size={11} />}
+      {status === 'pendingApproval' && <Clock size={11} />}
       {label}
     </span>
   )

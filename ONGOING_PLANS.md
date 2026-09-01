@@ -71,10 +71,10 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 - [x] Replace one-location-per-unit with physical location groups that can contain multiple Awa/Azu units and future acquisitions.
 - [x] Add user-triggered address lookup and hide technical coordinates by default.
 - [x] Keep staff location permission scoped to the Start shift action.
-- [ ] Add on-site capture with member approval fallback.
+- [x] Add on-site capture with member approval fallback — schema: five nullable `pending_*` columns on `work_sites` (not a child table — a site has at most one live geofence point regardless of capture attempts, so a resubmit before approval just overwrites), a new `staff_submit_location_capture()` security-definer RPC (staff has zero direct write RLS on `work_sites`, same reasoning `staff_clock_out()` already established), and a third SELECT policy so staff can see (but not write) a needs-setup/pending site. Approve/reject are plain member updates, not RPCs, since members already hold unrestricted `work_sites` UPDATE RLS. `workSiteStatus()` (`src/lib/staff.js`) is now the single 4-state classifier (`ready`/`pendingApproval`/`needsSetup`/`inactive`), replacing logic that used to be duplicated inline in `StaffLocationsManager.jsx` and `StaffLogsView.jsx`. Locally verified (mocked-Supabase harness) — capture, recapture, approve, and discard all confirmed end to end; not yet run against live Supabase.
 - [ ] Add payroll-period filtering, summary metrics, and filter-aware CSV export.
-- [ ] Verify member desktop/mobile and staff mobile flows against the live Supabase project.
-- [ ] Run security checks for RLS, geofence stamping, clock-out ownership, and deactivation with an open shift.
+- [ ] Verify member desktop/mobile and staff mobile flows against the live Supabase project — including the new on-site capture/approval flow above, which still needs its own incremental SQL block run live (see schema.sql's "On-site location capture with member approval" section).
+- [ ] Run security checks for RLS, geofence stamping, clock-out ownership, and deactivation with an open shift — for the new capture flow specifically: confirm staff genuinely cannot write `latitude`/`longitude`/`active` directly, an archived site with real coordinates never matches the new staff SELECT policy, and resubmitting a capture on an already-approved site is rejected by the RPC.
 - [ ] Update `CLAUDE.md`, remove this completed plan, commit, and push the final phase.
 
 ### Unresolved decision
@@ -83,7 +83,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 
 ### Next action
 
-Add on-site location capture with an Aaron/Ada approval state as the fallback when address lookup cannot identify the property accurately.
+Add payroll-period filtering, summary metrics, and filter-aware CSV export to the Hours overview — the property-manager payroll cadence (weekly/biweekly/twice monthly/monthly) is still an open decision above and blocks the default period selector, so that needs resolving first.
 
 ## Rentals — multiple tenants per booking
 

@@ -9,6 +9,7 @@ import {
   approveTimeEntry,
   setStaffActive,
   computeEntryPay,
+  workSiteStatus,
 } from '../lib/staff'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import StaffWorkSitesForm from './StaffWorkSitesForm'
@@ -128,8 +129,13 @@ export default function StaffLogsView({ me }) {
   }
 
   const totalPay = entries.reduce((sum, e) => sum + (computeEntryPay(e) || 0), 0)
-  const readyLocationCount = sites.filter((site) => site.active && site.latitude != null && site.longitude != null).length
-  const locationNeedsSetupCount = sites.filter((site) => site.latitude == null || site.longitude == null).length
+  // workSiteStatus() (src/lib/staff.js) is the single source of truth for
+  // this now — was duplicated inline here and in StaffLocationsManager.jsx's
+  // own StatusBadge, a real drift risk once a 4th state (a pending on-site
+  // capture) existed to keep in sync between the two.
+  const readyLocationCount = sites.filter((site) => workSiteStatus(site) === 'ready').length
+  const pendingApprovalCount = sites.filter((site) => workSiteStatus(site) === 'pendingApproval').length
+  const locationNeedsSetupCount = sites.filter((site) => workSiteStatus(site) === 'needsSetup').length
   const unassignedUnitCount = rentalProperties.filter((property) => !property.work_site_id).length
 
   if (loading) return <p className="loading">Loading…</p>
@@ -271,6 +277,7 @@ export default function StaffLogsView({ me }) {
           <h3 className="font-semibold text-text-h">Clock-in locations</h3>
           <p className="mt-0.5 text-xs opacity-65">
             {readyLocationCount} ready
+            {pendingApprovalCount > 0 ? ` · ${pendingApprovalCount} awaiting approval` : ''}
             {locationNeedsSetupCount > 0 ? ` · ${locationNeedsSetupCount} ${locationNeedsSetupCount === 1 ? 'location needs' : 'locations need'} setup` : ''}
             {unassignedUnitCount > 0 ? ` · ${unassignedUnitCount} unassigned ${unassignedUnitCount === 1 ? 'unit' : 'units'}` : ''}
           </p>

@@ -2,7 +2,8 @@ import { supabase } from './supabaseClient'
 
 const STAFF_COLUMNS = 'id, display_name, hourly_rate, emergency_rate, active'
 const WORK_SITE_COLUMNS =
-  'id, name, address, latitude, longitude, geofence_radius_m, rental_property_id, active'
+  'id, name, address, latitude, longitude, geofence_radius_m, rental_property_id, active, ' +
+  'pending_latitude, pending_longitude, pending_accuracy_m, pending_captured_by, pending_captured_at'
 const TIME_ENTRY_COLUMNS =
   'id, staff_id, work_site_id, rate_type, rate_amount, clock_in_at, clock_in_lat, clock_in_lng, ' +
   'clock_in_accuracy_m, distance_from_site_m, flagged, clock_out_at, clock_out_lat, clock_out_lng, ' +
@@ -44,12 +45,36 @@ export async function setStaffActive(id, active) {
   if (error) throw error
 }
 
-// Same query works for both roles — RLS decides what comes back
-// (members: every site; staff: active sites only).
+// Same query works for both roles — RLS decides what comes back (members:
+// every site; staff: active sites, plus needs-setup sites they can capture a
+// location for — see "staff can read needs-setup work sites" in schema.sql).
+// staff(display_name) is embedded so a member reviewing a pending capture
+// can see who submitted it with no second round-trip, same reasoning
+// fetchAllTimeEntries()'s own staff(display_name)/work_sites(name) embed
+// already uses below.
 export async function fetchWorkSites() {
-  const { data, error } = await supabase.from('work_sites').select(WORK_SITE_COLUMNS).order('name')
+  const { data, error } = await supabase
+    .from('work_sites')
+    .select(`${WORK_SITE_COLUMNS}, staff(display_name)`)
+    .order('name')
   if (error) throw error
   return data
+}
+
+// The single source of truth for a work_site's status — was three inline
+// booleans duplicated between StaffLocationsManager.jsx's StatusBadge and
+// StaffLogsView.jsx's readyLocationCount/locationNeedsSetupCount; now one
+// function both call, so a 4th state (a pending on-site capture) can't drift
+// out of sync between the two views. Order matters: a pending capture is
+// checked before "needs setup" even though both share active=false with
+// null latitude/longitude, since pending_latitude is what actually
+// distinguishes "nobody's looked at this yet" from "someone captured a
+// point, waiting on a member."
+export function workSiteStatus(site) {
+  if (site.active && site.latitude != null && site.longitude != null) return 'ready'
+  if (site.pending_latitude != null && site.pending_longitude != null) return 'pendingApproval'
+  if (site.latitude == null || site.longitude == null) return 'needsSetup'
+  return 'inactive'
 }
 
 export async function createWorkSite({ name, address, latitude, longitude, geofence_radius_m, active }) {
@@ -69,10 +94,18 @@ export async function createWorkSite({ name, address, latitude, longitude, geofe
   return data
 }
 
+// Nulls the four pending_* fields whenever real coordinates are being set
+// here — a member who sets coordinates directly (address search or the
+// manual advanced-details fields) is bypassing any pending capture, not
+// acting on it, so a stale "captured by X" shouldn't linger and resurface if
+// the site's coordinates are ever cleared again later. Approving a capture
+// specifically goes through approveWorkSiteLocationCapture() below instead,
+// not this function.
 export async function updateWorkSite(
   id,
   { name, address, latitude, longitude, geofence_radius_m, active },
 ) {
+  const clearPending = latitude != null && longitude != null
   const { data, error } = await supabase
     .from('work_sites')
     .update({
@@ -82,12 +115,80 @@ export async function updateWorkSite(
       longitude: longitude ?? null,
       geofence_radius_m,
       active,
+      ...(clearPending && {
+        pending_latitude: null,
+        pending_longitude: null,
+        pending_accuracy_m: null,
+        pending_captured_by: null,
+        pending_captured_at: null,
+      }),
     })
     .eq('id', id)
     .select(WORK_SITE_COLUMNS)
     .single()
   if (error) throw error
   return data
+}
+
+// The only write path staff has on work_sites — see
+// staff_submit_location_capture() in schema.sql, which re-checks is_staff()
+// and that the site is still unconfigured server-side rather than trusting
+// this call's premise. Resubmitting before a member approves is allowed on
+// purpose (see that function's own comment) and just overwrites the
+// previous attempt.
+export async function submitWorkSiteLocationCapture({ workSiteId, lat, lng, accuracyM }) {
+  const { data, error } = await supabase.rpc('staff_submit_location_capture', {
+    p_work_site_id: workSiteId,
+    p_lat: lat,
+    p_lng: lng,
+    p_accuracy_m: accuracyM ?? null,
+  })
+  if (error) throw error
+  return data
+}
+
+// A plain client update, not an RPC — members already hold unrestricted
+// update RLS on work_sites, the same reason approveTimeEntry() below is a
+// plain update on time_entries rather than an RPC. Copies the pending point
+// into the real columns, activates the site (matching the same
+// "coordinates present -> active" rule the form's own submit already
+// applies), and clears the four pending_* fields so a stale capture can
+// never resurface.
+export async function approveWorkSiteLocationCapture(site) {
+  const { data, error } = await supabase
+    .from('work_sites')
+    .update({
+      latitude: site.pending_latitude,
+      longitude: site.pending_longitude,
+      active: true,
+      pending_latitude: null,
+      pending_longitude: null,
+      pending_accuracy_m: null,
+      pending_captured_by: null,
+      pending_captured_at: null,
+    })
+    .eq('id', site.id)
+    .select(WORK_SITE_COLUMNS)
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Discards a pending capture without touching the real latitude/longitude —
+// the site just falls back to Needs setup, exactly as if nothing had been
+// captured.
+export async function rejectWorkSiteLocationCapture(id) {
+  const { error } = await supabase
+    .from('work_sites')
+    .update({
+      pending_latitude: null,
+      pending_longitude: null,
+      pending_accuracy_m: null,
+      pending_captured_by: null,
+      pending_captured_at: null,
+    })
+    .eq('id', id)
+  if (error) throw error
 }
 
 // A physical clock-in location can contain many rental units, while a

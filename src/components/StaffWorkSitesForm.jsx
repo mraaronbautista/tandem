@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { Check, MapPin, Search } from 'lucide-react'
-import { createWorkSite, updateWorkSite, archiveWorkSite, assignRentalPropertiesToWorkSite } from '../lib/staff'
+import {
+  createWorkSite,
+  updateWorkSite,
+  archiveWorkSite,
+  assignRentalPropertiesToWorkSite,
+  approveWorkSiteLocationCapture,
+  rejectWorkSiteLocationCapture,
+} from '../lib/staff'
 import { searchUsAddresses } from '../lib/geocoding'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -26,6 +33,39 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
   const [saving, setSaving] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState('')
+  const [reviewing, setReviewing] = useState(false)
+  const hasPendingCapture = site?.pending_latitude != null && site?.pending_longitude != null
+
+  // Approve/discard are deliberately separate one-tap actions from the main
+  // "Save location" submit below, not folded into handleSubmit's payload —
+  // approving a GPS point a staff member captured and editing the name/
+  // address are different trust levels, so fixing a typo can't accidentally
+  // also approve a bad point. Both go straight through onSaved(), same as
+  // the rest of this form's own submit path — StaffLogsView.jsx already
+  // does a full refetch there, so no new prop plumbing is needed.
+  async function handleApproveCapture() {
+    setReviewing(true)
+    setError('')
+    try {
+      const saved = await approveWorkSiteLocationCapture(site)
+      onSaved(saved)
+    } catch (err) {
+      setError(err.message)
+      setReviewing(false)
+    }
+  }
+
+  async function handleDiscardCapture() {
+    setReviewing(true)
+    setError('')
+    try {
+      await rejectWorkSiteLocationCapture(site.id)
+      onSaved(site)
+    } catch (err) {
+      setError(err.message)
+      setReviewing(false)
+    }
+  }
 
   function toggleProperty(propertyId) {
     setPropertyIds((current) =>
@@ -124,6 +164,36 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
       <ModalCard as="form" onSubmit={handleSubmit}>
         <h2>{site ? 'Edit physical location' : 'New physical location'}</h2>
         {error && <p className="error">{error}</p>}
+
+        {hasPendingCapture && (
+          <div className="flex flex-col gap-2 rounded-[8px] border border-accent bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-3 py-2.5">
+            <p className="text-sm font-medium text-text-h">On-site capture awaiting approval</p>
+            <p className="text-xs opacity-70">
+              Captured by {site.staff?.display_name || 'a staff member'} on{' '}
+              {new Date(site.pending_captured_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              {site.pending_accuracy_m != null ? `, accuracy ~${Math.round(site.pending_accuracy_m)}m` : ''}.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="cursor-pointer rounded-sm border-0 bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleApproveCapture}
+                disabled={reviewing}
+              >
+                <Check size={13} className="mr-1 inline align-[-2px]" />
+                {reviewing ? 'Saving…' : 'Approve as clock-in point'}
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer rounded-sm border border-border bg-bg px-3 py-1.5 text-xs text-text-h disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleDiscardCapture}
+                disabled={reviewing}
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
 
         <label>
           Location name

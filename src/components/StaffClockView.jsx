@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Play, Square } from 'lucide-react'
+import { AlertTriangle, MapPin, Play, Square } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 import {
   fetchOwnStaffProfile,
@@ -9,6 +9,8 @@ import {
   clockIn,
   clockOut,
   computeEntryPay,
+  workSiteStatus,
+  submitWorkSiteLocationCapture,
 } from '../lib/staff'
 import { findNearestSite } from '../lib/geo'
 import ThemeToggle from './ThemeToggle'
@@ -63,10 +65,22 @@ export default function StaffClockView({ theme, toggleTheme }) {
   const { session, signOut } = useAuth()
   const [profile, setProfile] = useState(null)
   const [sites, setSites] = useState([])
+  // Needs-setup and pending-approval sites, visible to staff specifically so
+  // they can capture a point for one — see "staff can read needs-setup work
+  // sites" in schema.sql. Kept separate from `sites` (ready sites only) so
+  // every existing sites-consuming path below (Start flow, findNearestSite,
+  // history lookups) stays exactly as it was — it already only ever expected
+  // ready sites, previously true implicitly via RLS alone, now explicit.
+  const [captureSites, setCaptureSites] = useState([])
   const [activeEntry, setActiveEntry] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // On-site capture flow local state
+  const [capturingSiteId, setCapturingSiteId] = useState(null)
+  const [captureError, setCaptureError] = useState('')
+  const [captureMessage, setCaptureMessage] = useState('')
 
   // Start-flow local state
   const [starting, setStarting] = useState(false)
@@ -89,7 +103,14 @@ export default function StaffClockView({ theme, toggleTheme }) {
         fetchActiveEntry(session.user.id),
       ])
       setProfile(profileData)
-      setSites(sitesData)
+      setSites(sitesData.filter((s) => workSiteStatus(s) === 'ready'))
+      // Explicitly needsSetup/pendingApproval only, not a plain "!== ready"
+      // — RLS ("staff can read needs-setup work sites" in schema.sql)
+      // already keeps an inactive/archived site out of what staff ever
+      // receives here, but filtering explicitly rather than by exclusion
+      // means this stays correct even if that assumption is ever wrong,
+      // instead of silently offering a Capture button for an archived site.
+      setCaptureSites(sitesData.filter((s) => ['needsSetup', 'pendingApproval'].includes(workSiteStatus(s))))
       setActiveEntry(entryData)
       if (!entryData) {
         setHistory(await fetchOwnTimeEntries(session.user.id, { from: startOfWeek().toISOString() }))
@@ -205,6 +226,30 @@ export default function StaffClockView({ theme, toggleTheme }) {
     }
   }
 
+  // Reuses getPosition() above rather than a third independent geolocation
+  // implementation — StaffWorkSitesForm.jsx already has its own separate
+  // inline one for a member standing on-site themselves; this is staff's
+  // version of the same idea, for the fallback case address lookup can't
+  // resolve. Resubmitting before a member approves is allowed on purpose
+  // (see staff_submit_location_capture()'s own comment in schema.sql) — the
+  // button just relabels to "Recapture" once a capture already exists.
+  async function handleCapture(siteId) {
+    setCapturingSiteId(siteId)
+    setCaptureError('')
+    setCaptureMessage('')
+    try {
+      const pos = await getPosition({ enableHighAccuracy: true, timeout: 15000 })
+      const { latitude, longitude, accuracy } = pos.coords
+      await submitWorkSiteLocationCapture({ workSiteId: siteId, lat: latitude, lng: longitude, accuracyM: accuracy })
+      setCaptureMessage('Location captured. Ask Ada or Aaron to approve it before you can clock in here.')
+      await loadAll()
+    } catch (err) {
+      setCaptureError(err.message || "Couldn't get your location. Check this site's location permission and try again.")
+    } finally {
+      setCapturingSiteId(null)
+    }
+  }
+
   if (loading) return <p className="loading p-6 text-center">Loading…</p>
 
   const todayPay = history
@@ -250,8 +295,45 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 <Play size={22} className="mr-1.5 inline align-[-3px]" fill="currentColor" /> Start
               </button>
               {sites.length === 0 && (
-                <p className="text-center text-sm opacity-70">No active work sites are available. Ask Ada or Aaron to add one.</p>
+                <p className="text-center text-sm opacity-70">
+                  {captureSites.length === 0
+                    ? 'No active work sites are available. Ask Ada or Aaron to add one.'
+                    : "No work sites are ready to clock in at yet — capture your location below for the one you're at."}
+                </p>
               )}
+            </div>
+          )}
+
+          {/* Fallback for when address lookup couldn't place a site
+              accurately — the on-site property manager captures their own
+              current GPS reading instead. Sits pending until a member
+              approves it (see approveWorkSiteLocationCapture in staff.js),
+              so this never bypasses member review of a new clock-in point. */}
+          {!activeEntry && !starting && captureSites.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-[8px] border border-border bg-card-bg p-4">
+              <h2 className="text-[13px] opacity-60">Set up a location</h2>
+              {captureError && <p className="error">{captureError}</p>}
+              {captureMessage && <p className="text-sm text-online">{captureMessage}</p>}
+              {captureSites.map((site) => {
+                const hasPending = site.pending_latitude != null
+                return (
+                  <div key={site.id} className="flex items-center justify-between gap-2 rounded-sm border border-border px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-text-h">{site.name}</p>
+                      {hasPending && <p className="text-xs opacity-65">Submitted — waiting for approval</p>}
+                    </div>
+                    <button
+                      type="button"
+                      className="flex-none cursor-pointer rounded-sm border border-border bg-bg px-2.5 py-1.5 text-xs text-text-h disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => handleCapture(site.id)}
+                      disabled={capturingSiteId === site.id}
+                    >
+                      <MapPin size={12} className="mr-1 inline align-[-1px]" />
+                      {capturingSiteId === site.id ? 'Locating…' : hasPending ? 'Recapture' : 'Capture location'}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
 
