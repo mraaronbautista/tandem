@@ -148,6 +148,17 @@ export default function CorkBoardView({ me, memberName }) {
   // whoever does the promoting, not the pin's original author — claiming
   // it is the point, and for a shared pin that's often the other person.
   // The pin itself is left as-is; promoting doesn't unpin it.
+  //
+  // Any comments already on the pin carry over as checklist items — the
+  // whole point of commenting on a pin is adding a thought/follow-up to
+  // it, and those would otherwise be stranded on the pin once it turns
+  // into a task nobody's looking at the pin for any more. Same shape
+  // ChecklistEditor.jsx builds by hand (id/text/done/blocked/
+  // blockedReason), so they're editable normally right after creation.
+  // Each is prefixed with its author's name via the same memberName()
+  // prop already used to render comments on the pin itself, since a
+  // shared pin can carry thoughts from both people and the checklist
+  // loses that attribution otherwise.
   async function handleFocusToday(note) {
     if (!me) return
     setPromotingId(note.id)
@@ -156,12 +167,20 @@ export default function CorkBoardView({ me, memberName }) {
       // that mismatch used to push "today 23:59" into tomorrow morning
       // for Aaron (Philippines, ~12-13h ahead of Eastern).
       const zone = detectDefaultTimezone()
+      const checklist = (note.comments || []).map((c) => ({
+        id: crypto.randomUUID(),
+        text: `${memberName(c.authorId)}: ${c.body}`,
+        done: false,
+        blocked: false,
+        blockedReason: '',
+      }))
       await createTask({
         title: note.body,
         who: whoKeyForName(me.display_name) || 'yours',
         due_date: zonedTimeToUtcIso(todayDateString(), '23:59', zone),
         due_timezone: zone,
         created_by: me.id,
+        checklist,
       })
       setPromoted((prev) => new Set(prev).add(note.id))
     } catch (err) {
