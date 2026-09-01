@@ -5,6 +5,7 @@ import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
+import TaskIcon from './TaskIcon'
 
 // 2.5 (150px/hour), not the original 1.2 (72px/hour) — too cramped to
 // read comfortably on a phone, and worse, it made MIN_BLOCK_HEIGHT's
@@ -392,6 +393,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                   <button type="button" className="day-timeline-block-body" onClick={() => onSelect(task)}>
                     <span className="day-timeline-block-main">
                       <span className="day-timeline-block-top">
+                        <TaskIcon task={task} size={13} className="mt-[3px]" title={PRIORITY_LABEL[task.priority]} />
                         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
                           {WHO_LABEL[task.who]}
                         </span>

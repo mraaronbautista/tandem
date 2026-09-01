@@ -11,7 +11,7 @@ import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
-import PriorityDot from './PriorityDot'
+import TaskIcon from './TaskIcon'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
@@ -212,7 +212,8 @@ export default function TaskRow({
 
   return (
     <div
-      className={`task-row ${overlapping ? 'border-l-[3px] border-l-notice' : ''}`}
+      className="task-row border-l-[3px]"
+      style={{ borderLeftColor: overlapping ? '#e0a83e' : PRIORITY_COLOR[task.priority] }}
       onClick={() => setOpen((v) => !v)}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -223,9 +224,12 @@ export default function TaskRow({
           onClick={(e) => e.stopPropagation()}
           onChange={handleStatusToggle}
         />
-        {!hidePriorityDot && (
-          <PriorityDot color={PRIORITY_COLOR[task.priority]} title={PRIORITY_LABEL[task.priority]} />
-        )}
+        {/* Was a plain PriorityDot — priority itself moved to the row's
+            own left border (matching DayTimeline.jsx's block, which
+            already worked this way) once this slot became the task icon,
+            so swapping the dot out for an icon here doesn't leave
+            priority with no visual signal at all. */}
+        {!hidePriorityDot && <TaskIcon task={task} title={PRIORITY_LABEL[task.priority]} />}
         <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
           {WHO_LABEL[task.who]}
         </span>

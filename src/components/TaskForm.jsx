@@ -5,6 +5,8 @@ import { formatDuration } from '../lib/tasks'
 import { PRIORITY_SHORT_LABEL } from '../lib/priorityColors'
 import ChecklistEditor from './ChecklistEditor'
 import ScrollSelect from './ScrollSelect'
+import TaskIcon from './TaskIcon'
+import TaskIconPicker from './TaskIconPicker'
 
 // due_date/due_time/due_timezone aren't set here — a brand-new task
 // defaults to roughly "now", in whoever's creating it own zone (see
@@ -17,6 +19,7 @@ export const emptyTaskForm = {
   title: '',
   who: 'yours',
   priority: 'med',
+  icon: null,
   duration_minutes: '',
   source: 'none',
   source_note: '',
@@ -166,6 +169,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
     }
   })
   const [saving, setSaving] = useState(false)
+  const [iconPickerOpen, setIconPickerOpen] = useState(false)
   // Distinct from "the date field happens to be blank" — that ambiguity
   // used to mean saving an All Day task unchanged silently gave it
   // today's date the moment it was edited (splitDueDateInZone(null, tz)
@@ -247,17 +251,41 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
 
   return (
     <form className="new-task-form" onSubmit={handleSubmit}>
-      <label className="visually-hidden" htmlFor={titleFieldId}>
-        Title
-      </label>
-      <input
-        id={titleFieldId}
-        autoFocus={autoFocus}
-        required
-        placeholder="What needs to happen?"
-        value={form.title}
-        onChange={(e) => set('title', e.target.value)}
-      />
+      <div className="flex items-center gap-2">
+        {/* Icon leads the title, same as Structured's layout — tapping it
+            opens TaskIconPicker.jsx regardless of whether the icon shown
+            right now is a manual pick or just the live keyword guess (see
+            resolveTaskIcon in taskIcons.js); picking one always sets an
+            explicit override. Not wrapped in .new-task-form's own
+            `> input`/`> textarea` child-selector styling (App.css), so the
+            title input below gets its equivalent look inlined via
+            Tailwind instead now that it's no longer a direct child. */}
+        <button
+          type="button"
+          onClick={() => setIconPickerOpen(true)}
+          title="Choose an icon"
+          aria-label="Choose an icon"
+          className="flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full border border-border bg-pill-bg text-text-h"
+        >
+          <TaskIcon task={form} size={16} />
+        </button>
+        <label className="visually-hidden" htmlFor={titleFieldId}>
+          Title
+        </label>
+        <input
+          id={titleFieldId}
+          autoFocus={autoFocus}
+          required
+          placeholder="What needs to happen?"
+          value={form.title}
+          onChange={(e) => set('title', e.target.value)}
+          className="w-full rounded-[8px] border border-border bg-bg px-[10px] py-[9px] text-text-h [font:inherit]"
+        />
+      </div>
+
+      {iconPickerOpen && (
+        <TaskIconPicker value={form.icon} onChange={(icon) => set('icon', icon)} onClose={() => setIconPickerOpen(false)} />
+      )}
 
       <div className="new-task-row">
         <label>

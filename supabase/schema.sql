@@ -36,6 +36,16 @@ create table tasks (
   who task_who not null default 'yours',
   status task_status not null default 'to_do',
   priority task_priority not null default 'med',
+  -- A manually-picked Lucide icon *name* (e.g. 'Dumbbell'), from
+  -- TASK_ICON_OPTIONS in src/lib/taskIcons.js — null means "keep
+  -- guessing one live from the title" (guessTaskIcon, also in
+  -- taskIcons.js) rather than nothing at all. Deliberately not storing
+  -- the guessed icon here even when it's what's actually shown: the
+  -- guess should be able to keep improving later (a bigger/better
+  -- keyword map) without a backfill migration touching every existing
+  -- row's icon. Only ever set once someone taps the icon and explicitly
+  -- picks one, at which point it wins over the guess for good.
+  icon text,
   due_date timestamptz,
   -- IANA zone the due_date's wall-clock time was set in (e.g. picking
   -- "3:00 PM" while this is 'America/New_York' means 3pm Eastern, not 3pm
