@@ -1,12 +1,15 @@
 import { useId, useState } from 'react'
 import { WHO_LABEL } from '../lib/whoLabels'
-import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
+import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso, zoneAbbreviation } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
 import { PRIORITY_SHORT_LABEL } from '../lib/priorityColors'
 import ChecklistEditor from './ChecklistEditor'
 import ScrollSelect from './ScrollSelect'
 import TaskIcon from './TaskIcon'
 import TaskIconPicker from './TaskIconPicker'
+import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // due_date/due_time/due_timezone aren't set here — a brand-new task
 // defaults to roughly "now", in whoever's creating it own zone (see
@@ -144,6 +147,29 @@ function buildEndTimeOptions(startTime) {
   return options
 }
 
+// The condensed one-line summary shown in place of the Date/Time/End
+// time/Time zone/Duration fields (Part C of
+// /Users/aaron/.claude/plans/cuddly-dancing-bird.md) — e.g. "Wed, Sep 2
+// · 6:00–7:00 AM (1 hr) · CT", or just the date/time/zone with no range
+// when there's no duration set. Tapping it opens the same fields, just
+// behind a modal instead of always sitting open — Structured's own
+// collapsed-summary-that-expands pattern, without inventing a new
+// mechanism (ScrollSelect.jsx already establishes "collapsed value, tap
+// to open the full picker" for a single field; this is the same idea
+// one level up, for the whole date/time cluster).
+function dueSummaryLabel(form) {
+  if (!form.due_date) return 'No specific time — tap to set'
+  const dateLabel = new Date(`${form.due_date}T00:00:00`)
+    .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    .replace(', ', ' ')
+  const timeLabel = TIME_OPTIONS.find((t) => t.value === form.due_time)?.label ?? form.due_time
+  const zoneLabel = zoneAbbreviation(form.due_timezone)
+  if (!form.duration_minutes) return `${dateLabel} · ${timeLabel} · ${zoneLabel}`
+  const endLabel = buildEndTimeOptions(form.due_time).find((o) => o.value === form.duration_minutes)?.label
+  const durationLabel = formatDuration(Number(form.duration_minutes))
+  return `${dateLabel} · ${timeLabel}${endLabel ? `–${endLabel}` : ''} (${durationLabel}) · ${zoneLabel}`
+}
+
 export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true }) {
   // Multiple TaskForm instances can be mounted at once (each TaskRow
   // owns its own `editing` state independently), so the title/notes
@@ -170,6 +196,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
   })
   const [saving, setSaving] = useState(false)
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const [timePickerOpen, setTimePickerOpen] = useState(false)
   // Distinct from "the date field happens to be blank" — that ambiguity
   // used to mean saving an All Day task unchanged silently gave it
   // today's date the moment it was edited (splitDueDateInZone(null, tz)
@@ -342,52 +369,80 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           </>
         ) : (
           <>
-            <label>
-              Date
-              <input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
-            </label>
+            {/* Condensed: Date/Time/End time/Time zone/Duration used to
+                sit open here as 5 always-visible fields — now a single
+                tappable summary that expands into the same fields inside
+                a modal (Part C of cuddly-dancing-bird.md). */}
+            <button
+              type="button"
+              onClick={() => setTimePickerOpen(true)}
+              className="min-w-[220px] flex-1 cursor-pointer rounded-[6px] border border-border bg-bg px-2 py-[7px] text-left text-text-h [font:inherit]"
+            >
+              {dueSummaryLabel(form)}
+            </button>
 
-            <label>
-              Time
-              <select value={form.due_time} onChange={(e) => set('due_time', e.target.value)}>
-                {TIME_OPTIONS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {timePickerOpen && (
+              <Modal onClose={() => setTimePickerOpen(false)}>
+                <ModalCard>
+                  <h2>Date &amp; time</h2>
 
-            <label>
-              End time
-              <ScrollSelect
-                value={form.duration_minutes}
-                onChange={(v) => set('duration_minutes', v)}
-                options={endTimeOptions}
-              />
-            </label>
+                  <div className="new-task-row">
+                    <label>
+                      Date
+                      <input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
+                    </label>
 
-            <label>
-              Time zone
-              <select value={form.due_timezone} onChange={(e) => set('due_timezone', e.target.value)}>
-                {TIMEZONE_OPTIONS.map((tz) => (
-                  <option key={tz.value} value={tz.value}>
-                    {tz.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                    <label>
+                      Time
+                      <select value={form.due_time} onChange={(e) => set('due_time', e.target.value)}>
+                        {TIME_OPTIONS.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-            <label>
-              Duration
-              <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
-                {durationOptions.map((d) => (
-                  <option key={d.value} value={d.value}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                    <label>
+                      End time
+                      <ScrollSelect
+                        value={form.duration_minutes}
+                        onChange={(v) => set('duration_minutes', v)}
+                        options={endTimeOptions}
+                      />
+                    </label>
+
+                    <label>
+                      Time zone
+                      <select value={form.due_timezone} onChange={(e) => set('due_timezone', e.target.value)}>
+                        {TIMEZONE_OPTIONS.map((tz) => (
+                          <option key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      Duration
+                      <select value={form.duration_minutes} onChange={(e) => set('duration_minutes', e.target.value)}>
+                        {durationOptions.map((d) => (
+                          <option key={d.value} value={d.value}>
+                            {d.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <SubmissionActions>
+                    <SubmissionButton variant="primary" onClick={() => setTimePickerOpen(false)}>
+                      Done
+                    </SubmissionButton>
+                  </SubmissionActions>
+                </ModalCard>
+              </Modal>
+            )}
           </>
         )}
 
