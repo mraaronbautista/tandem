@@ -703,7 +703,20 @@ select:focus-visible {
 .day-timeline-hours {
   position: relative;
   flex: none;
-  width: 46px;
+  width: 54px;
+}
+
+.day-timeline-task-time-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-h);
+  white-space: nowrap;
+  transform: translateY(6px);
 }
 
 .day-timeline-hour-label {
@@ -786,15 +799,9 @@ select:focus-visible {
   overflow: hidden;
 }
 
-/* Dashed vertical line through a real, un-collapsed gap between two
-   clusters (layoutClusters' railSegments) — reinforces "this is one
-   continuous day" the same job the hour-lines partially do, just
-   focused specifically on dead time between tasks. Anchored near the
-   track's left edge rather than tied to any one block's icon position,
-   since a rail segment spans the space *between* two blocks, not
-   through either one. A zero-gap stacked pair (back-to-back, or part of
-   an overlap) gets no separate rail line — their borders are already
-   touching, which reads as connected on its own. */
+/* UNUSED after every positive interval gained a full horizontal,
+   duration-labelled .day-timeline-gap marker. Retained until the
+   dedicated dead-CSS cleanup pass. */
 .day-timeline-rail {
   position: absolute;
   left: 3px;

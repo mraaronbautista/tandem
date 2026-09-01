@@ -53,6 +53,10 @@ const PAD_MINUTES = 20
 // scroll between them, burying whatever's on the other side of the gap.
 const GAP_THRESHOLD_MINUTES = 90
 const GAP_MARKER_HEIGHT = 30
+// Even a short positive gap needs enough room to carry its duration
+// label. Without this floor, a 5-minute gap was only 12.5px tall and the
+// label either collided with a block or had to disappear.
+const GAP_LABEL_MIN_HEIGHT = 22
 // Fixed height reserved between two stacked blocks that are a *genuine*
 // overlap (both ids present in overlappingIds — real durations that
 // actually intersect, not just close enough to trip the legibility
@@ -202,18 +206,16 @@ function groupIntoClusters(items) {
 // minutes apart still stack (there's no room to render them at their
 // real proportional distance without colliding), but they aren't a
 // genuine scheduling conflict, so no label between them; a real
-// duration pair that actually intersects gets one. railSegments cover
-// the opposite case — the dead space *between* clusters, not within one
-// — a dashed line through an actual gap (proportional or collapsed) so
-// the timeline still reads as one continuous day, not disconnected
-// islands of tasks.
+// duration pair that actually intersects gets one. Every positive empty
+// stretch between clusters gets a labelled gap marker: short gaps retain
+// their proportional height (with a small legibility floor), while long
+// ones collapse to GAP_MARKER_HEIGHT.
 function layoutClusters(clusters, overlappingIds) {
   let cursor = PAD_MINUTES * PX_PER_MINUTE
   const positioned = []
   const gapMarkers = []
   const hourMarks = []
   const overlapLabels = []
-  const railSegments = []
   let prevRealEnd = null
   // A gap segment's own tick loop and the cluster right after it can
   // both land a tick on the exact same hour — the gap's inclusive
@@ -240,25 +242,19 @@ function layoutClusters(clusters, overlappingIds) {
 
     if (prevRealEnd) {
       const gapMinutes = (clusterStart.getTime() - prevRealEnd.getTime()) / 60000
-      if (gapMinutes > GAP_THRESHOLD_MINUTES) {
+      if (gapMinutes > 0) {
+        const collapsed = gapMinutes > GAP_THRESHOLD_MINUTES
+        const proportionalHeight = gapMinutes * PX_PER_MINUTE
+        const markerHeight = collapsed ? GAP_MARKER_HEIGHT : Math.max(proportionalHeight, GAP_LABEL_MIN_HEIGHT)
+        if (!collapsed) pushHourTicks(prevRealEnd, clusterStart, cursor)
         // Collapsed: fixed-height marker, no hour ticks inside it (same
         // reasoning as skipping ticks inside a multi-item stack below —
         // there's no real per-pixel time correspondence in a
         // deliberately-compressed placeholder either). The marker's own
         // dashed .day-timeline-gap-line already gives this stretch the
         // connecting-rail treatment, so no separate railSegment here.
-        gapMarkers.push({ top: cursor, minutes: gapMinutes })
-        cursor += GAP_MARKER_HEIGHT
-      } else if (gapMinutes > 0) {
-        // A real, un-collapsed gap still renders at the normal
-        // proportional scale, hour ticks included — same as the space
-        // within any single-item cluster below — plus a dashed rail
-        // line spanning it, the one case genuinely new here: a gap this
-        // short previously rendered as blank space with nothing marking
-        // it as "this is dead time, not just unrendered."
-        pushHourTicks(prevRealEnd, clusterStart, cursor)
-        railSegments.push({ top: cursor, height: gapMinutes * PX_PER_MINUTE })
-        cursor += gapMinutes * PX_PER_MINUTE
+        gapMarkers.push({ top: cursor, height: markerHeight, minutes: gapMinutes })
+        cursor += markerHeight
       }
     }
 
@@ -312,7 +308,6 @@ function layoutClusters(clusters, overlappingIds) {
     hourMarks,
     gapMarkers,
     overlapLabels,
-    railSegments,
     height: cursor + PAD_MINUTES * PX_PER_MINUTE,
   }
 }
@@ -390,9 +385,19 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
       {layout && (
         <div className="day-timeline" style={{ height: layout.height }}>
           <div className="day-timeline-hours">
-            {layout.hourMarks.map((h) => (
+            {layout.hourMarks
+              .filter((h) => !layout.positioned.some((item) => Math.abs(item.top - h.top) < 8))
+              .map((h) => (
               <span key={h.top} className="day-timeline-hour-label" style={{ top: h.top }}>
                 {h.label}
+              </span>
+              ))}
+            {layout.positioned.map((item) => (
+              <span key={`task-time-${item.task.id}`} className="day-timeline-task-time-label" style={{ top: item.top }}>
+                {item.start.toLocaleTimeString([], {
+                  hour: 'numeric',
+                  minute: item.start.getMinutes() ? '2-digit' : undefined,
+                })}
               </span>
             ))}
           </div>
@@ -403,20 +408,11 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
             ))}
 
             {layout.gapMarkers.map((g) => (
-              <div key={g.top} className="day-timeline-gap" style={{ top: g.top, height: GAP_MARKER_HEIGHT }}>
+              <div key={g.top} className="day-timeline-gap" style={{ top: g.top, height: g.height }}>
                 <span className="day-timeline-gap-line" />
                 <span className="day-timeline-gap-label">{formatDuration(Math.round(g.minutes))} gap</span>
                 <span className="day-timeline-gap-line" />
               </div>
-            ))}
-
-            {/* Connecting rail through a real (un-collapsed) gap between
-                two clusters — a dashed line the same visual weight as
-                the collapsed-gap marker's own .day-timeline-gap-line, so
-                a short empty stretch still reads as "this is dead time,"
-                not just unrendered blank space. */}
-            {layout.railSegments.map((r) => (
-              <span key={`rail-${r.top}`} className="day-timeline-rail" style={{ top: r.top, height: r.height }} />
             ))}
 
             {/* A genuine scheduling conflict within a stack — both tasks
