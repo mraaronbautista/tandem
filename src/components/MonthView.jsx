@@ -33,17 +33,14 @@ function buildWeeks(year, month) {
   return weeks
 }
 
-// The time a task's chip shows — whichever field actually placed it on
-// this day (see groupTasksByDay in tasks.js): completed_at for done
-// tasks, due_date otherwise. Always present, since groupTasksByDay
-// already drops anything with neither. A still-open All Day task pinned
-// to this date (see isAllDayTask) shows "All day" instead of the literal
-// midnight it's stored at; once done, the real completed_at time is more
-// useful than that placeholder, so only the not-done case gets it.
+// The time a task's chip shows — always due_date, the same field that
+// placed it on this day (see groupTasksByDay in tasks.js), whether or
+// not the task is actually done yet. A still-open All Day task pinned to
+// this date (see isAllDayTask) shows "All day" instead of the literal
+// midnight it's stored at.
 function timeLabel(task) {
   if (task.status !== 'done' && isAllDayTask(task)) return 'All day'
-  const at = task.status === 'done' ? task.completed_at : task.due_date
-  return new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return new Date(task.due_date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
 // The whole point of Month is a bird's-eye view of what's coming up

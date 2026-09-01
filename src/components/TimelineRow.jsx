@@ -5,23 +5,23 @@ import TaskRow from './TaskRow'
 
 export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
   const isDone = task.status === 'done'
-  // Once done, `time` is the real completed_at moment (see TaskBoard.jsx),
-  // which is more useful here than "All day" — only a still-open All Day
-  // task, still genuinely showing its placeholder due_date, gets the
-  // "All day" label instead of the literal midnight it's stored at.
+  // `time` is always due_date now (see TaskBoard.jsx) — a task's
+  // position in this list stays where it was scheduled regardless of
+  // whether or when it actually got done (see getTasksForDay in
+  // tasks.js). The real completed_at moment is shown separately, as its
+  // own "Completed HH:MM" tag on the nested TaskRow below (its own
+  // dueLabel) — this leading time column is purely about where the task
+  // was due, so it reads consistently whether or not it's done. A
+  // still-open All Day task, still genuinely showing its placeholder
+  // due_date, gets the "All day" label instead of the literal midnight
+  // it's stored at.
   const isAllDay = !isDone && isAllDayTask(task)
   // Shown in the task's own due_timezone, matching the task-zone-badge
   // rendered just below this by the nested TaskRow (see dueLabel there
-  // for the full reasoning) — a still-open task's `time` here is its
-  // due_date, so the two labels have to agree on which zone they're in.
-  // completed_at has no due_timezone concept of its own (it's just when
-  // the task actually got finished), so that one stays viewer-local.
+  // for the full reasoning) — `time` is always due_date here, so the two
+  // labels always agree on which zone they're in, done or not.
   const timeZone = task.due_timezone || DEFAULT_TIMEZONE
-  const label = isAllDay
-    ? 'All day'
-    : isDone
-      ? new Date(time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-      : new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone })
+  const label = isAllDay ? 'All day' : new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone })
 
   // A still-open task with a real duration gets its own start/end dots
   // (and both time labels) instead of a single point — done tasks show

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { GanttChart, Home, FileText, LayoutGrid, Timer, Target, ClipboardList, NotebookPen, Lock, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
+import { GanttChart, Home, FileText, LayoutGrid, Timer, Target, ClipboardList, NotebookPen, Lock, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
@@ -8,6 +8,7 @@ import {
   deleteTask,
   getOverdueTasks,
   getTasksForDay,
+  getCompletedToday,
   getOverlappingTaskIds,
   getWeekDays,
   groupTasksByDay,
@@ -27,6 +28,7 @@ import DayTimeline from './DayTimeline'
 import AllDayRow from './AllDayRow'
 import NewTaskForm from './NewTaskForm'
 import Modal from './Modal'
+import ModalCard from './ModalCard'
 import DateStrip from './DateStrip'
 import DatePickerModal from './DatePickerModal'
 import PullToRefresh from './PullToRefresh'
@@ -130,6 +132,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [peekTaskId, setPeekTaskId] = useState(null)
+  const [completedTodayOpen, setCompletedTodayOpen] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
@@ -332,6 +335,15 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // Overdue is a "right now" signal, only ever shown alongside today — not
   // something that quietly disappears once you scroll away from today.
   const overdue = useMemo(() => (isToday ? getOverdueTasks(whoFiltered) : []), [whoFiltered, isToday])
+
+  // Same "right now" reasoning as overdue above — a task's own position
+  // in the day-by-day list always stays on its due date now (see
+  // getTasksForDay in tasks.js), so "what did I actually finish today"
+  // needs its own separate signal rather than being inferred from
+  // whatever happens to be sitting in today's list. who-scoped like
+  // everything else on this tab, so switching the Ada/Aaron filter
+  // scopes this the same way.
+  const completedToday = useMemo(() => (isToday ? getCompletedToday(whoFiltered) : []), [whoFiltered, isToday])
 
   // Day/Week share one rendering path: a list of day-sections. Day mode
   // is just that list with a single entry, so it doesn't need its own
@@ -756,6 +768,24 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
             {viewMode !== 'month' && <DateStrip selectedDate={selectedDate} onSelect={setSelectedDate} />}
 
+            {/* A task's position in the lists below always stays on its
+                own due date now (see getTasksForDay in tasks.js) — this
+                is the separate "what actually got done today" signal
+                that used to come from relocating a completed task into
+                today's list instead. Same isToday gate Overdue already
+                uses, and who-scoped the same way as everything else on
+                this tab. */}
+            {isToday && completedToday.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCompletedTodayOpen(true)}
+                className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent active:scale-[0.97]"
+              >
+                <CheckCircle2 size={13} className="text-accent" />
+                {completedToday.length} completed today
+              </button>
+            )}
+
             {error && <p className="error">{error}</p>}
             {loading ? (
               <p className="loading">Loading…</p>
@@ -827,7 +857,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                               <TimelineRow
                                 key={task.id}
                                 task={task}
-                                time={task.status === 'done' ? task.completed_at : task.due_date}
+                                time={task.due_date}
                                 isLast={i === dTasks.length - 1}
                                 {...taskRowProps}
                               />
@@ -877,6 +907,42 @@ export default function TaskBoard({ theme, toggleTheme }) {
           <div className="peek-task">
             <TaskRow task={peekTask} defaultOpen {...taskRowProps} />
           </div>
+        </Modal>
+      )}
+
+      {/* Same TimelineRow/TaskRow rendering the Overdue/Week sections
+          already use — time is still due_date (TimelineRow's own
+          contract, same as everywhere else it's used), so the leading
+          column shows where each task was actually scheduled; the real
+          completed_at moment shows up right below via the nested
+          TaskRow's own "Completed HH:MM" tag (dueLabel), same as it
+          already does anywhere else a done task renders. Each row
+          expands in place (TaskRow's own open state), no separate peek
+          needed, since these rows aren't height-constrained the way
+          DayTimeline's blocks are.
+
+          Falls back to completed_at when due_date is null — a genuinely
+          dateless task (All Day's own "Date (optional)" left blank) can
+          still be checked off, and getCompletedToday (unlike
+          getTasksForDay/groupTasksByDay) doesn't require a due_date to
+          surface one here, so this is the one place that case can now
+          actually show up. */}
+      {completedTodayOpen && (
+        <Modal onClose={() => setCompletedTodayOpen(false)}>
+          <ModalCard>
+            <h2>Completed today</h2>
+            <div className="flex flex-col">
+              {completedToday.map((task, i) => (
+                <TimelineRow
+                  key={task.id}
+                  task={task}
+                  time={task.due_date || task.completed_at}
+                  isLast={i === completedToday.length - 1}
+                  {...taskRowProps}
+                />
+              ))}
+            </div>
+          </ModalCard>
         </Modal>
       )}
 

@@ -255,29 +255,39 @@ export function getCompletedSince(tasks, whoKey, since) {
   })
 }
 
-// Everything that "belongs" to a given day: tasks due that day if still
-// not done, plus tasks actually completed that day regardless of when
-// they were originally due. That last part matters for a household
-// split across timezones — Ada assigning something at 3pm her time can
-// land on what's already "yesterday" on your calendar, and if a
-// completed task stayed pinned to that original (now past) day, it'd
-// look like nothing got done today even though it did. The label still
-// always shows the original due time (see TaskRow's dueLabel) plus a
-// small "Completed" tag — only which day's list it appears in follows
-// completion time, not the label itself.
+// Everything due on a given day, done or not — a task stays exactly
+// where it was scheduled regardless of when it actually got finished.
+// This used to move a completed task to whichever day it was actually
+// completed on instead (a household split across timezones means Ada
+// assigning something at 3pm her time can land on what's already
+// "yesterday" on your calendar, and a task pinned to that original, now-
+// past day made it look like nothing got done today even though it
+// did) — but relocating a task away from the day it was set for read as
+// its own kind of wrong, like the day it was actually scheduled for
+// didn't get credit for it. See getCompletedToday below for how "what
+// got finished today" is now surfaced instead, without moving anything.
 export function getTasksForDay(tasks, date) {
   const dayKey = localDayKey(date)
 
   return tasks
-    .filter((t) => {
-      if (t.status === 'done') return t.completed_at && localDayKey(new Date(t.completed_at)) === dayKey
-      return t.due_date && localDayKey(new Date(t.due_date)) === dayKey
-    })
-    .sort((a, b) => {
-      const at = a.status === 'done' ? a.completed_at : a.due_date
-      const bt = b.status === 'done' ? b.completed_at : b.due_date
-      return new Date(at) - new Date(bt)
-    })
+    .filter((t) => t.due_date && localDayKey(new Date(t.due_date)) === dayKey)
+    .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+}
+
+// Tasks completed today (the viewer's own local calendar day), regardless
+// of which day they were originally due — the "what actually got done
+// today" signal, now that getTasksForDay above always keeps a task on
+// its own due day instead of following it to wherever it got finished.
+// Surfaced as its own small, separate indicator (TaskBoard.jsx) rather
+// than folded back into the day's task list, so a task never has to
+// choose between "where it was scheduled" and "credit for finishing it
+// today" — it can show both, in two different places, instead of only
+// ever being findable in one.
+export function getCompletedToday(tasks) {
+  const todayKey = localDayKey(new Date())
+  return tasks
+    .filter((t) => t.status === 'done' && t.completed_at && localDayKey(new Date(t.completed_at)) === todayKey)
+    .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
 }
 
 // `count` consecutive day-granularity Date objects starting at `date` —
@@ -413,19 +423,17 @@ export function getNudgedTasks(tasks) {
     .sort((a, b) => new Date(b.overdue_nudge_sent_at) - new Date(a.overdue_nudge_sent_at))
 }
 
-// Buckets tasks by the local day they belong to (same done/not-done rule
-// as getTasksForDay: done tasks by completed_at, others by due_date) into
-// a Map of 'YYYY-MM-DD' -> tasks[] — for rendering many days at once
-// (Month view) without re-scanning the whole task list once per day the
-// way calling getTasksForDay in a loop would. All Day tasks (due_date
-// null, never done via a specific day) naturally fall out of every
+// Buckets tasks by the local day they're due (same due_date-always rule
+// as getTasksForDay above) into a Map of 'YYYY-MM-DD' -> tasks[] — for
+// rendering many days at once (Month view) without re-scanning the whole
+// task list once per day the way calling getTasksForDay in a loop would.
+// All Day tasks with no date (due_date null) naturally fall out of every
 // bucket, same as they're excluded from getTasksForDay.
 export function groupTasksByDay(tasks) {
   const map = new Map()
   for (const t of tasks) {
-    const at = t.status === 'done' ? t.completed_at : t.due_date
-    if (!at) continue
-    const key = localDayKey(new Date(at))
+    if (!t.due_date) continue
+    const key = localDayKey(new Date(t.due_date))
     if (!map.has(key)) map.set(key, [])
     map.get(key).push(t)
   }

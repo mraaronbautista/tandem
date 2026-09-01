@@ -73,25 +73,28 @@ const OVERLAP_LABEL_HEIGHT = 22
 // still shown in full via blockTimeLabel.
 const MAX_BLOCK_MINUTES = 360
 
-// "Completed 10:00 PM" for a finished task (start is completed_at, a
-// single instant — a range would misleadingly imply it was still in
-// progress the whole time), "10:00–10:40 PM" for a real duration, or
-// just "10:00 PM" for a point-in-time task — never the fake
-// POINT_TASK_MINUTES sizing used purely for a legible minimum block
+// "Completed 10:00 PM" for a finished task — always the real
+// completed_at instant, read straight off the task rather than derived
+// from `start` (which is always due_date now — see the layout useMemo
+// below, and tasks.js's getTasksForDay for why a task's *position*
+// no longer follows it to wherever it actually got finished). The two
+// are deliberately decoupled: the block still sits where it was
+// scheduled, but the label states honestly when it was actually done,
+// even if that's a different day entirely. "10:00–10:40 PM" for a real
+// duration, or just "10:00 PM" for a point-in-time task — never the
+// fake POINT_TASK_MINUTES sizing used purely for a legible minimum block
 // height, which isn't a real duration worth stating as one.
 //
-// Formatted in the task's own due_timezone, not the viewer's — the
-// block's *position* on the timeline is deliberately viewer-local
-// (it's placed where this lands in the day the viewer is actually
-// looking at), but the time/zone badge's whole job is "can I trust
+// Formatted in the task's own due_timezone, not the viewer's, for the
+// still-open cases — the time/zone badge's whole job is "can I trust
 // this was scheduled right in the zone it says it's in," which a
 // silently-converted time right next to that zone's abbreviation
 // actively defeats: a task set for 10 PM–2 AM Eastern showed as
 // "10:00 AM–2:00 PM" next to an "ET" badge for a viewer ~12 hours
-// away, reading as if 10 AM–2 PM *was* Eastern time. A completed
-// task shows completed_at in the viewer's own zone instead — that's
-// when it was actually finished in the real world, not tied to
-// whatever zone the original due time was set in.
+// away, reading as if 10 AM–2 PM *was* Eastern time. "Completed" shows
+// completed_at in the viewer's own zone instead — that's when it was
+// actually finished in the real world, not tied to whatever zone the
+// original due time was set in.
 // A task whose real duration (not the capped/truncated render height —
 // see MAX_BLOCK_MINUTES above) crosses into another calendar day in its
 // own due_timezone needs the end's date stated too, not just its time —
@@ -101,7 +104,7 @@ const MAX_BLOCK_MINUTES = 360
 function blockTimeLabel(task, start, end, dueTimeZone) {
   if (task.status === 'done') {
     const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    return `Completed ${fmt(start)}`
+    return `Completed ${fmt(new Date(task.completed_at))}`
   }
   const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: dueTimeZone })
   if (!task.duration_minutes) return fmt(start)
@@ -113,15 +116,16 @@ function blockTimeLabel(task, start, end, dueTimeZone) {
   return `${fmt(start)} – ${dateFmt(end)}, ${fmt(end)}`
 }
 
-// "Tue 08/18/26" — same zone basis as blockTimeLabel above — a task set
-// for late evening in a zone hours ahead of the viewer's can land on a
-// different calendar date there than the block's own viewer-local
-// position on the day grid might suggest. toLocaleDateString inserts a
-// comma after the weekday by default ("Tue, 08/18/26"); stripped since
-// the requested format is space-separated.
-function blockDateLabel(task, start, dueTimeZone) {
-  const opts = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' }
-  if (task.status !== 'done') opts.timeZone = dueTimeZone
+// "Tue 08/18/26" — start is always due_date now (see blockTimeLabel
+// above), so this always reads in due_timezone regardless of done
+// status; a task set for late evening in a zone hours ahead of the
+// viewer's can still land on a different calendar date there than
+// where the block's own position (also due_date-based) might suggest.
+// toLocaleDateString inserts a comma after the weekday by default
+// ("Tue, 08/18/26"); stripped since the requested format is
+// space-separated.
+function blockDateLabel(start, dueTimeZone) {
+  const opts = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit', timeZone: dueTimeZone }
   return start.toLocaleDateString('en-US', opts).replace(', ', ' ')
 }
 
@@ -148,8 +152,8 @@ function roundUpToHour(date) {
 // directly against the previous item. Using the raw end here let two
 // tasks whose real times didn't overlap still end up with visually
 // colliding rendered boxes once each was clamped up to MIN_BLOCK_HEIGHT
-// — most visible among several tasks completed within a short window of
-// each other, where completed_at's synthetic point-task span is often
+// — most visible among several point tasks due within a short window of
+// each other, where the synthetic POINT_TASK_MINUTES span is often
 // shorter than MIN_BLOCK_HEIGHT actually renders as.
 function groupIntoClusters(items) {
   const sorted = [...items].sort((a, b) => a.start - b.start || a.clusterEnd - b.clusterEnd)
@@ -353,7 +357,12 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
     if (!timed.length) return null
 
     const items = timed.map((task) => {
-      const start = new Date(task.status === 'done' ? task.completed_at : task.due_date)
+      // Always due_date, even once done — a task's position on the
+      // timeline stays where it was scheduled regardless of when it
+      // actually got finished (see getTasksForDay in tasks.js). The
+      // label still states the real completed_at separately —
+      // blockTimeLabel reads that straight off `task`, not `start`.
+      const start = new Date(task.due_date)
       const end = new Date(start.getTime() + (task.duration_minutes || POINT_TASK_MINUTES) * 60000)
       // Layout (position/height/which tasks cluster together) is driven
       // by cappedEnd, not the real end — see MAX_BLOCK_MINUTES above. The
@@ -492,7 +501,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                     </span>
                     <span className="day-timeline-block-time">
                       <span className="day-timeline-block-date">
-                        {blockDateLabel(task, start, task.due_timezone || DEFAULT_TIMEZONE)}
+                        {blockDateLabel(start, task.due_timezone || DEFAULT_TIMEZONE)}
                       </span>
                       <span className="day-timeline-block-time-row">
                         <span>{blockTimeLabel(task, start, end, task.due_timezone || DEFAULT_TIMEZONE)}</span>
