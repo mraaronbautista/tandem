@@ -118,9 +118,11 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
   async function handleStartTap() {
     setStarting(true)
+    setError('')
     setLocationError('')
     setLocating(true)
     setDetectedSite(null)
+    setSelectedSiteId('')
     try {
       const pos = await getPosition({ enableHighAccuracy: true, timeout: 15000 })
       const { latitude, longitude, accuracy } = pos.coords
@@ -129,7 +131,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       if (nearest) setSelectedSiteId(nearest.site.id)
     } catch {
       setLocationError(
-        "Couldn't get your location — check that location access is allowed for this site, then try again, or pick your site manually below.",
+        "Couldn't get your location. Clock-in requires a location reading — check this site's location permission, then try again.",
       )
     } finally {
       setLocating(false)
@@ -139,6 +141,10 @@ export default function StaffClockView({ theme, toggleTheme }) {
   async function handleConfirmStart() {
     if (!selectedSiteId) {
       setError('Pick a site before starting.')
+      return
+    }
+    if (!detectedSite) {
+      setError('Get your current location before starting.')
       return
     }
     setSubmitting(true)
@@ -234,19 +240,34 @@ export default function StaffClockView({ theme, toggleTheme }) {
       {profile?.active !== false && (
         <>
           {!activeEntry && !starting && (
-            <button
-              type="button"
-              className="cursor-pointer rounded-[16px] border-0 bg-accent px-4 py-8 text-2xl font-bold text-white active:scale-[0.98]"
-              onClick={handleStartTap}
-            >
-              <Play size={22} className="mr-1.5 inline align-[-3px]" fill="currentColor" /> Start
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                className="cursor-pointer rounded-[16px] border-0 bg-accent px-4 py-8 text-2xl font-bold text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleStartTap}
+                disabled={sites.length === 0}
+              >
+                <Play size={22} className="mr-1.5 inline align-[-3px]" fill="currentColor" /> Start
+              </button>
+              {sites.length === 0 && (
+                <p className="text-center text-sm opacity-70">No active work sites are available. Ask Ada or Aaron to add one.</p>
+              )}
+            </div>
           )}
 
           {!activeEntry && starting && (
             <div className="flex flex-col gap-3 rounded-[8px] border border-border bg-card-bg p-4">
               {locating && <p className="loading">Finding your location…</p>}
               {locationError && <p className="error">{locationError}</p>}
+              {locationError && !locating && (
+                <button
+                  type="button"
+                  className="cursor-pointer self-start rounded-sm border border-border bg-bg px-3 py-2 text-sm text-text-h"
+                  onClick={handleStartTap}
+                >
+                  Try location again
+                </button>
+              )}
               {detectedSite?.nearest && (
                 <p className="text-sm opacity-80">
                   You're ~{Math.round(detectedSite.nearest.distanceM)}m from{' '}
@@ -270,7 +291,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 </select>
               </label>
 
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   className={`flex-1 cursor-pointer rounded-sm border px-3 py-2 text-sm ${
@@ -314,7 +335,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                   type="button"
                   className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                   onClick={handleConfirmStart}
-                  disabled={submitting || !selectedSiteId}
+                  disabled={submitting || locating || !selectedSiteId || !detectedSite}
                 >
                   {submitting ? 'Starting…' : 'Confirm start'}
                 </button>
@@ -324,7 +345,10 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
           {activeEntry && (
             <div className="flex flex-col items-center gap-3 rounded-[16px] border border-border bg-card-bg p-6">
-              <p className="text-sm opacity-70">Clocked in — {activeEntry.rate_type}</p>
+              <div className="text-center text-sm opacity-70">
+                <p>Clocked in at {sites.find((site) => site.id === activeEntry.work_site_id)?.name || 'work site'}</p>
+                <p className="mt-0.5 capitalize">{activeEntry.rate_type} rate</p>
+              </div>
               <p className="text-4xl font-bold text-text-h tabular-nums">{formatElapsed(elapsedMs)}</p>
               {activeEntry.flagged && (
                 <p className="flex items-center gap-1 text-xs text-overdue">
@@ -365,13 +389,16 @@ export default function StaffClockView({ theme, toggleTheme }) {
             <div className="flex flex-col gap-2">
               <h2 className="text-[13px] opacity-60">Recent shifts</h2>
               {history.map((e) => (
-                <div key={e.id} className="flex items-center justify-between rounded-sm border border-border px-3 py-2 text-sm">
-                  <span>
+                <div key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-sm border border-border px-3 py-2 text-sm">
+                  <span className="min-w-0 truncate font-medium text-text-h">
+                    {sites.find((site) => site.id === e.work_site_id)?.name || 'Work site'}
+                  </span>
+                  <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>
+                  <span className="text-xs opacity-65">
                     {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                     {e.flagged && <AlertTriangle size={12} className="ml-1 inline align-[-1px] text-overdue" />}
                   </span>
-                  <span>{e.clock_out_at ? money(computeEntryPay(e)) : 'in progress'}</span>
-                  <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>
+                  <span className="font-semibold">{e.clock_out_at ? money(computeEntryPay(e)) : 'in progress'}</span>
                 </div>
               ))}
             </div>

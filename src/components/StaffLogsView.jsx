@@ -13,6 +13,7 @@ import {
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import StaffWorkSitesForm from './StaffWorkSitesForm'
 import StaffPayrollExport from './StaffPayrollExport'
+import StaffProfileForm from './StaffProfileForm'
 
 const COMPANY = 'awa'
 const STATUS_TABS = [
@@ -50,6 +51,7 @@ export default function StaffLogsView({ me }) {
   const [editingSite, setEditingSite] = useState(null)
   const [addingSite, setAddingSite] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [editingStaff, setEditingStaff] = useState(null)
 
   async function reloadEntries() {
     try {
@@ -170,13 +172,13 @@ export default function StaffLogsView({ me }) {
       ) : (
         <div className="flex flex-col gap-2">
           {entries.map((e) => (
-            <div key={e.id} className="flex flex-col gap-1 rounded-[8px] border border-border px-3 py-2 text-sm">
+            <div key={e.id} className="flex min-w-0 flex-col gap-1 rounded-[8px] border border-border px-3 py-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-text-h">{e.staff?.display_name}</span>
                 <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>
               </div>
-              <div className="flex items-center justify-between opacity-80">
-                <span>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 opacity-80">
+                <span className="min-w-0">
                   {e.work_sites?.name} — {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                   {e.flagged && (
                     <span className="text-overdue">
@@ -213,17 +215,27 @@ export default function StaffLogsView({ me }) {
       <div className="flex flex-col gap-2">
         <h3 className="text-[13px] opacity-60">Staff roster</h3>
         {roster.map((s) => (
-          <div key={s.id} className="flex items-center justify-between rounded-sm border border-border px-3 py-2 text-sm">
-            <span>
-              {s.display_name} — ${s.hourly_rate}/hr (${s.emergency_rate}/hr emergency)
+          <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-sm border border-border px-3 py-2 text-sm">
+            <span className="min-w-0">
+              <strong className="block truncate font-semibold text-text-h">{s.display_name}</strong>
+              <span className="text-xs opacity-65">${s.hourly_rate}/hr · ${s.emergency_rate}/hr emergency</span>
             </span>
-            <button
-              type="button"
-              className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h"
-              onClick={() => handleToggleActive(s)}
-            >
-              {s.active ? 'Deactivate' : 'Reactivate'}
-            </button>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h"
+                onClick={() => setEditingStaff(s)}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h"
+                onClick={() => handleToggleActive(s)}
+              >
+                {s.active ? 'Deactivate' : 'Reactivate'}
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -263,6 +275,17 @@ export default function StaffLogsView({ me }) {
       )}
 
       {exportOpen && <StaffPayrollExport entries={entries} onClose={() => setExportOpen(false)} />}
+
+      {editingStaff && (
+        <StaffProfileForm
+          staffMember={editingStaff}
+          onClose={() => setEditingStaff(null)}
+          onSaved={(saved) => {
+            setRoster((current) => current.map((member) => (member.id === saved.id ? saved : member)))
+            setEditingStaff(null)
+          }}
+        />
+      )}
     </div>
   )
 }

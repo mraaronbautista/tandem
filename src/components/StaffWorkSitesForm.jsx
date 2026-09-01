@@ -152,8 +152,8 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
         </button>
         {locationError && <p className="error">{locationError}</p>}
 
-        <div className="flex gap-2">
-          <label className="flex-1">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="min-w-0">
             Latitude
             <input
               required
@@ -164,7 +164,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               className={FIELD_INPUT_CLASS}
             />
           </label>
-          <label className="flex-1">
+          <label className="min-w-0">
             Longitude
             <input
               required
