@@ -373,12 +373,6 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                   }}
                   title={PRIORITY_LABEL[task.priority]}
                 >
-                  <input
-                    type="checkbox"
-                    className="task-done-checkbox"
-                    checked={task.status === 'done'}
-                    onChange={() => onStatusChange(task.id, task.status === 'done' ? 'to_do' : 'done')}
-                  />
                   {/* Time/zone live in their own fixed right-hand column
                       (day-timeline-block-time), not stacked below the
                       title — a title long enough to wrap its full 2 lines
@@ -436,6 +430,14 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                       </span>
                     </span>
                   </button>
+                  {/* Trailing, not leading — same "checkbox on the right"
+                      placement TaskRow.jsx's collapsed row now uses. */}
+                  <input
+                    type="checkbox"
+                    className="task-done-checkbox"
+                    checked={task.status === 'done'}
+                    onChange={() => onStatusChange(task.id, task.status === 'done' ? 'to_do' : 'done')}
+                  />
                 </div>
               )
             })}

@@ -217,13 +217,6 @@ export default function TaskRow({
       onClick={() => setOpen((v) => !v)}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <input
-          type="checkbox"
-          className="task-done-checkbox"
-          checked={task.status === 'done'}
-          onClick={(e) => e.stopPropagation()}
-          onChange={handleStatusToggle}
-        />
         {/* Was a plain PriorityDot — priority itself moved to the row's
             own left border (matching DayTimeline.jsx's block, which
             already worked this way) once this slot became the task icon,
@@ -272,6 +265,16 @@ export default function TaskRow({
         {task.status === 'done' && task.completed_at && (
           <span className="text-[11px] whitespace-nowrap opacity-50">Completed {localLabel(task.completed_at)}</span>
         )}
+        {/* Moved from leading to trailing (ml-auto pins it to the row's
+            right edge, same "checkbox on the right" placement Structured
+            uses) — purely a position change, same checkbox/behavior. */}
+        <input
+          type="checkbox"
+          className="task-done-checkbox ml-auto"
+          checked={task.status === 'done'}
+          onClick={(e) => e.stopPropagation()}
+          onChange={handleStatusToggle}
+        />
       </div>
 
       {open && (
