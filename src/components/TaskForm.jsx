@@ -386,7 +386,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
                 <ModalCard>
                   <h2>Date &amp; time</h2>
 
-                  <div className="new-task-row">
+                  <div className="datetime-picker-grid">
                     <label>
                       Date
                       <input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />

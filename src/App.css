@@ -2746,6 +2746,75 @@ a.task-submission-file-link:hover {
   font: inherit;
 }
 
+/* The Date & time modal's 5 fields (TaskForm.jsx, Part C's collapsed
+   summary that expands into this modal) — CSS Grid with auto-fill
+   columns, not .new-task-row's flexbox. flex-wrap + flex: 1 1 100px
+   (the .new-task-row recipe above) grows a trailing row's items to fill
+   whatever width is left over on their own row — fine when every row is
+   full, but with 5 fields the last row only ever has 1 (Duration),
+   which then stretched to the row's *entire* width while the 4 fields
+   above it each sat at a quarter width, reading as wildly inconsistent
+   sizing. auto-fill (not auto-fit) keeps the same column tracks defined
+   across every row of the grid regardless of how many cells a given row
+   actually fills, so Duration sits in column 1 at the exact same width
+   as Date above it, with the remaining columns simply left blank rather
+   than redistributed to it. */
+.datetime-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  /* An explicit width, not just the auto-fill columns themselves — this
+     modal has no definite width of its own to compute auto-fill's
+     column count against (.submission-modal's width:100% resolves
+     against Modal.jsx's unstyled dialog wrapper, whose own width is
+     shrink-to-fit around its content, i.e. this grid — a circular
+     dependency the browser resolves by falling back to each element's
+     intrinsic size). flex-wrap's own intrinsic-size algorithm summed
+     every item's flex-basis as if none of them wrapped, so it happened
+     to propagate a wide natural size up through that same chain; grid's
+     auto-fill tracks don't contribute that same wide intrinsic size, so
+     swapping to grid collapsed the whole nested-modal stack down to one
+     narrow column. A fixed width sidesteps needing that propagation at
+     all. 520px fits all 4 non-Duration fields on one row at this
+     minmax floor (4 × 120px + 3 × 10px gap = 510px), matching Duration
+     landing alone on its own row below, same width as its neighbors
+     rather than stretched full-width.
+     The narrow-screen cap is a viewport unit, not a percentage —
+     max-width: 100% would need to resolve against this grid's
+     containing block, but that chain (the dialog wrapper, then
+     .submission-modal's own width: 100%) is shrink-to-fit all the way
+     up (see above), and a percentage against an indefinite containing
+     block generally computes as unconstrained rather than 0 — so a
+     plain max-width: 100% here silently did nothing, and the grid
+     overflowed the mobile slide-up sheet at its full 520px instead of
+     dropping to fewer columns. 100vw doesn't have that problem: it
+     resolves against the viewport, never the containing block, so it
+     reliably caps the grid regardless of how indefinite everything
+     above it is. The 72px subtracted is a safety margin for the
+     modal's own edge chrome (.submission-modal's 18px padding on each
+     side, plus slack for .modal-backdrop's), not an exact measurement. */
+  width: 520px;
+  max-width: min(520px, calc(100vw - 72px));
+}
+
+.datetime-picker-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.datetime-picker-grid select,
+.datetime-picker-grid input {
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
 /* Direct-child only, so it doesn't fight .new-task-row label's own
    layout (flex-basis etc.) for labels nested inside that row — this just
    covers the labels that sit directly in the form (Date, Time, Repeats,
