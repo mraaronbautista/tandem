@@ -25,7 +25,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 - The admin UI must not ask Aaron to re-enter a rental property's name or address.
 - Latitude and longitude remain hidden under advanced details.
 - A configured location receives a sensible default radius (currently proposed: 150 meters).
-- Location setup first attempts to derive a map point from the property's saved address.
+- Location setup first attempts to derive a map point from the property's saved address through an explicit OpenStreetMap search; it does not autocomplete or request staff location permission.
 - If address lookup is unreliable, the on-site property manager may capture the point; that point remains pending until Aaron or Ada approves it.
 - Standard/emergency rates are snapshotted at clock-in, so editing rates never reprices past shifts.
 - The existing staff/member separation, RLS boundaries, server-side geofence calculation, and RPC-only clock-out remain intact.
@@ -54,6 +54,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 ### Staff-facing clock view
 
 - Keep the phone-first Start/Stop experience.
+- Request browser location permission only when staff taps Start shift, when the location reading is needed; do not prompt on login or while merely viewing the clock screen.
 - Require a successful location reading at clock-in and provide a clear retry state.
 - Suggest the nearest configured property while allowing a manual property override.
 - Show selected property, rate, elapsed time, geofence flag, recent shifts, and estimated pay.
@@ -69,6 +70,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 - [x] Replace “Add site” with “Manage clock-in locations” and property-first configuration.
 - [x] Replace one-location-per-unit with physical location groups that can contain multiple Awa/Azu units and future acquisitions.
 - [x] Add user-triggered address lookup and hide technical coordinates by default.
+- [x] Keep staff location permission scoped to the Start shift action.
 - [ ] Add on-site capture with member approval fallback.
 - [ ] Add payroll-period filtering, summary metrics, and filter-aware CSV export.
 - [ ] Verify member desktop/mobile and staff mobile flows against the live Supabase project.
