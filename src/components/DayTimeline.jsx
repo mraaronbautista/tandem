@@ -6,7 +6,26 @@ import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
 import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 
-const PX_PER_MINUTE = 1.2
+// 2.5 (150px/hour), not the original 1.2 (72px/hour) — too cramped to
+// read comfortably on a phone, and worse, it made MIN_BLOCK_HEIGHT's
+// fixed 58px floor (see below) equivalent to ~48 real minutes. Since
+// assignColumns has to cluster on that floored height, not each task's
+// real end (see its own comment below for why), two genuinely separate
+// point-in-time tasks as little as 20-30 minutes apart — e.g. one at
+// 1:30 AM, another at 2:00 AM — were landing inside the same 48-minute
+// "cluster" purely because of the legibility floor, and rendering side
+// by side in split columns as if they actually conflicted. At 2.5px/min
+// the same 58px floor is only ~23 real minutes, well under
+// POINT_TASK_MINUTES (30) — so a point task's own synthetic 30-minute
+// span is what actually ends up driving clusterEnd, not the floor, and
+// two tasks a real 30+ minutes apart stop spuriously colliding. A task
+// with a real stated duration is affected the same way: at the old
+// scale, a real 30-minute task (e.g. "2:30–3:00 AM") still got its
+// clusterEnd floored up to 48 minutes' worth of layout space even
+// though the label next to it said 30 — the rendered block was taller
+// than the time it claimed to cover. 30 real minutes already clears the
+// new, smaller floor, so the block's height and its own label agree.
+const PX_PER_MINUTE = 2.5
 // Point-in-time tasks (no duration) get sized as if they were this long,
 // purely for a legible minimum block height — not a real duration, and
 // not what getOverlappingTaskIds uses to decide the "⚠ Overlap" badge.
@@ -18,7 +37,9 @@ const POINT_TASK_MINUTES = 30
 // text) to fit without either getting clipped by the block's own fixed
 // height. Verified empirically against both, not just estimated —46
 // fit the title alone but clipped the date+time+badge column once that
-// was added.
+// was added. A fixed pixel value, not minutes — see PX_PER_MINUTE above
+// for why its real-minute equivalent matters just as much as its own
+// value.
 const MIN_BLOCK_HEIGHT = 58
 // Breathing room added around each busy window (see buildWindows below)
 // so a block isn't flush against the window's own top/bottom edge.
