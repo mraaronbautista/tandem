@@ -249,7 +249,7 @@ export default function RentalsView({ me, company }) {
 
   if (isDesktop) {
     return (
-      <div className="grid grid-cols-[1fr_340px] items-start gap-6">
+      <div className="rentals-desktop-dashboard grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3.5">
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">

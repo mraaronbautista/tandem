@@ -3531,6 +3531,16 @@ label.new-task-checkbox-label {
   align-items: start;
 }
 
+/* Rentals is a true two-column dashboard, so its tab shell is wider
+   than Tandem's reading-width lists. Grow the Financials rail only once
+   there is enough room; near the 900px desktop breakpoint it keeps the
+   established 340px width so the calendar is not squeezed. */
+@media (min-width: 1200px) {
+  .rentals-desktop-dashboard {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+}
+
 /* UNUSED — see .rentals-dashboard above. Now `flex min-w-0 flex-col
    gap-3`. */
 .rentals-main {
