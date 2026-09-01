@@ -53,6 +53,13 @@ const PAD_MINUTES = 20
 // scroll between them, burying whatever's on the other side of the gap.
 const GAP_THRESHOLD_MINUTES = 90
 const GAP_MARKER_HEIGHT = 30
+// Fixed height reserved between two stacked blocks that are a *genuine*
+// overlap (both ids present in overlappingIds — real durations that
+// actually intersect, not just close enough to trip the legibility
+// floor) — see the "Tasks are overlapping" label below. Blocks in the
+// same stack that don't clear that bar still render directly flush
+// against each other, no label, same as any other back-to-back pair.
+const OVERLAP_LABEL_HEIGHT = 22
 // A block's rendered height/layout footprint is capped at this many
 // minutes' worth of pixels, regardless of its real duration — a task
 // spanning multiple days (a real, supported case: TaskForm.jsx's own
@@ -125,89 +132,181 @@ function roundUpToHour(date) {
   return d
 }
 
-// Classic "meeting rooms" interval layout: sweeps tasks in start order,
-// grouping any that overlap into a cluster, then greedily assigns each a
-// column — the first column whose current occupant has already ended, or
-// a new one if none are free. Every item in a cluster gets the same
-// totalCols (the max simultaneous overlap within it), which is what
-// drives each block's width (100% / totalCols) below.
+// Sweeps tasks in start order, grouping any that are "close enough" —
+// see clusterEnd's own definition below — into a cluster. Used to be the
+// first half of a "meeting rooms" side-by-side-columns layout; now every
+// member of a cluster renders full-width, stacked one after another
+// instead (see layoutClusters below and Part B of the plan this came
+// from — Structured's own timeline doesn't split overlapping tasks into
+// narrower columns either, it keeps them full-width and labels the
+// overlap in plain text).
 //
 // Clusters on clusterEnd, not each item's real end — every block renders
 // at least MIN_BLOCK_HEIGHT tall regardless of its real/synthetic
-// duration (see clusterEnd's own definition below), and this needs to
-// see that same effective span to decide who actually needs a separate
-// column. Using the raw end here let two tasks whose real times didn't
-// overlap still end up sharing one column with visually colliding
-// rendered boxes once each was clamped up to MIN_BLOCK_HEIGHT — most
-// visible among several tasks completed within a short window of each
-// other, where completed_at's synthetic point-task span is often
+// duration (see clusterEnd's own definition below), and this still needs
+// to see that same effective span to decide who actually needs to stack
+// directly against the previous item. Using the raw end here let two
+// tasks whose real times didn't overlap still end up with visually
+// colliding rendered boxes once each was clamped up to MIN_BLOCK_HEIGHT
+// — most visible among several tasks completed within a short window of
+// each other, where completed_at's synthetic point-task span is often
 // shorter than MIN_BLOCK_HEIGHT actually renders as.
-function assignColumns(items) {
+function groupIntoClusters(items) {
   const sorted = [...items].sort((a, b) => a.start - b.start || a.clusterEnd - b.clusterEnd)
-  const result = []
-  let cluster = []
+  const clusters = []
+  let current = []
   let clusterMax = null
 
-  function flushCluster() {
-    if (!cluster.length) return
-    const columnEnds = []
-    const withCols = cluster.map((item) => {
-      let col = columnEnds.findIndex((end) => item.start >= end)
-      if (col === -1) {
-        col = columnEnds.length
-        columnEnds.push(item.clusterEnd)
-      } else {
-        columnEnds[col] = item.clusterEnd
-      }
-      return { ...item, col }
-    })
-    const totalCols = columnEnds.length
-    for (const item of withCols) result.push({ ...item, totalCols })
-    cluster = []
-  }
-
   for (const item of sorted) {
-    if (cluster.length && item.start < clusterMax) {
-      cluster.push(item)
+    if (current.length && item.start < clusterMax) {
+      current.push(item)
       if (item.clusterEnd > clusterMax) clusterMax = item.clusterEnd
     } else {
-      flushCluster()
-      cluster = [item]
+      if (current.length) clusters.push(current)
+      current = [item]
       clusterMax = item.clusterEnd
     }
   }
-  flushCluster()
-  return result
+  if (current.length) clusters.push(current)
+  return clusters
 }
 
-// Merges task intervals into "busy windows" — any two tasks (or an
-// already-merged window and the next task) less than GAP_THRESHOLD_
-// MINUTES apart join the same window; anything further apart starts a
-// new one. What's left between windows is exactly the gaps worth
-// collapsing. Uses clusterEnd (see assignColumns above) so a window
-// reserves enough pixel space for every block's real rendered height,
-// not just its raw duration.
-function buildWindows(items) {
-  const sorted = [...items].sort((a, b) => a.start - b.start)
-  const windows = []
-  for (const item of sorted) {
-    const last = windows[windows.length - 1]
-    if (last && (item.start.getTime() - last.end.getTime()) / 60000 <= GAP_THRESHOLD_MINUTES) {
-      if (item.clusterEnd > last.end) last.end = item.clusterEnd
-    } else {
-      windows.push({ start: item.start, end: item.clusterEnd })
+// Lays every cluster out top to bottom in one sequential sweep, rather
+// than mapping arbitrary real timestamps onto one shared linear pixel
+// axis the way the original single-item design could (a plain
+// `timeToPx(date)` function). Once a cluster can occupy a *different*
+// amount of vertical space than its own real elapsed time — stacking N
+// members takes N block-heights, not the real time between the first
+// start and the last end — no single real timestamp reliably maps to
+// one pixel position across a cluster boundary any more (a task
+// starting shortly after a big stack would land *inside* that stack's
+// own rendered range under the old linear-window math). Walking
+// cluster-by-cluster and accumulating pixel position directly sidesteps
+// that instead of trying to patch it.
+//
+// Cross-cluster gaps use each cluster's real chronological end (the max
+// of its members' real `end`, not the MIN_BLOCK_HEIGHT-floored
+// clusterEnd) — using the floored version here would reintroduce the
+// exact "legibility floor treated as real busy time" distortion Part A
+// of this file's own PX_PER_MINUTE fix already went after, just between
+// clusters instead of within one.
+//
+// overlappingIds (getOverlappingTaskIds's own result, passed straight
+// through as a prop) is what decides where the "Tasks are overlapping"
+// label actually appears — keyed off real, duration-based conflicts
+// only, not just "close enough to need stacking." Two point tasks 25
+// minutes apart still stack (there's no room to render them at their
+// real proportional distance without colliding), but they aren't a
+// genuine scheduling conflict, so no label between them; a real
+// duration pair that actually intersects gets one. railSegments cover
+// the opposite case — the dead space *between* clusters, not within one
+// — a dashed line through an actual gap (proportional or collapsed) so
+// the timeline still reads as one continuous day, not disconnected
+// islands of tasks.
+function layoutClusters(clusters, overlappingIds) {
+  let cursor = PAD_MINUTES * PX_PER_MINUTE
+  const positioned = []
+  const gapMarkers = []
+  const hourMarks = []
+  const overlapLabels = []
+  const railSegments = []
+  let prevRealEnd = null
+  // A gap segment's own tick loop and the cluster right after it can
+  // both land a tick on the exact same hour — the gap's inclusive
+  // upper bound is that cluster's own start, which is also where the
+  // cluster's tick loop starts counting from. Deduping by real time
+  // (not by pixel top, which is also identical in that case) keeps
+  // each hour appearing once, regardless of which segment generated it.
+  const seenHourTimes = new Set()
+
+  function pushHourTicks(fromReal, toReal, pxAtFrom) {
+    for (let h = roundUpToHour(fromReal); h <= toReal; h = new Date(h.getTime() + 3600000)) {
+      const t = h.getTime()
+      if (seenHourTimes.has(t)) continue
+      seenHourTimes.add(t)
+      hourMarks.push({
+        top: pxAtFrom + ((t - fromReal.getTime()) / 60000) * PX_PER_MINUTE,
+        label: h.toLocaleTimeString([], { hour: 'numeric' }),
+      })
     }
   }
-  return windows
+
+  clusters.forEach((cluster) => {
+    const clusterStart = cluster[0].start
+
+    if (prevRealEnd) {
+      const gapMinutes = (clusterStart.getTime() - prevRealEnd.getTime()) / 60000
+      if (gapMinutes > GAP_THRESHOLD_MINUTES) {
+        // Collapsed: fixed-height marker, no hour ticks inside it (same
+        // reasoning as skipping ticks inside a multi-item stack below —
+        // there's no real per-pixel time correspondence in a
+        // deliberately-compressed placeholder either). The marker's own
+        // dashed .day-timeline-gap-line already gives this stretch the
+        // connecting-rail treatment, so no separate railSegment here.
+        gapMarkers.push({ top: cursor, minutes: gapMinutes })
+        cursor += GAP_MARKER_HEIGHT
+      } else if (gapMinutes > 0) {
+        // A real, un-collapsed gap still renders at the normal
+        // proportional scale, hour ticks included — same as the space
+        // within any single-item cluster below — plus a dashed rail
+        // line spanning it, the one case genuinely new here: a gap this
+        // short previously rendered as blank space with nothing marking
+        // it as "this is dead time, not just unrendered."
+        pushHourTicks(prevRealEnd, clusterStart, cursor)
+        railSegments.push({ top: cursor, height: gapMinutes * PX_PER_MINUTE })
+        cursor += gapMinutes * PX_PER_MINUTE
+      }
+    }
+
+    const clusterPxStart = cursor
+    // Hour ticks only inside a *single*-item cluster — a multi-item one
+    // has no one real "this pixel = this clock time" mapping any more
+    // (several tasks' real times are compressed/stacked into one run of
+    // pixels), so a tick floating inside a stack would be misleading
+    // rather than helpful.
+    if (cluster.length === 1) pushHourTicks(cluster[0].start, cluster[0].clusterEnd, clusterPxStart)
+
+    let stackTop = clusterPxStart
+    let clusterRealEnd = cluster[0].end
+    cluster.forEach((item, idx) => {
+      if (idx > 0) {
+        const prev = cluster[idx - 1]
+        if (overlappingIds?.has(prev.task.id) && overlappingIds?.has(item.task.id)) {
+          overlapLabels.push({ top: stackTop, height: OVERLAP_LABEL_HEIGHT })
+          stackTop += OVERLAP_LABEL_HEIGHT
+        }
+      }
+      const height = ((item.clusterEnd.getTime() - item.start.getTime()) / 60000) * PX_PER_MINUTE
+      positioned.push({ ...item, top: stackTop, height })
+      stackTop += height
+      if (item.end > clusterRealEnd) clusterRealEnd = item.end
+    })
+
+    cursor = stackTop
+    prevRealEnd = clusterRealEnd
+  })
+
+  return {
+    positioned,
+    hourMarks,
+    gapMarkers,
+    overlapLabels,
+    railSegments,
+    height: cursor + PAD_MINUTES * PX_PER_MINUTE,
+  }
 }
 
 // Day mode's task list, drawn as a real time-scaled timeline rather than
 // a flat stack of rows (see TimelineRow.jsx, still used for Overdue and
 // for Week mode's day-sections) — tasks are positioned by actual start
-// time and sized by actual duration, and two that overlap render in
-// side-by-side columns instead of just carrying an "⚠ Overlap" badge
-// with nothing visually linking them. Scoped to Day mode only; a scaled
-// view per day for Week mode's 7 sections is a separate, bigger project.
+// time and sized by actual duration. Two that are close enough to need
+// stacking render full-width, one after another (not split into
+// narrower side-by-side columns — see groupIntoClusters/layoutClusters
+// below), and a genuine overlap (real, duration-based conflicts only,
+// via the overlappingIds prop) gets an explicit "Tasks are overlapping"
+// label between them instead of relying on an "⚠ Overlap" badge alone.
+// Scoped to Day mode only; a scaled view per day for Week mode's 7
+// sections is a separate, bigger project.
 //
 // A still-open task pinned to this date with no specific time
 // (isAllDayTask) has nothing meaningful to place on a minute scale — it
@@ -255,69 +354,8 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
       return { task, start, end, truncated, clusterEnd }
     })
 
-    // Windows merge based on the tasks' own real start/end times, before
-    // any padding is added — padding is cosmetic and shouldn't influence
-    // whether two tasks count as "close together."
-    const windows = buildWindows(items).map((w) => ({
-      start: new Date(w.start.getTime() - PAD_MINUTES * 60000),
-      end: new Date(w.end.getTime() + PAD_MINUTES * 60000),
-    }))
-
-    // Lays out windows and the collapsed-gap markers between them along
-    // one pixel axis, then timeToPx maps any real Date within a window
-    // back to its position on that axis — every task's start/end always
-    // falls inside some window since windows were built from exactly
-    // those times, so this never needs a fallback case.
-    let cursor = 0
-    const windowLayouts = []
-    const gapMarkers = []
-    windows.forEach((w, i) => {
-      const durationMin = (w.end.getTime() - w.start.getTime()) / 60000
-      windowLayouts.push({ start: w.start, end: w.end, pxStart: cursor })
-      cursor += durationMin * PX_PER_MINUTE
-
-      const next = windows[i + 1]
-      if (next) {
-        const gapMinutes = (next.start.getTime() - w.end.getTime()) / 60000
-        if (gapMinutes > 0) {
-          gapMarkers.push({ top: cursor, minutes: gapMinutes })
-          cursor += GAP_MARKER_HEIGHT
-        }
-      }
-    })
-    const totalHeight = cursor
-
-    function timeToPx(date) {
-      const t = date.getTime()
-      const w = windowLayouts.find((win) => t >= win.start.getTime() && t <= win.end.getTime())
-      return w.pxStart + ((t - w.start.getTime()) / 60000) * PX_PER_MINUTE
-    }
-
-    const positioned = assignColumns(items).map(({ task, start, end, truncated, clusterEnd, col, totalCols }) => ({
-      task,
-      start,
-      end,
-      truncated,
-      col,
-      totalCols,
-      top: timeToPx(start),
-      // clusterEnd, not the real end — it's already floored at
-      // MIN_BLOCK_HEIGHT and capped at MAX_BLOCK_MINUTES (see items
-      // above), and using the real (possibly far-outside-any-window) end
-      // here would break timeToPx, which only resolves times that fall
-      // within a window built from clusterEnd in the first place.
-      height: timeToPx(clusterEnd) - timeToPx(start),
-    }))
-
-    const hourMarks = []
-    for (const w of windowLayouts) {
-      for (let h = roundUpToHour(w.start); h <= w.end; h = new Date(h.getTime() + 60 * 60000)) {
-        hourMarks.push({ top: timeToPx(h), label: h.toLocaleTimeString([], { hour: 'numeric' }) })
-      }
-    }
-
-    return { positioned, hourMarks, gapMarkers, height: totalHeight }
-  }, [timed])
+    return layoutClusters(groupIntoClusters(items), overlappingIds)
+  }, [timed, overlappingIds])
 
   return (
     <div className="day-timeline-wrap">
@@ -346,7 +384,28 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
               </div>
             ))}
 
-            {layout.positioned.map(({ task, start, end, truncated, top, height, col, totalCols }) => {
+            {/* Connecting rail through a real (un-collapsed) gap between
+                two clusters — a dashed line the same visual weight as
+                the collapsed-gap marker's own .day-timeline-gap-line, so
+                a short empty stretch still reads as "this is dead time,"
+                not just unrendered blank space. */}
+            {layout.railSegments.map((r) => (
+              <span key={`rail-${r.top}`} className="day-timeline-rail" style={{ top: r.top, height: r.height }} />
+            ))}
+
+            {/* A genuine scheduling conflict within a stack — both tasks
+                keyed off the real, duration-based overlappingIds prop,
+                not just "close enough to need stacking" (see
+                layoutClusters). Plain text between the two blocks, no
+                extra rail treatment — the label itself is the stronger
+                signal here. */}
+            {layout.overlapLabels.map((o) => (
+              <div key={`overlap-${o.top}`} className="day-timeline-overlap-label" style={{ top: o.top, height: o.height }}>
+                Tasks are overlapping
+              </div>
+            ))}
+
+            {layout.positioned.map(({ task, start, end, truncated, top, height }) => {
               const overlapping = overlappingIds?.has(task.id) ?? false
               const classes = ['day-timeline-block']
               if (overlapping) classes.push('day-timeline-block-overlapping')
@@ -367,8 +426,6 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                   style={{
                     top,
                     height,
-                    left: `${(col / totalCols) * 100}%`,
-                    width: `${100 / totalCols}%`,
                     borderLeftColor: overlapping ? '#e0a83e' : PRIORITY_COLOR[task.priority],
                   }}
                   title={PRIORITY_LABEL[task.priority]}

@@ -763,6 +763,12 @@ select:focus-visible {
 
 .day-timeline-block {
   position: absolute;
+  /* Always full width now — overlapping tasks stack full-width one
+     after another (layoutClusters in DayTimeline.jsx) instead of
+     splitting into narrower side-by-side columns, so there's no longer
+     a per-block inline left/width to size this against. */
+  left: 0;
+  right: 0;
   box-sizing: border-box;
   display: flex;
   align-items: flex-start;
@@ -778,6 +784,40 @@ select:focus-visible {
      gets here). */
   background: var(--card-bg);
   overflow: hidden;
+}
+
+/* Dashed vertical line through a real, un-collapsed gap between two
+   clusters (layoutClusters' railSegments) — reinforces "this is one
+   continuous day" the same job the hour-lines partially do, just
+   focused specifically on dead time between tasks. Anchored near the
+   track's left edge rather than tied to any one block's icon position,
+   since a rail segment spans the space *between* two blocks, not
+   through either one. A zero-gap stacked pair (back-to-back, or part of
+   an overlap) gets no separate rail line — their borders are already
+   touching, which reads as connected on its own. */
+.day-timeline-rail {
+  position: absolute;
+  left: 3px;
+  width: 0;
+  border-left: 2px dashed var(--border);
+}
+
+/* Reserved space between two stacked blocks flagged as a genuine
+   overlap (see OVERLAP_LABEL_HEIGHT/overlapLabels in DayTimeline.jsx) —
+   distinguishes "these two happen to be stacked because they're close
+   together" from "these two actually conflict in time," which a plain
+   stack alone can't. .day-timeline-block-overlapping's own amber border
+   is the secondary cue on each block itself. */
+.day-timeline-overlap-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e0a83e;
 }
 
 .day-timeline-block .task-done-checkbox {
