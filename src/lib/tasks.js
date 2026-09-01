@@ -65,8 +65,15 @@ export function getOverlappingTaskIds(tasks) {
   // isAllDayTask() excluded explicitly — a multi-day All Day task now
   // also has a (whole-day-multiple) duration, but a date range isn't a
   // scheduled block the way a timed task's span is, so it shouldn't
-  // trip overlap detection against anything.
-  const timed = tasks.filter((t) => t.status !== 'done' && t.due_date && t.duration_minutes && !isAllDayTask(t))
+  // trip overlap detection against anything. duration_minutes is no
+  // longer required here (see the aEnd/bEnd fallback below) — a point
+  // task used to be excluded from this Set entirely, on either side of
+  // a pair, which meant one landing squarely inside another same-person
+  // task's real duration (e.g. a point task at 11:30 PM inside a task
+  // that runs 11 PM-midnight) never got flagged at all: no ⚠ badge, no
+  // amber border, no "Tasks are overlapping" label on the Timeline,
+  // even though it's a genuine conflict.
+  const timed = tasks.filter((t) => t.status !== 'done' && t.due_date && !isAllDayTask(t))
   const overlapping = new Set()
 
   for (let i = 0; i < timed.length; i++) {
@@ -74,11 +81,22 @@ export function getOverlappingTaskIds(tasks) {
       const a = timed[i]
       const b = timed[j]
       if (a.who !== b.who) continue
+      // Two tasks with no real duration of their own are each just a
+      // single instant — flagging them only when they land on the
+      // exact same millisecond isn't a meaningful conflict worth
+      // warning about, so this still needs at least one side to have a
+      // real span.
+      if (!a.duration_minutes && !b.duration_minutes) continue
 
       const aStart = new Date(a.due_date).getTime()
-      const aEnd = aStart + a.duration_minutes * 60000
+      // A point task's own end is just its start — a zero-width
+      // instant — which the interval-overlap check below already
+      // handles correctly (it's "inside" another task's real span
+      // whenever that span's start is before it and its end is after),
+      // no separate branch needed for the point-vs-duration case.
+      const aEnd = a.duration_minutes ? aStart + a.duration_minutes * 60000 : aStart
       const bStart = new Date(b.due_date).getTime()
-      const bEnd = bStart + b.duration_minutes * 60000
+      const bEnd = b.duration_minutes ? bStart + b.duration_minutes * 60000 : bStart
 
       if (aStart < bEnd && bStart < aEnd) {
         overlapping.add(a.id)
