@@ -86,12 +86,26 @@ export function chargeDatesForBooking(booking) {
 }
 
 export async function fetchRentalProperties(company) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('rental_properties')
-    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
+    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation, work_site_id')
     .eq('company', company)
     .eq('active', true)
     .order('monthly_rent', { ascending: false })
+  // The location-group frontend may deploy a few minutes before Aaron
+  // runs its one-time SQL block. Keep Rentals and the Staff tab readable
+  // during that window; configuration writes still correctly wait for
+  // the migration instead of pretending a link was persisted.
+  if (error?.code === '42703' && error.message?.includes('work_site_id')) {
+    const fallback = await supabase
+      .from('rental_properties')
+      .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
+      .eq('company', company)
+      .eq('active', true)
+      .order('monthly_rent', { ascending: false })
+    data = fallback.data?.map((property) => ({ ...property, work_site_id: null }))
+    error = fallback.error
+  }
   if (error) throw error
   return data
 }

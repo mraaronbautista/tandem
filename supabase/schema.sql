@@ -1034,3 +1034,68 @@ end;
 $$;
 
 grant execute on function staff_clock_out(uuid, double precision, double precision) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Physical staff locations (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once after the original staff schema on an existing project.
+-- A work_site is now one physical place (Rachel, Parkside, a future
+-- acquisition), not one rental unit. Many rental_properties may point to
+-- the same work_site; the staff member clocks into the place, while units are
+-- only context for Ada/Aaron. Coordinates become nullable so a location group
+-- can be created before address lookup/on-site GPS is approved. Such a row is
+-- inserted with active=false and therefore stays invisible to staff until its
+-- clock-in point is ready.
+
+alter table work_sites alter column latitude drop not null;
+alter table work_sites alter column longitude drop not null;
+
+alter table rental_properties
+  add column work_site_id uuid references work_sites (id) on delete set null;
+
+create index rental_properties_work_site_id_idx on rental_properties (work_site_id);
+
+-- Preserve any one-unit links created by the first staff implementation.
+-- They can then be regrouped into Rachel/Parkside from the member UI.
+update rental_properties rp
+set work_site_id = ws.id
+from work_sites ws
+where ws.rental_property_id = rp.id
+  and rp.work_site_id is null;
+
+-- Defensive trust-boundary update: even if a client guesses the UUID of an
+-- inactive/unconfigured location and attempts a raw insert, clock-in fails
+-- before distance calculation rather than producing a null flag or accepting
+-- a place that staff should not be able to use.
+create or replace function stamp_time_entry_meta()
+returns trigger as $$
+declare
+  v_site work_sites;
+  v_staff staff;
+begin
+  select * into v_site from work_sites where id = new.work_site_id;
+  if v_site.id is null then
+    raise exception 'work site not found';
+  end if;
+  if not v_site.active or v_site.latitude is null or v_site.longitude is null then
+    raise exception 'work site is not ready for clock-in';
+  end if;
+
+  select * into v_staff from staff where id = new.staff_id;
+  if v_staff.id is null then
+    raise exception 'staff not found';
+  end if;
+
+  new.rate_amount := case new.rate_type
+    when 'emergency' then v_staff.emergency_rate
+    else v_staff.hourly_rate
+  end;
+
+  new.distance_from_site_m := haversine_distance_m(
+    new.clock_in_lat, new.clock_in_lng, v_site.latitude, v_site.longitude
+  );
+  new.flagged := new.distance_from_site_m > v_site.geofence_radius_m;
+
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;

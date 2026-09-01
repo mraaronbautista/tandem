@@ -1,44 +1,32 @@
 import { useState } from 'react'
 import { MapPin } from 'lucide-react'
-import { createWorkSite, updateWorkSite, archiveWorkSite } from '../lib/staff'
+import { createWorkSite, updateWorkSite, archiveWorkSite, assignRentalPropertiesToWorkSite } from '../lib/staff'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
-// Matches .submission-field input (see RentalPropertyForm.jsx's own
-// identical constant/comment) — same fix repeated locally rather than
-// shared, matching this codebase's own established preference for small
-// per-file duplication over a shared module for a handful of lines.
 const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
 
-// Same "one form, initialValues decide create vs. edit" shape as
-// RentalPropertyForm.jsx. The one thing a plain lat/lng text field
-// can't give an admin: confidence the numbers are actually right — the
-// "Use my current location" button lets Ada/Aaron stand at the real
-// property and capture exact coordinates with one tap, the same
-// getCurrentPosition call StaffClockView.jsx uses for clock-in. Manual
-// entry stays available as a fallback (e.g. adding a site remotely).
-export default function StaffWorkSitesForm({ site, rentalProperty, rentalProperties, onClose, onSaved, onArchived }) {
-  const [name, setName] = useState(site?.name || rentalProperty?.unit_name || '')
-  const [address, setAddress] = useState(site?.address || rentalProperty?.address || '')
+export default function StaffWorkSitesForm({ site, rentalProperties, onClose, onSaved, onArchived }) {
+  const [name, setName] = useState(site?.name || '')
+  const [address, setAddress] = useState(site?.address || '')
   const [latitude, setLatitude] = useState(site?.latitude ?? '')
   const [longitude, setLongitude] = useState(site?.longitude ?? '')
   const [radiusM, setRadiusM] = useState(site?.geofence_radius_m ?? 150)
-  const [rentalPropertyId, setRentalPropertyId] = useState(site?.rental_property_id || rentalProperty?.id || '')
+  const [propertyIds, setPropertyIds] = useState(
+    rentalProperties.filter((property) => property.work_site_id === site?.id).map((property) => property.id),
+  )
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState('')
   const [saving, setSaving] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState('')
 
-  function handleRentalPropertyChange(propertyId) {
-    setRentalPropertyId(propertyId)
-    if (site || !propertyId) return
-    const property = rentalProperties.find((candidate) => candidate.id === propertyId)
-    if (!property) return
-    setName(property.unit_name)
-    setAddress(property.address || '')
+  function toggleProperty(propertyId) {
+    setPropertyIds((current) =>
+      current.includes(propertyId) ? current.filter((id) => id !== propertyId) : [...current, propertyId],
+    )
   }
 
   function handleUseCurrentLocation() {
@@ -55,28 +43,32 @@ export default function StaffWorkSitesForm({ site, rentalProperty, rentalPropert
         setLocating(false)
       },
       () => {
-        setLocationError("Couldn't get your location — enter the coordinates manually instead.")
+        setLocationError("Couldn't get this device's location. Address lookup will be added next.")
         setLocating(false)
       },
       { enableHighAccuracy: true, timeout: 15000 },
     )
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!name.trim() || latitude === '' || longitude === '') return
+  async function handleSubmit(event) {
+    event.preventDefault()
+    if (!name.trim()) return
     setSaving(true)
     setError('')
     try {
+      const hasCoordinates = latitude !== '' && longitude !== ''
+      const existingWasUnconfigured = site && (site.latitude == null || site.longitude == null)
+      const shouldBeActive = site ? site.active || (existingWasUnconfigured && hasCoordinates) : hasCoordinates
       const payload = {
         name: name.trim(),
         address: address.trim(),
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-        geofence_radius_m: Number(radiusM) || 100,
-        rental_property_id: rentalPropertyId || null,
+        latitude: hasCoordinates ? Number(latitude) : null,
+        longitude: hasCoordinates ? Number(longitude) : null,
+        geofence_radius_m: Number(radiusM) || 150,
+        active: shouldBeActive,
       }
       const saved = site ? await updateWorkSite(site.id, payload) : await createWorkSite(payload)
+      await assignRentalPropertiesToWorkSite(saved.id, propertyIds)
       onSaved(saved)
     } catch (err) {
       setError(err.message)
@@ -86,7 +78,7 @@ export default function StaffWorkSitesForm({ site, rentalProperty, rentalPropert
   }
 
   async function handleArchive() {
-    if (!window.confirm(`Remove "${site.name}" from the active site list? Past time entries are kept.`)) return
+    if (!window.confirm(`Deactivate "${site.name}" as a clock-in location? Past shifts and linked units are kept.`)) return
     setArchiving(true)
     setError('')
     try {
@@ -101,115 +93,63 @@ export default function StaffWorkSitesForm({ site, rentalProperty, rentalPropert
   return (
     <Modal onClose={onClose}>
       <ModalCard as="form" onSubmit={handleSubmit}>
-        <h2>{site ? 'Edit clock-in location' : rentalProperty ? 'Configure clock-in location' : 'Other clock-in location'}</h2>
-
+        <h2>{site ? 'Edit physical location' : 'New physical location'}</h2>
         {error && <p className="error">{error}</p>}
 
-        {rentalProperty ? (
-          <div className="rounded-[8px] border border-border bg-card-bg px-3 py-2.5">
-            <strong className="block text-sm font-semibold text-text-h">{rentalProperty.unit_name}</strong>
-            <span className="text-xs opacity-65">{rentalProperty.address || 'No address saved for this property'}</span>
+        <label>
+          Location name
+          <input required autoFocus placeholder="e.g. Rachel or Parkside" value={name} onChange={(event) => setName(event.target.value)} className={FIELD_INPUT_CLASS} />
+        </label>
+
+        <label>
+          Address (optional for now)
+          <input placeholder="Street address for this physical location" value={address} onChange={(event) => setAddress(event.target.value)} className={FIELD_INPUT_CLASS} />
+        </label>
+
+        <fieldset className="rounded-[8px] border border-border px-3 py-2">
+          <legend className="px-1 text-sm font-medium text-text-h">Rental units at this location</legend>
+          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            {rentalProperties.map((property) => {
+              const assignedElsewhere = property.work_site_id && property.work_site_id !== site?.id
+              return (
+                <label key={property.id} className="flex min-w-0 cursor-pointer items-start gap-2 rounded-sm bg-card-bg px-2.5 py-2 text-sm">
+                  <input type="checkbox" className="mt-0.5" checked={propertyIds.includes(property.id)} onChange={() => toggleProperty(property.id)} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-text-h">{property.unit_name}</span>
+                    <span className="block text-xs opacity-60">
+                      {property.company === 'azu' ? 'Azu' : 'Awa'}{assignedElsewhere ? ' · currently linked elsewhere' : ''}
+                    </span>
+                  </span>
+                </label>
+              )
+            })}
           </div>
-        ) : (
-          <>
-            <label>
-              Location name
-              <input
-                required
-                autoFocus
-                placeholder="e.g. Family house"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={FIELD_INPUT_CLASS}
-              />
-            </label>
-
-            <label>
-              Address (optional)
-              <input
-                placeholder="e.g. 123 Rachel St."
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className={FIELD_INPUT_CLASS}
-              />
-            </label>
-          </>
-        )}
-
-        {rentalProperties?.length > 0 && (
-          <label>
-            Linked rental property (optional)
-            <select
-              value={rentalPropertyId}
-              onChange={(e) => handleRentalPropertyChange(e.target.value)}
-              className={FIELD_INPUT_CLASS}
-              disabled={Boolean(rentalProperty)}
-            >
-              <option value="">Not a rental unit</option>
-              {rentalProperties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.company === 'azu' ? 'Azu' : 'Awa'} · {p.unit_name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+          {rentalProperties.length === 0 && <p className="py-2 text-sm opacity-60">No active rental units yet.</p>}
+        </fieldset>
 
         <details className="rounded-[8px] border border-border px-3 py-2" open={latitude === '' || longitude === ''}>
-          <summary className="cursor-pointer text-sm font-medium text-text-h">Location details</summary>
+          <summary className="cursor-pointer text-sm font-medium text-text-h">Clock-in point</summary>
           <div className="mt-3 flex flex-col gap-3">
-            <p className="text-xs opacity-65">Address lookup will be added next. Current coordinates are kept here as an advanced fallback.</p>
-            <button
-              type="button"
-              className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h"
-              onClick={handleUseCurrentLocation}
-              disabled={locating}
-            >
-              {locating ? (
-                'Locating…'
-              ) : (
-                <>
-                  <MapPin size={14} className="mr-1 inline align-[-2px]" /> Use this device's current location
-                </>
-              )}
+            <p className="text-xs opacity-65">
+              You can save this group before GPS is configured. It will show Needs setup and will not appear to staff yet.
+            </p>
+            <button type="button" className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h" onClick={handleUseCurrentLocation} disabled={locating}>
+              {locating ? 'Locating…' : <><MapPin size={14} className="mr-1 inline align-[-2px]" /> Use this device's current location</>}
             </button>
             {locationError && <p className="error">{locationError}</p>}
-
             <div className="grid grid-cols-2 gap-2">
-          <label className="min-w-0">
-            Latitude
-            <input
-              required
-              type="number"
-              step="any"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              className={FIELD_INPUT_CLASS}
-            />
-          </label>
-          <label className="min-w-0">
-            Longitude
-            <input
-              required
-              type="number"
-              step="any"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              className={FIELD_INPUT_CLASS}
-            />
-          </label>
+              <label className="min-w-0">
+                Latitude
+                <input type="number" step="any" value={latitude} onChange={(event) => setLatitude(event.target.value)} className={FIELD_INPUT_CLASS} />
+              </label>
+              <label className="min-w-0">
+                Longitude
+                <input type="number" step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} className={FIELD_INPUT_CLASS} />
+              </label>
             </div>
-
             <label>
               Allowed radius (meters)
-              <input
-                type="number"
-                min="10"
-                step="10"
-                value={radiusM}
-                onChange={(e) => setRadiusM(e.target.value)}
-                className={FIELD_INPUT_CLASS}
-              />
+              <input type="number" min="10" step="10" value={radiusM} onChange={(event) => setRadiusM(event.target.value)} className={FIELD_INPUT_CLASS} />
             </label>
           </div>
         </details>
@@ -218,11 +158,11 @@ export default function StaffWorkSitesForm({ site, rentalProperty, rentalPropert
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {site && (
             <SubmissionButton variant="destructive" onClick={handleArchive} disabled={archiving}>
-              {archiving ? 'Removing…' : 'Remove site'}
+              {archiving ? 'Deactivating…' : 'Deactivate'}
             </SubmissionButton>
           )}
           <SubmissionButton type="submit" variant="primary" disabled={saving}>
-            {saving ? 'Saving…' : site ? 'Save changes' : rentalProperty ? 'Save location' : 'Add location'}
+            {saving ? 'Saving…' : 'Save location'}
           </SubmissionButton>
         </SubmissionActions>
       </ModalCard>

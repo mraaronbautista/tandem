@@ -52,16 +52,16 @@ export async function fetchWorkSites() {
   return data
 }
 
-export async function createWorkSite({ name, address, latitude, longitude, geofence_radius_m, rental_property_id }) {
+export async function createWorkSite({ name, address, latitude, longitude, geofence_radius_m, active }) {
   const { data, error } = await supabase
     .from('work_sites')
     .insert({
       name,
       address: address || null,
-      latitude,
-      longitude,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
       geofence_radius_m: geofence_radius_m || 100,
-      rental_property_id: rental_property_id || null,
+      active,
     })
     .select(WORK_SITE_COLUMNS)
     .single()
@@ -71,23 +71,37 @@ export async function createWorkSite({ name, address, latitude, longitude, geofe
 
 export async function updateWorkSite(
   id,
-  { name, address, latitude, longitude, geofence_radius_m, rental_property_id },
+  { name, address, latitude, longitude, geofence_radius_m, active },
 ) {
   const { data, error } = await supabase
     .from('work_sites')
     .update({
       name,
       address: address || null,
-      latitude,
-      longitude,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
       geofence_radius_m,
-      rental_property_id: rental_property_id || null,
+      active,
     })
     .eq('id', id)
     .select(WORK_SITE_COLUMNS)
     .single()
   if (error) throw error
   return data
+}
+
+// A physical clock-in location can contain many rental units, while a
+// unit belongs to at most one physical place. Rachel, for example,
+// covers four units but only one GPS/geofence.
+export async function assignRentalPropertiesToWorkSite(workSiteId, propertyIds) {
+  const { error: clearError } = await supabase
+    .from('rental_properties')
+    .update({ work_site_id: null })
+    .eq('work_site_id', workSiteId)
+  if (clearError) throw clearError
+  if (!propertyIds.length) return
+  const { error } = await supabase.from('rental_properties').update({ work_site_id: workSiteId }).in('id', propertyIds)
+  if (error) throw error
 }
 
 export async function archiveWorkSite(id) {

@@ -19,8 +19,9 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 
 ### Decisions
 
-- Existing active properties from both Awa and Azu Rentalz are the starting point for clock-in locations.
-- `work_sites` remains the behind-the-scenes geofence configuration because rental properties do not contain coordinates and staff may also work at non-rental locations.
+- Physical locations are independent of companies: Rachel and Parkside are current places, while future acquisitions can become additional locations regardless of whether Awa or Azu manages their units.
+- A rental unit belongs to at most one physical location; one location can contain any number of units. Staff clocks into the location, never an individual unit.
+- `work_sites` represents those physical places and remains the geofence configuration because rental properties do not contain coordinates and staff may also work at non-rental locations. `rental_properties.work_site_id` supplies the many-units-to-one-location link.
 - The admin UI must not ask Aaron to re-enter a rental property's name or address.
 - Latitude and longitude remain hidden under advanced details.
 - A configured location receives a sensible default radius (currently proposed: 150 meters).
@@ -44,10 +45,11 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
    - Deactivation must not strand an open shift.
 
 3. **Clock-in locations**
-   - Automatically show active Awa and Azu properties.
-   - Show a clear state for each: Needs setup, Awaiting approval, Ready, or Inactive.
-   - “Configure” uses the existing rental name/address.
-   - “Add other location” handles homes, offices, storage, or other non-rental sites.
+   - Show physical locations such as Rachel and Parkside, with their Awa/Azu units nested underneath for context.
+   - Show a clear state for each location: Needs setup, Awaiting approval, Ready, or Inactive.
+   - Let members create a location group and select all units physically located there.
+   - Permit a group to be saved before coordinates are available; it remains hidden from staff until ready.
+   - New acquisitions become another location when operational, without changing the company/location model.
 
 ### Staff-facing clock view
 
@@ -65,6 +67,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 - [x] Replace the raw empty state with the Hours overview/onboarding layout.
 - [x] Load and present properties from both Awa and Azu.
 - [x] Replace “Add site” with “Manage clock-in locations” and property-first configuration.
+- [x] Replace one-location-per-unit with physical location groups that can contain multiple Awa/Azu units and future acquisitions.
 - [ ] Add address lookup and hide technical coordinates by default.
 - [ ] Add on-site capture with member approval fallback.
 - [ ] Add payroll-period filtering, summary metrics, and filter-aware CSV export.

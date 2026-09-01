@@ -49,7 +49,6 @@ export default function StaffLogsView({ me }) {
   const [error, setError] = useState('')
   const [approvingId, setApprovingId] = useState(null)
   const [editingSite, setEditingSite] = useState(null)
-  const [configuringProperty, setConfiguringProperty] = useState(null)
   const [addingSite, setAddingSite] = useState(false)
   const [locationsOpen, setLocationsOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -129,9 +128,9 @@ export default function StaffLogsView({ me }) {
   }
 
   const totalPay = entries.reduce((sum, e) => sum + (computeEntryPay(e) || 0), 0)
-  const readyLocationCount = sites.filter((site) => site.active).length
-  const configuredRentalIds = new Set(sites.filter((site) => site.active).map((site) => site.rental_property_id))
-  const needsSetupCount = rentalProperties.filter((property) => !configuredRentalIds.has(property.id)).length
+  const readyLocationCount = sites.filter((site) => site.active && site.latitude != null && site.longitude != null).length
+  const locationNeedsSetupCount = sites.filter((site) => site.latitude == null || site.longitude == null).length
+  const unassignedUnitCount = rentalProperties.filter((property) => !property.work_site_id).length
 
   if (loading) return <p className="loading">Loading…</p>
 
@@ -271,7 +270,9 @@ export default function StaffLogsView({ me }) {
         <div className="min-w-0">
           <h3 className="font-semibold text-text-h">Clock-in locations</h3>
           <p className="mt-0.5 text-xs opacity-65">
-            {readyLocationCount} ready{needsSetupCount > 0 ? ` · ${needsSetupCount} rental ${needsSetupCount === 1 ? 'property needs' : 'properties need'} setup` : ''}
+            {readyLocationCount} ready
+            {locationNeedsSetupCount > 0 ? ` · ${locationNeedsSetupCount} ${locationNeedsSetupCount === 1 ? 'location needs' : 'locations need'} setup` : ''}
+            {unassignedUnitCount > 0 ? ` · ${unassignedUnitCount} unassigned ${unassignedUnitCount === 1 ? 'unit' : 'units'}` : ''}
           </p>
         </div>
         <button
@@ -288,36 +289,35 @@ export default function StaffLogsView({ me }) {
           properties={rentalProperties}
           sites={sites}
           onClose={() => setLocationsOpen(false)}
-          onConfigureProperty={(property) => {
-            setLocationsOpen(false)
-            setConfiguringProperty(property)
-          }}
           onEditSite={(site) => {
             setLocationsOpen(false)
             setEditingSite(site)
           }}
-          onAddOther={() => {
+          onAddLocation={() => {
             setLocationsOpen(false)
             setAddingSite(true)
           }}
         />
       )}
 
-      {(addingSite || editingSite || configuringProperty) && (
+      {(addingSite || editingSite) && (
         <StaffWorkSitesForm
           site={editingSite}
-          rentalProperty={configuringProperty}
           rentalProperties={rentalProperties}
           onClose={() => {
             setAddingSite(false)
             setEditingSite(null)
-            setConfiguringProperty(null)
           }}
           onSaved={async () => {
             setAddingSite(false)
             setEditingSite(null)
-            setConfiguringProperty(null)
-            setSites(await fetchWorkSites())
+            const [siteData, awaProperties, azuProperties] = await Promise.all([
+              fetchWorkSites(),
+              fetchRentalProperties('awa'),
+              fetchRentalProperties('azu'),
+            ])
+            setSites(siteData)
+            setRentalProperties([...awaProperties, ...azuProperties])
           }}
           onArchived={async () => {
             setEditingSite(null)
