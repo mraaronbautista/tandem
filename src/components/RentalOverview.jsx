@@ -50,20 +50,24 @@ export default function RentalOverview({
           <>
             <span className="rental-overview-top">
               <span className="rental-unit-dot" style={{ background: p.color }} />
-              <span className="font-semibold text-text-h">{p.unit_name}</span>
-              <span className="text-xs opacity-60">${Number(p.monthly_rent).toLocaleString()}/mo</span>
+              <span className="rental-overview-unit-name font-semibold text-text-h" title={p.unit_name}>
+                {p.unit_name}
+              </span>
+              <span className="rental-overview-rate text-xs opacity-60">
+                ${Number(p.monthly_rent).toLocaleString()}/mo
+              </span>
             </span>
             {status.occupied ? (
-              <span className="text-[13px] text-text-h opacity-100">
+              <span className="rental-overview-status-line text-[13px] text-text-h opacity-100" title={`Occupied through ${formatDateStr(status.through)} — ${status.guest}`}>
                 Occupied through {formatDateStr(status.through)} — {status.guest}
               </span>
             ) : status.next ? (
-              <span className="text-[13px] opacity-75">
+              <span className="rental-overview-status-line text-[13px] opacity-75" title={`Vacant — next ${status.next.pending ? 'request' : 'guest'} ${formatDateStr(status.next.checkIn)} — ${status.next.guest}`}>
                 Vacant — next {status.next.pending ? 'request' : 'guest'} {formatDateStr(status.next.checkIn)} —{' '}
                 {status.next.guest}
               </span>
             ) : (
-              <span className="text-[13px] opacity-50">Vacant</span>
+              <span className="rental-overview-status-line text-[13px] opacity-50">Vacant</span>
             )}
           </>
         )

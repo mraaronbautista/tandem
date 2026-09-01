@@ -3605,12 +3605,11 @@ label.new-task-checkbox-label {
   flex: 1;
   min-width: 0;
   padding: 10px 12px;
-  /* Reserves room on the right for .rental-negotiating-toggle, absolutely
-     positioned against this element — sized for its widest ("🤝 In
-     talks") state so text never has to reflow around it when it toggles
-     on/off. position: relative anchors that toggle to this card, not
-     some further-out ancestor. */
-  padding-right: 84px;
+  /* Only the status line reserves room for the absolutely-positioned
+     negotiation control (see .rental-overview-status-line). Keeping the
+     card's own right padding normal lets the monthly rate sit at the
+     true top-right edge. */
+  padding-right: 12px;
   position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -3643,6 +3642,36 @@ label.new-task-checkbox-label {
 
 .rental-overview-top .rental-unit-dot {
   margin-top: 5px;
+}
+
+.rental-overview-unit-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rental-overview-rate {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Long tenant/status text is useful context, but it must not dictate a
+   card's width or make one card in the two-column desktop list much
+   taller than its neighbor. Keep two readable lines, then ellipsize;
+   the full value remains available through the element's title. The
+   right padding keeps the centered negotiation control clear. */
+.rental-overview-status-line {
+  min-width: 0;
+  max-width: 100%;
+  padding-right: 72px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* UNUSED as of the RentalOverview.jsx Tailwind conversion — now
@@ -3803,12 +3832,14 @@ label.new-task-checkbox-label {
 
 .rental-calendar-toolbar .rental-overview-item {
   width: 100%;
+  height: 82px;
+  overflow: hidden;
   padding: 8px 10px;
   /* The base .rental-overview-item rule's own padding-right (reserved
      for .rental-negotiating-toggle) is a shorthand override away from
      being silently reset back to 10px by the padding above — restated
      here so the toggle doesn't overlap this compact card's text too. */
-  padding-right: 84px;
+  padding-right: 10px;
   font-size: 12px;
 }
 
