@@ -650,8 +650,16 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 onChange={(e) => setRentalsCompany(e.target.value)}
                 className="cursor-pointer appearance-none rounded-sm border-0 bg-transparent py-1 pr-6 pl-0 text-[22px] font-bold whitespace-nowrap text-text-h [font-family:inherit]"
               >
+                {/* font-size set on the options, not the select — the
+                    closed trigger's own big bold look is deliberate (see
+                    the comment above), only the open popover's oversized
+                    text needed shrinking. Desktop browsers style an
+                    <option> independently of the select's own displayed
+                    value; iOS Safari's native picker mostly ignores this
+                    either way, so this is a no-cost improvement there,
+                    not a regression. */}
                 {Object.entries(COMPANY_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
+                  <option key={value} value={value} className="text-[15px] font-normal">
                     {label}
                   </option>
                 ))}
