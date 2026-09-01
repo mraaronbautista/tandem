@@ -2119,6 +2119,7 @@ a.task-submission-file-link:hover {
 .view-mode-row .timeline-view-tabs {
   flex: 0 0 138px;
   width: 138px;
+  margin-left: auto;
 }
 
 /* This row packs three clusters — Today/‹›, Day/Week/Month, who-filter —
