@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 // RLS already scopes the select to "own or shared" (see schema.sql), so
 // this returns exactly what the caller is allowed to see with no extra
 // filtering needed client-side.
-const CORK_NOTE_COLUMNS = 'id, author_id, body, shared, comments, created_at'
+const CORK_NOTE_COLUMNS = 'id, author_id, body, shared, comments, created_at, archived'
 
 export async function fetchCorkNotes() {
   const { data, error } = await supabase

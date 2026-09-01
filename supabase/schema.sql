@@ -674,7 +674,18 @@ create table cork_notes (
   -- below rather than a plain update(), since the update RLS policy is
   -- author-only (see below) and a comment needs to come from *either*
   -- member on a shared pin.
-  comments jsonb not null default '[]'::jsonb
+  comments jsonb not null default '[]'::jsonb,
+  -- Soft-disable, not delete — same reasoning rental_properties.
+  -- in_negotiation/archive_property and work_sites.active already
+  -- establish elsewhere in this schema. "Unpin" used to be the only way
+  -- to get a finished pin off the board, and that meant a real delete —
+  -- this gives archiving (reversible, still visible in its own
+  -- collapsed section) as the everyday action instead, with delete kept
+  -- around as a further, still-available step once a pin is archived.
+  -- Goes through the plain author-only update policy below, same as
+  -- editing/sharing a pin — archiving isn't a mutual action any more
+  -- than those are.
+  archived boolean not null default false
 );
 
 alter table cork_notes enable row level security;

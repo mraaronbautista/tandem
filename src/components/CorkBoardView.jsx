@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Target } from 'lucide-react'
+import { Check, Target, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
@@ -40,6 +40,12 @@ export default function CorkBoardView({ me, memberName }) {
   const [editingId, setEditingId] = useState(null)
   const [editDraft, setEditDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  // Collapsed by default — an archived pin is meant to be tucked away,
+  // not sitting open and competing with the active board for attention;
+  // same "collapsed until you go looking" reasoning VaultView.jsx's own
+  // folders use.
+  const [archivedOpen, setArchivedOpen] = useState(false)
+  const [archivingId, setArchivingId] = useState(null)
   // Keyed by note id, not a single shared string — commenting on two
   // different pins shouldn't clobber each other's in-progress draft.
   const [commentDrafts, setCommentDrafts] = useState({})
@@ -88,8 +94,23 @@ export default function CorkBoardView({ me, memberName }) {
     }
   }
 
+  // Reversible, so no confirm — unlike delete below, archiving doesn't
+  // lose anything; the pin (and its comments) just move into the
+  // collapsed Archived section instead of sitting on the active board.
+  async function handleArchive(note, archived) {
+    setArchivingId(note.id)
+    try {
+      await updateCorkNote(note.id, { archived })
+      reload()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setArchivingId(null)
+    }
+  }
+
   async function handleDelete(note) {
-    if (!window.confirm('Unpin this note?')) return
+    if (!window.confirm('Delete this pin permanently? This can\'t be undone.')) return
     try {
       await deleteCorkNote(note.id)
       reload()
@@ -190,6 +211,9 @@ export default function CorkBoardView({ me, memberName }) {
     }
   }
 
+  const activeNotes = notes?.filter((n) => !n.archived) ?? []
+  const archivedNotes = notes?.filter((n) => n.archived) ?? []
+
   return (
     <div className="tab-panel">
       <p className="text-[13px] opacity-65">Pin something with no deadline, so it doesn't get lost.</p>
@@ -216,9 +240,13 @@ export default function CorkBoardView({ me, memberName }) {
       {!error && !notes && <p className="loading">Loading…</p>}
       {notes && !notes.length && <p className="task-notes-empty">Nothing pinned yet.</p>}
 
-      {notes && notes.length > 0 && (
+      {notes && notes.length > 0 && !activeNotes.length && archivedNotes.length > 0 && (
+        <p className="task-notes-empty">Nothing pinned yet — see Archived below.</p>
+      )}
+
+      {activeNotes.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-          {notes.map((note) => {
+          {activeNotes.map((note) => {
             const isOwn = note.author_id === me?.id
             const isEditing = editingId === note.id
             return (
@@ -286,8 +314,13 @@ export default function CorkBoardView({ me, memberName }) {
                           <button type="button" className={itemActionClasses} onClick={() => handleToggleShare(note)}>
                             {note.shared ? 'Make private' : 'Share'}
                           </button>
-                          <button type="button" className={itemActionClasses} onClick={() => handleDelete(note)}>
-                            Unpin
+                          <button
+                            type="button"
+                            className={itemActionClasses}
+                            onClick={() => handleArchive(note, true)}
+                            disabled={archivingId === note.id}
+                          >
+                            {archivingId === note.id ? '…' : 'Archive'}
                           </button>
                         </>
                       )}
@@ -335,6 +368,55 @@ export default function CorkBoardView({ me, memberName }) {
             )
           })}
         </ul>
+      )}
+
+      {archivedNotes.length > 0 && (
+        <div className="mt-1">
+          <button
+            type="button"
+            onClick={() => setArchivedOpen((v) => !v)}
+            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-transparent px-3.5 py-2 text-[13px] text-text-h opacity-75"
+          >
+            <span>Archived ({archivedNotes.length})</span>
+            {archivedOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+
+          {archivedOpen && (
+            <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
+              {archivedNotes.map((note) => {
+                const isOwn = note.author_id === me?.id
+                return (
+                  <li key={note.id} className="rounded-md border border-border bg-card-bg px-3.5 py-2.5 opacity-70">
+                    <p className="mb-1.5 break-words whitespace-pre-wrap">{note.body}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs opacity-65">
+                      <span>
+                        {memberName(note.author_id)} · {formatDate(note.created_at)}
+                      </span>
+                      <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared ? 'border-accent text-accent' : 'border-border'}`}>
+                        {note.shared ? 'Shared' : 'Only you'}
+                      </span>
+                    </div>
+                    {isOwn && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className={itemActionClasses}
+                          onClick={() => handleArchive(note, false)}
+                          disabled={archivingId === note.id}
+                        >
+                          {archivingId === note.id ? '…' : 'Unarchive'}
+                        </button>
+                        <button type="button" className={itemActionClasses} onClick={() => handleDelete(note)}>
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   )
