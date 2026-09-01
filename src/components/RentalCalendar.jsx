@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useState } from 'react'
 import RentalBookingForm from './RentalBookingForm'
 import RentalBookingDetail from './RentalBookingDetail'
 import RentalButton from './RentalButton'
+import { bookingGuestLabel } from '../lib/rentals'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -179,6 +180,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
             const isStart = dateStr === booking.check_in || col === 0
             const isEnd = dateStr === booking.check_out || col === 6 || day === numDays
             const isPending = booking.status === 'pending'
+            const guestLabel = bookingGuestLabel(booking)
             classes.push('rental-month-day-occupied')
             if (isPending) classes.push('rental-month-day-pending')
             if (isStart) classes.push('rental-month-day-start')
@@ -221,8 +223,8 @@ const RentalCalendar = forwardRef(function RentalCalendar(
                       .filter(Boolean)
                       .join(', ') || undefined,
                 }}
-                title={`${booking.guest_name}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
-                aria-label={`${booking.guest_name}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
+                title={`${guestLabel}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
+                aria-label={`${guestLabel}${isPending ? ' (pending)' : ''}: ${formatDateStr(booking.check_in)} – ${formatDateStr(booking.check_out)}`}
                 onClick={() => setSelectedBooking(booking)}
               >
                 {day}
@@ -232,7 +234,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
                     bar spanning several weeks doesn't go unlabeled after
                     its first row, same as a real calendar app repeats an
                     event's title at the start of each week it crosses. */}
-                {isStart && <span className="rental-month-day-guest">{booking.guest_name}</span>}
+                {isStart && <span className="rental-month-day-guest">{guestLabel}</span>}
               </button>
             )
           }),

@@ -13,6 +13,25 @@ export const BOOKING_SOURCE_LABEL = {
   unspecified: 'Not set',
 }
 
+const BOOKING_COLUMNS =
+  'id, property_id, guest_name, guest_names, check_in, check_out, status, source, source_note, notes, paid_charges'
+const LEGACY_BOOKING_COLUMNS =
+  'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, paid_charges'
+
+function missingGuestNamesColumn(error) {
+  return error && (error.code === '42703' || error.code === 'PGRST204') && error.message?.includes('guest_names')
+}
+
+export function bookingGuestNames(booking) {
+  const names = (booking?.guest_names || []).map((name) => name.trim()).filter(Boolean)
+  if (names.length) return names
+  return booking?.guest_name ? [booking.guest_name] : []
+}
+
+export function bookingGuestLabel(booking) {
+  return bookingGuestNames(booking).join(' and ')
+}
+
 function pad(n) {
   return String(n).padStart(2, '0')
 }
@@ -192,14 +211,22 @@ export async function deleteRentalExpense(id) {
 // check_out >= rangeStart. check_out is the last occupied day (inclusive),
 // not a hotel-style departure day.
 export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('rental_bookings')
-    .select(
-      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, paid_charges, rental_properties!inner(company)',
-    )
+    .select(`${BOOKING_COLUMNS}, rental_properties!inner(company)`)
     .eq('rental_properties.company', company)
     .lt('check_in', rangeEnd)
     .gte('check_out', rangeStart)
+  if (missingGuestNamesColumn(error)) {
+    const fallback = await supabase
+      .from('rental_bookings')
+      .select(`${LEGACY_BOOKING_COLUMNS}, rental_properties!inner(company)`)
+      .eq('rental_properties.company', company)
+      .lt('check_in', rangeEnd)
+      .gte('check_out', rangeStart)
+    data = fallback.data
+    error = fallback.error
+  }
   if (error) throw error
   return data
 }
@@ -209,14 +236,22 @@ export async function fetchRentalBookings(company, rangeStart, rangeEnd) {
 // being browsed elsewhere in the UI. Backs the Overview tab, which shows
 // current/next occupancy per unit rather than one month at a time.
 export async function fetchUpcomingRentalBookings(company) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('rental_bookings')
-    .select(
-      'id, property_id, guest_name, check_in, check_out, status, source, source_note, notes, paid_charges, rental_properties!inner(company)',
-    )
+    .select(`${BOOKING_COLUMNS}, rental_properties!inner(company)`)
     .eq('rental_properties.company', company)
     .gte('check_out', todayDateStr())
     .order('check_in', { ascending: true })
+  if (missingGuestNamesColumn(error)) {
+    const fallback = await supabase
+      .from('rental_bookings')
+      .select(`${LEGACY_BOOKING_COLUMNS}, rental_properties!inner(company)`)
+      .eq('rental_properties.company', company)
+      .gte('check_out', todayDateStr())
+      .order('check_in', { ascending: true })
+    data = fallback.data
+    error = fallback.error
+  }
   if (error) throw error
   return data
 }
@@ -234,10 +269,10 @@ export function unitOccupancyStatus(bookings, propertyId) {
   const current = unitBookings.find(
     (b) => b.status === 'confirmed' && b.check_in <= todayStr && b.check_out >= todayStr,
   )
-  if (current) return { occupied: true, through: current.check_out, guest: current.guest_name }
+  if (current) return { occupied: true, through: current.check_out, guest: bookingGuestLabel(current) }
   const next = unitBookings.find((b) => b.check_in > todayStr)
   if (next) {
-    return { occupied: false, next: { checkIn: next.check_in, guest: next.guest_name, pending: next.status === 'pending' } }
+    return { occupied: false, next: { checkIn: next.check_in, guest: bookingGuestLabel(next), pending: next.status === 'pending' } }
   }
   return { occupied: false, next: null }
 }
@@ -316,7 +351,7 @@ export function nextAvailability(bookings, propertyId, minStayDays = MIN_STAY_DA
     const after = addDaysStr(b.check_out, 1)
     if (after > cursor) {
       cursor = after
-      blocking.push(b.guest_name)
+      blocking.push(bookingGuestLabel(b))
     }
   }
 
@@ -385,6 +420,7 @@ export async function hasOverlappingBooking(propertyId, checkIn, checkOut, exclu
 export async function createRentalBooking({
   property_id,
   guest_name,
+  guest_names,
   check_in,
   check_out,
   status,
@@ -401,47 +437,68 @@ export async function createRentalBooking({
   if (await hasOverlappingBooking(property_id, check_in, check_out)) {
     throw new Error('This unit already has a booking that overlaps those dates.')
   }
-  const { data, error } = await supabase
+  const payload = {
+    property_id,
+    guest_name,
+    guest_names,
+    check_in,
+    check_out,
+    status: status || 'confirmed',
+    source: source || null,
+    source_note: source === 'other' ? source_note || null : null,
+    notes: notes || null,
+    created_by,
+  }
+  let { data, error } = await supabase
     .from('rental_bookings')
-    .insert({
-      property_id,
-      guest_name,
-      check_in,
-      check_out,
-      status: status || 'confirmed',
-      source: source || null,
-      source_note: source === 'other' ? source_note || null : null,
-      notes: notes || null,
-      created_by,
-    })
-    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, notes')
+    .insert(payload)
+    .select(BOOKING_COLUMNS)
     .single()
+  if (missingGuestNamesColumn(error)) {
+    const { guest_names: _guestNames, ...legacyPayload } = payload
+    const fallback = await supabase.from('rental_bookings').insert(legacyPayload).select(LEGACY_BOOKING_COLUMNS).single()
+    data = fallback.data
+    error = fallback.error
+  }
   if (error) throw error
   return data
 }
 
 export async function updateRentalBooking(
   id,
-  { property_id, guest_name, check_in, check_out, status, source, source_note, notes },
+  { property_id, guest_name, guest_names, check_in, check_out, status, source, source_note, notes },
 ) {
   if (await hasOverlappingBooking(property_id, check_in, check_out, id)) {
     throw new Error('This unit already has a booking that overlaps those dates.')
   }
-  const { data, error } = await supabase
+  const payload = {
+    property_id,
+    guest_name,
+    guest_names,
+    check_in,
+    check_out,
+    status: status || 'confirmed',
+    source: source || null,
+    source_note: source === 'other' ? source_note || null : null,
+    notes: notes || null,
+  }
+  let { data, error } = await supabase
     .from('rental_bookings')
-    .update({
-      property_id,
-      guest_name,
-      check_in,
-      check_out,
-      status: status || 'confirmed',
-      source: source || null,
-      source_note: source === 'other' ? source_note || null : null,
-      notes: notes || null,
-    })
+    .update(payload)
     .eq('id', id)
-    .select('id, property_id, guest_name, check_in, check_out, status, source, source_note, notes')
+    .select(BOOKING_COLUMNS)
     .single()
+  if (missingGuestNamesColumn(error)) {
+    const { guest_names: _guestNames, ...legacyPayload } = payload
+    const fallback = await supabase
+      .from('rental_bookings')
+      .update(legacyPayload)
+      .eq('id', id)
+      .select(LEGACY_BOOKING_COLUMNS)
+      .single()
+    data = fallback.data
+    error = fallback.error
+  }
   if (error) throw error
   return data
 }

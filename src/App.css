@@ -3415,8 +3415,12 @@ label.new-task-checkbox-label {
    density are behavior-sensitive and remain a deliberate CSS abstraction. */
 .rental-month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, 1fr), not plain 1fr: a long tenant name otherwise becomes
+     the track's automatic min-content width and can inflate every day
+     cell into the giant blue blocks this calendar once produced. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
+  min-width: 0;
 }
 
 .rental-month-weekday {
@@ -3429,6 +3433,7 @@ label.new-task-checkbox-label {
 
 .rental-month-day,
 .rental-month-day-empty {
+  min-width: 0;
   aspect-ratio: 1;
   display: flex;
   align-items: center;

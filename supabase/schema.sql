@@ -967,6 +967,20 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
+-- ---------------------------------------------------------------------------
+-- Multiple tenants per rental booking (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run once on projects that already have rental_bookings. guest_name stays
+-- as a joined display/compatibility value for older clients; guest_names is
+-- the structured source used by the current Add/Edit booking form.
+
+alter table rental_bookings
+  add column if not exists guest_names text[] not null default '{}';
+
+update rental_bookings
+set guest_names = array[guest_name]
+where cardinality(guest_names) = 0;
+
 create trigger time_entries_stamp_meta
   before insert on time_entries
   for each row execute function stamp_time_entry_meta();

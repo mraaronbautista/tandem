@@ -82,3 +82,26 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 ### Next action
 
 Choose and integrate an address-lookup provider so a saved rental address can configure its map point without Aaron supplying coordinates.
+
+## Rentals — multiple tenants per booking
+
+**Status:** Implemented and locally verified; awaiting live migration/data verification.
+
+### Goal and decisions
+
+- One booking continues to reserve one unit/date range and generate one rental charge cycle.
+- A booking may contain multiple individual tenant names; it is not represented as overlapping bookings for the same unit.
+- `rental_bookings.guest_names` is the structured tenant list. The existing `guest_name` remains a joined compatibility/display value so older clients and existing logic degrade safely.
+- Existing bookings migrate to a one-item tenant list automatically.
+- Long tenant labels must never participate in calendar track sizing; the seven day columns use `minmax(0, 1fr)` and every day cell has `min-width: 0`.
+
+### Status
+
+- [x] Add repeatable Tenant fields with Add tenant and Remove controls to Add/Edit booking.
+- [x] Render structured tenant labels throughout Calendar, Overview, Details, availability explanations, and confirmations.
+- [x] Bound calendar tracks so long names truncate instead of inflating the month grid.
+- [x] Add the backward-compatible `guest_names` migration and pre-migration read/write fallbacks.
+- [x] Verify the long-name calendar and repeatable Tenant controls at desktop and 390px mobile widths.
+- [ ] Run the incremental SQL block against live Supabase.
+- [ ] Verify create/edit of a two-tenant booking on desktop and mobile against live data.
+- [ ] Remove this completed plan after live verification and keep the final behavior in `CLAUDE.md`.

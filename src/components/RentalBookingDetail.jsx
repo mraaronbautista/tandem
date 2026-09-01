@@ -6,6 +6,7 @@ import {
   chargeDatesForBooking,
   todayDateStr,
   BOOKING_SOURCE_LABEL,
+  bookingGuestLabel,
 } from '../lib/rentals'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -54,7 +55,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
 
   async function handleDelete() {
     const verb = isPending ? 'Decline' : 'Delete'
-    if (!window.confirm(`${verb} booking for ${booking.guest_name}? This can't be undone.`)) return
+    if (!window.confirm(`${verb} booking for ${bookingGuestLabel(booking)}? This can't be undone.`)) return
     setDeleting(true)
     setError('')
     try {
@@ -90,7 +91,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
             Pending request
           </span>
         )}
-        <p className="text-[17px] font-semibold text-text-h">{booking.guest_name}</p>
+        <p className="text-[17px] font-semibold text-text-h">{bookingGuestLabel(booking)}</p>
         <p className="opacity-75">
           {formatDateStr(booking.check_in)} – {formatDateStr(booking.check_out)}
         </p>

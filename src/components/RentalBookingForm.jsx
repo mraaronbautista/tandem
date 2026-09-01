@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { createRentalBooking, updateRentalBooking, hasOverlappingBooking, BOOKING_SOURCE_LABEL } from '../lib/rentals'
+import { Plus, X } from 'lucide-react'
+import {
+  createRentalBooking,
+  updateRentalBooking,
+  hasOverlappingBooking,
+  BOOKING_SOURCE_LABEL,
+  bookingGuestNames,
+} from '../lib/rentals'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -57,7 +64,10 @@ export default function RentalBookingForm({
   onSaved,
 }) {
   const [propertyId, setPropertyId] = useState(booking?.property_id || defaultPropertyId || properties[0]?.id || '')
-  const [guestName, setGuestName] = useState(booking?.guest_name || '')
+  const [tenantNames, setTenantNames] = useState(() => {
+    const existing = bookingGuestNames(booking)
+    return existing.length ? existing : ['']
+  })
   // defaultCheckIn comes from clicking a specific vacant calendar day —
   // takes priority over today's date, but an existing booking's own
   // check_in (editing) always wins over both.
@@ -81,6 +91,14 @@ export default function RentalBookingForm({
   // createRentalBooking/updateRentalBooking), this is purely advisory.
   const [dateConflict, setDateConflict] = useState(false)
 
+  function setTenantName(index, value) {
+    setTenantNames((current) => current.map((name, i) => (i === index ? value : name)))
+  }
+
+  function removeTenant(index) {
+    setTenantNames((current) => current.filter((_, i) => i !== index))
+  }
+
   useEffect(() => {
     if (!propertyId || !checkIn || !checkOut || checkOut < checkIn) {
       setDateConflict(false)
@@ -97,13 +115,18 @@ export default function RentalBookingForm({
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!propertyId || !guestName.trim() || !checkIn || !checkOut) return
+    const cleanedTenantNames = tenantNames.map((name) => name.trim()).filter(Boolean)
+    if (!propertyId || cleanedTenantNames.length === 0 || !checkIn || !checkOut) return
     setSaving(true)
     setError('')
     try {
       const payload = {
         property_id: propertyId,
-        guest_name: guestName.trim(),
+        // Keep guest_name as a human-readable compatibility value for
+        // older clients/functions; guest_names is the real structured
+        // tenant list used by the current UI.
+        guest_name: cleanedTenantNames.join(' and '),
+        guest_names: cleanedTenantNames,
         check_in: checkIn,
         check_out: checkOut,
         status,
@@ -140,17 +163,43 @@ export default function RentalBookingForm({
           </select>
         </label>
 
-        <label>
-          Guest name
-          <input
-            required
-            autoFocus
-            placeholder="Who's staying?"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            className={FIELD_INPUT_CLASS}
-          />
-        </label>
+        <fieldset className="rounded-[8px] border border-border px-3 py-2">
+          <legend className="px-1 text-sm font-medium text-text-h">Tenants</legend>
+          <div className="mt-1 flex flex-col gap-2">
+            {tenantNames.map((tenantName, index) => (
+              <label key={index} className="min-w-0">
+                Tenant {index + 1}
+                <span className="mt-1 flex min-w-0 gap-1.5">
+                  <input
+                    required
+                    autoFocus={index === 0}
+                    placeholder="Tenant name"
+                    value={tenantName}
+                    onChange={(e) => setTenantName(index, e.target.value)}
+                    className={FIELD_INPUT_CLASS}
+                  />
+                  {tenantNames.length > 1 && (
+                    <button
+                      type="button"
+                      className="flex-none cursor-pointer rounded-[8px] border border-border bg-pill-bg px-2 text-text-h"
+                      onClick={() => removeTenant(index)}
+                      aria-label={`Remove tenant ${index + 1}`}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </span>
+              </label>
+            ))}
+            <button
+              type="button"
+              className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-2.5 py-1.5 text-xs text-text-h"
+              onClick={() => setTenantNames((current) => [...current, ''])}
+            >
+              <Plus size={13} className="mr-1 inline align-[-2px]" /> Add tenant
+            </button>
+          </div>
+        </fieldset>
 
         <label>
           Check-in
