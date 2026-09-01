@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Pin, Inbox as InboxIcon } from 'lucide-react'
 import CorkBoardView from './CorkBoardView'
 import InboxView from './InboxView'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import { useMediaQuery } from '../lib/useMediaQuery'
 
 // Cork Board + Inbox, merged into one nav destination (Proposal A) — a
 // navigation-level grouping only. Neither screen's own data/Realtime/CRUD
@@ -15,6 +16,42 @@ export default function BoardView({ me, memberName, tasks, meId, onSelectTask, o
   // behind Pins by default.
   const [section, setSection] = useState(hasUnseenInbox ? 'inbox' : 'pins')
 
+  // Self-contained, not threaded down from TaskBoard.jsx — same
+  // "self-contained tab component" pattern RentalsView.jsx's own
+  // isDesktop already establishes, rather than adding another prop to
+  // TaskBoard's already-long BoardView call site.
+  const isDesktop = useMediaQuery('(min-width: 900px)')
+
+  // Swipe left/right on mobile to switch between Pins and Inbox — same
+  // gesture (touchstart/touchend only, no running touchmove tracking, no
+  // preventDefault, horizontal-dominance + minimum-distance check) as
+  // TaskBoard.jsx's own handleDaySwipe/handleMonthSwipe, deliberately a
+  // separate small copy rather than a shared hook, matching that file's
+  // own reasoning for not sharing one between Day and Month either.
+  // Only two fixed sections, so this is a direct toggle rather than a
+  // stepped offset — swipe left (the same "advance" direction Day/Month
+  // already use) moves Pins -> Inbox, matching their left-to-right tab
+  // order; swipe right goes back.
+  const swipeStart = useRef(null)
+  const SWIPE_MIN_DISTANCE = 60
+
+  function handleSwipeStart(e) {
+    if (isDesktop) return
+    const t = e.touches[0]
+    swipeStart.current = { x: t.clientX, y: t.clientY }
+  }
+
+  function handleSwipeEnd(e) {
+    const start = swipeStart.current
+    swipeStart.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    setSection(dx > 0 ? 'pins' : 'inbox')
+  }
+
   return (
     <>
       <PeriodTabs className="board-section-tabs">
@@ -26,18 +63,20 @@ export default function BoardView({ me, memberName, tasks, meId, onSelectTask, o
         </PeriodTab>
       </PeriodTabs>
 
-      {section === 'pins' ? (
-        <CorkBoardView me={me} memberName={memberName} />
-      ) : (
-        <InboxView
-          tasks={tasks}
-          meId={meId}
-          memberName={memberName}
-          onSelectTask={onSelectTask}
-          onUpdate={onUpdate}
-          lastViewedAt={lastViewedAt}
-        />
-      )}
+      <div onTouchStart={handleSwipeStart} onTouchEnd={handleSwipeEnd}>
+        {section === 'pins' ? (
+          <CorkBoardView me={me} memberName={memberName} />
+        ) : (
+          <InboxView
+            tasks={tasks}
+            meId={meId}
+            memberName={memberName}
+            onSelectTask={onSelectTask}
+            onUpdate={onUpdate}
+            lastViewedAt={lastViewedAt}
+          />
+        )}
+      </div>
     </>
   )
 }
