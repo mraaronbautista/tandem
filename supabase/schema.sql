@@ -500,6 +500,65 @@ create table rental_bookings (
 create index rental_bookings_property_id_idx on rental_bookings (property_id);
 create index rental_bookings_range_idx on rental_bookings (check_in, check_out);
 
+-- One automatically-maintained turnover task per booking. Kept as a
+-- nullable link on tasks so ordinary tasks remain completely unchanged;
+-- the unique constraint is the database-level duplicate guard.
+alter table tasks
+  add column rental_turnover_booking_id uuid unique
+  references rental_bookings (id) on delete cascade;
+
+create or replace function sync_rental_turnover_task()
+returns trigger as $$
+declare
+  property_name text;
+  cleaning_due timestamptz;
+begin
+  -- Pending bookings are not firm move-outs. If a confirmed booking is
+  -- moved back to pending, remove its not-yet-needed automatic task.
+  if new.status <> 'confirmed' then
+    delete from tasks where rental_turnover_booking_id = new.id;
+    return new;
+  end if;
+
+  select unit_name into property_name
+  from rental_properties
+  where id = new.property_id;
+
+  -- check_out is the final occupied date, so turnover cleaning belongs
+  -- on the following morning. Construct the wall time in Central time
+  -- before converting it to the timestamptz stored by tasks.
+  cleaning_due := ((new.check_out + 1) + time '10:00') at time zone 'America/Chicago';
+
+  insert into tasks (
+    title, who, priority, due_date, due_timezone, source, notes,
+    created_by, rental_turnover_booking_id
+  ) values (
+    'Arrange turnover cleaning for ' || property_name,
+    'assistant',
+    'med',
+    cleaning_due,
+    'America/Chicago',
+    'none',
+    'Automatically created for ' || new.guest_name || '''s move-out.',
+    new.created_by,
+    new.id
+  )
+  on conflict (rental_turnover_booking_id) do update set
+    title = excluded.title,
+    due_date = excluded.due_date,
+    due_timezone = excluded.due_timezone,
+    notes = excluded.notes,
+    who = 'assistant';
+
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger rental_bookings_sync_turnover_task
+after insert or update of property_id, guest_name, check_out, status
+on rental_bookings
+for each row execute function sync_rental_turnover_task();
+
 alter table rental_properties enable row level security;
 alter table rental_bookings enable row level security;
 
