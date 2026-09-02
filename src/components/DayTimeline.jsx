@@ -106,7 +106,12 @@ function blockTimeLabel(task, start, end, displayTimezone) {
   const startDay = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
   const endDay = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())
   const dayOffset = Math.round((endDay - startDay) / 86400000)
-  return `${fmt(start)}–${fmt(end)}${dayOffset > 0 ? ` +${dayOffset}` : ''}`
+  return (
+    <>
+      {fmt(start)}–{fmt(end)}
+      {dayOffset > 0 && <sup className="day-timeline-day-offset">+{dayOffset}</sup>}
+    </>
+  )
 }
 
 // "Tue 08/18/26" — start is always due_date now (see blockTimeLabel

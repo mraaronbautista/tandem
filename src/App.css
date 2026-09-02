@@ -957,6 +957,13 @@ select:focus-visible {
   gap: 5px;
 }
 
+.day-timeline-day-offset {
+  margin-left: 1px;
+  font-size: 0.68em;
+  line-height: 0;
+  vertical-align: super;
+}
+
 .day-timeline-block-top {
   display: flex;
   /* flex-start, not center — with a title that wraps to 2 lines (see
