@@ -703,7 +703,10 @@ select:focus-visible {
 .day-timeline-hours {
   position: relative;
   flex: none;
-  width: 54px;
+  /* Wide enough for the longest ordinary label (e.g. "10:30 PM") at
+     phone sizes. A tighter gutter let the AM/PM suffix spill over the
+     track edge and visually collide with the task block. */
+  width: 62px;
 }
 
 .day-timeline-task-time-label {
@@ -714,6 +717,7 @@ select:focus-visible {
   text-align: right;
   font-size: 11px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--text-h);
   white-space: nowrap;
   transform: translateY(6px);
@@ -725,6 +729,7 @@ select:focus-visible {
   right: 0;
   text-align: right;
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
   opacity: 0.6;
   white-space: nowrap;
   transform: translateY(-6px);
@@ -984,9 +989,10 @@ select:focus-visible {
 
 @media (max-width: 480px) {
   .day-timeline-hours {
-    width: 34px;
+    width: 54px;
   }
 
+  .day-timeline-task-time-label,
   .day-timeline-hour-label {
     font-size: 10px;
   }

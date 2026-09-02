@@ -58,7 +58,7 @@ export default function TimelineRow({ task, time, isLast, displayTimezone = DEFA
     // start-dot/span/end-dot alignment described in App.css's own
     // comments, so exact pixel match matters more than tidiness here.
     <div className="flex gap-2.5 max-[480px]:gap-1.5">
-      <div className="flex w-[54px] flex-none flex-col whitespace-nowrap pt-[13px] text-right text-xs opacity-70 max-[480px]:w-10 max-[480px]:text-[11px]">
+      <div className="flex w-[62px] flex-none flex-col whitespace-nowrap pt-[13px] text-right text-xs tabular-nums opacity-70 max-[480px]:w-[54px] max-[480px]:text-[10px]">
         <span>{label}</span>
         {/* Lines up with the end dot below — both this margin and the
             connector's height are the same 28px (mt-7), so the two
