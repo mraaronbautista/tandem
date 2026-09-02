@@ -33,6 +33,7 @@ returns trigger as $$
 begin
   if old.recurrence_series_id is not null
      and old.recurrence_series_id <> old.id
+     and pg_trigger_depth() = 1
      and coalesce(current_setting('app.recurrence_sync', true), '0') <> '1' then
     insert into task_recurrence_exclusions (recurrence_series_id, due_date)
     values (old.recurrence_series_id, old.due_date)

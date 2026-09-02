@@ -279,9 +279,20 @@ export default function TaskBoard({ theme, toggleTheme }) {
     reload()
     reloadMembers()
 
+    // A recurring-series deletion can remove many generated rows in one
+    // database operation. Realtime emits one event per row; reloading the
+    // entire task list for every event caused a burst of duplicate fetches
+    // (and recurrence checks) that made the UI feel stuck. Collapse each
+    // short event burst into one final refresh instead.
+    let taskReloadTimer = null
+    const scheduleTaskReload = () => {
+      window.clearTimeout(taskReloadTimer)
+      taskReloadTimer = window.setTimeout(() => reload(), 300)
+    }
+
     const tasksChannel = supabase
       .channel('tasks-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => reload())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, scheduleTaskReload)
       .subscribe()
 
     // So Ada's "working" badge (and anything else about the other
@@ -293,6 +304,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       .subscribe()
 
     return () => {
+      window.clearTimeout(taskReloadTimer)
       supabase.removeChannel(tasksChannel)
       supabase.removeChannel(membersChannel)
     }
