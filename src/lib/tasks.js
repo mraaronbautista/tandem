@@ -150,20 +150,33 @@ export function isOverdue(task) {
 }
 
 // Calendar day (as "YYYY-MM-DD") that `date` falls on in the viewer's own
-// local timezone — bucketing matches the display, which now always shows
-// times converted to whoever is actually looking, in their own local time.
+// local timezone. Used for viewer-local events such as completion timestamps
+// and for turning the selected calendar Date into a stable comparison key.
 function localDayKey(date) {
   const pad = (n) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+// The calendar day a task was actually scheduled for in its saved timezone.
+// Task times and zone badges are displayed in this same zone, so placement
+// must agree: Thursday 10 PM CT is Thursday even when viewed from Manila,
+// where that instant happens to be Friday morning.
+function taskDueDayKey(task) {
+  return splitDueDateInZone(task.due_date, task.due_timezone || DEFAULT_TIMEZONE).due_date
+}
+
 // Overdue is a "right now" concept, not tied to whichever day is being
 // browsed — only ever shown alongside today's view, regardless of due date.
 export function getOverdueTasks(tasks) {
-  const todayKey = localDayKey(new Date())
+  const nowIso = new Date().toISOString()
 
   return tasks
-    .filter((t) => t.status !== 'done' && t.due_date && localDayKey(new Date(t.due_date)) < todayKey)
+    .filter((t) => {
+      if (t.status === 'done' || !t.due_date) return false
+      const timeZone = t.due_timezone || DEFAULT_TIMEZONE
+      const todayInTaskZone = splitDueDateInZone(nowIso, timeZone).due_date
+      return taskDueDayKey(t) < todayInTaskZone
+    })
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
@@ -293,7 +306,7 @@ export function getTasksForDay(tasks, date) {
   const dayKey = localDayKey(date)
 
   return tasks
-    .filter((t) => t.due_date && localDayKey(new Date(t.due_date)) === dayKey)
+    .filter((t) => t.due_date && taskDueDayKey(t) === dayKey)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
@@ -446,8 +459,9 @@ export function getNudgedTasks(tasks) {
     .sort((a, b) => new Date(b.overdue_nudge_sent_at) - new Date(a.overdue_nudge_sent_at))
 }
 
-// Buckets tasks by the local day they're due (same due_date-always rule
-// as getTasksForDay above) into a Map of 'YYYY-MM-DD' -> tasks[] — for
+// Buckets tasks by the calendar day they're due in each task's saved
+// timezone (same rule as getTasksForDay above) into a Map of
+// 'YYYY-MM-DD' -> tasks[] — for
 // rendering many days at once (Month view) without re-scanning the whole
 // task list once per day the way calling getTasksForDay in a loop would.
 // All Day tasks with no date (due_date null) naturally fall out of every
@@ -456,7 +470,7 @@ export function groupTasksByDay(tasks) {
   const map = new Map()
   for (const t of tasks) {
     if (!t.due_date) continue
-    const key = localDayKey(new Date(t.due_date))
+    const key = taskDueDayKey(t)
     if (!map.has(key)) map.set(key, [])
     map.get(key).push(t)
   }
