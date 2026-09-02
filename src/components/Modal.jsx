@@ -84,17 +84,18 @@ export default function Modal({ onClose, children }) {
     if (!sheet || e.touches.length !== 1) return
     if (e.target.closest('input, textarea, select, [contenteditable="true"]')) return
 
-    // Some sheets contain their own scrolling list inside the card. Let a
-    // downward gesture scroll that list toward its top first; dismissal
-    // only takes over once every scrollable layer under the finger is at
-    // the top, matching native bottom-sheet behavior.
+    // Track any remaining scroll instead of refusing to start the gesture
+    // outright. One continuous pull can now use its first part to return
+    // the booking/form content to the top and its remaining movement to
+    // dismiss the sheet — no extra swipe for a tiny leftover offset.
     let node = e.target
+    let scrollDebt = 0
     while (node && node !== contentRef.current) {
-      if (node.scrollTop > 0) return
+      scrollDebt += node.scrollTop || 0
       node = node.parentElement
     }
     const touch = e.touches[0]
-    swipeStartRef.current = { x: touch.clientX, y: touch.clientY }
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY, scrollDebt }
   }
 
   function handleTouchEnd(e) {
@@ -104,7 +105,7 @@ export default function Modal({ onClose, children }) {
     const touch = e.changedTouches[0]
     const deltaX = touch.clientX - start.x
     const deltaY = touch.clientY - start.y
-    if (deltaY < 80 || deltaY < Math.abs(deltaX) * 1.25) return
+    if (deltaY < Math.max(80, start.scrollDebt) || deltaY < Math.abs(deltaX) * 1.25) return
     e.preventDefault()
     onClose()
   }
