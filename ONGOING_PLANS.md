@@ -87,13 +87,13 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 - [ ] Add payroll-period filtering, summary metrics, and filter-aware CSV export.
 - [ ] Update `CLAUDE.md`, remove this completed plan, commit, and push the final phase.
 
-### Unresolved decision
+### Decision
 
-- Property-manager payroll cadence: weekly, every two weeks, twice monthly, or monthly. This determines the default period selector and CSV boundaries.
+- Property-manager payroll cadence is **configurable, not fixed at build time** — Aaron and Ada asked for it to be interchangeable and manageable by either of them, not hardcoded to one of weekly/biweekly/twice-monthly/monthly. Concrete design for whoever builds the payroll-period-filtering item below: a new `staff.payroll_cadence` column (enum: `weekly | biweekly | twice_monthly | monthly`, default `biweekly` to match the household's actual current arrangement per `EndOfDayReportForm.jsx`'s own `biweekly` report period) — lives on `staff`, not `members` or a new table, since it's a property of *this specific staff member's* pay arrangement (the same reasoning `hourly_rate`/`emergency_rate` already live there), and a household with more than one staff member later could plausibly want different cadences per person. Edited via `StaffProfileForm.jsx`, alongside the existing rate fields it already manages — that form is already "Ada/Aaron's own view of managing the property manager," reachable from `StaffLogsView.jsx`'s roster Edit action, so no new settings surface is needed. The period-boundary math itself should reuse `startOfPeriod()`'s existing `BIWEEKLY_ANCHOR`-based cycle logic (`src/lib/tasks.js`) for the `biweekly` case rather than reinventing it — that function is currently module-private, so it'll need exporting (or a small duplicated copy, matching this app's own established preference for that over premature sharing, e.g. `buildWeeks()`).
 
 ### Next action
 
-Add payroll-period filtering, summary metrics, and filter-aware CSV export to the Hours overview — the property-manager payroll cadence (weekly/biweekly/twice monthly/monthly) is still an open decision above and blocks the default period selector, so that needs resolving first.
+Add payroll-period filtering, summary metrics, and filter-aware CSV export to the Hours overview, now that the cadence decision above is resolved — starting with `staff.payroll_cadence` (schema + `StaffProfileForm.jsx` field) so the period selector has a real default to read instead of guessing.
 
 ## Rentals — multiple tenants per booking
 
