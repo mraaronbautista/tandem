@@ -24,6 +24,43 @@ const FOCUSABLE_SELECTOR =
 // announce this as a dialog at all, not just another chunk of page.
 export default function Modal({ onClose, children }) {
   const contentRef = useRef(null)
+  const swipeStartRef = useRef(null)
+
+  function mobileSheet() {
+    if (!window.matchMedia('(max-width: 640px)').matches) return null
+    const sheet = contentRef.current?.firstElementChild
+    return sheet?.matches('.new-task-form, .peek-task, .submission-modal') ? sheet : null
+  }
+
+  function handleTouchStart(e) {
+    const sheet = mobileSheet()
+    if (!sheet || e.touches.length !== 1) return
+    if (e.target.closest('input, textarea, select, [contenteditable="true"]')) return
+
+    // Some sheets contain their own scrolling list inside the card. Let a
+    // downward gesture scroll that list toward its top first; dismissal
+    // only takes over once every scrollable layer under the finger is at
+    // the top, matching native bottom-sheet behavior.
+    let node = e.target
+    while (node && node !== contentRef.current) {
+      if (node.scrollTop > 0) return
+      node = node.parentElement
+    }
+    const touch = e.touches[0]
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  function handleTouchEnd(e) {
+    const start = swipeStartRef.current
+    swipeStartRef.current = null
+    if (!start || !e.changedTouches.length) return
+    const touch = e.changedTouches[0]
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (deltaY < 80 || deltaY < Math.abs(deltaX) * 1.25) return
+    e.preventDefault()
+    onClose()
+  }
 
   useEffect(() => {
     function handleKey(e) {
@@ -57,7 +94,16 @@ export default function Modal({ onClose, children }) {
 
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div ref={contentRef} role="dialog" aria-modal="true" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={contentRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => { swipeStartRef.current = null }}
+      >
         {children}
       </div>
     </div>,

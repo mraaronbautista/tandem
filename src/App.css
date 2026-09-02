@@ -2638,11 +2638,29 @@ a.task-submission-file-link:hover {
   .modal-backdrop .new-task-form,
   .modal-backdrop .peek-task,
   .modal-backdrop .submission-modal {
+    position: relative;
     max-width: 100%;
     /* dvh here too — see the base rule above for why; this is the slide-
        up sheet where the keyboard-scroll issue actually shows up. */
     max-height: 88dvh;
     animation: modal-slide-up 0.2s ease-out;
+  }
+
+  .modal-backdrop .new-task-form::before,
+  .modal-backdrop .peek-task::before,
+  .modal-backdrop .submission-modal::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    z-index: 1;
+    width: 34px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--text);
+    opacity: 0.22;
+    transform: translateX(-50%);
+    pointer-events: none;
   }
 
   .modal-backdrop .new-task-form,
