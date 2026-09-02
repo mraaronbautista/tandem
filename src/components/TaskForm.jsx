@@ -95,7 +95,9 @@ export function recurrenceLabel(recurrence, recurrenceDays = []) {
   return RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label
 }
 
-// Half-hour increments across the day, e.g. "09:00" -> "9:00 AM".
+// Common half-hour shortcuts shown beside the minute-precision time input.
+// Typing remains unrestricted; this list is only a faster path for the
+// times used most often.
 export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2)
   const m = i % 2 === 0 ? '00' : '30'
@@ -105,7 +107,7 @@ export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
 })
 
 // A brand-new task's default due date/time — "now," rounded up to the
-// next half-hour mark (matching TIME_OPTIONS' own granularity), rather
+// next half-hour mark, rather
 // than an arbitrary fixed hour (previously always 9 AM regardless of
 // when the task was actually created). Rounds up, never down: a default
 // already in the past would make a just-created task read as immediately
@@ -201,7 +203,7 @@ function dueSummaryLabel(form) {
   const dateLabel = new Date(`${form.due_date}T00:00:00`)
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     .replace(', ', ' ')
-  const timeLabel = TIME_OPTIONS.find((t) => t.value === form.due_time)?.label ?? form.due_time
+  const timeLabel = minutesToTimeLabel(timeToMinutes(form.due_time))
   const zoneLabel = zoneAbbreviation(form.due_timezone)
   if (!form.duration_minutes) return `${dateLabel} · ${timeLabel} · ${zoneLabel}`
   const endLabel = buildEndTimeOptions(form.due_time).find((o) => o.value === form.duration_minutes)?.label
@@ -441,13 +443,28 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
 
                     <label>
                       Time
-                      <select value={form.due_time} onChange={(e) => set('due_time', e.target.value)}>
-                        {TIME_OPTIONS.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex gap-2">
+                        <input
+                          className="min-w-0 flex-1"
+                          type="time"
+                          step="60"
+                          value={form.due_time}
+                          onChange={(e) => set('due_time', e.target.value)}
+                        />
+                        <select
+                          aria-label="Common start times"
+                          className="w-[92px] flex-none"
+                          value={TIME_OPTIONS.some((time) => time.value === form.due_time) ? form.due_time : ''}
+                          onChange={(e) => e.target.value && set('due_time', e.target.value)}
+                        >
+                          <option value="">Quick</option>
+                          {TIME_OPTIONS.map((time) => (
+                            <option key={time.value} value={time.value}>
+                              {time.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </label>
 
                     <label>
