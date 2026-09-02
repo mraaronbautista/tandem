@@ -128,6 +128,35 @@ create unique index tasks_recurrence_series_due_unique
   on tasks (recurrence_series_id, due_date)
   where recurrence_series_id is not null and due_date is not null;
 
+-- Tombstones for individual generated occurrences the user deliberately
+-- deletes. Without this, the monthly ensure pass sees a missing date and
+-- recreates it immediately.
+create table task_recurrence_exclusions (
+  recurrence_series_id uuid not null references tasks (id) on delete cascade,
+  due_date timestamptz not null,
+  primary key (recurrence_series_id, due_date)
+);
+
+alter table task_recurrence_exclusions enable row level security;
+
+create or replace function remember_deleted_recurrence_occurrence()
+returns trigger as $$
+begin
+  if old.recurrence_series_id is not null
+     and old.recurrence_series_id <> old.id
+     and coalesce(current_setting('app.recurrence_sync', true), '0') <> '1' then
+    insert into task_recurrence_exclusions (recurrence_series_id, due_date)
+    values (old.recurrence_series_id, old.due_date)
+    on conflict do nothing;
+  end if;
+  return old;
+end;
+$$ language plpgsql security definer;
+
+create trigger tasks_remember_deleted_recurrence_occurrence
+before delete on tasks
+for each row execute function remember_deleted_recurrence_occurrence();
+
 -- Keep updated_at/completed_at in sync with status changes.
 create or replace function set_task_meta()
 returns trigger as $$
@@ -258,6 +287,11 @@ begin
   from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
   where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
     and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
+    and not exists (
+      select 1 from task_recurrence_exclusions e
+      where e.recurrence_series_id = template.id
+        and e.due_date = (day_stamp::date + wall_time) at time zone template.due_timezone
+    )
   on conflict (recurrence_series_id, due_date)
     where recurrence_series_id is not null and due_date is not null do nothing;
 end;
@@ -272,7 +306,9 @@ begin
     or new.due_timezone is distinct from old.due_timezone
     or new.recurrence_days is distinct from old.recurrence_days
   ) then
+    perform set_config('app.recurrence_sync', '1', true);
     delete from tasks where recurrence_series_id = old.id and id <> old.id and status <> 'done';
+    perform set_config('app.recurrence_sync', '0', true);
   end if;
   if new.recurrence::text = 'selected_weekdays' and new.recurrence_series_id = new.id then
     perform generate_current_month_occurrences(new.id);
