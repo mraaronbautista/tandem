@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
@@ -92,6 +92,7 @@ export default function TaskRow({
   const [nudging, setNudging] = useState(false)
   const [nudgeSent, setNudgeSent] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const swipeStartRef = useRef(null)
   const attachments = task.completion_attachments || []
   const hasSubmission = Boolean(task.completion_note || attachments.length)
   const overdue = isOverdue(task)
@@ -169,6 +170,29 @@ export default function TaskRow({
     if (next === 'done') setOpen(true)
   }
 
+  function handleSwipeStart(e) {
+    if (!open || e.touches.length !== 1) return
+    const touch = e.touches[0]
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  function handleSwipeEnd(e) {
+    const start = swipeStartRef.current
+    swipeStartRef.current = null
+    if (!start || !e.changedTouches.length) return
+    const touch = e.changedTouches[0]
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (deltaY < 80 || deltaY < Math.abs(deltaX) * 1.25) return
+
+    // Prevent the touch's synthetic click from immediately reopening the
+    // task after the swipe closes it. The gesture starts on the compact
+    // header only, so scrolling back through a long note remains normal.
+    e.preventDefault()
+    setOpen(false)
+    setNotesExpanded(false)
+  }
+
   function handleSaveNote() {
     if (noteDraft !== (task.completion_note || '')) onUpdate(task.id, { completion_note: noteDraft || null })
     setSubmitOpen(false)
@@ -221,7 +245,12 @@ export default function TaskRow({
       style={{ borderLeftColor: overlapping ? '#e0a83e' : PRIORITY_COLOR[task.priority] }}
       onClick={() => setOpen((v) => !v)}
     >
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <div
+        className="flex flex-wrap items-center gap-x-2 gap-y-1.5"
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+        onTouchCancel={() => { swipeStartRef.current = null }}
+      >
         {/* Was a plain PriorityDot — priority itself moved to the row's
             own left border (matching DayTimeline.jsx's block, which
             already worked this way) once this slot became the task icon,
