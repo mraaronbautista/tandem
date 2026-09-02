@@ -298,6 +298,7 @@ const FAQS = [
     title: "Why hasn't next week's copy of a recurring task shown up yet?",
     items: [
       'The next occurrence is only created once you mark the current one done — it\'s not generated ahead of time, so you won\'t see it sitting there early.',
+      'For a task that repeats on selected weekdays, Tandem advances to the next selected day. For example, completing Tuesday in a Tuesday/Thursday schedule creates Thursday; completing Thursday creates the following Tuesday.',
     ],
   },
   {

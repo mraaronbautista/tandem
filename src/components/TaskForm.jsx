@@ -30,6 +30,7 @@ export const emptyTaskForm = {
   notes: '',
   checklist: [],
   recurrence: 'none',
+  recurrence_days: [],
 }
 
 // Quick-pick spans for "how long will this take" — covers the common
@@ -63,6 +64,7 @@ export const RECURRENCE_OPTIONS = [
   { value: 'none', label: 'Never' },
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
+  { value: 'selected_weekdays', label: 'Selected weekdays' },
   { value: 'biweekly', label: 'Every 2 weeks' },
   { value: 'every_3_weeks', label: 'Every 3 weeks' },
   { value: 'monthly', label: 'Monthly' },
@@ -71,6 +73,27 @@ export const RECURRENCE_OPTIONS = [
   { value: 'every_6_months', label: 'Every 6 months' },
   { value: 'annually', label: 'Annually' },
 ]
+
+export const WEEKDAY_OPTIONS = [
+  { value: 1, shortLabel: 'M', label: 'Monday' },
+  { value: 2, shortLabel: 'T', label: 'Tuesday' },
+  { value: 3, shortLabel: 'W', label: 'Wednesday' },
+  { value: 4, shortLabel: 'T', label: 'Thursday' },
+  { value: 5, shortLabel: 'F', label: 'Friday' },
+  { value: 6, shortLabel: 'S', label: 'Saturday' },
+  { value: 0, shortLabel: 'S', label: 'Sunday' },
+]
+
+export function recurrenceLabel(recurrence, recurrenceDays = []) {
+  if (recurrence === 'selected_weekdays') {
+    const selected = WEEKDAY_OPTIONS.filter((day) => recurrenceDays.includes(day.value)).map((day) => day.label)
+    if (!selected.length) return 'Selected weekdays'
+    if (selected.length === 1) return `Every ${selected[0]}`
+    if (selected.length === 2) return `Every ${selected[0]} and ${selected[1]}`
+    return `Every ${selected.slice(0, -1).join(', ')}, and ${selected.at(-1)}`
+  }
+  return RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label
+}
 
 // Half-hour increments across the day, e.g. "09:00" -> "9:00 AM".
 export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -208,6 +231,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
       notes: initialValues?.notes ?? '',
       duration_minutes: initialValues?.duration_minutes != null ? String(initialValues.duration_minutes) : '',
       recurrence: initialValues?.recurrence ?? 'none',
+      recurrence_days: initialValues?.recurrence_days ?? [],
     }
   })
   const [saving, setSaving] = useState(false)
@@ -264,6 +288,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.title.trim()) return
+    if (form.recurrence === 'selected_weekdays' && !form.recurrence_days.length) return
     setSaving(true)
     try {
       const { due_time, ...rest } = form
@@ -470,7 +495,23 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
 
         <label>
           Repeats
-          <select value={form.recurrence} onChange={(e) => set('recurrence', e.target.value)}>
+          <select
+            value={form.recurrence}
+            onChange={(e) => {
+              const recurrence = e.target.value
+              setForm((current) => {
+                if (recurrence !== 'selected_weekdays' || current.recurrence_days.length) {
+                  return { ...current, recurrence }
+                }
+                const date = new Date(`${current.due_date}T00:00:00`)
+                return {
+                  ...current,
+                  recurrence,
+                  recurrence_days: [Number.isNaN(date.getTime()) ? new Date().getDay() : date.getDay()],
+                }
+              })
+            }}
+          >
             {RECURRENCE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -479,6 +520,42 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           </select>
         </label>
       </div>
+
+      {form.recurrence === 'selected_weekdays' && (
+        <fieldset className="m-0 rounded-lg border border-border px-3 py-2">
+          <legend className="px-1 text-xs font-medium text-text-muted">This task repeats every</legend>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Repeat on weekdays">
+            {WEEKDAY_OPTIONS.map((day) => {
+              const selected = form.recurrence_days.includes(day.value)
+              return (
+                <button
+                  key={day.label}
+                  type="button"
+                  aria-pressed={selected}
+                  aria-label={day.label}
+                  title={day.label}
+                  onClick={() =>
+                    set(
+                      'recurrence_days',
+                      selected
+                        ? form.recurrence_days.filter((value) => value !== day.value)
+                        : [...form.recurrence_days, day.value],
+                    )
+                  }
+                  className={`h-9 w-9 cursor-pointer rounded-full border text-xs font-semibold transition-colors ${
+                    selected
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-border bg-bg text-text-h hover:border-accent'
+                  }`}
+                >
+                  {day.shortLabel}
+                </button>
+              )
+            })}
+          </div>
+          {!form.recurrence_days.length && <p className="mt-2 text-xs text-overdue">Select at least one day.</p>}
+        </fieldset>
+      )}
 
       <div className="new-task-row">
         <label>

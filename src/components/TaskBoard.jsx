@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { GanttChart, Home, FileText, LayoutGrid, Timer, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
+import { GanttChart, Home, FileText, LayoutGrid, Timer, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
@@ -136,6 +136,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [error, setError] = useState('')
   const [peekTaskId, setPeekTaskId] = useState(null)
   const [completedTodayOpen, setCompletedTodayOpen] = useState(false)
+  const [overdueModalOpen, setOverdueModalOpen] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
@@ -561,6 +562,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       notes: task.notes,
       checklist,
       recurrence: task.recurrence,
+      recurrence_days: task.recurrence_days,
     })
   }
 
@@ -792,15 +794,29 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 today's list instead. Same isToday gate Overdue already
                 uses, and who-scoped the same way as everything else on
                 this tab. */}
-            {isToday && completedToday.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setCompletedTodayOpen(true)}
-                className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent active:scale-[0.97]"
-              >
-                <CheckCircle2 size={13} className="text-accent" />
-                {completedToday.length} completed today
-              </button>
+            {isToday && (completedToday.length > 0 || overdue.length > 0) && (
+              <div className="flex flex-wrap gap-2">
+                {overdue.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setOverdueModalOpen(true)}
+                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-overdue hover:text-overdue active:scale-[0.97]"
+                  >
+                    <AlertTriangle size={13} className="text-overdue" />
+                    {overdue.length} overdue
+                  </button>
+                )}
+                {completedToday.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCompletedTodayOpen(true)}
+                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent active:scale-[0.97]"
+                  >
+                    <CheckCircle2 size={13} className="text-accent" />
+                    {completedToday.length} completed today
+                  </button>
+                )}
+              </div>
             )}
 
             {error && <p className="error">{error}</p>}
@@ -955,6 +971,29 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   task={task}
                   time={task.due_date || task.completed_at}
                   isLast={i === completedToday.length - 1}
+                  {...taskRowProps}
+                />
+              ))}
+            </div>
+          </ModalCard>
+        </Modal>
+      )}
+
+      {/* Same TimelineRow list the inline Overdue section already renders
+          (time is due_date, same as everywhere else) — this modal is just
+          a quick-glance shortcut to the same tasks via the pill above,
+          not a second source of truth. */}
+      {overdueModalOpen && (
+        <Modal onClose={() => setOverdueModalOpen(false)}>
+          <ModalCard>
+            <h2>Overdue</h2>
+            <div className="flex flex-col">
+              {overdue.map((task, i) => (
+                <TimelineRow
+                  key={task.id}
+                  task={task}
+                  time={task.due_date}
+                  isLast={i === overdue.length - 1}
                   {...taskRowProps}
                 />
               ))}

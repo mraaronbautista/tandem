@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import './App.css'
 import { useAuth } from './lib/AuthContext'
 import { useTheme } from './lib/useTheme'
@@ -13,6 +14,26 @@ function App() {
   // without one, staying 'loading' until called again with a real
   // session (see useAccountRole.js).
   const role = useAccountRole(session)
+
+  // iOS/WKWebView can leave position:fixed elements (the bottom nav,
+  // modal sheets) visually detached from the viewport after the PWA has
+  // sat backgrounded for a while — the screen locks overnight, the
+  // calendar day rolls over, and on wake the fixed layer hasn't been
+  // recomposited, so it renders as if it scrolled away with the page
+  // instead of staying pinned to the bottom. A synchronous reflow when
+  // the tab becomes visible again is the standard workaround for this
+  // WebKit bug — nothing else in the app triggers one on its own.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'visible') return
+      const body = document.body
+      body.style.display = 'none'
+      void body.offsetHeight
+      body.style.display = ''
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
 
   if (authError) {
     return (

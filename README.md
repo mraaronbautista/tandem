@@ -53,5 +53,5 @@ Once deployed, open the Netlify URL in Safari (iOS) → Share → **Add to Home 
 ## Notes on scope
 
 - **Attachments:** no file upload — tasks carry an optional "sent via Teams/Email" tag plus a free-text note (filename, message context) so you know where to look.
-- **Recurrence:** the next occurrence of a repeating task is only created once the current one is marked Done (not pre-generated ahead of time).
+- **Recurrence:** the next occurrence of a repeating task is only created once the current one is marked Done (not pre-generated ahead of time). Recurrence can use a fixed interval or selected weekdays such as Tuesday and Thursday.
 - **Calendar:** intentionally out of scope for now — coordinate scheduling manually via Teams.

@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from './timezone'
 
 const TASK_COLUMNS =
-  'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at'
+  'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at'
 
 export async function fetchTasks() {
   const { data, error } = await supabase

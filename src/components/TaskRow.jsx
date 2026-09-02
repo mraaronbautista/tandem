@@ -6,7 +6,7 @@ import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } fro
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge } from '../lib/manualNotify'
 import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, X } from 'lucide-react'
-import TaskForm, { RECURRENCE_OPTIONS } from './TaskForm'
+import TaskForm, { recurrenceLabel as getRecurrenceLabel } from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
@@ -113,7 +113,7 @@ export default function TaskRow({
   const checklist = task.checklist || []
   const checklistDone = checklist.filter((item) => item.done).length
   const recurrence = task.recurrence ?? 'none'
-  const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label
+  const recurrenceLabel = getRecurrenceLabel(recurrence, task.recurrence_days || [])
   const clarifications = task.clarifications || []
   // A question directed at whoever's looking right now — an in-app
   // reminder that doesn't depend on the push notification having been
