@@ -337,6 +337,57 @@ begin
 end;
 $$ language plpgsql security definer;
 
+create or replace function generate_month_occurrences(template_id uuid, target_month date)
+returns void as $$
+declare
+  template tasks%rowtype;
+  month_start date := date_trunc('month', target_month)::date;
+  month_end date := (date_trunc('month', target_month) + interval '1 month - 1 day')::date;
+  wall_time time;
+  assignee_id uuid;
+begin
+  select * into template from tasks where id = template_id;
+  if not found or template.recurrence::text <> 'selected_weekdays'
+     or template.recurrence_series_id <> template.id or template.due_date is null then return; end if;
+  wall_time := (template.due_date at time zone template.due_timezone)::time;
+  select id into assignee_id from members
+  where lower(display_name) = case when template.who = 'assistant' then 'aaron' else 'ada' end limit 1;
+  insert into tasks (
+    title, who, priority, icon, due_date, due_timezone, duration_minutes,
+    source, source_note, notes, checklist, recurrence, recurrence_days,
+    created_by, recurrence_series_id
+  )
+  select template.title, template.who, template.priority, template.icon,
+    (day_stamp::date + wall_time) at time zone template.due_timezone,
+    template.due_timezone, template.duration_minutes, template.source,
+    template.source_note, template.notes, template.checklist,
+    template.recurrence, template.recurrence_days,
+    coalesce(assignee_id, template.created_by), template.id
+  from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
+  where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
+    and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
+    and not exists (
+      select 1 from task_recurrence_exclusions e where e.recurrence_series_id = template.id
+        and e.due_date = (day_stamp::date + wall_time) at time zone template.due_timezone
+    )
+  on conflict (recurrence_series_id, due_date)
+    where recurrence_series_id is not null and due_date is not null do nothing;
+end;
+$$ language plpgsql security definer;
+
+create or replace function ensure_month_recurrences(target_month date)
+returns void as $$
+declare template_id uuid;
+begin
+  if not exists (select 1 from members where id = auth.uid()) then raise exception 'Not authorized'; end if;
+  for template_id in select id from tasks
+    where recurrence::text = 'selected_weekdays' and recurrence_series_id = id
+  loop
+    perform generate_month_occurrences(template_id, target_month);
+  end loop;
+end;
+$$ language plpgsql security definer;
+
 create or replace function delete_recurring_task(target_task_id uuid, delete_future boolean)
 returns void as $$
 declare

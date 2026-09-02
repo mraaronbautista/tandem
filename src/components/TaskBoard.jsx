@@ -3,6 +3,7 @@ import { GanttChart, Home, FileText, LayoutGrid, Timer, Hand, Settings, ChevronL
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
+  ensureMonthRecurrences,
   createTask,
   updateTask,
   deleteTask,
@@ -315,6 +316,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const memberName = (id) => members.find((m) => m.id === id)?.display_name
   const displayTimezone = me?.default_timezone || detectDefaultTimezone()
   const displayToday = useMemo(() => dateInTimezone(new Date(), displayTimezone), [displayTimezone])
+  const selectedMonthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-01`
+
+  // Recurrence has no end date. Materialize only the calendar month the
+  // user navigates to, instead of running recurrence generation during
+  // every ordinary task refresh/delete.
+  useEffect(() => {
+    ensureMonthRecurrences(selectedMonthKey).then(reload).catch((err) => setError(err.message))
+  }, [selectedMonthKey])
 
   // Default to your own tasks, not the shared "All" view — you should only
   // see the other person's tasks by deliberately switching to their tab.
