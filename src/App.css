@@ -844,6 +844,10 @@ select:focus-visible {
    however tall the title happens to need to be. */
 .day-timeline-block-body {
   flex: 1;
+  /* The outer block carries the task's full duration height. Stretch this
+     actual button through that height so every empty-looking part of a
+     long task remains the same open/edit target as its header. */
+  align-self: stretch;
   min-width: 0;
   display: flex;
   align-items: flex-start;
