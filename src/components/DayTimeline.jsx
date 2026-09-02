@@ -66,6 +66,14 @@ const GAP_LABEL_MIN_HEIGHT = 22
 // same stack that don't clear that bar still render directly flush
 // against each other, no label, same as any other back-to-back pair.
 const OVERLAP_LABEL_HEIGHT = 22
+// Breathing room between two directly stacked blocks (no overlap label
+// between them) — without it, consecutive blocks' 1px borders sat flush
+// against each other and read as one merged card, especially for a
+// genuinely back-to-back pair (one ending exactly when the next starts).
+// Skipped when an overlap label already separates the pair — that label
+// already reserves its own space, and stacking this on top of it left
+// the gap disproportionately larger than between any other pair.
+const STACK_GAP = 8
 // Task cards are deliberately fixed-height. The timeline is an agenda
 // overview, so elapsed hours belong in the start/end label rather than
 // being represented as empty vertical space inside the card.
@@ -297,6 +305,8 @@ function layoutClusters(clusters, overlappingIds) {
       if (conflictsWithEarlier) {
         overlapLabels.push({ top: stackTop, height: OVERLAP_LABEL_HEIGHT })
         stackTop += OVERLAP_LABEL_HEIGHT
+      } else if (idx > 0) {
+        stackTop += STACK_GAP
       }
       const height = TASK_BLOCK_HEIGHT
       positioned.push({ ...item, top: stackTop, height })
