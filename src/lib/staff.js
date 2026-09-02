@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
+import { startOfPeriod } from './tasks'
 
-const STAFF_COLUMNS = 'id, display_name, hourly_rate, emergency_rate, active'
+const STAFF_COLUMNS = 'id, display_name, hourly_rate, emergency_rate, active, payroll_cadence'
 const WORK_SITE_COLUMNS =
   'id, name, address, latitude, longitude, geofence_radius_m, rental_property_id, active, ' +
   'pending_latitude, pending_longitude, pending_accuracy_m, pending_captured_by, pending_captured_at'
@@ -27,10 +28,10 @@ export async function fetchOwnStaffProfile(id) {
   return data
 }
 
-export async function updateStaffProfile(id, { display_name, hourly_rate, emergency_rate }) {
+export async function updateStaffProfile(id, { display_name, hourly_rate, emergency_rate, payroll_cadence }) {
   const { data, error } = await supabase
     .from('staff')
-    .update({ display_name, hourly_rate, emergency_rate })
+    .update({ display_name, hourly_rate, emergency_rate, payroll_cadence })
     .eq('id', id)
     .select(STAFF_COLUMNS)
     .single()
@@ -323,4 +324,54 @@ export function computeEntryPay(entry) {
   if (!entry.clock_out_at) return null
   const hours = (new Date(entry.clock_out_at) - new Date(entry.clock_in_at)) / 3_600_000
   return hours * Number(entry.rate_amount)
+}
+
+// The one payroll-cadence shape startOfPeriod() (tasks.js) doesn't already
+// know how to step: two fixed calendar halves per month (1st-15th,
+// 16th-through-end), not an N-day block cycle like weekly/biweekly/monthly.
+// Normalizes into a single "half-months since month 0" integer so stepping
+// by `offset` can't drift across a year boundary the way hand-rolled
+// month/year carrying could.
+function startOfTwiceMonthly(offset = 0) {
+  const now = new Date()
+  const currentHalf = now.getDate() <= 15 ? 0 : 1
+  const totalHalves = (now.getFullYear() * 12 + now.getMonth()) * 2 + currentHalf + offset
+  const month = Math.floor(totalHalves / 2) // absolute months since year 0
+  const half = totalHalves - month * 2
+  // 2000 (not 0) as the constructor's year arg: years 0-99 there get
+  // remapped to 1900-1999 by the Date spec, which combined with `month`
+  // being a huge absolute count (not a small offset) landed centuries off
+  // in testing. A real 4-digit base year sidesteps that remapping — the
+  // month argument still correctly carries into the year no matter how
+  // far out of 0-11 range it is.
+  const d = new Date(2000, month - 2000 * 12, half === 0 ? 1 : 16)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+const CADENCE_TO_PERIOD = { weekly: 'week', biweekly: 'biweekly', monthly: 'month' }
+
+// Start of the current (offset 0) or a past `offset` payroll bucket for a
+// given staff.payroll_cadence value, viewer-local — same convention
+// startOfPeriod() (tasks.js) already uses for EOD reports, matching
+// precedent rather than introducing a fixed-timezone special case with no
+// established pattern elsewhere in this app. biweekly reuses
+// startOfPeriod()'s own BIWEEKLY_ANCHOR-based cycle math unchanged, so the
+// same real-world cutoff dates apply to both EOD reports and payroll.
+export function startOfPayrollPeriod(cadence, offset = 0) {
+  if (cadence === 'twice_monthly') return startOfTwiceMonthly(offset)
+  return startOfPeriod(CADENCE_TO_PERIOD[cadence], offset)
+}
+
+// "This pay period" for offset 0, else the actual date range — mirrors
+// tasks.js's periodBucketLabel() shape but uniformly says "pay period"
+// regardless of cadence, since a weekly/monthly cadence reading as "This
+// week"/"This month" here would undersell that this view is specifically
+// about payroll, not a generic calendar bucket.
+export function payrollPeriodLabel(cadence, offset = 0) {
+  if (offset === 0) return 'This pay period'
+  const start = startOfPayrollPeriod(cadence, offset)
+  const end = new Date(startOfPayrollPeriod(cadence, offset + 1).getTime() - 86400000)
+  const fmt = (d) => d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  return `${fmt(start)} – ${fmt(end)}`
 }

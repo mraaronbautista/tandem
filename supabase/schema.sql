@@ -1201,3 +1201,22 @@ grant execute on function staff_submit_location_capture(uuid, double precision, 
 -- time_entries rather than an RPC. The RPC-only discipline above exists
 -- specifically for the staff write path, where the RLS gap is real; there's
 -- no equivalent gap on the member side to work around here.
+
+-- ---------------------------------------------------------------------------
+-- Staff payroll cadence (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, after every earlier staff
+-- block above it.
+
+-- A distinct enum from report_period (eod_reports) on purpose: that one is
+-- an ad-hoc reporting bucket Ada/Aaron pick per-submission, while this is a
+-- fixed, recurring attribute of one staff member's actual pay arrangement.
+create type staff_payroll_cadence as enum ('weekly', 'biweekly', 'twice_monthly', 'monthly');
+
+-- Lives on staff, not members — this is this specific property manager's
+-- own pay arrangement, same reasoning hourly_rate/emergency_rate already
+-- live here. Default 'biweekly' matches the household's actual current
+-- arrangement (the same real cutoff BIWEEKLY_ANCHOR in src/lib/tasks.js
+-- already encodes).
+alter table staff
+  add column payroll_cadence staff_payroll_cadence not null default 'biweekly';

@@ -175,7 +175,10 @@ export function getOverdueTasks(tasks) {
 // shared reference point, there's no way to tell which of the two
 // candidate Sundays a 14-day cycle should start on, and picking wrong
 // would silently misalign every later cutoff too.
-const BIWEEKLY_ANCHOR = new Date(2026, 6, 26)
+// Exported so src/lib/staff.js can anchor payroll-cadence periods to the
+// same real biweekly cutoff EOD reports already use, rather than a second,
+// independently-drifting anchor.
+export const BIWEEKLY_ANCHOR = new Date(2026, 6, 26)
 
 // Start of the current (offset 0) or a past (`offset` whole periods back
 // — -1 means "one period ago", etc.) day/week/month/biweekly bucket, in
@@ -190,7 +193,9 @@ const BIWEEKLY_ANCHOR = new Date(2026, 6, 26)
 // target month has fewer days (e.g. Aug 31 minus a month isn't a real
 // date in some months) — day 1 always exists, so pinning to it first
 // makes the offset safe regardless of today's date-of-month.
-function startOfPeriod(period, offset = 0) {
+// Exported so src/lib/staff.js can reuse the week/month/biweekly cases for
+// payroll-cadence periods instead of reimplementing this same calendar math.
+export function startOfPeriod(period, offset = 0) {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
   if (period === 'day') d.setDate(d.getDate() + offset)

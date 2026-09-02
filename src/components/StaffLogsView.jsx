@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Clock3, MapPin } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchRentalProperties } from '../lib/rentals'
 import {
@@ -11,8 +11,11 @@ import {
   setStaffActive,
   computeEntryPay,
   workSiteStatus,
+  startOfPayrollPeriod,
+  payrollPeriodLabel,
 } from '../lib/staff'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import IconButton from './IconButton'
 import StaffWorkSitesForm from './StaffWorkSitesForm'
 import StaffPayrollExport from './StaffPayrollExport'
 import StaffProfileForm from './StaffProfileForm'
@@ -47,6 +50,8 @@ export default function StaffLogsView({ me }) {
   const [rentalProperties, setRentalProperties] = useState([])
   const [entries, setEntries] = useState([])
   const [statusFilter, setStatusFilter] = useState('all')
+  const [periodOffset, setPeriodOffset] = useState(0)
+  const [showAllTime, setShowAllTime] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [approvingId, setApprovingId] = useState(null)
@@ -57,9 +62,23 @@ export default function StaffLogsView({ me }) {
   const [exportOpen, setExportOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
 
+  // Drives the period stepper — the first active roster member's own
+  // cadence. There's currently exactly one property manager, so this is a
+  // reasonable simplification; a second staff member with a different
+  // cadence would need this to become per-row instead.
+  const payrollCadence = roster.find((s) => s.active)?.payroll_cadence || 'biweekly'
+
   async function reloadEntries() {
     try {
-      setEntries(await fetchAllTimeEntries({ status: statusFilter === 'all' ? undefined : statusFilter }))
+      const range = showAllTime
+        ? {}
+        : {
+            from: startOfPayrollPeriod(payrollCadence, periodOffset).toISOString(),
+            to: startOfPayrollPeriod(payrollCadence, periodOffset + 1).toISOString(),
+          }
+      setEntries(
+        await fetchAllTimeEntries({ status: statusFilter === 'all' ? undefined : statusFilter, ...range }),
+      )
     } catch (err) {
       setError(err.message)
     }
@@ -96,7 +115,7 @@ export default function StaffLogsView({ me }) {
   useEffect(() => {
     reloadEntries()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter])
+  }, [statusFilter, periodOffset, showAllTime, payrollCadence])
 
   // Requires `alter publication supabase_realtime add table time_entries;`
   // to be run by hand — see the deployment note in schema.sql.
@@ -107,7 +126,7 @@ export default function StaffLogsView({ me }) {
       .subscribe()
     return () => supabase.removeChannel(channel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter])
+  }, [statusFilter, periodOffset, showAllTime, payrollCadence])
 
   async function handleApprove(entryId) {
     setApprovingId(entryId)
@@ -157,6 +176,19 @@ export default function StaffLogsView({ me }) {
   }
 
   const totalPay = entries.reduce((sum, e) => sum + (computeEntryPay(e) || 0), 0)
+  const totalHours = entries.reduce(
+    (sum, e) => sum + (e.clock_out_at ? (new Date(e.clock_out_at) - new Date(e.clock_in_at)) / 3_600_000 : 0),
+    0,
+  )
+  const pendingCount = entries.filter((e) => e.status === 'pending').length
+  const approvedCount = entries.filter((e) => e.status === 'approved').length
+  const activePeriodLabel = showAllTime ? 'all time' : payrollPeriodLabel(payrollCadence, periodOffset)
+  const periodDates = showAllTime
+    ? null
+    : [
+        startOfPayrollPeriod(payrollCadence, periodOffset),
+        new Date(startOfPayrollPeriod(payrollCadence, periodOffset + 1).getTime() - 86400000),
+      ]
   // workSiteStatus() (src/lib/staff.js) is the single source of truth for
   // this now — was duplicated inline here and in StaffLocationsManager.jsx's
   // own StatusBadge, a real drift risk once a 4th state (a pending on-site
@@ -205,9 +237,61 @@ export default function StaffLogsView({ me }) {
         </div>
       </div>
 
-      <div className="flex justify-between rounded-[8px] border border-border bg-card-bg px-4 py-3 text-sm">
-        <span>Total ({statusFilter})</span>
-        <span className="font-semibold">{money(totalPay)}</span>
+      {/* Its own row, visually distinct from the status PeriodTabs above —
+          "this pay period vs last" and "pending vs approved" are two
+          different kinds of filter, so they shouldn't read as one control. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <div className="flex items-center gap-1.5 text-text">
+          <IconButton
+            size="weekNav"
+            onClick={() => setPeriodOffset((o) => o - 1)}
+            disabled={showAllTime}
+            title="Previous period"
+            aria-label="Previous pay period"
+          >
+            <ChevronLeft size={14} />
+          </IconButton>
+          <span className="min-w-[110px] text-center font-semibold whitespace-nowrap">
+            {showAllTime ? 'All time' : payrollPeriodLabel(payrollCadence, periodOffset)}
+          </span>
+          <IconButton
+            size="weekNav"
+            onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))}
+            disabled={showAllTime || periodOffset >= 0}
+            title="Next period"
+            aria-label="Next pay period"
+          >
+            <ChevronRight size={14} />
+          </IconButton>
+        </div>
+        <label className="flex cursor-pointer items-center gap-1.5 text-xs opacity-75">
+          <input
+            type="checkbox"
+            checked={showAllTime}
+            onChange={(event) => {
+              setShowAllTime(event.target.checked)
+              setPeriodOffset(0)
+            }}
+          />
+          Show all time
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-1.5 rounded-[8px] border border-border bg-card-bg px-4 py-3 text-sm">
+        <div className="flex justify-between">
+          <span>Total pay ({statusFilter})</span>
+          <span className="font-semibold">{money(totalPay)}</span>
+        </div>
+        <div className="flex justify-between opacity-80">
+          <span>Total hours</span>
+          <span>{totalHours.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between opacity-80">
+          <span>Pending / Approved</span>
+          <span>
+            {pendingCount} / {approvedCount}
+          </span>
+        </div>
       </div>
 
       {entries.length === 0 ? (
@@ -371,7 +455,14 @@ export default function StaffLogsView({ me }) {
         />
       )}
 
-      {exportOpen && <StaffPayrollExport entries={entries} onClose={() => setExportOpen(false)} />}
+      {exportOpen && (
+        <StaffPayrollExport
+          entries={entries}
+          periodLabel={activePeriodLabel}
+          periodDates={periodDates}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
 
       {editingStaff && (
         <StaffProfileForm

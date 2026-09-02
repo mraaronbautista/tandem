@@ -11,6 +11,7 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
   const [displayName, setDisplayName] = useState(staffMember.display_name)
   const [hourlyRate, setHourlyRate] = useState(staffMember.hourly_rate)
   const [emergencyRate, setEmergencyRate] = useState(staffMember.emergency_rate)
+  const [payrollCadence, setPayrollCadence] = useState(staffMember.payroll_cadence || 'biweekly')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -23,6 +24,7 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
         display_name: displayName.trim(),
         hourly_rate: Number(hourlyRate),
         emergency_rate: Number(emergencyRate),
+        payroll_cadence: payrollCadence,
       })
       onSaved(saved)
     } catch (err) {
@@ -77,6 +79,20 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
         </div>
 
         <p className="text-xs opacity-65">Rate changes apply only to future clock-ins. Past shifts keep their original rate.</p>
+
+        <label>
+          Payroll cadence
+          <select
+            value={payrollCadence}
+            onChange={(event) => setPayrollCadence(event.target.value)}
+            className={FIELD_CLASS}
+          >
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="twice_monthly">Twice a month</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </label>
 
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>

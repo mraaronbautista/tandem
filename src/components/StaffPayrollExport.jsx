@@ -42,14 +42,21 @@ function buildCsv(entries) {
   return [header.join(','), ...rows].join('\n')
 }
 
-export default function StaffPayrollExport({ entries, onClose }) {
+// periodDates: [start, end] Date pair for the active payroll period, or null
+// when "Show all time" is on — drives the filename so a payroll CSV is
+// named by the pay period it actually covers, more useful for
+// recordkeeping than just today's export date.
+export default function StaffPayrollExport({ entries, periodLabel, periodDates, onClose }) {
   function handleExport() {
     const csv = buildCsv(entries)
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `tandem-staff-hours-${new Date().toISOString().slice(0, 10)}.csv`
+    const filenameDate = periodDates
+      ? `${periodDates[0].toISOString().slice(0, 10)}-to-${periodDates[1].toISOString().slice(0, 10)}`
+      : new Date().toISOString().slice(0, 10)
+    a.download = `tandem-staff-hours-${filenameDate}.csv`
     a.click()
     URL.revokeObjectURL(url)
     onClose()
@@ -62,7 +69,8 @@ export default function StaffPayrollExport({ entries, onClose }) {
 
         <p>
           Downloads a CSV of the {entries.length} entr{entries.length === 1 ? 'y' : 'ies'} currently shown (matching
-          the active status filter) — staff name, site, clock in/out, hours, rate, pay, and approval status.
+          the active status filter and {periodLabel || 'all time'}) — staff name, site, clock in/out, hours, rate,
+          pay, and approval status.
         </p>
 
         <SubmissionActions>
