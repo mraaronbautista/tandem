@@ -382,6 +382,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           of whether one is nested inside the other. */}
       <div onTouchStart={handleMonthSwipeStart} onTouchEnd={handleMonthSwipeEnd}>
         <RentalCalendar
+          ref={calendarRef}
           properties={properties}
           bookings={bookings}
           monthDate={monthDate}
