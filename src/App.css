@@ -3636,7 +3636,7 @@ label.new-task-checkbox-label {
 .rental-overview-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   /* <li> normally still gets a marker box even inside a flex/grid
      parent — blockification changes layout mode, not marker
@@ -3662,15 +3662,15 @@ label.new-task-checkbox-label {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 7px;
   flex: 1;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 12px 14px;
   /* Only the status line reserves room for the absolutely-positioned
      negotiation control (see .rental-overview-status-line). Keeping the
      card's own right padding normal lets the monthly rate sit at the
      true top-right edge. */
-  padding-right: 12px;
+  padding-right: 14px;
   position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -3727,7 +3727,7 @@ label.new-task-checkbox-label {
 .rental-overview-status-line {
   min-width: 0;
   max-width: 100%;
-  padding-right: 72px;
+  padding-right: 80px;
   overflow: hidden;
   overflow-wrap: anywhere;
   display: -webkit-box;
@@ -3757,10 +3757,9 @@ label.new-task-checkbox-label {
 
 /* Lives inside .rental-overview-item now (see the comment in
    RentalOverview.jsx for why that card is a <div role="button"> rather
-   than a real <button> to allow this) — pinned to the card's right edge,
-   vertically centered against the *whole* card via top: 50% +
-   translateY(-50%) regardless of how many lines the status text below
-   wraps to, so toggling it never adds a line or changes the card's own
+   than a real <button> to allow this). The live Tailwind version is
+   pinned to the lower-right, keeping it visually separate from the rate
+   on the top line while still never adding a line or changing the card's
    height. A circle showing just 🤝 at rest; grows into a pill with
    "In talks" once on (the same element is both the control and the
    display, not a separate toggle + badge) — filled amber, since the
@@ -3873,7 +3872,7 @@ label.new-task-checkbox-label {
      match whichever one happens to be tallest, even when its own two
      lines of text didn't need the extra space. */
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
 }
 
 /* The actual flex item here is the <li> (a plain, unstyled element in
@@ -3887,20 +3886,20 @@ label.new-task-checkbox-label {
    still lets a lone leftover card on the final row stretch to fill the
    full width instead of sitting stranded at half width. */
 .rental-calendar-toolbar .rental-overview-list > li {
-  flex: 1 1 calc(50% - 4px);
+  flex: 1 1 calc(50% - 5px);
   min-width: 0;
 }
 
 .rental-calendar-toolbar .rental-overview-item {
   width: 100%;
-  height: 82px;
+  height: 90px;
   overflow: hidden;
-  padding: 8px 10px;
+  padding: 10px 12px;
   /* The base .rental-overview-item rule's own padding-right (reserved
      for .rental-negotiating-toggle) is a shorthand override away from
      being silently reset back to 10px by the padding above — restated
      here so the toggle doesn't overlap this compact card's text too. */
-  padding-right: 10px;
+  padding-right: 12px;
   font-size: 12px;
 }
 

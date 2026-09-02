@@ -74,10 +74,9 @@ export default function RentalOverview({
 
         // Absolutely positioned within the card (.rental-overview-item
         // is position: relative) rather than sitting in normal flow —
-        // pinned to the card's right edge, vertically centered against
-        // the *whole* card regardless of how many lines its status text
-        // wraps to, so toggling it never changes the card's own height
-        // the way inserting a badge as another stacked line would.
+        // pinned to the card's lower-right corner, clearly separated
+        // from the monthly price on the top line. It stays out of normal
+        // flow so toggling it never changes the card's own height.
         // Icon-only at rest, grows to include "In talks" once on — same
         // element serves as both the control and the display, rather
         // than a separate read-only badge plus a separate toggle.
@@ -93,7 +92,7 @@ export default function RentalOverview({
         // already use for this exact shape of problem (Tailwind can't
         // combine two transition-* utilities with different durations on
         // one element).
-        const negotiatingToggleClasses = `absolute right-2 top-1/2 flex h-6 min-w-6 -translate-y-1/2 cursor-pointer items-center justify-center gap-1 rounded-full border py-0 text-[11px] font-semibold leading-none whitespace-nowrap transition-all duration-[120ms] ease-tactile active:scale-90 ${
+        const negotiatingToggleClasses = `absolute right-3 bottom-2.5 flex h-6 min-w-6 cursor-pointer items-center justify-center gap-1 rounded-full border py-0 text-[11px] font-semibold leading-none whitespace-nowrap transition-all duration-[120ms] ease-tactile active:scale-90 ${
           p.in_negotiation
             ? 'border-[#e0a83e] bg-[#e0a83e] px-2.5 text-white opacity-100'
             : 'border-border bg-card-bg px-[5px] text-text-h opacity-45'
