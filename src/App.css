@@ -1011,9 +1011,8 @@ select:focus-visible {
   opacity: 0.55;
 }
 
-/* A task whose real duration got capped for layout purposes (see
-   MAX_BLOCK_MINUTES in DayTimeline.jsx — a multi-day task rendered at
-   its true linear scale would otherwise dwarf the rest of the day) —
+/* A task whose real duration is compressed into the agenda's fixed card
+   height (see TASK_BLOCK_HEIGHT in DayTimeline.jsx) —
    dashed instead of solid on every edge but the left (which already
    carries the priority color) marks the box itself as a deliberately
    cut-off view, not the task's real full extent. blockTimeLabel already

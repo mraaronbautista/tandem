@@ -64,13 +64,10 @@ const GAP_LABEL_MIN_HEIGHT = 22
 // same stack that don't clear that bar still render directly flush
 // against each other, no label, same as any other back-to-back pair.
 const OVERLAP_LABEL_HEIGHT = 22
-// Keep the day useful as an at-a-glance agenda rather than letting one
-// long shift consume the viewport. Durations stay proportional through
-// 90 minutes; anything longer gets the same compact 225px footprint.
-// The real start/end time remains visible in blockTimeLabel, and the
-// dashed edge (see .day-timeline-block-truncated) makes the compression
-// explicit. This also covers multi-day tasks supported by TaskForm.
-const MAX_BLOCK_MINUTES = 90
+// Task cards are deliberately fixed-height. The timeline is an agenda
+// overview, so elapsed hours belong in the start/end label rather than
+// being represented as empty vertical space inside the card.
+const TASK_BLOCK_HEIGHT = MIN_BLOCK_HEIGHT
 
 // "Completed 10:00 PM" for a finished task — always the real
 // completed_at instant, read straight off the task rather than derived
@@ -94,8 +91,8 @@ const MAX_BLOCK_MINUTES = 90
 // completed_at in the viewer's own zone instead — that's when it was
 // actually finished in the real world, not tied to whatever zone the
 // original due time was set in.
-// A task whose real duration (not the capped/truncated render height —
-// see MAX_BLOCK_MINUTES above) crosses into another calendar day in its
+// A task whose real duration (not its compact render height) crosses
+// into another calendar day in its
 // own due_timezone needs the end's date stated too, not just its time —
 // "9:00 AM–9:00 AM" for a 2-day task is actively misleading, since it
 // reads as a same-day span. Compared in due_timezone, matching every
@@ -261,12 +258,8 @@ function layoutClusters(clusters, overlappingIds) {
     }
 
     const clusterPxStart = cursor
-    // Hour ticks only inside a *single*-item cluster — a multi-item one
-    // has no one real "this pixel = this clock time" mapping any more
-    // (several tasks' real times are compressed/stacked into one run of
-    // pixels), so a tick floating inside a stack would be misleading
-    // rather than helpful.
-    if (cluster.length === 1) pushHourTicks(cluster[0].start, cluster[0].clusterEnd, clusterPxStart)
+    // Task cards are fixed-height, so there is intentionally no hourly
+    // grid inside them. Their start/end label carries the exact timing.
 
     let stackTop = clusterPxStart
     let clusterRealEnd = cluster[0].end
@@ -295,7 +288,7 @@ function layoutClusters(clusters, overlappingIds) {
         overlapLabels.push({ top: stackTop, height: OVERLAP_LABEL_HEIGHT })
         stackTop += OVERLAP_LABEL_HEIGHT
       }
-      const height = ((item.clusterEnd.getTime() - item.start.getTime()) / 60000) * PX_PER_MINUTE
+      const height = TASK_BLOCK_HEIGHT
       positioned.push({ ...item, top: stackTop, height })
       stackTop += height
       if (item.end > clusterRealEnd) clusterRealEnd = item.end
@@ -361,19 +354,13 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
       // blockTimeLabel reads that straight off `task`, not `start`.
       const start = wallClockDate(task.due_date, displayTimezone)
       const end = new Date(start.getTime() + (task.duration_minutes || POINT_TASK_MINUTES) * 60000)
-      // Layout (position/height/which tasks cluster together) is driven
-      // by cappedEnd, not the real end — see MAX_BLOCK_MINUTES above. The
-      // real `end` is kept alongside purely for blockTimeLabel's text,
-      // which states it in full regardless of how tall the block itself
-      // renders.
-      const maxEnd = new Date(start.getTime() + MAX_BLOCK_MINUTES * 60000)
-      const cappedEnd = end > maxEnd ? maxEnd : end
-      const truncated = end > maxEnd
       // The floor every block actually renders at (MIN_BLOCK_HEIGHT),
       // expressed as a Date so clustering/window logic can compare it
-      // against other tasks' real times directly — see assignColumns.
+      // against other tasks' real times directly. Real duration still
+      // drives overlap grouping even though every card has one height.
       const minEnd = new Date(start.getTime() + (MIN_BLOCK_HEIGHT / PX_PER_MINUTE) * 60000)
-      const clusterEnd = cappedEnd > minEnd ? cappedEnd : minEnd
+      const clusterEnd = end > minEnd ? end : minEnd
+      const truncated = Boolean(task.duration_minutes) && end > minEnd
       return { task, start, end, truncated, clusterEnd }
     })
 
