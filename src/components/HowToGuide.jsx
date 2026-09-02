@@ -21,7 +21,7 @@ const SECTIONS = [
     title: 'Today',
     items: [
       'The home tab — a daily planner grouped into All Day, Overdue, and the selected day\'s tasks.',
-      'Day view lays tasks out on a real time-scaled timeline: position and height reflect actual time and duration, and two tasks that overlap render side-by-side so a real conflict is obvious at a glance, not just a badge you might miss.',
+      'Day view lays tasks out on a real time-scaled timeline: position and height reflect actual time and duration, and overlapping tasks stack with a clear conflict label.',
       'Tip: a big empty gap between tasks (say, one at 6am and the next at 9pm) automatically collapses into a small marker instead of stretching the whole day out, so a light day doesn\'t turn into endless scrolling.',
       'Tap the "Month Year" label up top to jump straight to any date via the calendar popover; the ‹ › arrows next to it step by week.',
       'Switch whose tasks you\'re viewing with the All / Ada / Aaron picker.',
@@ -45,7 +45,7 @@ const SECTIONS = [
       'Comments: ask a question or leave a note on any task — either of you can comment regardless of who created or is assigned it, and files (PDFs, docs, photos, anything) can go on the message itself.',
       'Marking a task done lets you attach a completion note and files as proof of what was actually delivered.',
       'Tip: an "⚠ Overlap" badge means two of your own timed tasks collide — Ada and Aaron having things at the same time isn\'t flagged, since that\'s not a real conflict.',
-      'A 💬 badge on a task\'s collapsed row means there\'s a question or comment waiting on your reply — open the task to answer it, or check the Inbox tab to see every open one across all tasks in one place.',
+      'A 💬 badge on a task\'s collapsed row means there\'s a question or comment waiting on your reply — open the task to answer it, or check Board → Inbox to see every open one across all tasks in one place.',
     ],
   },
   {
@@ -64,7 +64,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'Cork Board',
+    title: 'Board — Pins',
     items: [
       'Pin a task or note with no deadline, so a stray idea doesn\'t get lost.',
       'Tap + while on Board to switch to Pins and focus the new-pin box.',
@@ -74,7 +74,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'Inbox',
+    title: 'Board — Inbox',
     items: [
       'Collects every open question or comment across all tasks in one place — the only reliable way to catch a stray 💬 without stumbling onto that specific task first.',
       '"New" — unanswered questions directed at you, shown first. "Resolved" — your own questions that got closed out, either with an actual reply or dismissed with "No reply needed".',
@@ -205,7 +205,7 @@ const FAQS = [
   {
     title: "What does the 💬 badge on a task mean?",
     items: [
-      'There\'s an unanswered question or comment on that task directed at you. Open the task to reply, or check the Inbox tab to see every one of these across every task in one place instead of hunting for the badge.',
+      'There\'s an unanswered question or comment on that task directed at you. Open the task to reply, or check Board → Inbox to see every one across all tasks.',
     ],
   },
   {
@@ -215,15 +215,21 @@ const FAQS = [
     ],
   },
   {
-    title: "I pinned something on the Cork Board — can Aaron see it?",
+    title: "I pinned something under Board — can Aaron see it?",
     items: [
       'Not unless you share it. New pins are private by default; toggle "Share to both boards" to let Aaron see it too. Even shared, only you can edit or unpin it — he can view and comment, not manage it.',
     ],
   },
   {
-    title: 'What does "Focus today" do on a Cork Board pin?',
+    title: 'What does "Focus today" do on a Board pin?',
     items: [
       'It turns that pin into a real task due today, assigned to whoever tapped the button — not necessarily the pin\'s original author, since claiming a shared idea as today\'s work is the point. The pin itself stays on the board untouched, so you can promote it again later if needed.',
+    ],
+  },
+  {
+    title: 'Where can I find the Vault?',
+    items: [
+      'Open Settings (⚙️), then tap Vault. It moved out of the + button because Vault is something you browse and unlock, not a new item you create.',
     ],
   },
   {
@@ -303,7 +309,7 @@ const FAQS = [
   {
     title: 'How do I change which timezone new tasks default to?',
     items: [
-      'Settings (⚙️) → Default timezone. Once set, it\'s used automatically for any new task, priority, or Cork Board pin you create — Aaron bulk-adding your schedule for you uses your saved zone too, not his device\'s.',
+      'Settings (⚙️) → Default timezone. It controls how task times and calendar dates are displayed as well as the timezone used for new tasks, priorities, and Board pins. Aaron bulk-adding your schedule for you still uses your saved zone rather than his device\'s.',
     ],
   },
 ]
