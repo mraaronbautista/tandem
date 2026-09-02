@@ -185,7 +185,7 @@ function dueSummaryLabel(form) {
   return `${dateLabel} · ${timeLabel}${endLabel ? `–${endLabel}` : ''} · ${zoneLabel}`
 }
 
-export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true }) {
+export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true, header = null }) {
   // Multiple TaskForm instances can be mounted at once (each TaskRow
   // owns its own `editing` state independently), so the title/notes
   // label ids below need to be unique per instance, not a fixed string.
@@ -294,6 +294,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
 
   return (
     <form className="new-task-form" onSubmit={handleSubmit}>
+      {header}
       <div className="flex items-center gap-2">
         {/* Icon leads the title, same as Structured's layout — tapping it
             opens TaskIconPicker.jsx regardless of whether the icon shown

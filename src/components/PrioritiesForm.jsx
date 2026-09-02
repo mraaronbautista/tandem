@@ -33,7 +33,7 @@ function todayDateString() {
 // "Last set" below is read-only reference only, never pre-filled into the
 // editable list — otherwise reopening this and hitting Save would
 // recreate a task for every old item, not just anything new.
-export default function PrioritiesForm({ me, memberName, onClose }) {
+export default function PrioritiesForm({ me, memberName, onClose, embedded = false, header = null }) {
   const [period, setPeriod] = useState('day')
   const [latest, setLatest] = useState(null)
   // Keyed per period so switching the Day/Week/Month tab never discards
@@ -97,9 +97,9 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
   const current = latest?.[period]
   const lastLines = current?.body ? current.body.split('\n').filter((line) => line.trim()) : []
 
-  return (
-    <Modal onClose={onClose}>
+  const content = (
       <ModalCard as="form" onSubmit={handleSubmit}>
+        {header}
         <h2>Priorities</h2>
 
         <PeriodTabs>
@@ -137,6 +137,7 @@ export default function PrioritiesForm({ me, memberName, onClose }) {
           </SubmissionButton>
         </SubmissionActions>
       </ModalCard>
-    </Modal>
   )
+
+  return embedded ? content : <Modal onClose={onClose}>{content}</Modal>
 }

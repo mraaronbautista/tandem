@@ -44,7 +44,7 @@ import RentalPropertyForm from './RentalPropertyForm'
 // (.rental-calendar-toolbar .rental-overview-list) is tuned for a wide
 // row, not a narrow column, so the two layouts solve the same redundancy
 // in different ways on purpose.
-export default function RentalsView({ me, company }) {
+export default function RentalsView({ me, company, registerQuickAdd }) {
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
@@ -69,6 +69,12 @@ export default function RentalsView({ me, company }) {
   // here, and both layouts need to reach it.
   const [propertyFormOpen, setPropertyFormOpen] = useState(false)
   const [editingProperty, setEditingProperty] = useState(null)
+
+  useEffect(() => {
+    if (!registerQuickAdd) return undefined
+    registerQuickAdd(() => calendarRef.current?.openAddBooking())
+    return () => registerQuickAdd(null)
+  }, [registerQuickAdd])
 
   function openNewProperty() {
     setEditingProperty(null)

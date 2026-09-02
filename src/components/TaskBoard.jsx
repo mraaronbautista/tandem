@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { GanttChart, Home, FileText, LayoutGrid, Timer, Target, ClipboardList, NotebookPen, Lock, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { GanttChart, Home, FileText, LayoutGrid, Timer, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
@@ -26,7 +26,7 @@ import TaskRow from './TaskRow'
 import TimelineRow from './TimelineRow'
 import DayTimeline from './DayTimeline'
 import AllDayRow from './AllDayRow'
-import NewTaskForm from './NewTaskForm'
+import NewTaskForm, { FloatingAddButton } from './NewTaskForm'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import DateStrip from './DateStrip'
@@ -35,8 +35,6 @@ import PullToRefresh from './PullToRefresh'
 import WorkingStatusToggle from './WorkingStatusToggle'
 import EndOfDayReportForm from './EndOfDayReportForm'
 import EodReportsList from './EodReportsList'
-import PrioritiesForm from './PrioritiesForm'
-import BulkAddTasksForm from './BulkAddTasksForm'
 import SettingsMenu from './SettingsMenu'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
@@ -142,11 +140,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
   const [reportOpen, setReportOpen] = useState(false)
-  const [prioritiesOpen, setPrioritiesOpen] = useState(false)
-  const [bulkAddOpen, setBulkAddOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
+  const quickAddHandlerRef = useRef(null)
+  const registerQuickAdd = useCallback((handler) => {
+    quickAddHandlerRef.current = handler
+  }, [])
   // Which rental company the Rentals tab is browsing — Awa Rentalz and
   // Azu Rentals are two separate sets of units/bookings/financials (see
   // rental_company enum in schema.sql), switched via the header's own
@@ -577,31 +577,31 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   const hasUnseenInbox = hasUnseenInboxItems(tasks, session.user.id, inboxLastViewedAt)
 
-  // Folded into the "+" FAB as a speed-dial rather than separate header
-  // icons — that's what got cluttered as these got added one by one.
-  // Rentals and Reports moved out to the persistent tab bar/sidebar (see
-  // TABS above) since they're places you go browse, not one-shot actions
-  // like the ones still here. Nudge moved back out to a standalone header
-  // icon (see .header-actions below) — unlike these, it's reached for
-  // often enough, and is time-sensitive enough in the moment, that
-  // burying it two taps deep behind the FAB menu was actual friction, not
-  // just tidiness; being one specific single-icon exception (Ada-only, so
-  // Aaron's header is untouched) doesn't reintroduce the clutter this
-  // speed-dial was built to avoid.
-  // Ordered by roughly how often you'd actually reach for each one, not
-  // alphabetically or by when it was added — Bulk add/Priorities are
-  // routine task-management, Submit report is routine-ish but
-  // person-specific, and Vault is both the rarest to open and the most
-  // sensitive, so it sits furthest from an accidental tap at the top of
-  // the speed-dial rather than sandwiched in the middle.
-  const quickActions = [
-    { key: 'bulkAdd', icon: <ClipboardList size={16} />, label: 'Bulk add / edit tasks', onSelect: () => setBulkAddOpen(true) },
-    { key: 'priorities', icon: <Target size={16} />, label: 'Priorities', onSelect: () => setPrioritiesOpen(true) },
-    ...(me?.display_name === 'Aaron'
-      ? [{ key: 'report', icon: <NotebookPen size={16} />, label: 'Submit report', onSelect: () => setReportOpen(true) }]
-      : []),
-    { key: 'vault', icon: <Lock size={16} />, label: 'Vault', onSelect: () => setVaultOpen(true) },
-  ]
+  function renderContextAdd(variant) {
+    if (activeTab === 'today') {
+      return (
+        <NewTaskForm
+          variant={variant}
+          onCreate={handleCreate}
+          defaultWho={defaultWho}
+          selectedDate={selectedDate}
+          me={me}
+          members={members}
+          tasks={tasks}
+          onTasksChanged={reload}
+          memberName={memberName}
+        />
+      )
+    }
+    if (activeTab === 'reports' && me?.display_name === 'Aaron') {
+      return <FloatingAddButton variant={variant} onClick={() => setReportOpen(true)} label="Submit report" />
+    }
+    if (activeTab === 'rentals' || activeTab === 'board') {
+      const label = activeTab === 'rentals' ? 'Add booking' : 'Add pin'
+      return <FloatingAddButton variant={variant} onClick={() => quickAddHandlerRef.current?.()} label={label} />
+    }
+    return null
+  }
 
   // Renders the same TABS/activeTab/badge data through NavItem.jsx at
   // either mount size — MobileNav's capsule (size="mobile") and the
@@ -626,13 +626,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     <div className="max-w-[640px] mx-auto pt-6 px-4 pb-[calc(110px+env(safe-area-inset-bottom,0px))] md:max-w-[1360px] md:p-6">
       {!isDesktop && (
         <MobileNav navButtons={renderNavButtons('mobile')}>
-          <NewTaskForm
-            variant="mobile"
-            onCreate={handleCreate}
-            defaultWho={defaultWho}
-            selectedDate={selectedDate}
-            extraActions={quickActions}
-          />
+          {renderContextAdd('mobile')}
         </MobileNav>
       )}
 
@@ -713,7 +707,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
           </div>
         </header>
 
-        {activeTab === 'rentals' && <RentalsView me={me} company={rentalsCompany} />}
+        {activeTab === 'rentals' && <RentalsView me={me} company={rentalsCompany} registerQuickAdd={registerQuickAdd} />}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
         {activeTab === 'board' && (
           <BoardView
@@ -725,6 +719,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
             onUpdate={handleUpdate}
             lastViewedAt={inboxLastViewedAt}
             hasUnseenInbox={hasUnseenInbox}
+            registerQuickAdd={registerQuickAdd}
           />
         )}
         {activeTab === 'staff' && <StaffLogsView me={me} />}
@@ -906,9 +901,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
           desktop-only now, so there's exactly one mounted FAB/menu/modal
           at a time rather than two independent instances competing on
           mobile. */}
-      {isDesktop && (
-        <NewTaskForm onCreate={handleCreate} defaultWho={defaultWho} selectedDate={selectedDate} extraActions={quickActions} />
-      )}
+      {isDesktop && renderContextAdd('desktop')}
 
       {datePickerOpen && (
         <DatePickerModal
@@ -972,24 +965,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} onClose={() => setReportOpen(false)} />}
 
-      {prioritiesOpen && (
-        <PrioritiesForm me={me} memberName={memberName} onClose={() => setPrioritiesOpen(false)} />
-      )}
-
-      {bulkAddOpen && (
-        <BulkAddTasksForm
-          me={me}
-          members={members}
-          tasks={tasks}
-          defaultWho={defaultWho}
-          onClose={() => setBulkAddOpen(false)}
-          onCreated={() => {
-            setBulkAddOpen(false)
-            reload()
-          }}
-        />
-      )}
-
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
 
       {settingsOpen && (
@@ -1009,6 +984,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
           memberName={me?.display_name}
           defaultTimezone={me?.default_timezone}
           onChangeDefaultTimezone={handleChangeDefaultTimezone}
+          onOpenVault={() => {
+            setSettingsOpen(false)
+            setVaultOpen(true)
+          }}
         />
       )}
     </div>

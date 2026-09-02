@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Target, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment } from '../lib/corkNotes'
@@ -29,7 +29,7 @@ function todayDateString() {
 // cork_notes in schema.sql) — a pin defaults to private, and putting it
 // on the other person's board is an explicit opt-in toggle, not the
 // default a shared task board would otherwise suggest.
-export default function CorkBoardView({ me, memberName }) {
+export default function CorkBoardView({ me, memberName, focusPinRequest = 0 }) {
   const [notes, setNotes] = useState(null)
   const [error, setError] = useState('')
   const [body, setBody] = useState('')
@@ -50,6 +50,13 @@ export default function CorkBoardView({ me, memberName }) {
   // different pins shouldn't clobber each other's in-progress draft.
   const [commentDrafts, setCommentDrafts] = useState({})
   const [postingCommentId, setPostingCommentId] = useState(null)
+  const composerRef = useRef(null)
+
+  useEffect(() => {
+    if (!focusPinRequest) return
+    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    composerRef.current?.focus()
+  }, [focusPinRequest])
 
   function reload() {
     fetchCorkNotes()
@@ -220,6 +227,7 @@ export default function CorkBoardView({ me, memberName }) {
 
       <form className={composeClasses} onSubmit={handlePost}>
         <textarea
+          ref={composerRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Pin a task or note…"

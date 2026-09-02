@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pin, Inbox as InboxIcon } from 'lucide-react'
 import CorkBoardView from './CorkBoardView'
 import InboxView from './InboxView'
@@ -10,11 +10,21 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 // logic changes; this just decides which of the two already-existing,
 // unmodified components renders, the same way TaskBoard.jsx's own
 // activeTab switch already does for every other tab.
-export default function BoardView({ me, memberName, tasks, meId, onSelectTask, onUpdate, lastViewedAt, hasUnseenInbox }) {
+export default function BoardView({ me, memberName, tasks, meId, onSelectTask, onUpdate, lastViewedAt, hasUnseenInbox, registerQuickAdd }) {
   // Inbox carried the nav's unread badge before this merge — opening
   // Board should land on whatever the badge was pointing at, not bury it
   // behind Pins by default.
   const [section, setSection] = useState(hasUnseenInbox ? 'inbox' : 'pins')
+  const [focusPinRequest, setFocusPinRequest] = useState(0)
+
+  useEffect(() => {
+    if (!registerQuickAdd) return undefined
+    registerQuickAdd(() => {
+      setSection('pins')
+      setFocusPinRequest((value) => value + 1)
+    })
+    return () => registerQuickAdd(null)
+  }, [registerQuickAdd])
 
   // Self-contained, not threaded down from TaskBoard.jsx — same
   // "self-contained tab component" pattern RentalsView.jsx's own
@@ -65,7 +75,7 @@ export default function BoardView({ me, memberName, tasks, meId, onSelectTask, o
 
       <div onTouchStart={handleSwipeStart} onTouchEnd={handleSwipeEnd}>
         {section === 'pins' ? (
-          <CorkBoardView me={me} memberName={memberName} />
+          <CorkBoardView me={me} memberName={memberName} focusPinRequest={focusPinRequest} />
         ) : (
           <InboxView
             tasks={tasks}

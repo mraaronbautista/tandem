@@ -13,8 +13,8 @@ const SECTIONS = [
     title: 'Getting around',
     items: [
       'Five tabs — Timeline, Rentals, Reports, Board, and Staff. On a phone they sit in a bar along the bottom; on a tablet or wider screen they fold into the top header next to Settings instead, since there\'s no separate sidebar.',
-      'The + button (bottom right) is for one-shot actions, not another tab you browse — Priorities, Bulk add/edit tasks, Vault, plus Submit report (Aaron only) or Nudge (Ada only).',
-      'The ⚙️ icon opens Settings: who\'s signed in, notifications, theme, default timezone, and this guide.',
+      'The + button changes with the screen you are on: task tools on Today, add booking on Rentals, submit report on Reports (Aaron only), and add pin on Board. Staff has no + because it has no single obvious add action.',
+      'The ⚙️ icon opens Settings: who\'s signed in, notifications, theme, default timezone, Vault, and this guide.',
     ],
   },
   {
@@ -31,7 +31,7 @@ const SECTIONS = [
   {
     title: 'Adding a task',
     items: [
-      'Tap the + button to open the new task form.',
+      'Tap + to open Task Tools. New task opens first; use the pill tabs at the top to switch to Bulk or Priorities.',
       'A new task defaults to being due "now," rounded up to the next half hour — not a fixed hour unrelated to when you actually added it.',
       'Tip: check "All day" for something with no exact time. You can still give it a specific date (e.g. "call the vet, sometime Tuesday") so it shows up that day without pretending to have a time nobody\'s going to keep — or leave the date blank too and it just floats until done.',
       'Add a duration to get a time range; leave it blank for a plain point-in-time deadline.',
@@ -54,6 +54,7 @@ const SECTIONS = [
       'Tracks occupancy and finances for a rental business — tap the company name at the top to switch between Awa Rentalz and Azu Rentals, each with its own separate units, bookings, and financials.',
       'Layout adapts to screen width: on a phone, switch between Calendar / Financials / Overview with tabs, one panel at a time. On a tablet or desktop-width screen, all three show together instead — Calendar and Overview share the main column, Financials stays visible in a column of its own — and you switch units by tapping one in Overview or the calendar\'s own unit-nav arrows rather than tabs.',
       'Calendar: tap a booked day to view, edit, or delete that booking. A striped cell is a pending request, not yet confirmed — it still blocks the dates, but doesn\'t count toward revenue until you confirm it.',
+      'Tap + while on Rentals to open Add booking directly.',
       'A booking can have more than one tenant in the same unit. Use “Add tenant” in Add/Edit booking instead of creating overlapping bookings or combining everybody into one Guest name field.',
       'Tip: record where a booking came from (Airbnb, Furnished Finder, Referral, etc.) when adding or editing it — Financials tallies revenue by source every month, so you can actually see which platform is worth the effort instead of guessing.',
       'Financials: revenue is recognized by upfront charge cycle (roughly every 30 days from check-in), not day-by-day occupancy — a guest still there in month two doesn\'t get double-counted.',
@@ -66,6 +67,7 @@ const SECTIONS = [
     title: 'Cork Board',
     items: [
       'Pin a task or note with no deadline, so a stray idea doesn\'t get lost.',
+      'Tap + while on Board to switch to Pins and focus the new-pin box.',
       'Private by default — toggle "Share to both boards" to let the other person see it too.',
       'Tip: "Focus today" turns any pin (yours, or shared with you) into a real task due today — so a good idea from last week can actually become something you do.',
       'Only the original author can edit or unpin a pin, even once shared — the other person can see and comment on it, not manage it.',
@@ -86,6 +88,7 @@ const SECTIONS = [
     title: 'Reports',
     items: [
       'Aaron submits end-of-day/week/month reports; Ada can read them all, grouped by month.',
+      'For Aaron, + on the Reports screen opens Submit report directly.',
       'The auto-filled draft only lists what you completed since your last submission for that bucket, not the whole day again, so reopening it doesn\'t duplicate old entries.',
       'Tip: minutes logged is overwritten each time, not added up — match it to your actual time tracker\'s running total rather than trying to sum sessions yourself.',
       'Any files attached as proof of a completed task carry through into the report automatically.',
@@ -106,15 +109,16 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'The + menu',
+    title: 'The contextual + button',
     items: [
+      'On Today, + opens Task Tools with New task / Bulk / Priorities tabs. Every fresh open starts on New task.',
       'Priorities: shared planning goals for the day/week/month — each bullet also creates a real task, so setting a priority isn\'t just a note that gets forgotten. Day priorities are due today; week/month ones are All Day and stick around until done.',
       'Bulk add/edit tasks: paste in a whole schedule at once on the Add tab instead of one task at a time. One line per task — "date – description" (e.g. "Aug 30 – Renew the lease"), with an optional time or time range right before the dash for anything that needs one ("Aug 28 8am-9am – Plumber at 1072 Rachel"). The Edit tab picks from your existing tasks — filterable to just Ada\'s, just Aaron\'s, or all — to retitle, reassign, re-timezone, reschedule, or delete a batch together.',
       'Tip: the Edit tab\'s Date/Time field has two modes — "Shift by" moves each selected task from its own current date/time by an amount you set (e.g. -1 day for a batch that all needs to move a day earlier), while "Set to" pins every selected task to one exact date and time, dateless ones included.',
       'Tip: "Export tasks" (top-right of that same Bulk add/edit screen) dumps every task\'s title, date, time, and timezone as plain text — filterable, and with a toggle for completed tasks — so you can copy or download it to double-check the whole schedule somewhere else at a glance.',
-      'Vault: a shared, encrypted password manager. The master password is the same for both of you and has to be re-entered every time you open it — it\'s never saved on the device.',
+      'Vault is in Settings rather than under + because it is something you open and browse, not something you add.',
       'Tip: there\'s no password reset for the vault — if the master password is forgotten, "Reset vault" wipes everything, so keep it somewhere safe.',
-      'Submit report (Aaron only) / Nudge (Ada only) — asymmetric on purpose, see Notifications below for why.',
+      'Submit report is the contextual + action on Reports for Aaron. Nudge stays as Ada\'s hand icon in the header.',
     ],
   },
   {
@@ -146,25 +150,25 @@ const FAQS = [
     title: "Why don't I have a \"Submit report\" option?",
     items: [
       'End-of-day/week/month reports are Aaron\'s log of what he worked on — you can read every one of them, grouped by month, from the Reports tab. There\'s nothing for you to submit there.',
-      'Tip: if you want to flag something to Aaron rather than read a past report, use Nudge in the + menu instead — that one\'s Ada-only.',
+      'Tip: if you want to flag something to Aaron rather than read a past report, use the hand-shaped Nudge button in the header — that one\'s Ada-only.',
     ],
   },
   {
     title: 'How do I remind Aaron about something?',
     items: [
-      'Tap + then Nudge — it sends Aaron a push notification directly. It\'s the Ada-side counterpart to Aaron\'s Submit report action.',
+      'Tap the hand-shaped Nudge button in the header — it sends Aaron a push notification directly.',
     ],
   },
   {
     title: 'I checked off an overdue task and it vanished from Overdue — did it delete?',
     items: [
-      'No — it moved to Today\'s list. A completed task is grouped by when you actually finished it, not its original due date, so a task overdue from last week that you finish today shows up under Today (still with its original due time and a small "Completed" tag) rather than staying buried in Overdue or disappearing.',
+      'No — it remains on the date where it was scheduled. The separate “completed today” indicator gives credit for what you finished today without relocating the original task.',
     ],
   },
   {
     title: "Why does a task's time look different than what I typed?",
     items: [
-      'It shouldn\'t — a task always displays in whatever timezone it was set in (shown as a small badge like "CT" or "PHT" next to the time), not converted to whichever of you happens to be looking at it. If the badge shows the zone you expect, the time next to it is correct as entered.',
+      'The board converts task times into your Default timezone from Settings. Changing CT to PHT can move a task to a different hour or calendar day; the small badge states the timezone currently being displayed.',
       'Tip: if a whole batch of tasks came out in the wrong zone (e.g. you pasted Aaron\'s schedule using your own zone by mistake), Bulk edit → Time zone can reinterpret the same wall-clock time in the correct zone for all of them at once, instead of fixing each one by hand.',
     ],
   },
@@ -189,13 +193,13 @@ const FAQS = [
   {
     title: 'How do I add my whole week\'s schedule at once instead of one task at a time?',
     items: [
-      'Tap + → Bulk add/edit tasks (the Add tab). One line per task: "date – description", with an optional time or time range right before the dash for anything that needs one ("Aug 28 8am-9am – Plumber at 1072 Rachel"). A live preview shows exactly what will be created before you confirm.',
+      'On Today, tap + → Bulk → Add. One line per task: "date – description", with an optional time or time range right before the dash for anything that needs one ("Aug 28 8am-9am – Plumber at 1072 Rachel"). A live preview shows exactly what will be created before you confirm.',
     ],
   },
   {
     title: 'Can I edit or delete several tasks at once?',
     items: [
-      'Yes — same Bulk add/edit tasks screen, on the Edit tab. Filter the list to Ada\'s, Aaron\'s, or all of them, select the ones you want, then either apply a change (title, who, timezone, or notes) across all of them, or hit "Delete N tasks" to remove them together. Deleting asks you to confirm first, since it can\'t be undone.',
+      'Yes — on Today, tap + → Bulk → Edit. Filter the list to Ada\'s, Aaron\'s, or all of them, select the ones you want, then apply a change or delete the selected batch.',
     ],
   },
   {

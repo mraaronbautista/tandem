@@ -1,96 +1,97 @@
 import { useState } from 'react'
-import { Pin, Plus, X } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import TaskForm from './TaskForm'
+import BulkAddTasksForm from './BulkAddTasksForm'
+import PrioritiesForm from './PrioritiesForm'
 import Modal from './Modal'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 function dateStr(d) {
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-// The FAB doubles as a speed-dial for the less-frequent actions (report,
-// priorities, nudge) — those used to live as separate header icons, which
-// got cluttered fast as more got added. "New task" stays the default/most
-// common action; extraActions are optional and only expand the FAB into a
-// menu when there's something to show.
-//
-// variant="desktop" (default) renders exactly as before — an
-// independently `position: fixed` .quick-actions box. variant="mobile" is
-// meant to be placed inside MobileNav.jsx as a flex sibling of the nav
-// capsule (so together they read as one centered group, a2-style) rather
-// than floating above a full-width bar on its own — it drops the fixed
-// positioning via a second class, .quick-actions-inline (App.css), and
-// pops its speed-dial menu as an absolutely-positioned overlay instead so
-// opening the menu can't shift the nav row's layout.
-export default function NewTaskForm({ onCreate, defaultWho, selectedDate, extraActions = [], variant = 'desktop' }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [formOpen, setFormOpen] = useState(false)
+export function FloatingAddButton({ onClick, variant = 'desktop', label = 'Add' }) {
+  return (
+    <div className={variant === 'mobile' ? 'quick-actions quick-actions-inline' : 'quick-actions'}>
+      <button className="fab-new-task" onClick={onClick} aria-label={label} title={label}>
+        <Plus size={28} strokeWidth={2.5} />
+      </button>
+    </div>
+  )
+}
 
-  function handleFabClick() {
-    if (extraActions.length === 0) {
-      setFormOpen(true)
-    } else {
-      setMenuOpen((v) => !v)
-    }
+// Today-specific creation hub. Other destinations give the persistent +
+// their own contextual action in TaskBoard.jsx; Today groups the three
+// task-planning workflows into one tabbed modal instead of a speed dial.
+export default function NewTaskForm({
+  onCreate,
+  defaultWho,
+  selectedDate,
+  me,
+  members,
+  tasks,
+  onTasksChanged,
+  memberName,
+  variant = 'desktop',
+}) {
+  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState('task')
+
+  function close() {
+    setOpen(false)
+    setMode('task')
   }
 
-  function handleNewTask() {
-    setMenuOpen(false)
-    setFormOpen(true)
+  function openTools() {
+    setMode('task')
+    setOpen(true)
   }
 
-  function handleAction(action) {
-    setMenuOpen(false)
-    action.onSelect()
-  }
+  const tabs = (
+    <PeriodTabs>
+      <PeriodTab active={mode === 'task'} onClick={() => setMode('task')}>New task</PeriodTab>
+      <PeriodTab active={mode === 'bulk'} onClick={() => setMode('bulk')}>Bulk</PeriodTab>
+      <PeriodTab active={mode === 'priorities'} onClick={() => setMode('priorities')}>Priorities</PeriodTab>
+    </PeriodTabs>
+  )
 
   return (
     <>
-      {!formOpen && (
-        <div className={variant === 'mobile' ? 'quick-actions quick-actions-inline' : 'quick-actions'}>
-          {menuOpen && (
-            <div className="quick-actions-menu">
-              {extraActions.map((a) => (
-                <button key={a.key} type="button" className="quick-action-item" onClick={() => handleAction(a)}>
-                  <span className="quick-action-icon">{a.icon}</span>
-                  {a.label}
-                </button>
-              ))}
-              <button type="button" className="quick-action-item" onClick={handleNewTask}>
-                <span className="quick-action-icon">
-                  <Pin size={16} />
-                </span>
-                New task
-              </button>
-            </div>
-          )}
-          <button className="fab-new-task" onClick={handleFabClick} aria-label={menuOpen ? 'Close menu' : 'Actions'}>
-            {menuOpen ? <X size={28} strokeWidth={2.5} /> : <Plus size={28} strokeWidth={2.5} />}
-          </button>
-        </div>
-      )}
+      {!open && <FloatingAddButton variant={variant} onClick={openTools} label="Open task tools" />}
 
-      {formOpen && (
-        <Modal onClose={() => setFormOpen(false)}>
-          <TaskForm
-            submitLabel="Save task"
-            // Anchors a new task to whichever day is currently browsed
-            // (Today tab's selectedDate) rather than always today — the
-            // default *time* still rounds up from right now (see
-            // defaultDueDateTime in TaskForm.jsx), just landing on the
-            // selected day instead of today's. Conditionally spread in
-            // (not `due_date: selectedDate && dateStr(selectedDate)`) —
-            // TaskForm.jsx's hasDueDateKey treats an explicit `due_date:
-            // undefined` key as still "present", which flips its All Day
-            // checkbox on by mistake; omitting the key entirely when
-            // there's no selectedDate avoids that.
-            initialValues={{ who: defaultWho, ...(selectedDate ? { due_date: dateStr(selectedDate) } : null) }}
-            onCancel={() => setFormOpen(false)}
-            onSubmit={async (values) => {
-              await onCreate(values)
-              setFormOpen(false)
-            }}
-          />
+      {open && (
+        <Modal onClose={close}>
+          {mode === 'task' && (
+            <TaskForm
+              header={tabs}
+              submitLabel="Save task"
+              initialValues={{ who: defaultWho, ...(selectedDate ? { due_date: dateStr(selectedDate) } : null) }}
+              onCancel={close}
+              onSubmit={async (values) => {
+                await onCreate(values)
+                close()
+              }}
+            />
+          )}
+          {mode === 'bulk' && (
+            <BulkAddTasksForm
+              embedded
+              header={tabs}
+              me={me}
+              members={members}
+              tasks={tasks}
+              defaultWho={defaultWho}
+              onClose={close}
+              onCreated={() => {
+                onTasksChanged()
+                close()
+              }}
+            />
+          )}
+          {mode === 'priorities' && (
+            <PrioritiesForm embedded header={tabs} me={me} memberName={memberName} onClose={close} />
+          )}
         </Modal>
       )}
     </>

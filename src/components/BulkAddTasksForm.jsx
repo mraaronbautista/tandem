@@ -113,7 +113,7 @@ function formatTaskDue(task) {
 // once (e.g. every task from a mis-set timezone). Sharing this modal
 // with Add rather than a separate one since they're both "bulk task
 // operations" opened from the same quick action.
-export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClose, onCreated }) {
+export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClose, onCreated, embedded = false, header = null }) {
   const [view, setView] = useState('add')
   // Stacked on top via Modal's own portal (same as ScrollSelect nested
   // inside a task form, or HowToGuide inside SettingsMenu) rather than a
@@ -363,9 +363,10 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
     }
   }
 
-  return (
-    <Modal onClose={onClose}>
+  const content = (
+    <>
       <ModalCard as="form" modifier="bulk-add-modal" onSubmit={view === 'add' ? handleSubmit : handleApply}>
+        {header}
         <div className="bulk-add-header-row">
           <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
           <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h" onClick={() => setExportOpen(true)}>
@@ -772,6 +773,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
       </ModalCard>
 
       {exportOpen && <TaskExportForm tasks={tasks} onClose={() => setExportOpen(false)} />}
-    </Modal>
+    </>
   )
+
+  return embedded ? content : <Modal onClose={onClose}>{content}</Modal>
 }
