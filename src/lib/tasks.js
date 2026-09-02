@@ -157,25 +157,25 @@ function localDayKey(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
-// The calendar day a task was actually scheduled for in its saved timezone.
-// Task times and zone badges are displayed in this same zone, so placement
-// must agree: Thursday 10 PM CT is Thursday even when viewed from Manila,
-// where that instant happens to be Friday morning.
-function taskDueDayKey(task) {
-  return splitDueDateInZone(task.due_date, task.due_timezone || DEFAULT_TIMEZONE).due_date
+// Timed tasks follow the viewer's chosen display timezone. All Day tasks
+// remain attached to the calendar date they were created for rather than
+// shifting dates, since they represent a day rather than a clock instant.
+function taskDueDayKey(task, displayTimezone) {
+  const timeZone = isAllDayTask(task) ? task.due_timezone || DEFAULT_TIMEZONE : displayTimezone
+  return splitDueDateInZone(task.due_date, timeZone).due_date
 }
 
 // Overdue is a "right now" concept, not tied to whichever day is being
 // browsed — only ever shown alongside today's view, regardless of due date.
-export function getOverdueTasks(tasks) {
+export function getOverdueTasks(tasks, displayTimezone) {
   const nowIso = new Date().toISOString()
 
   return tasks
     .filter((t) => {
       if (t.status === 'done' || !t.due_date) return false
-      const timeZone = t.due_timezone || DEFAULT_TIMEZONE
-      const todayInTaskZone = splitDueDateInZone(nowIso, timeZone).due_date
-      return taskDueDayKey(t) < todayInTaskZone
+      const timeZone = isAllDayTask(t) ? t.due_timezone || DEFAULT_TIMEZONE : displayTimezone
+      const todayInDisplayZone = splitDueDateInZone(nowIso, timeZone).due_date
+      return taskDueDayKey(t, displayTimezone) < todayInDisplayZone
     })
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
@@ -302,11 +302,11 @@ export function getCompletedSince(tasks, whoKey, since) {
 // its own kind of wrong, like the day it was actually scheduled for
 // didn't get credit for it. See getCompletedToday below for how "what
 // got finished today" is now surfaced instead, without moving anything.
-export function getTasksForDay(tasks, date) {
+export function getTasksForDay(tasks, date, displayTimezone) {
   const dayKey = localDayKey(date)
 
   return tasks
-    .filter((t) => t.due_date && taskDueDayKey(t) === dayKey)
+    .filter((t) => t.due_date && taskDueDayKey(t, displayTimezone) === dayKey)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
@@ -319,10 +319,15 @@ export function getTasksForDay(tasks, date) {
 // choose between "where it was scheduled" and "credit for finishing it
 // today" — it can show both, in two different places, instead of only
 // ever being findable in one.
-export function getCompletedToday(tasks) {
-  const todayKey = localDayKey(new Date())
+export function getCompletedToday(tasks, displayTimezone) {
+  const todayKey = splitDueDateInZone(new Date().toISOString(), displayTimezone).due_date
   return tasks
-    .filter((t) => t.status === 'done' && t.completed_at && localDayKey(new Date(t.completed_at)) === todayKey)
+    .filter(
+      (t) =>
+        t.status === 'done' &&
+        t.completed_at &&
+        splitDueDateInZone(t.completed_at, displayTimezone).due_date === todayKey,
+    )
     .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
 }
 
@@ -466,11 +471,11 @@ export function getNudgedTasks(tasks) {
 // task list once per day the way calling getTasksForDay in a loop would.
 // All Day tasks with no date (due_date null) naturally fall out of every
 // bucket, same as they're excluded from getTasksForDay.
-export function groupTasksByDay(tasks) {
+export function groupTasksByDay(tasks, displayTimezone) {
   const map = new Map()
   for (const t of tasks) {
     if (!t.due_date) continue
-    const key = taskDueDayKey(t)
+    const key = taskDueDayKey(t, displayTimezone)
     if (!map.has(key)) map.set(key, [])
     map.get(key).push(t)
   }

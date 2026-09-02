@@ -105,18 +105,16 @@ const MAX_BLOCK_MINUTES = 360
 // "9:00 AM–9:00 AM" for a 2-day task is actively misleading, since it
 // reads as a same-day span. Compared in due_timezone, matching every
 // other zone-aware label here (blockDateLabel, the badge).
-function blockTimeLabel(task, start, end, dueTimeZone) {
+function blockTimeLabel(task, start, end, displayTimezone) {
   if (task.status === 'done') {
-    const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: displayTimezone })
     return `Completed ${fmt(new Date(task.completed_at))}`
   }
-  const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: dueTimeZone })
+  const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   if (!task.duration_minutes) return fmt(start)
-  const spansDays =
-    splitDueDateInZone(start.toISOString(), dueTimeZone).due_date !==
-    splitDueDateInZone(end.toISOString(), dueTimeZone).due_date
+  const spansDays = start.toDateString() !== end.toDateString()
   if (!spansDays) return `${fmt(start)}–${fmt(end)}`
-  const dateFmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: dueTimeZone })
+  const dateFmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   return `${fmt(start)} – ${dateFmt(end)}, ${fmt(end)}`
 }
 
@@ -128,9 +126,18 @@ function blockTimeLabel(task, start, end, dueTimeZone) {
 // toLocaleDateString inserts a comma after the weekday by default
 // ("Tue, 08/18/26"); stripped since the requested format is
 // space-separated.
-function blockDateLabel(start, dueTimeZone) {
-  const opts = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit', timeZone: dueTimeZone }
+function blockDateLabel(start) {
+  const opts = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' }
   return start.toLocaleDateString('en-US', opts).replace(', ', ' ')
+}
+
+// A Date carrying the wall-clock fields for an instant in the selected
+// display timezone. The timeline layout uses Date arithmetic/getHours,
+// which otherwise follow the device timezone and would not move when the
+// user's saved default changes.
+function wallClockDate(isoString, timeZone) {
+  const { due_date, due_time } = splitDueDateInZone(isoString, timeZone)
+  return new Date(`${due_date}T${due_time}:00`)
 }
 
 function roundUpToHour(date) {
@@ -344,7 +351,7 @@ function layoutClusters(clusters, overlappingIds) {
 // details inline the way TaskRow normally does — a block's height is
 // fixed to its time span, and full task details (notes, checklist,
 // clarifications) don't fit inside that without breaking the layout.
-export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappingIds, meId }) {
+export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappingIds, meId, displayTimezone = DEFAULT_TIMEZONE }) {
   const untimed = tasks.filter((t) => t.status !== 'done' && isAllDayTask(t))
   const timed = tasks.filter((t) => !(t.status !== 'done' && isAllDayTask(t)))
 
@@ -357,7 +364,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
       // actually got finished (see getTasksForDay in tasks.js). The
       // label still states the real completed_at separately —
       // blockTimeLabel reads that straight off `task`, not `start`.
-      const start = new Date(task.due_date)
+      const start = wallClockDate(task.due_date, displayTimezone)
       const end = new Date(start.getTime() + (task.duration_minutes || POINT_TASK_MINUTES) * 60000)
       // Layout (position/height/which tasks cluster together) is driven
       // by cappedEnd, not the real end — see MAX_BLOCK_MINUTES above. The
@@ -376,7 +383,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
     })
 
     return layoutClusters(groupIntoClusters(items), overlappingIds)
-  }, [timed, overlappingIds])
+  }, [timed, overlappingIds, displayTimezone])
 
   return (
     <div className="day-timeline-wrap">
@@ -497,13 +504,13 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                     </span>
                     <span className="day-timeline-block-time">
                       <span className="day-timeline-block-date">
-                        {blockDateLabel(start, task.due_timezone || DEFAULT_TIMEZONE)}
+                        {blockDateLabel(start)}
                       </span>
                       <span className="day-timeline-block-time-row">
-                        <span>{blockTimeLabel(task, start, end, task.due_timezone || DEFAULT_TIMEZONE)}</span>
+                        <span>{blockTimeLabel(task, start, end, displayTimezone)}</span>
                         {!isAllDayTask(task) && (
-                          <span className="task-zone-badge" title={`Set in ${zoneLabel(task.due_timezone)}`}>
-                            {zoneAbbreviation(task.due_timezone)}
+                          <span className="task-zone-badge" title={`Displayed in ${zoneLabel(displayTimezone)}`}>
+                            {zoneAbbreviation(displayTimezone)}
                           </span>
                         )}
                       </span>

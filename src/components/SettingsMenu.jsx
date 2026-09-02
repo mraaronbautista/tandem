@@ -77,7 +77,7 @@ export default function SettingsMenu({
               </span>
               <span className="flex flex-1 flex-col">
                 Default timezone
-                <span className="text-xs font-normal opacity-60">Used when creating new items.</span>
+                <span className="text-xs font-normal opacity-60">Used when creating and viewing tasks.</span>
               </span>
               <select
                 className="flex-none cursor-pointer rounded-[6px] border border-border bg-card-bg px-2 py-1 text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"

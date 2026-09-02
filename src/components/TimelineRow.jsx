@@ -3,7 +3,7 @@ import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { DEFAULT_TIMEZONE, splitDueDateInZone } from '../lib/timezone'
 import TaskRow from './TaskRow'
 
-export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
+export default function TimelineRow({ task, time, isLast, displayTimezone = DEFAULT_TIMEZONE, ...taskRowProps }) {
   const isDone = task.status === 'done'
   // `time` is always due_date now (see TaskBoard.jsx) — a task's
   // position in this list stays where it was scheduled regardless of
@@ -20,7 +20,7 @@ export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
   // rendered just below this by the nested TaskRow (see dueLabel there
   // for the full reasoning) — `time` is always due_date here, so the two
   // labels always agree on which zone they're in, done or not.
-  const timeZone = task.due_timezone || DEFAULT_TIMEZONE
+  const timeZone = isAllDay ? task.due_timezone || DEFAULT_TIMEZONE : displayTimezone
   const label = isAllDay ? 'All day' : new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone })
 
   // A still-open task with a real duration gets its own start/end dots
@@ -84,7 +84,7 @@ export default function TimelineRow({ task, time, isLast, ...taskRowProps }) {
         {!isLast && <span className="mt-1 min-h-2 w-0.5 flex-1 bg-border" />}
       </div>
       <div className="min-w-0 flex-1 pb-2">
-        <TaskRow task={task} hidePriorityDot {...taskRowProps} />
+        <TaskRow task={task} hidePriorityDot displayTimezone={displayTimezone} {...taskRowProps} />
       </div>
     </div>
   )

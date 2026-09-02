@@ -1,6 +1,7 @@
 import { isAllDayTask } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import { DEFAULT_TIMEZONE, splitDueDateInZone } from '../lib/timezone'
 import PriorityDot from './PriorityDot'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -38,9 +39,13 @@ function buildWeeks(year, month) {
 // not the task is actually done yet. A still-open All Day task pinned to
 // this date (see isAllDayTask) shows "All day" instead of the literal
 // midnight it's stored at.
-function timeLabel(task) {
+function timeLabel(task, displayTimezone) {
   if (task.status !== 'done' && isAllDayTask(task)) return 'All day'
-  return new Date(task.due_date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return new Date(task.due_date).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: displayTimezone,
+  })
 }
 
 // The whole point of Month is a bird's-eye view of what's coming up
@@ -56,12 +61,12 @@ function timeLabel(task) {
 // cell) both selects it and drops back to Day mode either way, the
 // standard drill-down pattern, so the actual task list is never more
 // than one tap away.
-export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelectDay }) {
+export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelectDay, displayTimezone = DEFAULT_TIMEZONE }) {
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
   const weeks = buildWeeks(year, month)
-  const todayStr = toDateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
+  const todayStr = splitDueDateInZone(new Date().toISOString(), displayTimezone).due_date
   const selectedStr = toDateStr(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
 
   return (
@@ -107,7 +112,7 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
                           title={PRIORITY_LABEL[task.priority]}
                         />
                         <span className="month-view-task-title">{task.title}</span>
-                        <span className="month-view-task-time">{timeLabel(task)}</span>
+                        <span className="month-view-task-time">{timeLabel(task, displayTimezone)}</span>
                       </span>
                     ))}
                     {hiddenCount > 0 && <span className="month-view-day-more">{hiddenCount} more</span>}

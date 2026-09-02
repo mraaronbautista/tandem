@@ -16,7 +16,7 @@ import {
   INBOX_LAST_VIEWED_KEY,
 } from '../lib/tasks'
 import { fetchMembers, updateDefaultTimezone } from '../lib/members'
-import { setPreferredTimezone } from '../lib/timezone'
+import { detectDefaultTimezone, setPreferredTimezone, splitDueDateInZone } from '../lib/timezone'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
@@ -122,6 +122,11 @@ function startOfDay(d) {
   return x
 }
 
+function dateInTimezone(date, timeZone) {
+  const { due_date } = splitDueDateInZone(date.toISOString(), timeZone)
+  return startOfDay(new Date(`${due_date}T00:00:00`))
+}
+
 export default function TaskBoard({ theme, toggleTheme }) {
   const { session, signOut } = useAuth()
   const isDesktop = useMediaQuery('(min-width: 900px)')
@@ -178,7 +183,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // Day/Month don't get the same reset: Day mode's whole point is
   // picking a specific day, and Month wasn't asked to reset.
   function handleViewModeClick(key) {
-    if (key === 'week') setSelectedDate(startOfDay(new Date()))
+    if (key === 'week') setSelectedDate(dateInTimezone(new Date(), displayTimezone))
     setViewMode(key)
   }
 
@@ -193,7 +198,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // ways to reach for it depending on whether the bottom nav or the
   // header is already in front of you.
   function resetToToday() {
-    setSelectedDate(startOfDay(new Date()))
+    setSelectedDate(dateInTimezone(new Date(), displayTimezone))
     setViewMode('day')
   }
 
@@ -294,6 +299,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   const me = useMemo(() => members.find((m) => m.id === session.user.id), [members, session])
   const memberName = (id) => members.find((m) => m.id === id)?.display_name
+  const displayTimezone = me?.default_timezone || detectDefaultTimezone()
+  const displayToday = useMemo(() => dateInTimezone(new Date(), displayTimezone), [displayTimezone])
 
   // Default to your own tasks, not the shared "All" view — you should only
   // see the other person's tasks by deliberately switching to their tab.
@@ -308,6 +315,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // `me`/`members` threaded through as props.
   useEffect(() => {
     setPreferredTimezone(me?.default_timezone)
+    setSelectedDate(dateInTimezone(new Date(), me?.default_timezone || detectDefaultTimezone()))
   }, [me?.default_timezone])
 
   async function handleChangeDefaultTimezone(timezone) {
@@ -330,11 +338,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // day, so they stay visible no matter which date is selected.
   const allDay = useMemo(() => whoFiltered.filter((t) => t.status !== 'done' && !t.due_date), [whoFiltered])
 
-  const isToday = useMemo(() => selectedDate.getTime() === startOfDay(new Date()).getTime(), [selectedDate])
+  const isToday = useMemo(() => selectedDate.getTime() === displayToday.getTime(), [selectedDate, displayToday])
 
   // Overdue is a "right now" signal, only ever shown alongside today — not
   // something that quietly disappears once you scroll away from today.
-  const overdue = useMemo(() => (isToday ? getOverdueTasks(whoFiltered) : []), [whoFiltered, isToday])
+  const overdue = useMemo(
+    () => (isToday ? getOverdueTasks(whoFiltered, displayTimezone) : []),
+    [whoFiltered, isToday, displayTimezone],
+  )
 
   // Same "right now" reasoning as overdue above — a task's own position
   // in the day-by-day list always stays on its due date now (see
@@ -343,7 +354,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // whatever happens to be sitting in today's list. who-scoped like
   // everything else on this tab, so switching the Ada/Aaron filter
   // scopes this the same way.
-  const completedToday = useMemo(() => (isToday ? getCompletedToday(whoFiltered) : []), [whoFiltered, isToday])
+  const completedToday = useMemo(
+    () => (isToday ? getCompletedToday(whoFiltered, displayTimezone) : []),
+    [whoFiltered, isToday, displayTimezone],
+  )
 
   // Day/Week share one rendering path: a list of day-sections. Day mode
   // is just that list with a single entry, so it doesn't need its own
@@ -355,13 +369,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }, [viewMode, selectedDate])
 
   const daySections = useMemo(
-    () => daysToShow.map((date) => ({ date, tasks: getTasksForDay(whoFiltered, date) })),
-    [daysToShow, whoFiltered],
+    () => daysToShow.map((date) => ({ date, tasks: getTasksForDay(whoFiltered, date, displayTimezone) })),
+    [daysToShow, whoFiltered, displayTimezone],
   )
 
   // Grouped once for the whole visible month rather than calling
   // getTasksForDay per day inside MonthView's render loop.
-  const tasksByDay = useMemo(() => groupTasksByDay(whoFiltered), [whoFiltered])
+  const tasksByDay = useMemo(() => groupTasksByDay(whoFiltered, displayTimezone), [whoFiltered, displayTimezone])
 
   // The header's ‹ › arrows step by week, not month — jumping to an
   // arbitrary month is what the date-picker popover (opened by clicking
@@ -558,6 +572,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     memberName,
     meId: session.user.id,
     overlappingIds,
+    displayTimezone,
   }
 
   const hasUnseenInbox = hasUnseenInboxItems(tasks, session.user.id, inboxLastViewedAt)
@@ -802,6 +817,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   monthDate={selectedDate}
                   tasksByDay={tasksByDay}
                   selectedDate={selectedDate}
+                  displayTimezone={displayTimezone}
                   onSelectDay={(d) => {
                     setSelectedDate(d)
                     setViewMode('day')
@@ -848,7 +864,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                           // no heading at all.
                           isToday && overdue.length > 0 && <h2 className="task-section-heading">Today</h2>
                         ) : (
-                          <h2 className="task-section-heading">{daySectionLabel(date, startOfDay(new Date()))}</h2>
+                          <h2 className="task-section-heading">{daySectionLabel(date, displayToday)}</h2>
                         )}
                         {viewMode === 'day' ? (
                           <DayTimeline
@@ -857,6 +873,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                             onStatusChange={handleStatusChange}
                             overlappingIds={overlappingIds}
                             meId={session.user.id}
+                            displayTimezone={displayTimezone}
                           />
                         ) : (
                           <div className="flex flex-col">

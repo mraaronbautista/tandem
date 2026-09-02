@@ -42,8 +42,8 @@ function localLabel(isoString, timeZone) {
 // week — see TaskForm.jsx) shows the end's full date too, not just a
 // bare time — "5:30 PM – 9:00 AM" alone would misread as same-day for a
 // multi-day span.
-function dueLabel(task) {
-  const timeZone = task.due_timezone || DEFAULT_TIMEZONE
+function dueLabel(task, displayTimezone) {
+  const timeZone = isAllDayTask(task) ? task.due_timezone || DEFAULT_TIMEZONE : displayTimezone
   if (isAllDayTask(task)) {
     const startLabel = new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone })
     // A multi-day All Day task (see TaskForm.jsx's End date field) still
@@ -80,6 +80,7 @@ export default function TaskRow({
   defaultOpen = false,
   overlappingIds,
   hidePriorityDot = false,
+  displayTimezone = DEFAULT_TIMEZONE,
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const [editing, setEditing] = useState(false)
@@ -259,7 +260,7 @@ export default function TaskRow({
           </span>
         )}
         {task.due_date && (
-          <span className={`text-xs whitespace-nowrap ${overdue ? 'font-semibold text-overdue opacity-100' : 'opacity-70'}`}>{dueLabel(task)}</span>
+          <span className={`text-xs whitespace-nowrap ${overdue ? 'font-semibold text-overdue opacity-100' : 'opacity-70'}`}>{dueLabel(task, displayTimezone)}</span>
         )}
         {/* Names the zone dueLabel above is already showing the time in
             (see localLabel) — the two have to agree, since a badge next
@@ -269,8 +270,8 @@ export default function TaskRow({
             them, a much lower-stakes mistake than a timed task landing
             hours off, so it's not worth a badge on every all-day item. */}
         {task.due_date && !isAllDayTask(task) && (
-          <span className="task-zone-badge" title={`Set in ${zoneLabel(task.due_timezone || DEFAULT_TIMEZONE)}`}>
-            {zoneAbbreviation(task.due_timezone || DEFAULT_TIMEZONE)}
+          <span className="task-zone-badge" title={`Displayed in ${zoneLabel(displayTimezone)}`}>
+            {zoneAbbreviation(displayTimezone)}
           </span>
         )}
         {task.status === 'done' && task.completed_at && (
