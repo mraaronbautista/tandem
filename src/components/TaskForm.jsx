@@ -84,6 +84,16 @@ export const WEEKDAY_OPTIONS = [
   { value: 0, shortLabel: 'S', label: 'Sunday' },
 ]
 
+// Half-hour shortcuts in the same visual control as the editable time
+// field. Exact minutes can still be typed directly.
+export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2)
+  const m = i % 2 === 0 ? '00' : '30'
+  const value = `${String(h).padStart(2, '0')}:${m}`
+  const label = new Date(2000, 0, 1, h, Number(m)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return { value, label }
+})
+
 export function recurrenceLabel(recurrence, recurrenceDays = []) {
   if (recurrence === 'selected_weekdays') {
     const selected = WEEKDAY_OPTIONS.filter((day) => recurrenceDays.includes(day.value)).map((day) => day.label)
@@ -94,17 +104,6 @@ export function recurrenceLabel(recurrence, recurrenceDays = []) {
   }
   return RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label
 }
-
-// Common half-hour shortcuts shown beside the minute-precision time input.
-// Typing remains unrestricted; this list is only a faster path for the
-// times used most often.
-export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
-  const h = Math.floor(i / 2)
-  const m = i % 2 === 0 ? '00' : '30'
-  const value = `${String(h).padStart(2, '0')}:${m}`
-  const label = new Date(2000, 0, 1, h, Number(m)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  return { value, label }
-})
 
 // A brand-new task's default due date/time — "now," rounded up to the
 // next half-hour mark, rather
@@ -157,6 +156,21 @@ function minutesToTimeLabel(mins) {
   const h = Math.floor(mins / 60)
   const m = mins % 60
   return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+function endTimeValue(startTime, durationMinutes) {
+  if (!durationMinutes) return ''
+  const total = (timeToMinutes(startTime) + Number(durationMinutes)) % (24 * 60)
+  const hours = Math.floor(total / 60)
+  const minutes = total % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+function durationFromEndTime(startTime, endTime) {
+  if (!endTime) return ''
+  let duration = timeToMinutes(endTime) - timeToMinutes(startTime)
+  if (duration <= 0) duration += 24 * 60
+  return String(duration)
 }
 
 // End-time picker for a given start: 15-minute steps for the first 2
@@ -441,39 +455,44 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
                       <input type="date" value={form.due_date} onChange={(e) => set('due_date', e.target.value)} />
                     </label>
 
-                    <label>
+                    <label className="datetime-time-field">
                       Time
-                      <div className="flex gap-2">
+                      <div className="editable-time-control">
                         <input
-                          className="min-w-0 flex-1"
                           type="time"
                           step="60"
                           value={form.due_time}
                           onChange={(e) => set('due_time', e.target.value)}
                         />
                         <select
-                          aria-label="Common start times"
-                          className="w-[92px] flex-none"
-                          value={TIME_OPTIONS.some((time) => time.value === form.due_time) ? form.due_time : ''}
+                          aria-label="Time shortcuts"
+                          value=""
                           onChange={(e) => e.target.value && set('due_time', e.target.value)}
                         >
-                          <option value="">Quick</option>
+                          <option value="">Shortcuts</option>
                           {TIME_OPTIONS.map((time) => (
-                            <option key={time.value} value={time.value}>
-                              {time.label}
-                            </option>
+                            <option key={time.value} value={time.value}>{time.label}</option>
                           ))}
                         </select>
                       </div>
                     </label>
 
-                    <label>
+                    <label className="datetime-end-time-field">
                       End time
-                      <ScrollSelect
-                        value={form.duration_minutes}
-                        onChange={(v) => set('duration_minutes', v)}
-                        options={endTimeOptions}
-                      />
+                      <div className="editable-time-control">
+                        <input
+                          type="time"
+                          step="60"
+                          value={endTimeValue(form.due_time, form.duration_minutes)}
+                          onChange={(e) => set('duration_minutes', durationFromEndTime(form.due_time, e.target.value))}
+                        />
+                        <ScrollSelect
+                          value={form.duration_minutes}
+                          onChange={(v) => set('duration_minutes', v)}
+                          options={endTimeOptions}
+                          triggerLabel="Shortcuts"
+                        />
+                      </div>
                     </label>
 
                     <label>

@@ -8,7 +8,7 @@ import Modal from './Modal'
 // overflowing into neighboring fields and tangling visually with sibling
 // native <select>s. A modal always renders centered over everything,
 // independent of which narrow grid cell triggered it.
-export default function ScrollSelect({ value, onChange, options, visibleCount = 6 }) {
+export default function ScrollSelect({ value, onChange, options, visibleCount = 6, triggerLabel }) {
   const [open, setOpen] = useState(false)
   const selectedRef = useRef(null)
 
@@ -21,7 +21,7 @@ export default function ScrollSelect({ value, onChange, options, visibleCount = 
   return (
     <>
       <button type="button" className="w-full cursor-pointer rounded-[6px] border border-border bg-bg px-2 py-[7px] text-left text-text-h [font:inherit]" onClick={() => setOpen(true)}>
-        {selected?.label ?? '—'}
+        {triggerLabel ?? selected?.label ?? '—'}
       </button>
       {open && (
         <Modal onClose={() => setOpen(false)}>

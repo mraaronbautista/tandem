@@ -2913,6 +2913,54 @@ a.task-submission-file-link:hover {
   opacity: 0.75;
 }
 
+.datetime-picker-grid .datetime-time-field,
+.datetime-picker-grid .datetime-end-time-field {
+  grid-column: span 2;
+}
+
+.editable-time-control {
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.editable-time-control input,
+.editable-time-control select,
+.datetime-picker-grid .editable-time-control input,
+.datetime-picker-grid .editable-time-control select {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.editable-time-control input {
+  flex: 1;
+}
+
+.editable-time-control select {
+  width: 104px;
+  flex: none;
+  border-left: 1px solid var(--border);
+}
+
+.datetime-picker-grid .editable-time-control select {
+  border-left: 1px solid var(--border);
+}
+
+.editable-time-control > button {
+  width: 104px;
+  flex: none;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  white-space: nowrap;
+}
+
 .datetime-picker-grid select,
 .datetime-picker-grid input {
   padding: 7px 8px;
@@ -2921,6 +2969,13 @@ a.task-submission-file-link:hover {
   background: var(--bg);
   color: var(--text-h);
   font: inherit;
+}
+
+@media (max-width: 480px) {
+  .datetime-picker-grid .datetime-time-field,
+  .datetime-picker-grid .datetime-end-time-field {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Direct-child only, so it doesn't fight .new-task-row label's own

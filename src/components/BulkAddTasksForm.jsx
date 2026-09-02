@@ -654,9 +654,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                             onChange={(e) => setSetToDate(e.target.value)}
                             disabled={!applyDateTime}
                           />
-                          <div className="flex gap-2">
+                          <div className="editable-time-control">
                             <input
-                              className="min-w-0 flex-1"
                               type="time"
                               step="60"
                               value={setToTime}
@@ -664,17 +663,14 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                               disabled={!applyDateTime}
                             />
                             <select
-                              aria-label="Common task times"
-                              className="w-[92px] flex-none"
-                              value={TIME_OPTIONS.some((time) => time.value === setToTime) ? setToTime : ''}
+                              aria-label="Time shortcuts"
+                              value=""
                               onChange={(e) => e.target.value && setSetToTime(e.target.value)}
                               disabled={!applyDateTime}
                             >
-                              <option value="">Quick</option>
+                              <option value="">Shortcuts</option>
                               {TIME_OPTIONS.map((time) => (
-                                <option key={time.value} value={time.value}>
-                                  {time.label}
-                                </option>
+                                <option key={time.value} value={time.value}>{time.label}</option>
                               ))}
                             </select>
                           </div>
