@@ -6,6 +6,7 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  deleteRecurringTask,
   getOverdueTasks,
   getTasksForDay,
   getCompletedToday,
@@ -536,10 +537,12 @@ export default function TaskBoard({ theme, toggleTheme }) {
     }
   }
 
-  async function handleDelete(id) {
+  async function handleDelete(id, mode = 'single') {
     try {
-      await deleteTask(id)
-      setTasks((prev) => prev.filter((t) => t.id !== id))
+      if (mode === 'single') await deleteTask(id)
+      else await deleteRecurringTask(id, mode === 'future')
+      if (mode === 'single') setTasks((prev) => prev.filter((t) => t.id !== id))
+      else reload()
     } catch (err) {
       setError(err.message)
     }

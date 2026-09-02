@@ -171,6 +171,60 @@ begin
 end;
 $$ language plpgsql security definer;
 
+create or replace function delete_recurring_task(target_task_id uuid, delete_future boolean)
+returns void as $$
+declare
+  target tasks%rowtype;
+  series_id uuid;
+  replacement_id uuid;
+begin
+  if not exists (select 1 from members where id = auth.uid()) then
+    raise exception 'Not authorized';
+  end if;
+
+  select * into target from tasks where id = target_task_id;
+  if not found then return; end if;
+  series_id := coalesce(target.recurrence_series_id, target.id);
+
+  if delete_future then
+    -- Preserve earlier history without its old parent link, then delete
+    -- the template; its cascade removes the selected and later rows.
+    update tasks set recurrence = 'none', recurrence_days = '{}',
+      recurrence_series_id = null
+    where recurrence_series_id = series_id
+      and id <> series_id
+      and due_date < target.due_date;
+    delete from tasks where id = series_id;
+    return;
+  end if;
+
+  if target.id <> series_id then
+    delete from tasks where id = target.id;
+    return;
+  end if;
+
+  -- "Only this" can also be chosen on the visible template occurrence.
+  -- Promote another occurrence to template before removing the old one.
+  select id into replacement_id from tasks
+  where recurrence_series_id = series_id and id <> series_id
+  order by due_date nulls last limit 1;
+
+  if replacement_id is null then
+    delete from tasks where id = target.id;
+    return;
+  end if;
+
+  update tasks set recurrence_series_id = replacement_id where id = replacement_id;
+  update tasks set recurrence_series_id = replacement_id
+    where recurrence_series_id = series_id and id <> series_id;
+  update task_recurrence_exclusions set recurrence_series_id = replacement_id
+    where recurrence_series_id = series_id;
+  insert into task_recurrence_exclusions (recurrence_series_id, due_date)
+    values (replacement_id, target.due_date) on conflict do nothing;
+  delete from tasks where id = target.id;
+end;
+$$ language plpgsql security definer;
+
 -- Selected-weekday occurrences are already present; completing one must
 -- not append another copy using the old one-at-a-time recurrence chain.
 create or replace function spawn_next_recurrence()

@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from './timezone'
 
 const TASK_COLUMNS =
-  'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at'
+  'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at'
 
 export async function fetchTasks() {
   // Materialize this month's selected-weekday occurrences before reading
@@ -40,6 +40,14 @@ export async function updateTask(id, patch) {
 
 export async function deleteTask(id) {
   const { error } = await supabase.from('tasks').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteRecurringTask(id, deleteFuture) {
+  const { error } = await supabase.rpc('delete_recurring_task', {
+    target_task_id: id,
+    delete_future: deleteFuture,
+  })
   if (error) throw error
 }
 

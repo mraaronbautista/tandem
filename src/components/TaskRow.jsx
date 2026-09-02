@@ -92,6 +92,7 @@ export default function TaskRow({
   const [nudging, setNudging] = useState(false)
   const [nudgeSent, setNudgeSent] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const [deleteRecurringOpen, setDeleteRecurringOpen] = useState(false)
   const swipeStartRef = useRef(null)
   const attachments = task.completion_attachments || []
   const hasSubmission = Boolean(task.completion_note || attachments.length)
@@ -124,7 +125,9 @@ export default function TaskRow({
 
   function handleDelete(e) {
     e.stopPropagation()
-    if (window.confirm(`Delete "${task.title}"? This can't be undone.`)) {
+    if (task.recurrence === 'selected_weekdays') {
+      setDeleteRecurringOpen(true)
+    } else if (window.confirm(`Delete "${task.title}"? This can't be undone.`)) {
       onDelete(task.id)
     }
   }
@@ -442,6 +445,36 @@ export default function TaskRow({
             )}
             <SubmissionActions>
               <SubmissionButton onClick={() => setViewSubmissionOpen(false)}>Close</SubmissionButton>
+            </SubmissionActions>
+          </ModalCard>
+        </Modal>
+      )}
+
+      {deleteRecurringOpen && (
+        <Modal onClose={() => setDeleteRecurringOpen(false)}>
+          <ModalCard>
+            <h2>Delete recurring task?</h2>
+            <p>Choose whether to remove only this occurrence or stop this schedule from this task onward.</p>
+            <SubmissionActions>
+              <SubmissionButton onClick={() => setDeleteRecurringOpen(false)}>Cancel</SubmissionButton>
+              <SubmissionButton
+                variant="destructive"
+                onClick={() => {
+                  setDeleteRecurringOpen(false)
+                  onDelete(task.id, 'occurrence')
+                }}
+              >
+                Only this task
+              </SubmissionButton>
+              <SubmissionButton
+                variant="destructive"
+                onClick={() => {
+                  setDeleteRecurringOpen(false)
+                  onDelete(task.id, 'future')
+                }}
+              >
+                This and future tasks
+              </SubmissionButton>
             </SubmissionActions>
           </ModalCard>
         </Modal>
