@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { CalendarClock, ChevronRight } from 'lucide-react'
 import { WHO_LABEL } from '../lib/whoLabels'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso, zoneAbbreviation } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
@@ -173,7 +174,7 @@ function buildEndTimeOptions(startTime) {
 // to open the full picker" for a single field; this is the same idea
 // one level up, for the whole date/time cluster).
 function dueSummaryLabel(form) {
-  if (!form.due_date) return 'No specific time — tap to set'
+  if (!form.due_date) return 'Add date and time'
   const dateLabel = new Date(`${form.due_date}T00:00:00`)
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     .replace(', ', ' ')
@@ -181,8 +182,7 @@ function dueSummaryLabel(form) {
   const zoneLabel = zoneAbbreviation(form.due_timezone)
   if (!form.duration_minutes) return `${dateLabel} · ${timeLabel} · ${zoneLabel}`
   const endLabel = buildEndTimeOptions(form.due_time).find((o) => o.value === form.duration_minutes)?.label
-  const durationLabel = formatDuration(Number(form.duration_minutes))
-  return `${dateLabel} · ${timeLabel}${endLabel ? `–${endLabel}` : ''} (${durationLabel}) · ${zoneLabel}`
+  return `${dateLabel} · ${timeLabel}${endLabel ? `–${endLabel}` : ''} · ${zoneLabel}`
 }
 
 export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true }) {
@@ -354,7 +354,9 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
           All day
         </label>
+      </div>
 
+      <div className="new-task-row items-end">
         {allDay ? (
           <>
             <label>
@@ -392,9 +394,12 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
             <button
               type="button"
               onClick={() => setTimePickerOpen(true)}
-              className="min-w-[220px] flex-1 cursor-pointer rounded-[6px] border border-border bg-bg px-2 py-[7px] text-left text-text-h [font:inherit]"
+              className="flex min-h-10 min-w-[220px] flex-[2_1_260px] cursor-pointer items-center gap-2 rounded-[8px] border border-border bg-bg px-3 py-2 text-left text-sm leading-tight text-text-h transition-colors hover:border-accent focus-visible:border-accent focus-visible:outline-none"
+              title="Edit date and time"
             >
-              {dueSummaryLabel(form)}
+              <CalendarClock size={16} className="flex-none text-accent" aria-hidden="true" />
+              <span className="min-w-0 flex-1">{dueSummaryLabel(form)}</span>
+              <ChevronRight size={15} className="flex-none opacity-45" aria-hidden="true" />
             </button>
 
             {timePickerOpen && (
