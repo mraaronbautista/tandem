@@ -822,7 +822,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
             ) : (
               <div className="task-list" onTouchStart={handleDaySwipeStart} onTouchEnd={handleDaySwipeEnd}>
                 {allDay.length > 0 && (
-                  <section>
+                  <section className="all-day-section">
                     <h2 className="task-section-heading">All Day</h2>
                     <AllDayRow
                       tasks={allDay}

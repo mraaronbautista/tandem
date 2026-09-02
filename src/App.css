@@ -557,6 +557,13 @@ select:focus-visible {
   margin-top: 0;
 }
 
+/* Keep the undated chips visually attached to the schedule that follows.
+   Other section transitions stay roomier because they represent a real
+   change of state/day (for example Overdue → Today). */
+.task-list > .all-day-section + section {
+  margin-top: 8px;
+}
+
 /* All Day — undated tasks as a compact glanceable chip row */
 .allday-row {
   display: flex;
@@ -692,7 +699,7 @@ select:focus-visible {
 .day-timeline-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 .day-timeline {
