@@ -69,6 +69,12 @@ const OVERLAP_LABEL_HEIGHT = 22
 // being represented as empty vertical space inside the card.
 const TASK_BLOCK_HEIGHT = MIN_BLOCK_HEIGHT
 
+function calendarDayOffset(start, end) {
+  const startDay = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
+  const endDay = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())
+  return Math.round((endDay - startDay) / 86400000)
+}
+
 // "Completed 10:00 PM" for a finished task — always the real
 // completed_at instant, read straight off the task rather than derived
 // from `start` (which is always due_date now — see the layout useMemo
@@ -103,9 +109,7 @@ function blockTimeLabel(task, start, end, displayTimezone) {
   }
   const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   if (!task.duration_minutes) return fmt(start)
-  const startDay = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
-  const endDay = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())
-  const dayOffset = Math.round((endDay - startDay) / 86400000)
+  const dayOffset = calendarDayOffset(start, end)
   return (
     <>
       {fmt(start)}–{fmt(end)}
@@ -411,14 +415,21 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                 {h.label}
               </span>
               ))}
-            {layout.positioned.map((item) => (
-              <span key={`task-time-${item.task.id}`} className="day-timeline-task-time-label" style={{ top: item.top }}>
-                {item.start.toLocaleTimeString([], {
-                  hour: 'numeric',
-                  minute: item.start.getMinutes() ? '2-digit' : undefined,
-                })}
-              </span>
-            ))}
+            {layout.positioned.map((item) => {
+              const timeOptions = { hour: 'numeric', minute: '2-digit' }
+              const dayOffset = calendarDayOffset(item.start, item.end)
+              return (
+                <span key={`task-time-${item.task.id}`} className="day-timeline-task-time-label" style={{ top: item.top }}>
+                  <span>{item.start.toLocaleTimeString([], timeOptions)}</span>
+                  {item.task.duration_minutes && (
+                    <span className="day-timeline-task-end-label">
+                      → {item.end.toLocaleTimeString([], timeOptions)}
+                      {dayOffset > 0 && <sup className="day-timeline-day-offset">+{dayOffset}</sup>}
+                    </span>
+                  )}
+                </span>
+              )
+            })}
           </div>
 
           <div className="day-timeline-track">

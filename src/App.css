@@ -730,6 +730,16 @@ select:focus-visible {
   transform: translateY(6px);
 }
 
+.day-timeline-task-time-label > span {
+  display: block;
+}
+
+.day-timeline-task-end-label {
+  margin-top: 2px;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
 .day-timeline-hour-label {
   position: absolute;
   left: 0;
