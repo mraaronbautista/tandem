@@ -660,6 +660,25 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <header className="mb-4 flex flex-wrap items-center gap-2">
           {activeTab === 'today' && (
             <MonthNavRow>
+              {/* Steps a full calendar month regardless of viewMode — the
+                  header label itself always reads "Month Year" whether
+                  Day/Week/Month is active (see MonthNavRow's own
+                  comment), so stepping it a month at a time makes sense
+                  from any of the three. Distinct from .view-mode-row's
+                  ‹ Today › arrows below, which still step by week — those
+                  are for nudging the selected day, this is for browsing
+                  months, most useful in Month view (RentalsView's own
+                  month nav uses this exact IconButton-flanking-
+                  MonthNavLabel shape already). Desktop-only: mobile
+                  already has its own swipe gesture for stepping months
+                  (handleMonthSwipeEnd below), so a second, redundant
+                  control there is just clutter on a screen with less
+                  room for it. */}
+              {isDesktop && (
+                <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
+                  <ChevronLeft size={16} />
+                </IconButton>
+              )}
               <MonthNavLabel
                 className="text-[26px] max-[480px]:text-[22px]"
                 onClick={() => setDatePickerOpen(true)}
@@ -670,6 +689,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   {datePickerOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </span>
               </MonthNavLabel>
+              {isDesktop && (
+                <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
+                  <ChevronRight size={16} />
+                </IconButton>
+              )}
             </MonthNavRow>
           )}
           {activeTab === 'rentals' && (
