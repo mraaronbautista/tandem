@@ -735,6 +735,40 @@ select:focus-visible {
   transform: translateY(-6px);
 }
 
+/* A sequence rail immediately beside the left-hand task times. Solid
+   means scheduled work continues into the next block; real empty spans
+   are masked and redrawn as dashed sections below. The small start dots
+   anchor each floating time label to its corresponding task. */
+.day-timeline-time-rail {
+  position: absolute;
+  right: -5px;
+  z-index: 0;
+  width: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 28%, transparent);
+}
+
+.day-timeline-time-rail-gap {
+  position: absolute;
+  right: -6px;
+  z-index: 1;
+  width: 4px;
+  background: var(--bg);
+  border-left: 2px dashed color-mix(in srgb, var(--text) 28%, transparent);
+}
+
+.day-timeline-time-dot {
+  position: absolute;
+  right: -8px;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--card-bg);
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translateY(-50%);
+}
+
 /* min-width: 0 so a narrow phone can still shrink this below its
    flex-basis content width — same reasoning as elsewhere in this file
    (MonthView's day cells, Rentals' calendar grid). */

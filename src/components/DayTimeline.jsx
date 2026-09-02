@@ -392,6 +392,32 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
       {layout && (
         <div className="day-timeline" style={{ height: layout.height }}>
           <div className="day-timeline-hours">
+            <span
+              className="day-timeline-time-rail"
+              style={{
+                top: layout.positioned[0].top + 10,
+                height:
+                  Math.max(...layout.positioned.map((item) => item.top + item.height)) -
+                  (layout.positioned[0].top + 10),
+              }}
+              aria-hidden="true"
+            />
+            {layout.gapMarkers.map((gap) => (
+              <span
+                key={`time-gap-${gap.top}`}
+                className="day-timeline-time-rail-gap"
+                style={{ top: gap.top, height: gap.height }}
+                aria-hidden="true"
+              />
+            ))}
+            {layout.positioned.map((item) => (
+              <span
+                key={`time-dot-${item.task.id}`}
+                className="day-timeline-time-dot"
+                style={{ top: item.top + 10, background: PRIORITY_COLOR[item.task.priority] }}
+                aria-hidden="true"
+              />
+            ))}
             {layout.hourMarks
               .filter((h) => !layout.positioned.some((item) => Math.abs(item.top - h.top) < 8))
               .map((h) => (
