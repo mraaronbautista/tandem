@@ -848,33 +848,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   </section>
                 )}
 
-                {overdue.length > 0 && (
-                  <section>
-                    <h2 className="task-section-heading task-section-heading-overdue">Overdue</h2>
-                    <div className="flex flex-col">
-                      {overdue.map((task, i) => (
-                        <TimelineRow
-                          key={task.id}
-                          task={task}
-                          time={task.due_date}
-                          isLast={i === overdue.length - 1}
-                          {...taskRowProps}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
-
                 {daySections.map(
                   ({ date, tasks: dTasks }) =>
                     dTasks.length > 0 && (
                       <section key={date.toISOString()}>
-                        {viewMode === 'day' ? (
-                          // Only needed to disambiguate from the Overdue section
-                          // above — with just one day-section there's otherwise
-                          // no heading at all.
-                          isToday && overdue.length > 0 && <h2 className="task-section-heading">Today</h2>
-                        ) : (
+                        {viewMode !== 'day' && (
                           <h2 className="task-section-heading">{daySectionLabel(date, displayToday)}</h2>
                         )}
                         {viewMode === 'day' ? (
@@ -903,7 +881,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                     ),
                 )}
 
-                {!allDay.length && !overdue.length && !daySections.some((s) => s.tasks.length) && (
+                {!allDay.length && !daySections.some((s) => s.tasks.length) && (
                   <p className="empty">Nothing here.</p>
                 )}
               </div>
@@ -979,10 +957,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
         </Modal>
       )}
 
-      {/* Same TimelineRow list the inline Overdue section already renders
-          (time is due_date, same as everywhere else) — this modal is just
-          a quick-glance shortcut to the same tasks via the pill above,
-          not a second source of truth. */}
+      {/* The overdue pill is the single entry point for this list, keeping
+          stale tasks from pushing today's agenda below the fold. */}
       {overdueModalOpen && (
         <Modal onClose={() => setOverdueModalOpen(false)}>
           <ModalCard>
