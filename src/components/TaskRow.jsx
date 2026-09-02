@@ -5,7 +5,7 @@ import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge } from '../lib/manualNotify'
-import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, X } from 'lucide-react'
+import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, X } from 'lucide-react'
 import TaskForm, { RECURRENCE_OPTIONS } from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -91,11 +91,13 @@ export default function TaskRow({
   const [uploadError, setUploadError] = useState('')
   const [nudging, setNudging] = useState(false)
   const [nudgeSent, setNudgeSent] = useState(false)
+  const [notesExpanded, setNotesExpanded] = useState(false)
   const attachments = task.completion_attachments || []
   const hasSubmission = Boolean(task.completion_note || attachments.length)
   const overdue = isOverdue(task)
   const overlapping = overlappingIds?.has(task.id) ?? false
   const hasNotes = Boolean(task.notes)
+  const hasLongNotes = task.notes && (task.notes.length > 240 || task.notes.split('\n').length > 4)
   const sourceLabel = SOURCE_LABEL[task.source]
   const creatorName = memberName(task.created_by)
   // Nudging yourself makes no sense — same "assigning yourself a task
@@ -300,7 +302,30 @@ export default function TaskRow({
               {task.source_note ? ` — ${task.source_note}` : ''}
             </p>
           )}
-          {task.notes && <p className="break-words whitespace-pre-wrap">{task.notes}</p>}
+          {task.notes && (
+            <div className="mb-2">
+              <p
+                className={`break-words whitespace-pre-wrap ${
+                  hasLongNotes && !notesExpanded
+                    ? 'overflow-hidden text-ellipsis [-webkit-box-orient:vertical] [-webkit-line-clamp:4] [display:-webkit-box]'
+                    : ''
+                }`}
+              >
+                {task.notes}
+              </p>
+              {hasLongNotes && (
+                <button
+                  type="button"
+                  className="mt-1 flex cursor-pointer items-center gap-1 rounded-full border-0 bg-transparent px-0 py-1 text-xs font-medium text-accent"
+                  onClick={() => setNotesExpanded((value) => !value)}
+                  aria-expanded={notesExpanded}
+                >
+                  {notesExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  {notesExpanded ? 'Collapse note' : 'Show full note'}
+                </button>
+              )}
+            </div>
+          )}
           <ChecklistView items={checklist} onItemChange={handleChecklistItemChange} />
           {recurrence !== 'none' && recurrenceLabel && (
             <p>Repeats {recurrenceLabel.toLowerCase()}</p>
