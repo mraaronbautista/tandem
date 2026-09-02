@@ -757,9 +757,9 @@ select:focus-visible {
 
 .day-timeline-time-rail-gap {
   position: absolute;
-  right: -6px;
+  right: -5px;
   z-index: 1;
-  width: 4px;
+  width: 2px;
   background: var(--bg);
   border-left: 2px dashed color-mix(in srgb, var(--text) 28%, transparent);
 }
