@@ -4,6 +4,51 @@ import { createPortal } from 'react-dom'
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+let pageScrollLocks = 0
+let savedPageScroll = null
+
+function lockPageScroll() {
+  if (pageScrollLocks === 0) {
+    const body = document.body
+    const root = document.documentElement
+    savedPageScroll = {
+      y: window.scrollY,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      bodyOverflow: body.style.overflow,
+      rootOverflow: root.style.overflow,
+    }
+    body.style.position = 'fixed'
+    body.style.top = `-${savedPageScroll.y}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+    root.style.overflow = 'hidden'
+  }
+  pageScrollLocks += 1
+
+  return () => {
+    pageScrollLocks = Math.max(0, pageScrollLocks - 1)
+    if (pageScrollLocks !== 0 || !savedPageScroll) return
+    const body = document.body
+    const root = document.documentElement
+    const saved = savedPageScroll
+    savedPageScroll = null
+    body.style.position = saved.bodyPosition
+    body.style.top = saved.bodyTop
+    body.style.left = saved.bodyLeft
+    body.style.right = saved.bodyRight
+    body.style.width = saved.bodyWidth
+    body.style.overflow = saved.bodyOverflow
+    root.style.overflow = saved.rootOverflow
+    window.scrollTo(0, saved.y)
+  }
+}
+
 // Rendered via a portal straight onto document.body rather than in
 // place — a modal opened from *inside* another modal (e.g. the End-time
 // picker inside the edit-task form, or the peek-task view) would
@@ -25,6 +70,8 @@ const FOCUSABLE_SELECTOR =
 export default function Modal({ onClose, children }) {
   const contentRef = useRef(null)
   const swipeStartRef = useRef(null)
+
+  useEffect(() => lockPageScroll(), [])
 
   function mobileSheet() {
     if (!window.matchMedia('(max-width: 640px)').matches) return null
