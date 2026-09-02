@@ -5,6 +5,12 @@ const TASK_COLUMNS =
   'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at'
 
 export async function fetchTasks() {
+  // Materialize this month's selected-weekday occurrences before reading
+  // the board. Older databases may not have the migration yet; leave task
+  // loading usable there so the SQL can be applied without breaking UI.
+  const { error: recurrenceError } = await supabase.rpc('ensure_current_month_recurrences')
+  if (recurrenceError && recurrenceError.code !== 'PGRST202') throw recurrenceError
+
   const { data, error } = await supabase
     .from('tasks')
     .select(TASK_COLUMNS)

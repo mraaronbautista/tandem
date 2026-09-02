@@ -69,6 +69,9 @@ create table tasks (
   -- PostgreSQL weekday numbers (Sunday = 0 through Saturday = 6). Used
   -- only by selected_weekdays; the other recurrence modes leave it empty.
   recurrence_days smallint[] not null default '{}',
+  -- The template points to itself; generated occurrences point to their
+  -- template. This supplies a stable database-level deduplication key.
+  recurrence_series_id uuid references tasks (id) on delete cascade,
   constraint tasks_recurrence_days_valid check (
     recurrence::text <> 'selected_weekdays'
     or (cardinality(recurrence_days) > 0 and recurrence_days <@ array[0, 1, 2, 3, 4, 5, 6]::smallint[])
@@ -121,6 +124,9 @@ create table tasks (
 
 create index tasks_status_idx on tasks (status);
 create index tasks_due_date_idx on tasks (due_date);
+create unique index tasks_recurrence_series_due_unique
+  on tasks (recurrence_series_id, due_date)
+  where recurrence_series_id is not null and due_date is not null;
 
 -- Keep updated_at/completed_at in sync with status changes.
 create or replace function set_task_meta()
@@ -151,7 +157,9 @@ declare
   current_weekday integer;
   days_until_next integer;
 begin
-  if new.status = 'done' and old.status <> 'done' and new.recurrence <> 'none' then
+  if new.status = 'done' and old.status <> 'done'
+     and new.recurrence <> 'none'
+     and new.recurrence::text <> 'selected_weekdays' then
     next_due := case new.recurrence::text
       when 'daily' then coalesce(new.due_date, now()) + interval '1 day'
       when 'weekly' then coalesce(new.due_date, now()) + interval '7 days'
@@ -197,6 +205,100 @@ $$ language plpgsql security definer;
 create trigger tasks_spawn_recurrence
 after update on tasks
 for each row execute function spawn_next_recurrence();
+
+-- Selected-weekday schedules are materialized for the current calendar
+-- month so Month view can show the whole schedule in advance.
+create or replace function prepare_recurrence_series()
+returns trigger as $$
+begin
+  if new.recurrence::text = 'selected_weekdays' and new.recurrence_series_id is null then
+    new.recurrence_series_id := new.id;
+  elsif new.recurrence::text <> 'selected_weekdays' and new.recurrence_series_id = new.id then
+    new.recurrence_series_id := null;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger tasks_prepare_recurrence_series
+before insert or update of recurrence, recurrence_days on tasks
+for each row execute function prepare_recurrence_series();
+
+create or replace function generate_current_month_occurrences(template_id uuid)
+returns void as $$
+declare
+  template tasks%rowtype;
+  month_start date;
+  month_end date;
+  wall_time time;
+  assignee_id uuid;
+begin
+  select * into template from tasks where id = template_id;
+  if not found or template.recurrence::text <> 'selected_weekdays'
+     or template.recurrence_series_id <> template.id or template.due_date is null then
+    return;
+  end if;
+  month_start := date_trunc('month', now() at time zone template.due_timezone)::date;
+  month_end := (month_start + interval '1 month - 1 day')::date;
+  wall_time := (template.due_date at time zone template.due_timezone)::time;
+  select id into assignee_id from members
+  where lower(display_name) = case when template.who = 'assistant' then 'aaron' else 'ada' end
+  limit 1;
+  insert into tasks (
+    title, who, priority, icon, due_date, due_timezone, duration_minutes,
+    source, source_note, notes, checklist, recurrence, recurrence_days,
+    created_by, recurrence_series_id
+  )
+  select template.title, template.who, template.priority, template.icon,
+    (day_stamp::date + wall_time) at time zone template.due_timezone,
+    template.due_timezone, template.duration_minutes, template.source,
+    template.source_note, template.notes, template.checklist,
+    template.recurrence, template.recurrence_days,
+    coalesce(assignee_id, template.created_by), template.id
+  from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
+  where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
+    and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
+  on conflict (recurrence_series_id, due_date)
+    where recurrence_series_id is not null and due_date is not null do nothing;
+end;
+$$ language plpgsql security definer;
+
+create or replace function sync_current_month_recurrences()
+returns trigger as $$
+begin
+  if tg_op = 'UPDATE' and old.recurrence_series_id = old.id and (
+    new.recurrence::text <> 'selected_weekdays'
+    or new.due_date is distinct from old.due_date
+    or new.due_timezone is distinct from old.due_timezone
+    or new.recurrence_days is distinct from old.recurrence_days
+  ) then
+    delete from tasks where recurrence_series_id = old.id and id <> old.id and status <> 'done';
+  end if;
+  if new.recurrence::text = 'selected_weekdays' and new.recurrence_series_id = new.id then
+    perform generate_current_month_occurrences(new.id);
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger tasks_sync_current_month_recurrences
+after insert or update of recurrence, recurrence_days, due_date, due_timezone on tasks
+for each row execute function sync_current_month_recurrences();
+
+create or replace function ensure_current_month_recurrences()
+returns void as $$
+declare template_id uuid;
+begin
+  if not exists (select 1 from members where id = auth.uid()) then
+    raise exception 'Not authorized';
+  end if;
+  for template_id in select id from tasks
+    where recurrence::text = 'selected_weekdays' and recurrence_series_id = id
+  loop
+    perform generate_current_month_occurrences(template_id);
+  end loop;
+end;
+$$ language plpgsql security definer;
 
 -- RLS: both allow-listed members get full read/write on the shared board.
 -- Mutual visibility is the entire point of this app, so there is no
