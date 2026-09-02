@@ -524,22 +524,28 @@ begin
   from rental_properties
   where id = new.property_id;
 
-  -- check_out is the final occupied date, so turnover cleaning belongs
-  -- on the following morning. Construct the wall time in Central time
-  -- before converting it to the timestamptz stored by tasks.
-  cleaning_due := ((new.check_out + 1) + time '10:00') at time zone 'America/Chicago';
+  -- Give Aaron one week to arrange the turnover. Construct the reminder
+  -- day's 10:00 AM wall time in Central before storing it as timestamptz.
+  cleaning_due := ((new.check_out - 7) + time '10:00') at time zone 'America/Chicago';
 
   insert into tasks (
-    title, who, priority, due_date, due_timezone, source, notes,
+    title, who, priority, due_date, due_timezone, source, notes, checklist,
     created_by, rental_turnover_booking_id
   ) values (
-    'Arrange turnover cleaning for ' || property_name,
+    'Schedule turnover cleaning for ' || property_name,
     'assistant',
     'med',
     cleaning_due,
     'America/Chicago',
     'none',
-    'Automatically created for ' || new.guest_name || '''s move-out.',
+    'Automatically created seven days before ' || new.guest_name || '''s move-out.',
+    jsonb_build_array(jsonb_build_object(
+      'id', 'add-cleaner-visit-task',
+      'text', 'Add a task for when the cleaner will actually come.',
+      'done', false,
+      'blocked', false,
+      'blockedReason', ''
+    )),
     new.created_by,
     new.id
   )

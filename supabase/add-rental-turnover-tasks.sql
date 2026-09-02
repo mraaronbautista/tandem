@@ -1,7 +1,7 @@
 -- Run once in the Supabase SQL editor for an existing Tandem project.
--- Creates and maintains one Aaron-assigned cleaning task for each
--- confirmed rental booking, due at 10:00 AM Central on the morning after
--- the booking's final occupied date.
+-- Creates and maintains one Aaron-assigned cleaning-planning task for
+-- each confirmed rental booking, due at 10:00 AM Central seven days
+-- before the booking's final occupied date.
 
 alter table tasks
   add column if not exists rental_turnover_booking_id uuid;
@@ -47,19 +47,26 @@ begin
   from rental_properties
   where id = new.property_id;
 
-  cleaning_due := ((new.check_out + 1) + time '10:00') at time zone 'America/Chicago';
+  cleaning_due := ((new.check_out - 7) + time '10:00') at time zone 'America/Chicago';
 
   insert into tasks (
-    title, who, priority, due_date, due_timezone, source, notes,
+    title, who, priority, due_date, due_timezone, source, notes, checklist,
     created_by, rental_turnover_booking_id
   ) values (
-    'Arrange turnover cleaning for ' || property_name,
+    'Schedule turnover cleaning for ' || property_name,
     'assistant',
     'med',
     cleaning_due,
     'America/Chicago',
     'none',
-    'Automatically created for ' || new.guest_name || '''s move-out.',
+    'Automatically created seven days before ' || new.guest_name || '''s move-out.',
+    jsonb_build_array(jsonb_build_object(
+      'id', 'add-cleaner-visit-task',
+      'text', 'Add a task for when the cleaner will actually come.',
+      'done', false,
+      'blocked', false,
+      'blockedReason', ''
+    )),
     new.created_by,
     new.id
   )
@@ -82,21 +89,34 @@ for each row execute function sync_rental_turnover_task();
 
 -- Add tasks for current and future confirmed bookings that already exist.
 insert into tasks (
-  title, who, priority, due_date, due_timezone, source, notes,
+  title, who, priority, due_date, due_timezone, source, notes, checklist,
   created_by, rental_turnover_booking_id
 )
 select
-  'Arrange turnover cleaning for ' || p.unit_name,
+  'Schedule turnover cleaning for ' || p.unit_name,
   'assistant',
   'med',
-  ((b.check_out + 1) + time '10:00') at time zone 'America/Chicago',
+  ((b.check_out - 7) + time '10:00') at time zone 'America/Chicago',
   'America/Chicago',
   'none',
-  'Automatically created for ' || b.guest_name || '''s move-out.',
+  'Automatically created seven days before ' || b.guest_name || '''s move-out.',
+  jsonb_build_array(jsonb_build_object(
+    'id', 'add-cleaner-visit-task',
+    'text', 'Add a task for when the cleaner will actually come.',
+    'done', false,
+    'blocked', false,
+    'blockedReason', ''
+  )),
   b.created_by,
   b.id
 from rental_bookings b
 join rental_properties p on p.id = b.property_id
 where b.status = 'confirmed'
   and b.check_out >= current_date
-on conflict (rental_turnover_booking_id) do nothing;
+on conflict (rental_turnover_booking_id) do update set
+  title = excluded.title,
+  due_date = excluded.due_date,
+  due_timezone = excluded.due_timezone,
+  notes = excluded.notes,
+  checklist = excluded.checklist,
+  who = 'assistant';
