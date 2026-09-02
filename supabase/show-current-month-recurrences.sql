@@ -173,4 +173,6 @@ begin
 end;
 $$ language plpgsql security definer;
 
-select ensure_current_month_recurrences();
+-- Do not call ensure_current_month_recurrences() from the SQL Editor:
+-- auth.uid() is null there. Tandem calls it with the signed-in member's
+-- session automatically before fetching tasks.
