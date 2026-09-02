@@ -42,9 +42,11 @@ const POINT_TASK_MINUTES = 30
 // for why its real-minute equivalent matters just as much as its own
 // value.
 const MIN_BLOCK_HEIGHT = 58
-// Breathing room added around each busy window (see buildWindows below)
-// so a block isn't flush against the window's own top/bottom edge.
-const PAD_MINUTES = 20
+// Small edge padding around the agenda. Keep the top especially tight
+// so a section heading such as "Today" stays visually attached to its
+// first task instead of leaving an hour-scale-sized blank area.
+const TIMELINE_TOP_PADDING = 8
+const TIMELINE_BOTTOM_PADDING = 20
 // A real gap between tasks shorter than this still renders at the normal
 // proportional scale (a 20-40min gap between two tasks is normal daily
 // texture, not something worth collapsing). Anything longer collapses
@@ -218,7 +220,7 @@ function groupIntoClusters(items) {
 // their proportional height (with a small legibility floor), while long
 // ones collapse to GAP_MARKER_HEIGHT.
 function layoutClusters(clusters, overlappingIds) {
-  let cursor = PAD_MINUTES * PX_PER_MINUTE
+  let cursor = TIMELINE_TOP_PADDING
   const positioned = []
   const gapMarkers = []
   const hourMarks = []
@@ -311,7 +313,7 @@ function layoutClusters(clusters, overlappingIds) {
     hourMarks,
     gapMarkers,
     overlapLabels,
-    height: cursor + PAD_MINUTES * PX_PER_MINUTE,
+    height: cursor + TIMELINE_BOTTOM_PADDING,
   }
 }
 
