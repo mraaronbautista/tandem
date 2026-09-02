@@ -493,16 +493,18 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           </>
         )}
 
-        <label>
+        <label className="max-w-[180px]">
           Repeats
           <select
+            aria-label="Repeat frequency"
             value={form.recurrence}
             onChange={(e) => {
               const recurrence = e.target.value
               setForm((current) => {
-                if (recurrence !== 'selected_weekdays' || current.recurrence_days.length) {
-                  return { ...current, recurrence }
+                if (recurrence !== 'selected_weekdays') {
+                  return { ...current, recurrence, recurrence_days: [] }
                 }
+                if (current.recurrence_days.length) return { ...current, recurrence }
                 const date = new Date(`${current.due_date}T00:00:00`)
                 return {
                   ...current,
@@ -521,12 +523,11 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         </label>
       </div>
 
-      {form.recurrence === 'selected_weekdays' && (
-        <fieldset className="m-0 rounded-lg border border-border px-3 py-2">
-          <legend className="px-1 text-xs font-medium text-text-muted">This task repeats every</legend>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Repeat on weekdays">
+      <fieldset className="m-0 rounded-lg border border-border px-3 py-2">
+        <legend className="px-1 text-xs font-medium text-text-muted">This task repeats every</legend>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Repeat on weekdays">
             {WEEKDAY_OPTIONS.map((day) => {
-              const selected = form.recurrence_days.includes(day.value)
+              const selected = form.recurrence === 'selected_weekdays' && form.recurrence_days.includes(day.value)
               return (
                 <button
                   key={day.label}
@@ -534,14 +535,19 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
                   aria-pressed={selected}
                   aria-label={day.label}
                   title={day.label}
-                  onClick={() =>
-                    set(
-                      'recurrence_days',
-                      selected
-                        ? form.recurrence_days.filter((value) => value !== day.value)
-                        : [...form.recurrence_days, day.value],
-                    )
-                  }
+                  onClick={() => {
+                    setForm((current) => {
+                      const activeDays = current.recurrence === 'selected_weekdays' ? current.recurrence_days : []
+                      const nextDays = activeDays.includes(day.value)
+                        ? activeDays.filter((value) => value !== day.value)
+                        : [...activeDays, day.value]
+                      return {
+                        ...current,
+                        recurrence: nextDays.length ? 'selected_weekdays' : 'none',
+                        recurrence_days: nextDays,
+                      }
+                    })
+                  }}
                   className={`h-9 w-9 cursor-pointer rounded-full border text-xs font-semibold transition-colors ${
                     selected
                       ? 'border-accent bg-accent text-white'
@@ -552,10 +558,8 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
                 </button>
               )
             })}
-          </div>
-          {!form.recurrence_days.length && <p className="mt-2 text-xs text-overdue">Select at least one day.</p>}
-        </fieldset>
-      )}
+        </div>
+      </fieldset>
 
       <div className="new-task-row">
         <label>
