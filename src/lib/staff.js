@@ -295,6 +295,25 @@ export async function approveTimeEntry(entryId, approverId) {
   if (error) throw error
 }
 
+// The only way a shift stranded open ever gets closed if the property
+// manager can't do it themselves — most commonly because their account
+// was deactivated mid-shift, which staff_clock_out() (schema.sql)
+// deliberately refuses for a deactivated is_staff() account, same as it
+// refuses every other staff RPC. A plain client update, not an RPC —
+// members already hold unrestricted UPDATE RLS on time_entries (the
+// same grant approveTimeEntry() above already relies on), so there's no
+// RLS gap to work around here the way there is on the staff side.
+// Leaves clock_out_lat/lng null rather than guessing at a location — a
+// member closing this out remotely has no real GPS reading to attach to
+// it, unlike a normal clock-out.
+export async function forceClockOutEntry(entryId) {
+  const { error } = await supabase
+    .from('time_entries')
+    .update({ clock_out_at: new Date().toISOString() })
+    .eq('id', entryId)
+  if (error) throw error
+}
+
 // Hours * the rate snapshotted at clock-in — never a stored column, so
 // it can't drift if rate_amount is ever corrected before approval.
 // Same "derive it, don't store it" reasoning duration_minutes/end-time

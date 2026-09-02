@@ -7,6 +7,7 @@ import {
   fetchWorkSites,
   fetchAllTimeEntries,
   approveTimeEntry,
+  forceClockOutEntry,
   setStaffActive,
   computeEntryPay,
   workSiteStatus,
@@ -49,6 +50,7 @@ export default function StaffLogsView({ me }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [approvingId, setApprovingId] = useState(null)
+  const [closingId, setClosingId] = useState(null)
   const [editingSite, setEditingSite] = useState(null)
   const [addingSite, setAddingSite] = useState(false)
   const [locationsOpen, setLocationsOpen] = useState(false)
@@ -116,6 +118,32 @@ export default function StaffLogsView({ me }) {
       setError(err.message)
     } finally {
       setApprovingId(null)
+    }
+  }
+
+  // The normal way a shift ends is the property manager tapping Stop —
+  // this is only for when that can't happen (most commonly a
+  // deactivated account, which staff_clock_out() itself refuses). Sets
+  // clock_out_at to right now, with no location — see forceClockOutEntry
+  // in staff.js. Confirmed first since it directly determines pay and
+  // can't be un-done from here afterward, same reasoning the destructive
+  // actions elsewhere in this app (e.g. StaffWorkSitesForm's own
+  // Deactivate) already gate behind a native confirm().
+  async function handleForceClockOut(entry) {
+    if (
+      !window.confirm(
+        `Close out ${entry.staff?.display_name || 'this'}'s shift now? This sets the clock-out time to right now — only use this if they can't clock out themselves.`,
+      )
+    )
+      return
+    setClosingId(entry.id)
+    try {
+      await forceClockOutEntry(entry.id)
+      await reloadEntries()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setClosingId(null)
     }
   }
 
@@ -227,6 +255,16 @@ export default function StaffLogsView({ me }) {
                 </span>
                 <div className="flex items-center gap-2">
                   <span>{e.clock_out_at ? money(computeEntryPay(e)) : '—'}</span>
+                  {!e.clock_out_at && (
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h disabled:opacity-50"
+                      onClick={() => handleForceClockOut(e)}
+                      disabled={closingId === e.id}
+                    >
+                      {closingId === e.id ? 'Closing…' : 'Force clock-out'}
+                    </button>
+                  )}
                   {e.status === 'pending' && e.clock_out_at && (
                     <button
                       type="button"

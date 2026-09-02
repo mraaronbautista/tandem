@@ -83,7 +83,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
   - **Real gap found**: deactivating a staff account while they have an open shift (`ONGOING_PLANS.md`'s own stated decision: "Deactivation must not strand an open shift") — `staff_clock_out()` correctly refuses a deactivated account (`"not an active staff member"`, matching `is_staff()`'s `active` check), and there's currently **no UI path for a member to close that stranded shift either** — `StaffLogsView.jsx` shows it as "in progress" with no action available (Approve is gated on `clock_out_at` being set, and nothing else touches it). The only way to close it today is a member's own raw DB update, which RLS does permit (confirmed: a member's unrestricted `time_entries` UPDATE covers this), but there's no button for it. **Not fixed yet** — flagging as a real, still-open product gap rather than closing this checklist item's own scope by silently building something unrequested.
 
   All test fixtures (3 work_sites, 3 time_entries, one temporary deactivate/reactivate cycle) created and cleaned up via the same live project; both tables confirmed back to 0 rows afterward, `pmanager` confirmed reactivated.
-- [ ] Give a member a way to close a shift stranded open by deactivation — confirmed live (see above) that a deactivated staff account can't clock itself out, and `StaffLogsView.jsx` has no action for an "in progress" entry today. A raw DB update already satisfies RLS, so this is a UI gap, not a security one; likely a "Force clock-out" action on the entry card, gated to `status === 'pending' && !clock_out_at`.
+- [x] Give a member a way to close a shift stranded open by deactivation — `forceClockOutEntry()` (`src/lib/staff.js`), a plain member-side update (no RPC needed, same reasoning `approveTimeEntry()` already relies on — members already hold unrestricted `time_entries` UPDATE RLS, confirmed by the security pass above). Sets `clock_out_at` to now, leaves `clock_out_lat`/`clock_out_lng` null rather than guessing at a location a remote member has no way to actually know. New "Force clock-out" button in `StaffLogsView.jsx`'s entry card, shown only while `!clock_out_at`, gated behind a native `confirm()` since it directly determines pay. Verified live against the exact reproduced scenario (a real deactivated `pmanager` shift, stranded open) — Force clock-out correctly closed it, Approve then worked normally afterward on the same entry, confirmed via direct SQL that `clock_out_lat`/`lng` were left null. Test data cleaned up, `pmanager` reactivated, both tables back to 0 rows.
 - [ ] Add payroll-period filtering, summary metrics, and filter-aware CSV export.
 - [ ] Update `CLAUDE.md`, remove this completed plan, commit, and push the final phase.
 
@@ -93,7 +93,7 @@ Geofencing is an exception signal, not a hard attendance gate: a shift outside t
 
 ### Next action
 
-Add a way for a member to close a shift stranded open by staff deactivation — confirmed live via the security pass above that neither the deactivated staff account nor the member currently has a UI path to do this. Payroll-period filtering/CSV export is next after that, but still blocked on resolving the payroll cadence decision above first.
+Add payroll-period filtering, summary metrics, and filter-aware CSV export to the Hours overview — the property-manager payroll cadence (weekly/biweekly/twice monthly/monthly) is still an open decision above and blocks the default period selector, so that needs resolving first.
 
 ## Rentals — multiple tenants per booking
 
