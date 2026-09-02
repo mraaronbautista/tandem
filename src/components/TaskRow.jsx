@@ -5,8 +5,8 @@ import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge } from '../lib/manualNotify'
-import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, X } from 'lucide-react'
-import TaskForm from './TaskForm'
+import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, X } from 'lucide-react'
+import TaskForm, { RECURRENCE_OPTIONS } from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
@@ -108,6 +108,8 @@ export default function TaskRow({
   const canNudge = overdue && myWhoKey && task.who !== myWhoKey
   const checklist = task.checklist || []
   const checklistDone = checklist.filter((item) => item.done).length
+  const recurrence = task.recurrence ?? 'none'
+  const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label
   const clarifications = task.clarifications || []
   // A question directed at whoever's looking right now — an in-app
   // reminder that doesn't depend on the push notification having been
@@ -242,6 +244,15 @@ export default function TaskRow({
             <CheckSquare size={13} /> {checklistDone}/{checklist.length}
           </span>
         )}
+        {recurrence !== 'none' && recurrenceLabel && (
+          <span
+            className="flex flex-none items-center gap-1 rounded-full border border-border bg-pill-bg px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-text-h"
+            title={`Repeats ${recurrenceLabel.toLowerCase()}`}
+          >
+            <Repeat2 size={12} aria-hidden="true" />
+            {recurrenceLabel}
+          </span>
+        )}
         {hasQuestionForMe && (
           <span className="opacity-80" title="Has something for you to reply to">
             <MessageCircle size={13} />
@@ -290,10 +301,10 @@ export default function TaskRow({
           )}
           {task.notes && <p className="break-words whitespace-pre-wrap">{task.notes}</p>}
           <ChecklistView items={checklist} onItemChange={handleChecklistItemChange} />
-          {task.recurrence !== 'none' && (
-            <p>Repeats {task.recurrence}</p>
+          {recurrence !== 'none' && recurrenceLabel && (
+            <p>Repeats {recurrenceLabel.toLowerCase()}</p>
           )}
-          {!sourceLabel && !task.notes && !checklist.length && task.recurrence === 'none' && !creatorName && (
+          {!sourceLabel && !task.notes && !checklist.length && recurrence === 'none' && !creatorName && (
             <p className="task-notes-empty">No additional details.</p>
           )}
 

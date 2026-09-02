@@ -56,6 +56,21 @@ export const DURATION_OPTIONS = [
   { value: '10080', label: '1 week' },
 ]
 
+// Shared by the form and TaskRow so saved enum values always have the
+// same human-readable label everywhere recurrence is shown.
+export const RECURRENCE_OPTIONS = [
+  { value: 'none', label: 'Never' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'every_3_weeks', label: 'Every 3 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'every_2_months', label: 'Every 2 months' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'every_6_months', label: 'Every 6 months' },
+  { value: 'annually', label: 'Annually' },
+]
+
 // Half-hour increments across the day, e.g. "09:00" -> "9:00 AM".
 export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2)
@@ -192,6 +207,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
       source_note: initialValues?.source_note ?? '',
       notes: initialValues?.notes ?? '',
       duration_minutes: initialValues?.duration_minutes != null ? String(initialValues.duration_minutes) : '',
+      recurrence: initialValues?.recurrence ?? 'none',
     }
   })
   const [saving, setSaving] = useState(false)
@@ -449,16 +465,11 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         <label>
           Repeats
           <select value={form.recurrence} onChange={(e) => set('recurrence', e.target.value)}>
-            <option value="none">Never</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="biweekly">Every 2 weeks</option>
-            <option value="every_3_weeks">Every 3 weeks</option>
-            <option value="monthly">Monthly</option>
-            <option value="every_2_months">Every 2 months</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="every_6_months">Every 6 months</option>
-            <option value="annually">Annually</option>
+            {RECURRENCE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </label>
       </div>
