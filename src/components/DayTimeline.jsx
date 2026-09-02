@@ -64,18 +64,13 @@ const GAP_LABEL_MIN_HEIGHT = 22
 // same stack that don't clear that bar still render directly flush
 // against each other, no label, same as any other back-to-back pair.
 const OVERLAP_LABEL_HEIGHT = 22
-// A block's rendered height/layout footprint is capped at this many
-// minutes' worth of pixels, regardless of its real duration — a task
-// spanning multiple days (a real, supported case: TaskForm.jsx's own
-// duration picker goes up to a week, e.g. for a multi-day trip) would
-// otherwise scale linearly right along with everything else and dwarf
-// the rest of the day's tasks, or the day's whole scroll. Generous
-// enough (6 hours) to still show a genuinely long same-day task — an
-// all-day outing, a full workday block — at its real proportional size;
-// only the rare task that's actually longer than that gets truncated
-// (see .day-timeline-block-truncated below), with its real end time
-// still shown in full via blockTimeLabel.
-const MAX_BLOCK_MINUTES = 360
+// Keep the day useful as an at-a-glance agenda rather than letting one
+// long shift consume the viewport. Durations stay proportional through
+// 90 minutes; anything longer gets the same compact 225px footprint.
+// The real start/end time remains visible in blockTimeLabel, and the
+// dashed edge (see .day-timeline-block-truncated) makes the compression
+// explicit. This also covers multi-day tasks supported by TaskForm.
+const MAX_BLOCK_MINUTES = 90
 
 // "Completed 10:00 PM" for a finished task — always the real
 // completed_at instant, read straight off the task rather than derived
