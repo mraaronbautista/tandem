@@ -92,11 +92,10 @@ const TASK_BLOCK_HEIGHT = MIN_BLOCK_HEIGHT
 // actually finished in the real world, not tied to whatever zone the
 // original due time was set in.
 // A task whose real duration (not its compact render height) crosses
-// into another calendar day in its
-// own due_timezone needs the end's date stated too, not just its time —
-// "9:00 AM–9:00 AM" for a 2-day task is actively misleading, since it
-// reads as a same-day span. Compared in due_timezone, matching every
-// other zone-aware label here (blockDateLabel, the badge).
+// into another calendar day gets a compact day offset after its end
+// time: "10:55 PM–2:00 AM +1". Longer tasks naturally become +2, +3,
+// and so on. Compared in due_timezone, matching every other zone-aware
+// label here (blockDateLabel, the badge).
 function blockTimeLabel(task, start, end, displayTimezone) {
   if (task.status === 'done') {
     const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: displayTimezone })
@@ -104,10 +103,10 @@ function blockTimeLabel(task, start, end, displayTimezone) {
   }
   const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   if (!task.duration_minutes) return fmt(start)
-  const spansDays = start.toDateString() !== end.toDateString()
-  if (!spansDays) return `${fmt(start)}–${fmt(end)}`
-  const dateFmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return `${fmt(start)} – ${dateFmt(end)}, ${fmt(end)}`
+  const startDay = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
+  const endDay = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())
+  const dayOffset = Math.round((endDay - startDay) / 86400000)
+  return `${fmt(start)}–${fmt(end)}${dayOffset > 0 ? ` +${dayOffset}` : ''}`
 }
 
 // "Tue 08/18/26" — start is always due_date now (see blockTimeLabel
