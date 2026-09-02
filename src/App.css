@@ -1665,6 +1665,12 @@ select:focus-visible {
   list-style: none;
   display: flex;
   flex-direction: column;
+  /* This list lives in a height-capped flex-column modal. Without opting
+     out of flex shrinking, mobile browsers can squeeze it to nearly zero
+     so the edit fields and footer fit, making the tasks look missing.
+     The modal itself already scrolls, while this list keeps its own cap
+     for large task sets. */
+  flex: none;
   gap: 6px;
   max-height: 320px;
   overflow-y: auto;
