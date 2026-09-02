@@ -116,9 +116,9 @@ create table tasks (
   -- answerAttachments are [{url, name}] arrays, same shape and bucket as
   -- completion_attachments — either message can be attachment-only, with
   -- its text left '' rather than required. Purely client-driven, no
-  -- server-side logic — spawn_next_recurrence() doesn't reference it, so
-  -- a recurring task's next occurrence starts with an empty thread rather
-  -- than carrying forward a past occurrence's Q&A.
+  -- server-side logic — generate_month_occurrences() doesn't reference
+  -- it, so a recurring task's generated occurrences each start with an
+  -- empty thread rather than carrying forward the template's own Q&A.
   clarifications jsonb not null default '[]'::jsonb
 );
 
@@ -176,74 +176,27 @@ create trigger tasks_set_meta
 before update on tasks
 for each row execute function set_task_meta();
 
--- Recurrence: when a recurring task is completed, spawn the next occurrence
--- with its due date rolled forward. Occurrences only appear once the prior
--- one is marked done, not generated ahead of time.
-create or replace function spawn_next_recurrence()
-returns trigger as $$
-declare
-  next_due timestamptz;
-  reset_checklist jsonb;
-  current_weekday integer;
-  days_until_next integer;
-begin
-  if new.status = 'done' and old.status <> 'done'
-     and new.recurrence <> 'none'
-     and new.recurrence::text <> 'selected_weekdays' then
-    next_due := case new.recurrence::text
-      when 'daily' then coalesce(new.due_date, now()) + interval '1 day'
-      when 'weekly' then coalesce(new.due_date, now()) + interval '7 days'
-      when 'selected_weekdays' then null
-      when 'biweekly' then coalesce(new.due_date, now()) + interval '14 days'
-      when 'every_3_weeks' then coalesce(new.due_date, now()) + interval '21 days'
-      when 'monthly' then coalesce(new.due_date, now()) + interval '1 month'
-      when 'every_2_months' then coalesce(new.due_date, now()) + interval '2 months'
-      when 'quarterly' then coalesce(new.due_date, now()) + interval '3 months'
-      when 'every_6_months' then coalesce(new.due_date, now()) + interval '6 months'
-      when 'annually' then coalesce(new.due_date, now()) + interval '1 year'
-    end;
-
-    if new.recurrence::text = 'selected_weekdays' then
-      current_weekday := extract(dow from coalesce(new.due_date, now()) at time zone new.due_timezone)::integer;
-      select min(((day_number::integer - current_weekday + 6) % 7) + 1)
-        into days_until_next
-        from unnest(new.recurrence_days) as selected_day(day_number);
-      -- Add calendar days in the task's own zone so its selected wall time
-      -- remains stable when daylight-saving time changes.
-      next_due := (
-        coalesce(new.due_date, now()) at time zone new.due_timezone
-        + make_interval(days => days_until_next)
-      ) at time zone new.due_timezone;
-    end if;
-
-    -- Carry over checklist item text to the next occurrence, but unchecked —
-    -- it's a fresh instance of the recurring task, not a continuation.
-    select coalesce(jsonb_agg(jsonb_set(item, '{done}', 'false')), '[]'::jsonb)
-      into reset_checklist
-      from jsonb_array_elements(new.checklist) as item;
-
-    insert into tasks (
-      title, who, priority, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, created_by
-    ) values (
-      new.title, new.who, new.priority, next_due, new.due_timezone, new.duration_minutes, new.source, new.source_note, new.notes, reset_checklist, new.recurrence, new.recurrence_days, new.created_by
-    );
-  end if;
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger tasks_spawn_recurrence
-after update on tasks
-for each row execute function spawn_next_recurrence();
-
--- Selected-weekday schedules are materialized for the current calendar
--- month so Month view can show the whole schedule in advance.
+-- Recurrence: every non-'none' recurrence type is materialized ahead of
+-- time as real rows, not spawned one-at-a-time on completion. The first
+-- task saved with a recurrence becomes a template (recurrence_series_id
+-- points to its own id — see prepare_recurrence_series below); every
+-- generated occurrence points its recurrence_series_id back at that
+-- template, deduplicated by the (recurrence_series_id, due_date) unique
+-- index above rather than application logic. This used to be true only
+-- for "selected weekdays" schedules, with every other recurrence type
+-- (daily/weekly/monthly/...) instead spawning exactly one next occurrence
+-- on completion and nothing before that — which meant a still-open
+-- recurring task's future occurrences simply didn't exist yet anywhere,
+-- including on the calendar. Unifying every type onto the same
+-- template/materialize model makes every Repeats option behave the same
+-- way: pick one, and its upcoming occurrences show up on the calendar
+-- immediately, not only after you complete the current one.
 create or replace function prepare_recurrence_series()
 returns trigger as $$
 begin
-  if new.recurrence::text = 'selected_weekdays' and new.recurrence_series_id is null then
+  if new.recurrence::text <> 'none' and new.recurrence_series_id is null then
     new.recurrence_series_id := new.id;
-  elsif new.recurrence::text <> 'selected_weekdays' and new.recurrence_series_id = new.id then
+  elsif new.recurrence::text = 'none' and new.recurrence_series_id = new.id then
     new.recurrence_series_id := null;
   end if;
   return new;
@@ -254,55 +207,118 @@ create trigger tasks_prepare_recurrence_series
 before insert or update of recurrence, recurrence_days on tasks
 for each row execute function prepare_recurrence_series();
 
-create or replace function generate_current_month_occurrences(template_id uuid)
+-- Materializes template_id's occurrences landing inside target_month.
+-- Selected-weekday schedules match by day-of-week, over every day in the
+-- month (no fixed step to anchor from). Every other recurrence type has
+-- a fixed step (a day count for daily/weekly/biweekly/every_3_weeks, a
+-- calendar-month count for monthly/every_2_months/quarterly/
+-- every_6_months/annually) and is walked forward from the template's own
+-- due_date via generate_series — the same '+ interval' arithmetic the
+-- old per-completion spawn used (so a monthly task recurring on the 31st
+-- still compounds/clamps exactly like it always has, e.g. Jan 31 -> Feb
+-- 28 -> Mar 28, not Mar 31), just computed as a sequence up front instead
+-- of one step at a time. Both branches share the same assignee
+-- resolution, exclusion check, and (recurrence_series_id, due_date)
+-- on-conflict dedup.
+create or replace function generate_month_occurrences(template_id uuid, target_month date)
 returns void as $$
 declare
   template tasks%rowtype;
-  month_start date;
-  month_end date;
+  month_start date := date_trunc('month', target_month)::date;
+  month_end date := (date_trunc('month', target_month) + interval '1 month - 1 day')::date;
+  month_end_ts timestamptz;
   wall_time time;
   assignee_id uuid;
+  step interval;
 begin
   select * into template from tasks where id = template_id;
-  if not found or template.recurrence::text <> 'selected_weekdays'
+  if not found or template.recurrence::text = 'none'
      or template.recurrence_series_id <> template.id or template.due_date is null then
     return;
   end if;
-  month_start := date_trunc('month', now() at time zone template.due_timezone)::date;
-  month_end := (month_start + interval '1 month - 1 day')::date;
+
   wall_time := (template.due_date at time zone template.due_timezone)::time;
   select id into assignee_id from members
   where lower(display_name) = case when template.who = 'assistant' then 'aaron' else 'ada' end
   limit 1;
+
+  if template.recurrence::text = 'selected_weekdays' then
+    insert into tasks (
+      title, who, priority, icon, due_date, due_timezone, duration_minutes,
+      source, source_note, notes, checklist, recurrence, recurrence_days,
+      created_by, recurrence_series_id
+    )
+    select template.title, template.who, template.priority, template.icon,
+      (day_stamp::date + wall_time) at time zone template.due_timezone,
+      template.due_timezone, template.duration_minutes, template.source,
+      template.source_note, template.notes, template.checklist,
+      template.recurrence, template.recurrence_days,
+      coalesce(assignee_id, template.created_by), template.id
+    from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
+    where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
+      and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
+      and not exists (
+        select 1 from task_recurrence_exclusions e
+        where e.recurrence_series_id = template.id
+          and e.due_date = (day_stamp::date + wall_time) at time zone template.due_timezone
+      )
+    on conflict (recurrence_series_id, due_date)
+      where recurrence_series_id is not null and due_date is not null do nothing;
+    return;
+  end if;
+
+  step := case template.recurrence::text
+    when 'daily' then interval '1 day'
+    when 'weekly' then interval '7 days'
+    when 'biweekly' then interval '14 days'
+    when 'every_3_weeks' then interval '21 days'
+    when 'monthly' then interval '1 month'
+    when 'every_2_months' then interval '2 months'
+    when 'quarterly' then interval '3 months'
+    when 'every_6_months' then interval '6 months'
+    when 'annually' then interval '1 year'
+  end;
+  if step is null then
+    return;
+  end if;
+
+  -- One day past month_end, in the template's own zone, so a candidate
+  -- landing on the last day of the month is still inside generate_series'
+  -- inclusive upper bound.
+  month_end_ts := (month_end + 1)::timestamp at time zone template.due_timezone;
+
   insert into tasks (
     title, who, priority, icon, due_date, due_timezone, duration_minutes,
     source, source_note, notes, checklist, recurrence, recurrence_days,
     created_by, recurrence_series_id
   )
   select template.title, template.who, template.priority, template.icon,
-    (day_stamp::date + wall_time) at time zone template.due_timezone,
-    template.due_timezone, template.duration_minutes, template.source,
+    occurrence, template.due_timezone, template.duration_minutes, template.source,
     template.source_note, template.notes, template.checklist,
     template.recurrence, template.recurrence_days,
     coalesce(assignee_id, template.created_by), template.id
-  from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
-  where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
-    and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
+  from generate_series(template.due_date, month_end_ts, step) as occ(occurrence)
+  where (occurrence at time zone template.due_timezone)::date between month_start and month_end
+    and occurrence <> template.due_date
     and not exists (
       select 1 from task_recurrence_exclusions e
-      where e.recurrence_series_id = template.id
-        and e.due_date = (day_stamp::date + wall_time) at time zone template.due_timezone
+      where e.recurrence_series_id = template.id and e.due_date = occurrence
     )
   on conflict (recurrence_series_id, due_date)
     where recurrence_series_id is not null and due_date is not null do nothing;
 end;
 $$ language plpgsql security definer;
 
+-- Keeps a template's own materialized occurrences honest as it's edited,
+-- and always regenerates the real current calendar month right away
+-- (independent of whichever month the editor happens to be browsing —
+-- see ensure_month_recurrences below for materializing whatever month is
+-- actually being viewed).
 create or replace function sync_current_month_recurrences()
 returns trigger as $$
 begin
   if tg_op = 'UPDATE' and old.recurrence_series_id = old.id and (
-    new.recurrence::text <> 'selected_weekdays'
+    new.recurrence::text <> old.recurrence::text
     or new.due_date is distinct from old.due_date
     or new.due_timezone is distinct from old.due_timezone
     or new.recurrence_days is distinct from old.recurrence_days
@@ -311,8 +327,8 @@ begin
     delete from tasks where recurrence_series_id = old.id and id <> old.id and status <> 'done';
     perform set_config('app.recurrence_sync', '0', true);
   end if;
-  if new.recurrence::text = 'selected_weekdays' and new.recurrence_series_id = new.id then
-    perform generate_current_month_occurrences(new.id);
+  if new.recurrence::text <> 'none' and new.recurrence_series_id = new.id then
+    perform generate_month_occurrences(new.id, current_date);
   end if;
   return new;
 end;
@@ -322,66 +338,16 @@ create trigger tasks_sync_current_month_recurrences
 after insert or update of recurrence, recurrence_days, due_date, due_timezone on tasks
 for each row execute function sync_current_month_recurrences();
 
-create or replace function ensure_current_month_recurrences()
-returns void as $$
-declare template_id uuid;
-begin
-  if not exists (select 1 from members where id = auth.uid()) then
-    raise exception 'Not authorized';
-  end if;
-  for template_id in select id from tasks
-    where recurrence::text = 'selected_weekdays' and recurrence_series_id = id
-  loop
-    perform generate_current_month_occurrences(template_id);
-  end loop;
-end;
-$$ language plpgsql security definer;
-
-create or replace function generate_month_occurrences(template_id uuid, target_month date)
-returns void as $$
-declare
-  template tasks%rowtype;
-  month_start date := date_trunc('month', target_month)::date;
-  month_end date := (date_trunc('month', target_month) + interval '1 month - 1 day')::date;
-  wall_time time;
-  assignee_id uuid;
-begin
-  select * into template from tasks where id = template_id;
-  if not found or template.recurrence::text <> 'selected_weekdays'
-     or template.recurrence_series_id <> template.id or template.due_date is null then return; end if;
-  wall_time := (template.due_date at time zone template.due_timezone)::time;
-  select id into assignee_id from members
-  where lower(display_name) = case when template.who = 'assistant' then 'aaron' else 'ada' end limit 1;
-  insert into tasks (
-    title, who, priority, icon, due_date, due_timezone, duration_minutes,
-    source, source_note, notes, checklist, recurrence, recurrence_days,
-    created_by, recurrence_series_id
-  )
-  select template.title, template.who, template.priority, template.icon,
-    (day_stamp::date + wall_time) at time zone template.due_timezone,
-    template.due_timezone, template.duration_minutes, template.source,
-    template.source_note, template.notes, template.checklist,
-    template.recurrence, template.recurrence_days,
-    coalesce(assignee_id, template.created_by), template.id
-  from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
-  where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
-    and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
-    and not exists (
-      select 1 from task_recurrence_exclusions e where e.recurrence_series_id = template.id
-        and e.due_date = (day_stamp::date + wall_time) at time zone template.due_timezone
-    )
-  on conflict (recurrence_series_id, due_date)
-    where recurrence_series_id is not null and due_date is not null do nothing;
-end;
-$$ language plpgsql security definer;
-
+-- Called from the client (see ensureMonthRecurrences in tasks.js) whenever
+-- the viewed month changes, so every recurring template's occurrences for
+-- that month exist by the time the calendar renders it.
 create or replace function ensure_month_recurrences(target_month date)
 returns void as $$
 declare template_id uuid;
 begin
   if not exists (select 1 from members where id = auth.uid()) then raise exception 'Not authorized'; end if;
   for template_id in select id from tasks
-    where recurrence::text = 'selected_weekdays' and recurrence_series_id = id
+    where recurrence::text <> 'none' and recurrence_series_id = id
   loop
     perform generate_month_occurrences(template_id, target_month);
   end loop;

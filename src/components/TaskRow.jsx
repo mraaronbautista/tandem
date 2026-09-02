@@ -125,7 +125,7 @@ export default function TaskRow({
 
   function handleDelete(e) {
     e.stopPropagation()
-    if (task.recurrence === 'selected_weekdays') {
+    if (recurrence !== 'none') {
       setDeleteRecurringOpen(true)
     } else if (window.confirm(`Delete "${task.title}"? This can't be undone.`)) {
       onDelete(task.id)
