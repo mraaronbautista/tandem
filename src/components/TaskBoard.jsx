@@ -315,7 +315,47 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const me = useMemo(() => members.find((m) => m.id === session.user.id), [members, session])
   const memberName = (id) => members.find((m) => m.id === id)?.display_name
   const displayTimezone = me?.default_timezone || detectDefaultTimezone()
-  const displayToday = useMemo(() => dateInTimezone(new Date(), displayTimezone), [displayTimezone])
+
+  // displayToday used to be a plain `new Date()` snapshot taken once
+  // (recomputed only when displayTimezone changed) — fine for a page
+  // load, but it goes stale the moment the real calendar day rolls over
+  // during a long-lived session (the PWA sitting backgrounded overnight,
+  // or just a browser tab left open past midnight), since nothing ever
+  // told React to re-render on its own. isToday (below) then silently
+  // goes false for what the viewer still sees as "today," taking the
+  // Overdue/Completed-today pills with it. `now` re-ticks on
+  // visibilitychange (the same wake signal App.jsx's fixed-position
+  // reflow already listens for) and on a minute-scale interval as a
+  // fallback for a tab that never backgrounds but stays open across
+  // midnight anyway.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    function refreshNow() {
+      if (document.visibilityState === 'visible') setNow(new Date())
+    }
+    document.addEventListener('visibilitychange', refreshNow)
+    const interval = setInterval(refreshNow, 60000)
+    return () => {
+      document.removeEventListener('visibilitychange', refreshNow)
+      clearInterval(interval)
+    }
+  }, [])
+  const displayToday = useMemo(() => dateInTimezone(now, displayTimezone), [now, displayTimezone])
+  // If the calendar day rolls over while selectedDate was still tracking
+  // "today," keep it tracking today rather than freezing on whatever day
+  // it was when the tab was last opened — otherwise isToday (and the
+  // pills gated on it) stay wrong until the viewer manually navigates.
+  // Left alone if selectedDate had already been deliberately navigated
+  // elsewhere (it won't match prevDisplayToday, so this no-ops).
+  const prevDisplayTodayRef = useRef(displayToday)
+  useEffect(() => {
+    const prev = prevDisplayTodayRef.current
+    if (prev.getTime() !== displayToday.getTime()) {
+      setSelectedDate((d) => (d.getTime() === prev.getTime() ? displayToday : d))
+      prevDisplayTodayRef.current = displayToday
+    }
+  }, [displayToday])
+
   const selectedMonthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-01`
 
   // Recurrence has no end date. Materialize only the calendar month the
@@ -660,25 +700,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <header className="mb-4 flex flex-wrap items-center gap-2">
           {activeTab === 'today' && (
             <MonthNavRow>
-              {/* Steps a full calendar month regardless of viewMode — the
-                  header label itself always reads "Month Year" whether
-                  Day/Week/Month is active (see MonthNavRow's own
-                  comment), so stepping it a month at a time makes sense
-                  from any of the three. Distinct from .view-mode-row's
-                  ‹ Today › arrows below, which still step by week — those
-                  are for nudging the selected day, this is for browsing
-                  months, most useful in Month view (RentalsView's own
-                  month nav uses this exact IconButton-flanking-
-                  MonthNavLabel shape already). Desktop-only: mobile
-                  already has its own swipe gesture for stepping months
-                  (handleMonthSwipeEnd below), so a second, redundant
-                  control there is just clutter on a screen with less
-                  room for it. */}
-              {isDesktop && (
-                <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
-                  <ChevronLeft size={16} />
-                </IconButton>
-              )}
+              {/* Removed the desktop ‹ › month-step arrows that used to
+                  flank this label — a second month-stepping control was
+                  confusing alongside .view-mode-row's own ‹ Today ›
+                  arrows below, which step by week for the same general
+                  "browse around" purpose. Tapping the label to jump to an
+                  arbitrary date (below) and .view-mode-row's stepper
+                  cover this without a redundant second control. */}
               <MonthNavLabel
                 className="text-[26px] max-[480px]:text-[22px]"
                 onClick={() => setDatePickerOpen(true)}
@@ -689,11 +717,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   {datePickerOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </span>
               </MonthNavLabel>
-              {isDesktop && (
-                <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
-                  <ChevronRight size={16} />
-                </IconButton>
-              )}
             </MonthNavRow>
           )}
           {activeTab === 'rentals' && (
