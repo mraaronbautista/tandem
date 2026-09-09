@@ -18,7 +18,13 @@ import {
   INBOX_LAST_VIEWED_KEY,
 } from '../lib/tasks'
 import { fetchMembers, updateDefaultTimezone } from '../lib/members'
-import { detectDefaultTimezone, setPreferredTimezone, splitDueDateInZone } from '../lib/timezone'
+import {
+  detectDefaultTimezone,
+  setPreferredTimezone,
+  splitDueDateInZone,
+  zonedTimeToUtcIso,
+  DEFAULT_TIMEZONE,
+} from '../lib/timezone'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
@@ -139,6 +145,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [peekTaskId, setPeekTaskId] = useState(null)
   const [completedTodayOpen, setCompletedTodayOpen] = useState(false)
   const [overdueModalOpen, setOverdueModalOpen] = useState(false)
+  const [movingOverdue, setMovingOverdue] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
@@ -583,6 +590,35 @@ export default function TaskBoard({ theme, toggleTheme }) {
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  // Reschedules every currently-overdue task to today, keeping each task's
+  // own time-of-day and due_timezone — only the date moves. Each task's own
+  // due_timezone decides what "today" means for it (falling back to
+  // DEFAULT_TIMEZONE, same as everywhere else an unset due_timezone is
+  // treated), so a Philippines-time task and a Central-time task each land
+  // on their own actual "today" rather than one shared date.
+  async function handleMoveOverdueToToday() {
+    setMovingOverdue(true)
+    try {
+      const updates = await Promise.all(
+        overdue.map((task) => {
+          const timeZone = task.due_timezone || DEFAULT_TIMEZONE
+          const { due_time } = splitDueDateInZone(task.due_date, timeZone)
+          const todayStr = splitDueDateInZone(new Date().toISOString(), timeZone).due_date
+          return updateTask(task.id, { due_date: zonedTimeToUtcIso(todayStr, due_time, timeZone) })
+        })
+      )
+      setTasks((prev) => {
+        const byId = new Map(updates.map((t) => [t.id, t]))
+        return prev.map((t) => byId.get(t.id) || t)
+      })
+      setOverdueModalOpen(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMovingOverdue(false)
     }
   }
 
@@ -1033,7 +1069,17 @@ export default function TaskBoard({ theme, toggleTheme }) {
       {overdueModalOpen && (
         <Modal onClose={() => setOverdueModalOpen(false)}>
           <ModalCard>
-            <h2>Overdue</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2>Overdue</h2>
+              <button
+                type="button"
+                className="flex-none cursor-pointer rounded-full border border-border bg-pill-bg px-2.5 py-1 text-xs text-text disabled:cursor-default disabled:opacity-60"
+                disabled={movingOverdue}
+                onClick={handleMoveOverdueToToday}
+              >
+                {movingOverdue ? 'Moving…' : 'Move all to today'}
+              </button>
+            </div>
             <div className="flex flex-col">
               {overdue.map((task, i) => (
                 <TimelineRow
