@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Flag, MapPin, Play, Square } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Flag, Info, MapPin, Play, Square } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import {
@@ -21,6 +21,9 @@ import { findNearestSite, haversineDistanceM } from '../lib/geo'
 import ThemeToggle from './ThemeToggle'
 import MarkdownText from './MarkdownText'
 import StaffChangePasswordForm from './StaffChangePasswordForm'
+import Modal from './Modal'
+import ModalCard from './ModalCard'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 // How long to wait after first noticing the property manager is outside
 // the active shift's geofence before actually prompting them — a single
@@ -93,6 +96,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [changingPassword, setChangingPassword] = useState(false)
+  const [roleOpen, setRoleOpen] = useState(false)
 
   // On-site capture flow local state
   const [capturingSiteId, setCapturingSiteId] = useState(null)
@@ -593,12 +597,26 @@ export default function StaffClockView({ theme, toggleTheme }) {
           screen) since "what does this role cover" is relevant whether or
           not a shift happens to be running right now. */}
       {profile?.active !== false && profile?.job_description && (
-        <div className="rounded-[8px] border border-border bg-card-bg p-4">
-          <h2 className="text-[13px] opacity-60">Your role</h2>
-          <div className="mt-1">
+        <button
+          type="button"
+          className="flex cursor-pointer items-center gap-1.5 self-start rounded-full border border-border bg-card-bg px-3 py-1.5 text-xs text-text-h"
+          onClick={() => setRoleOpen(true)}
+        >
+          <Info size={13} /> Your role
+          <ChevronRight size={13} className="opacity-60" />
+        </button>
+      )}
+
+      {roleOpen && (
+        <Modal onClose={() => setRoleOpen(false)}>
+          <ModalCard>
+            <h2>Your role</h2>
             <MarkdownText text={profile.job_description} />
-          </div>
-        </div>
+            <SubmissionActions>
+              <SubmissionButton onClick={() => setRoleOpen(false)}>Close</SubmissionButton>
+            </SubmissionActions>
+          </ModalCard>
+        </Modal>
       )}
 
       {profile?.active !== false && (
