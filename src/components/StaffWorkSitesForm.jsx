@@ -293,8 +293,16 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
           {locationError && <p className="error">{locationError}</p>}
         </div>
 
-        <fieldset className="rounded-[8px] border border-border px-3 py-2">
-          <legend className="px-1 text-sm font-medium text-text-h">Rental units at this location</legend>
+        {/* Collapsed by default (a plain <details>, not a <fieldset>) — this
+            list previously rendered fully open always, which on a narrow
+            phone viewport pushed the rest of the form (and the actual Save
+            button) a long way down for something most edits never need to
+            touch. The selected count in the summary means collapsing it
+            doesn't hide whether units are already assigned. */}
+        <details className="rounded-[8px] border border-border px-3 py-2">
+          <summary className="cursor-pointer px-1 text-sm font-medium text-text-h">
+            Rental units at this location{propertyIds.length > 0 ? ` (${propertyIds.length} selected)` : ''}
+          </summary>
           <div className="mt-1 grid gap-2 sm:grid-cols-2">
             {rentalProperties.map((property) => {
               const assignedElsewhere = property.work_site_id && property.work_site_id !== site?.id
@@ -312,7 +320,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
             })}
           </div>
           {rentalProperties.length === 0 && <p className="py-2 text-sm opacity-60">No active rental units yet.</p>}
-        </fieldset>
+        </details>
 
         <details className="rounded-[8px] border border-border px-3 py-2">
           {/* Renamed from "Advanced clock-in details" — that framed this
