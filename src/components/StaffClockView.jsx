@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, MapPin, Play, Square } from 'lucide-react'
+import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import {
   fetchOwnStaffProfile,
@@ -103,14 +104,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
         fetchActiveEntry(session.user.id),
       ])
       setProfile(profileData)
-      setSites(sitesData.filter((s) => workSiteStatus(s) === 'ready'))
-      // Explicitly needsSetup/pendingApproval only, not a plain "!== ready"
-      // — RLS ("staff can read needs-setup work sites" in schema.sql)
-      // already keeps an inactive/archived site out of what staff ever
-      // receives here, but filtering explicitly rather than by exclusion
-      // means this stays correct even if that assumption is ever wrong,
-      // instead of silently offering a Capture button for an archived site.
-      setCaptureSites(sitesData.filter((s) => ['needsSetup', 'pendingApproval'].includes(workSiteStatus(s))))
+      applySites(sitesData)
       setActiveEntry(entryData)
       if (!entryData) {
         setHistory(await fetchOwnTimeEntries(session.user.id, { from: startOfWeek().toISOString() }))
@@ -122,8 +116,49 @@ export default function StaffClockView({ theme, toggleTheme }) {
     }
   }
 
+  // Split out of loadAll so the work_sites Realtime channel below can
+  // re-derive just sites/captureSites on a member's approve/discard —
+  // re-running the whole loadAll (profile, activeEntry, history) on
+  // every work_sites row change would be wasted work and risks
+  // clobbering in-flight Start-flow state for no reason.
+  function applySites(sitesData) {
+    setSites(sitesData.filter((s) => workSiteStatus(s) === 'ready'))
+    // Explicitly needsSetup/pendingApproval only, not a plain "!== ready"
+    // — RLS ("staff can read needs-setup work sites" in schema.sql)
+    // already keeps an inactive/archived site out of what staff ever
+    // receives here, but filtering explicitly rather than by exclusion
+    // means this stays correct even if that assumption is ever wrong,
+    // instead of silently offering a Capture button for an archived site.
+    setCaptureSites(sitesData.filter((s) => ['needsSetup', 'pendingApproval'].includes(workSiteStatus(s))))
+  }
+
+  async function reloadSites() {
+    try {
+      applySites(await fetchWorkSites())
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   useEffect(() => {
     loadAll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Mirrors StaffLogsView.jsx's own staff-work-sites-changes channel, for
+  // the same reason in the other direction: a member approving or
+  // discarding a capture is a work_sites write that happens entirely
+  // outside anything this screen does, so a pmanager already sitting on
+  // this screen needs the same live signal a member gets, not just a
+  // fetch on mount. Requires the same
+  // `alter publication supabase_realtime add table work_sites;` step —
+  // see schema.sql.
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-clock-work-sites-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_sites' }, reloadSites)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
