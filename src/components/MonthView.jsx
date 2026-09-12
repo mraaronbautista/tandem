@@ -1,3 +1,4 @@
+import { Repeat2 } from 'lucide-react'
 import { isAllDayTask } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -112,6 +113,15 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
                           title={PRIORITY_LABEL[task.priority]}
                         />
                         <span className="month-view-task-title">{task.title}</span>
+                        {/* flex-none, same as the time label right after it
+                            — the chip's own flex row (App.css) has no room
+                            for more than a tiny fixed-width icon here, and
+                            .month-view-task-title's flex:1 truncation
+                            already accounts for every sibling taking its
+                            own width regardless of how many there are. */}
+                        {task.recurrence && task.recurrence !== 'none' && (
+                          <Repeat2 size={10} className="flex-none opacity-70" aria-label="Recurring task" />
+                        )}
                         <span className="month-view-task-time">{timeLabel(task, displayTimezone)}</span>
                       </span>
                     ))}

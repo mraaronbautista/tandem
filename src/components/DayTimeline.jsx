@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CheckSquare, StickyNote, MessageCircle } from 'lucide-react'
+import { CheckSquare, StickyNote, MessageCircle, Repeat2 } from 'lucide-react'
 import { isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
@@ -483,6 +483,13 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
               const hasQuestionForMe = (task.clarifications || []).some(
                 (c) => !c.answer && !c.resolved && c.askedBy !== meId,
               )
+              // Icon-only here, unlike TaskRow.jsx's collapsed-row pill
+              // (icon + "Weekly"/"Daily"/etc. text) — this meta row is
+              // already the block's tightest real estate, shared with
+              // checklist/notes/question, so the label text stays in the
+              // tooltip (matching notes/question's own icon-only
+              // treatment) rather than competing for width.
+              const isRecurring = Boolean(task.recurrence) && task.recurrence !== 'none'
               return (
                 <div
                   key={task.id}
@@ -514,7 +521,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                         </span>
                         <span className="day-timeline-block-title">{task.title}</span>
                       </span>
-                      {(checklist.length > 0 || hasNotes || hasQuestionForMe) && (
+                      {(checklist.length > 0 || hasNotes || hasQuestionForMe || isRecurring) && (
                         <span className="day-timeline-block-meta">
                           {checklist.length > 0 && (
                             <span className="day-timeline-block-checklist inline-flex items-center gap-0.5" title="Subtasks">
@@ -532,6 +539,11 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                               aria-label="Has something for you to reply to"
                             >
                               <MessageCircle size={12} />
+                            </span>
+                          )}
+                          {isRecurring && (
+                            <span title="Recurring task" aria-label="Recurring task">
+                              <Repeat2 size={12} />
                             </span>
                           )}
                         </span>
