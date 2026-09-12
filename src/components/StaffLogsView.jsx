@@ -24,6 +24,7 @@ import StaffWorkSitesForm from './StaffWorkSitesForm'
 import StaffTimeEntryForm from './StaffTimeEntryForm'
 import StaffPayrollExport from './StaffPayrollExport'
 import StaffProfileForm from './StaffProfileForm'
+import StaffResetPasswordForm from './StaffResetPasswordForm'
 import StaffLocationsManager from './StaffLocationsManager'
 
 const STATUS_TABS = [
@@ -70,6 +71,7 @@ export default function StaffLogsView({ me }) {
   const [exportOpen, setExportOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
   const [addingStaff, setAddingStaff] = useState(false)
+  const [resettingPasswordStaff, setResettingPasswordStaff] = useState(null)
   const [editingEntry, setEditingEntry] = useState(null)
   const [addingEntry, setAddingEntry] = useState(false)
 
@@ -614,6 +616,13 @@ export default function StaffLogsView({ me }) {
               <button
                 type="button"
                 className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h"
+                onClick={() => setResettingPasswordStaff(s)}
+              >
+                Reset password
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h"
                 onClick={() => handleToggleActive(s)}
               >
                 {s.active ? 'Deactivate' : 'Reactivate'}
@@ -713,6 +722,13 @@ export default function StaffLogsView({ me }) {
             setEditingStaff(null)
             setAddingStaff(false)
           }}
+        />
+      )}
+
+      {resettingPasswordStaff && (
+        <StaffResetPasswordForm
+          staffMember={resettingPasswordStaff}
+          onClose={() => setResettingPasswordStaff(null)}
         />
       )}
 

@@ -20,6 +20,7 @@ import { sendTimeEntryCorrectionRequest } from '../lib/manualNotify'
 import { findNearestSite, haversineDistanceM } from '../lib/geo'
 import ThemeToggle from './ThemeToggle'
 import MarkdownText from './MarkdownText'
+import StaffChangePasswordForm from './StaffChangePasswordForm'
 
 // How long to wait after first noticing the property manager is outside
 // the active shift's geofence before actually prompting them — a single
@@ -91,6 +92,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
 
   // On-site capture flow local state
   const [capturingSiteId, setCapturingSiteId] = useState(null)
@@ -568,12 +570,21 @@ export default function StaffClockView({ theme, toggleTheme }) {
           <button
             type="button"
             className="cursor-pointer rounded-sm border border-border bg-card-bg px-2.5 py-1.5 text-xs text-text"
+            onClick={() => setChangingPassword(true)}
+          >
+            Change password
+          </button>
+          <button
+            type="button"
+            className="cursor-pointer rounded-sm border border-border bg-card-bg px-2.5 py-1.5 text-xs text-text"
             onClick={signOut}
           >
             Sign out
           </button>
         </div>
       </header>
+
+      {changingPassword && <StaffChangePasswordForm onClose={() => setChangingPassword(false)} />}
 
       {error && <p className="error">{error}</p>}
 

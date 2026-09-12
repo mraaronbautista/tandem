@@ -63,6 +63,29 @@ export async function updateStaffProfile(
   return data
 }
 
+// A member resetting a property manager's login password (StaffLogsView.jsx)
+// — same reasoning createStaffAccount() above already gives for going
+// through an Edge Function: auth.admin.updateUserById() needs the
+// service-role key, which the browser's own anon-key client never holds.
+// See reset-staff-password/index.ts for the caller-is-a-member check this
+// relies on.
+export async function resetStaffPassword({ staffId, newPassword }) {
+  const { data, error } = await supabase.functions.invoke('reset-staff-password', {
+    body: { staffId, newPassword },
+  })
+  if (error) throw error
+  return data
+}
+
+// A signed-in staff account changing their own password (StaffClockView.jsx)
+// — unlike resetStaffPassword() above, this needs no Edge Function: GoTrue
+// lets the current session update its own password directly through the
+// anon client, no admin privilege required.
+export async function changeOwnPassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) throw error
+}
+
 // Soft-disable, not a delete — matches archiveRentalProperty's own
 // reasoning: keeps time_entries history intact for someone who leaves.
 export async function setStaffActive(id, active) {
