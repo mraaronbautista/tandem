@@ -63,15 +63,19 @@ export async function updateStaffProfile(
   return data
 }
 
-// A member resetting a property manager's login password (StaffLogsView.jsx)
-// — same reasoning createStaffAccount() above already gives for going
-// through an Edge Function: auth.admin.updateUserById() needs the
-// service-role key, which the browser's own anon-key client never holds.
-// See reset-staff-password/index.ts for the caller-is-a-member check this
-// relies on.
-export async function resetStaffPassword({ staffId, newPassword }) {
-  const { data, error } = await supabase.functions.invoke('reset-staff-password', {
-    body: { staffId, newPassword },
+// A member changing a property manager's login username and/or password
+// (StaffLogsView.jsx) — same reasoning createStaffAccount() above already
+// gives for going through an Edge Function: auth.admin.updateUserById()
+// needs the service-role key, which the browser's own anon-key client
+// never holds. newUsername is optional (pass null/undefined to leave it
+// unchanged) — this is what makes account turnover to a new employee
+// possible without losing the staff row's own rates/job description/
+// time_entries history the way deactivating and creating a fresh account
+// would. See update-staff-credentials/index.ts for the caller-is-a-member
+// check this relies on.
+export async function updateStaffCredentials({ staffId, newUsername, newPassword }) {
+  const { data, error } = await supabase.functions.invoke('update-staff-credentials', {
+    body: { staffId, newUsername, newPassword },
   })
   if (error) throw error
   return data
