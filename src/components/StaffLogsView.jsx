@@ -150,8 +150,15 @@ export default function StaffLogsView({ me }) {
   useEffect(() => {
     const channel = supabase
       .channel('staff-work-sites-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_sites' }, reloadSites)
-      .subscribe()
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_sites' }, (payload) => {
+        // TEMPORARY diagnostic — remove once the reported live-update gap
+        // on this channel is confirmed fixed.
+        console.log('[work_sites realtime] event received:', payload)
+        reloadSites()
+      })
+      .subscribe((status, err) => {
+        console.log('[work_sites realtime] subscribe status:', status, err || '')
+      })
     return () => supabase.removeChannel(channel)
   }, [])
 
