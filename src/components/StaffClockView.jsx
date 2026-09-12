@@ -153,9 +153,10 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setProfile(profileData)
       applySites(sitesData)
       setActiveEntry(entryData)
-      if (!entryData) {
-        setHistory(await fetchOwnTimeEntries(session.user.id, { from: startOfWeek().toISOString() }))
-      }
+      // Always fetched now, not only while !entryData — the elapsed-timer
+      // effect below needs today's already-closed shifts (from a break)
+      // to compute cumulative time even while a new one is active.
+      setHistory(await fetchOwnTimeEntries(session.user.id, { from: startOfWeek().toISOString() }))
       await reloadRequests()
     } catch (err) {
       setError(err.message)
@@ -237,15 +238,28 @@ export default function StaffClockView({ theme, toggleTheme }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Sum of today's already-closed shifts, prior to whatever's currently
+  // active. Added into the ticking elapsed readout below so a break reads
+  // as a pause in one continuous work session — the timer picks back up
+  // from where it left off rather than resetting to zero — without
+  // actually needing the "one shift spans the break" schema change that
+  // was explicitly not built. Purely a display concern: each shift's own
+  // clock_in_at/clock_out_at still governs pay independently either way,
+  // and StaffLogsView.jsx's period totals already sum every row
+  // regardless of day, so nothing about payroll math changes here.
+  const priorTodayMs = history
+    .filter((e) => e.clock_out_at && new Date(e.clock_in_at) >= startOfToday())
+    .reduce((sum, e) => sum + (new Date(e.clock_out_at) - new Date(e.clock_in_at)), 0)
+
   // Ticks the elapsed-time readout locally — no server round-trip
   // needed to keep a clock moving.
   useEffect(() => {
     if (!activeEntry) return
-    const tick = () => setElapsedMs(Date.now() - new Date(activeEntry.clock_in_at).getTime())
+    const tick = () => setElapsedMs(priorTodayMs + (Date.now() - new Date(activeEntry.clock_in_at).getTime()))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [activeEntry])
+  }, [activeEntry, priorTodayMs])
 
   // Continuous geofence-exit check while clocked in — only ever prompts,
   // per product decision, never auto-clocks-out on its own (a GPS glitch
@@ -530,6 +544,12 @@ export default function StaffClockView({ theme, toggleTheme }) {
     .filter((e) => new Date(e.clock_in_at) >= startOfToday())
     .reduce((sum, e) => sum + (computeEntryPay(e) || 0), 0)
   const weekPay = history.reduce((sum, e) => sum + (computeEntryPay(e) || 0), 0)
+  const todayHours = history
+    .filter((e) => e.clock_out_at && new Date(e.clock_in_at) >= startOfToday())
+    .reduce((sum, e) => sum + (new Date(e.clock_out_at) - new Date(e.clock_in_at)) / 3_600_000, 0)
+  const weekHours = history
+    .filter((e) => e.clock_out_at)
+    .reduce((sum, e) => sum + (new Date(e.clock_out_at) - new Date(e.clock_in_at)) / 3_600_000, 0)
 
   return (
     <div className="mx-auto flex max-w-[480px] flex-col gap-4 p-4">
@@ -803,11 +823,17 @@ export default function StaffClockView({ theme, toggleTheme }) {
             <div className="flex flex-col gap-2 rounded-[8px] border border-border bg-card-bg p-4">
               <div className="flex justify-between text-sm">
                 <span>Today</span>
-                <span className="font-semibold">{money(todayPay)}</span>
+                <span>
+                  <span className="font-semibold">{money(todayPay)}</span>
+                  <span className="ml-1.5 opacity-60">({todayHours.toFixed(2)}h)</span>
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>This week</span>
-                <span className="font-semibold">{money(weekPay)}</span>
+                <span>
+                  <span className="font-semibold">{money(weekPay)}</span>
+                  <span className="ml-1.5 opacity-60">({weekHours.toFixed(2)}h)</span>
+                </span>
               </div>
             </div>
           )}
