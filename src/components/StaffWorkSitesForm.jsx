@@ -127,7 +127,21 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
     try {
       const hasCoordinates = latitude !== '' && longitude !== ''
       const existingWasUnconfigured = site && (site.latitude == null || site.longitude == null)
-      const shouldBeActive = site ? site.active || (existingWasUnconfigured && hasCoordinates) : hasCoordinates
+      // hasCoordinates is a hard precondition, not just one input to an OR —
+      // a site can never legitimately be active with no coordinates (staff's
+      // capture RPC assumes the inverse: "not active" is exactly how it
+      // recognizes a site as re-capturable). The previous `site.active ||`
+      // form let an already-active site stay active even after its own
+      // coordinates were deliberately cleared back out on this same submit,
+      // stranding it active-with-null-coordinates — invisible to the RPC's
+      // own "unconfigured" check, so a member trying to reset a site for
+      // re-capture got "already configured" with no way out except a
+      // manual DB fix. Every other case this used to cover (an existing
+      // active site keeping its coordinates untouched; a needs-setup site
+      // getting coordinates for the first time; an archived site with
+      // coordinates *not* being silently reactivated by an unrelated edit)
+      // still holds, since those all already imply hasCoordinates is true.
+      const shouldBeActive = hasCoordinates && (site ? site.active || existingWasUnconfigured : true)
       const payload = {
         name: name.trim(),
         address: address.trim(),
