@@ -315,6 +315,16 @@ export async function forceClockOutEntry(entryId) {
   if (error) throw error
 }
 
+// A plain client delete through the new unrestricted "members can delete
+// time entries" RLS (schema.sql) — for a duplicate, a bogus manual add, or
+// a mistaken clock-in. Irreversible, so the confirm() lives on the caller
+// (StaffLogsView.jsx), same convention every other destructive action in
+// this app already follows, rather than anything enforced here.
+export async function deleteTimeEntry(entryId) {
+  const { error } = await supabase.from('time_entries').delete().eq('id', entryId)
+  if (error) throw error
+}
+
 // A plain client update through the existing unrestricted "members can
 // update time entries" RLS, same as approveTimeEntry()/forceClockOutEntry()
 // above — lets a member correct a wrong clock-in/out time, or clear

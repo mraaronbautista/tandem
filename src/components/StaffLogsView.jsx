@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronLeft, ChevronRight, Clock3, MapPin, Pencil, Plus } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock3, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchRentalProperties } from '../lib/rentals'
 import {
@@ -10,6 +10,7 @@ import {
   resolveTimeEntryRequest,
   approveTimeEntry,
   forceClockOutEntry,
+  deleteTimeEntry,
   setStaffActive,
   computeEntryPay,
   workSiteStatus,
@@ -60,6 +61,7 @@ export default function StaffLogsView({ me }) {
   const [error, setError] = useState('')
   const [approvingId, setApprovingId] = useState(null)
   const [closingId, setClosingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
   const [resolvingRequestId, setResolvingRequestId] = useState(null)
   const [editingSite, setEditingSite] = useState(null)
   const [addingSite, setAddingSite] = useState(false)
@@ -228,6 +230,28 @@ export default function StaffLogsView({ me }) {
       setError(err.message)
     } finally {
       setClosingId(null)
+    }
+  }
+
+  // Irreversible — for a duplicate, a bogus manual add, or a mistaken
+  // clock-in. Same confirm()-gated pattern handleForceClockOut above
+  // already uses, since this is the same class of "directly affects pay/
+  // history, can't be undone from here" action.
+  async function handleDeleteEntry(entry) {
+    if (
+      !window.confirm(
+        `Delete ${entry.staff?.display_name || 'this'}'s shift at ${entry.work_sites?.name || 'this location'}? This can't be undone.`,
+      )
+    )
+      return
+    setDeletingId(entry.id)
+    try {
+      await deleteTimeEntry(entry.id)
+      await reloadEntries()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -429,7 +453,11 @@ export default function StaffLogsView({ me }) {
                 <span className="text-xs opacity-60">
                   {e.rate_type} — ${e.rate_amount}/hr
                 </span>
-                <div className="flex items-center gap-2">
+                {/* flex-wrap — this row can now hold up to five pieces
+                    (pay, Edit, Delete, Force clock-out, Approve) on a
+                    pending open shift; without wrapping that overflowed a
+                    narrow phone viewport. */}
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <span>{e.clock_out_at ? money(computeEntryPay(e)) : '—'}</span>
                   <button
                     type="button"
@@ -437,6 +465,15 @@ export default function StaffLogsView({ me }) {
                     onClick={() => setEditingEntry(e)}
                   >
                     <Pencil size={11} className="mr-1 inline align-[-1px]" /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    title="Delete this shift"
+                    className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-overdue disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => handleDeleteEntry(e)}
+                    disabled={deletingId === e.id}
+                  >
+                    <Trash2 size={11} />
                   </button>
                   {!e.clock_out_at && (
                     <button

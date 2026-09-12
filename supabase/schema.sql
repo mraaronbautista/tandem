@@ -1627,3 +1627,22 @@ create policy "staff can submit time entry requests"
 -- Learned from the work_sites live-update gap just above — building the
 -- Realtime channel for both directions (StaffLogsView.jsx and
 -- StaffClockView.jsx) from the start this time, not after a live report.
+
+-- ---------------------------------------------------------------------------
+-- Time entry deletion (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, after the "Manual time
+-- entries and correction requests" block above. Reported directly right
+-- after that one shipped: a duplicate entry, a bogus manual add, or a
+-- mistaken clock-in had no way to actually go away — approve/force-clock-
+-- out/edit all mutate a row, nothing removes one. Members already hold
+-- unrestricted SELECT/INSERT/UPDATE on time_entries; this is the one
+-- missing verb, granted the same unconditional way as the others rather
+-- than restricted to only-unapproved or only-own-created rows — the same
+-- "mutual visibility, no per-row ownership" reasoning every other table in
+-- this app already follows, and consistent with force-clock-out/approve
+-- already being equally unrestricted, irreversible actions gated by a
+-- plain confirm() on the client rather than a database-level restriction.
+create policy "members can delete time entries"
+  on time_entries for delete
+  using (is_member());
