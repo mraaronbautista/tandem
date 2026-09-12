@@ -187,6 +187,27 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               {new Date(site.pending_captured_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               {site.pending_accuracy_m != null ? `, accuracy ~${Math.round(site.pending_accuracy_m)}m` : ''}.
             </p>
+            {/* Raw coordinates plus the radius this approval would actually apply
+                (site.geofence_radius_m, the current saved value — approving only
+                ever copies pending_latitude/longitude into latitude/longitude and
+                flips active; it never touches geofence_radius_m, so whatever's
+                already saved there is what takes effect, regardless of what the
+                Advanced clock-in details field below might currently show
+                unsaved). A bare lat/lng pair isn't itself enough context to
+                approve against, hence the map link — reuses the same OpenStreetMap
+                service (no API key, no new dependency) this form already
+                attributes for address search. */}
+            <p className="text-xs opacity-70">
+              {site.pending_latitude.toFixed(6)}, {site.pending_longitude.toFixed(6)} · geofence radius {site.geofence_radius_m}m ·{' '}
+              <a
+                href={`https://www.openstreetmap.org/?mlat=${site.pending_latitude}&mlon=${site.pending_longitude}#map=18/${site.pending_latitude}/${site.pending_longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                View on map
+              </a>
+            </p>
             <div className="flex gap-2">
               <button
                 type="button"
