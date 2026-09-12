@@ -248,6 +248,14 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               className={FIELD_INPUT_CLASS}
             />
           </label>
+          {/* This whole address block is a lookup, not the thing that gets
+              saved — it exists only to fill in the actual latitude/longitude
+              under "Clock-in point" below, the same fields a manual entry or
+              an on-site capture also write into. Said explicitly because the
+              button below reads "Find clock-in point," which on its own
+              reads as if this step IS setting the location, when it's really
+              just one of three ways to populate the same coordinates. */}
+          <p className="text-xs opacity-65">Looks up coordinates to fill in under Clock-in point below.</p>
           <button
             type="button"
             className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h"
@@ -307,10 +315,20 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
         </fieldset>
 
         <details className="rounded-[8px] border border-border px-3 py-2">
-          <summary className="cursor-pointer text-sm font-medium text-text-h">Advanced clock-in details</summary>
+          {/* Renamed from "Advanced clock-in details" — that framed this
+              section as optional extra settings, when the latitude/longitude
+              fields inside are actually the one thing that determines what
+              gets saved on submit. Address search above and an approved
+              on-site capture both just write into these same two fields;
+              this section is where that value can always be reviewed or
+              overridden directly, not a separate/lesser path. Still
+              collapsed by default — most saves go through address search or
+              approval and never need opening this — but the label no longer
+              undersells what it actually is. */}
+          <summary className="cursor-pointer text-sm font-medium text-text-h">Clock-in point (exact coordinates)</summary>
           <div className="mt-3 flex flex-col gap-3">
             <p className="text-xs opacity-65">
-              You can save this group before GPS is configured. It will show Needs setup and will not appear to staff yet.
+              This is the exact point staff clock in against — whatever's set here is what actually gets saved, whether it came from the address search above, an on-site capture, or entered directly. You can save this group before it's configured; it will show Needs setup and stay hidden from staff until then.
             </p>
             <button type="button" className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h" onClick={handleUseCurrentLocation} disabled={locating}>
               {locating ? 'Locating…' : <><MapPin size={14} className="mr-1 inline align-[-2px]" /> Use this device's current location</>}
