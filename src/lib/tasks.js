@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from './timezone'
 
 const TASK_COLUMNS =
-  'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at'
+  'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at, archived'
 
 export async function fetchTasks() {
   const { data, error } = await supabase
@@ -185,7 +185,7 @@ export function getOverdueTasks(tasks, displayTimezone) {
 
   return tasks
     .filter((t) => {
-      if (t.status === 'done' || !t.due_date) return false
+      if (t.status === 'done' || !t.due_date || t.archived) return false
       const timeZone = isAllDayTask(t) ? t.due_timezone || DEFAULT_TIMEZONE : displayTimezone
       const todayInDisplayZone = splitDueDateInZone(nowIso, timeZone).due_date
       return taskDueDayKey(t, displayTimezone) < todayInDisplayZone
@@ -319,7 +319,7 @@ export function getTasksForDay(tasks, date, displayTimezone) {
   const dayKey = localDayKey(date)
 
   return tasks
-    .filter((t) => t.due_date && taskDueDayKey(t, displayTimezone) === dayKey)
+    .filter((t) => t.due_date && !t.archived && taskDueDayKey(t, displayTimezone) === dayKey)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 }
 
@@ -487,7 +487,7 @@ export function getNudgedTasks(tasks) {
 export function groupTasksByDay(tasks, displayTimezone) {
   const map = new Map()
   for (const t of tasks) {
-    if (!t.due_date) continue
+    if (!t.due_date || t.archived) continue
     const key = taskDueDayKey(t, displayTimezone)
     if (!map.has(key)) map.set(key, [])
     map.get(key).push(t)

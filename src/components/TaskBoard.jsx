@@ -146,6 +146,18 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [completedTodayOpen, setCompletedTodayOpen] = useState(false)
   const [overdueModalOpen, setOverdueModalOpen] = useState(false)
   const [movingOverdue, setMovingOverdue] = useState(false)
+  // Bulk-select state for the Overdue modal — added once the list itself
+  // could grow long enough that touching each task one at a time became
+  // real friction. selectedOverdueIds is a Set of task ids, scoped to
+  // whatever's currently in `overdue`; cleared whenever select mode is
+  // toggled off or the modal closes, since a stale selection referencing
+  // an id no longer in the (live, Realtime-updated) overdue list would be
+  // meaningless.
+  const [overdueSelectMode, setOverdueSelectMode] = useState(false)
+  const [selectedOverdueIds, setSelectedOverdueIds] = useState(() => new Set())
+  const [completingOverdue, setCompletingOverdue] = useState(false)
+  const [movingSelectedOverdue, setMovingSelectedOverdue] = useState(false)
+  const [archivingOverdue, setArchivingOverdue] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
@@ -593,32 +605,125 @@ export default function TaskBoard({ theme, toggleTheme }) {
     }
   }
 
-  // Reschedules every currently-overdue task to today, keeping each task's
-  // own time-of-day and due_timezone — only the date moves. Each task's own
-  // due_timezone decides what "today" means for it (falling back to
-  // DEFAULT_TIMEZONE, same as everywhere else an unset due_timezone is
-  // treated), so a Philippines-time task and a Central-time task each land
-  // on their own actual "today" rather than one shared date.
+  // Reschedules the given tasks to today, keeping each one's own time-of-day
+  // and due_timezone — only the date moves. Each task's own due_timezone
+  // decides what "today" means for it (falling back to DEFAULT_TIMEZONE,
+  // same as everywhere else an unset due_timezone is treated), so a
+  // Philippines-time task and a Central-time task each land on their own
+  // actual "today" rather than one shared date. Shared by both the
+  // move-everything and move-just-what's-selected paths below — the
+  // per-task zone math is identical either way, only which tasks it runs
+  // over differs.
+  async function moveTasksToToday(taskList) {
+    const updates = await Promise.all(
+      taskList.map((task) => {
+        const timeZone = task.due_timezone || DEFAULT_TIMEZONE
+        const { due_time } = splitDueDateInZone(task.due_date, timeZone)
+        const todayStr = splitDueDateInZone(new Date().toISOString(), timeZone).due_date
+        return updateTask(task.id, { due_date: zonedTimeToUtcIso(todayStr, due_time, timeZone) })
+      })
+    )
+    setTasks((prev) => {
+      const byId = new Map(updates.map((t) => [t.id, t]))
+      return prev.map((t) => byId.get(t.id) || t)
+    })
+  }
+
   async function handleMoveOverdueToToday() {
     setMovingOverdue(true)
     try {
-      const updates = await Promise.all(
-        overdue.map((task) => {
-          const timeZone = task.due_timezone || DEFAULT_TIMEZONE
-          const { due_time } = splitDueDateInZone(task.due_date, timeZone)
-          const todayStr = splitDueDateInZone(new Date().toISOString(), timeZone).due_date
-          return updateTask(task.id, { due_date: zonedTimeToUtcIso(todayStr, due_time, timeZone) })
-        })
-      )
-      setTasks((prev) => {
-        const byId = new Map(updates.map((t) => [t.id, t]))
-        return prev.map((t) => byId.get(t.id) || t)
-      })
+      await moveTasksToToday(overdue)
       setOverdueModalOpen(false)
     } catch (err) {
       setError(err.message)
     } finally {
       setMovingOverdue(false)
+    }
+  }
+
+  function toggleOverdueSelectMode() {
+    setOverdueSelectMode((v) => !v)
+    setSelectedOverdueIds(new Set())
+  }
+
+  function toggleOverdueSelected(id) {
+    setSelectedOverdueIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function handleToggleSelectAllOverdue() {
+    setSelectedOverdueIds((current) =>
+      current.size === overdue.length ? new Set() : new Set(overdue.map((t) => t.id)),
+    )
+  }
+
+  // Reported directly as most of a long overdue list being recurring tasks
+  // that just never got ticked off — a bulk version of TaskRow.jsx's own
+  // handleStatusToggle, same plain status:'done' update (completed_at is
+  // stamped however that single-task path already gets it stamped, not
+  // set explicitly here). reload() afterward for the same reason
+  // handleStatusChange already calls it on a single toggle — completing a
+  // recurring task can spawn/reveal its next occurrence.
+  async function handleCompleteSelectedOverdue() {
+    if (selectedOverdueIds.size === 0) return
+    setCompletingOverdue(true)
+    try {
+      const updates = await Promise.all(
+        [...selectedOverdueIds].map((id) => updateTask(id, { status: 'done' })),
+      )
+      setTasks((prev) => {
+        const byId = new Map(updates.map((t) => [t.id, t]))
+        return prev.map((t) => byId.get(t.id) || t)
+      })
+      reload()
+      setSelectedOverdueIds(new Set())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCompletingOverdue(false)
+    }
+  }
+
+  async function handleMoveSelectedOverdueToToday() {
+    if (selectedOverdueIds.size === 0) return
+    setMovingSelectedOverdue(true)
+    try {
+      await moveTasksToToday(overdue.filter((t) => selectedOverdueIds.has(t.id)))
+      setSelectedOverdueIds(new Set())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMovingSelectedOverdue(false)
+    }
+  }
+
+  // Reversible — see tasks.archived in schema.sql. Not gated behind a
+  // confirm(): unlike a delete, this can be undone (currently only by
+  // hand in Supabase, since no "view archived tasks" UI was asked for
+  // alongside this — see CLAUDE.md), and getOverdueTasks()/
+  // getTasksForDay()/groupTasksByDay() (tasks.js) all exclude archived
+  // tasks, so this is the one action here that actually removes something
+  // from the list rather than rescheduling or completing it in place.
+  async function handleArchiveSelectedOverdue() {
+    if (selectedOverdueIds.size === 0) return
+    setArchivingOverdue(true)
+    try {
+      const updates = await Promise.all(
+        [...selectedOverdueIds].map((id) => updateTask(id, { archived: true })),
+      )
+      setTasks((prev) => {
+        const byId = new Map(updates.map((t) => [t.id, t]))
+        return prev.map((t) => byId.get(t.id) || t)
+      })
+      setSelectedOverdueIds(new Set())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setArchivingOverdue(false)
     }
   }
 
@@ -1067,30 +1172,113 @@ export default function TaskBoard({ theme, toggleTheme }) {
       {/* The overdue pill is the single entry point for this list, keeping
           stale tasks from pushing today's agenda below the fold. */}
       {overdueModalOpen && (
-        <Modal onClose={() => setOverdueModalOpen(false)}>
+        <Modal
+          onClose={() => {
+            setOverdueModalOpen(false)
+            setOverdueSelectMode(false)
+            setSelectedOverdueIds(new Set())
+          }}
+        >
           <ModalCard>
             <div className="flex items-center justify-between gap-2">
               <h2>Overdue</h2>
-              <button
-                type="button"
-                className="flex-none cursor-pointer rounded-full border border-border bg-pill-bg px-2.5 py-1 text-xs text-text disabled:cursor-default disabled:opacity-60"
-                disabled={movingOverdue}
-                onClick={handleMoveOverdueToToday}
-              >
-                {movingOverdue ? 'Moving…' : 'Move all to today'}
-              </button>
+              <div className="flex flex-none items-center gap-1.5">
+                {/* "Select" replaces "Move all to today" while active,
+                    rather than sitting alongside it — the two read as
+                    conflicting entry points into the same list otherwise
+                    (a full-list action and a start-picking-some action side
+                    by side), and Select's own toolbar below covers the
+                    "act on everything" case anyway (Select all + any bulk
+                    action). */}
+                {overdueSelectMode ? (
+                  <button
+                    type="button"
+                    className="cursor-pointer rounded-full border border-border bg-pill-bg px-2.5 py-1 text-xs text-text"
+                    onClick={toggleOverdueSelectMode}
+                  >
+                    Cancel
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-full border border-border bg-pill-bg px-2.5 py-1 text-xs text-text"
+                      onClick={toggleOverdueSelectMode}
+                    >
+                      Select
+                    </button>
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-full border border-border bg-pill-bg px-2.5 py-1 text-xs text-text disabled:cursor-default disabled:opacity-60"
+                      disabled={movingOverdue}
+                      onClick={handleMoveOverdueToToday}
+                    >
+                      {movingOverdue ? 'Moving…' : 'Move all to today'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
+
+            {overdueSelectMode && (
+              <div className="flex items-center justify-between gap-2 border-b border-border pb-2 text-xs">
+                <button
+                  type="button"
+                  className="cursor-pointer text-accent-h underline"
+                  onClick={handleToggleSelectAllOverdue}
+                >
+                  {selectedOverdueIds.size === overdue.length ? 'Deselect all' : 'Select all'}
+                </button>
+                <span className="opacity-60">{selectedOverdueIds.size} selected</span>
+              </div>
+            )}
+
             <div className="flex flex-col">
               {overdue.map((task, i) => (
-                <TimelineRow
-                  key={task.id}
-                  task={task}
-                  time={task.due_date}
-                  isLast={i === overdue.length - 1}
-                  {...taskRowProps}
-                />
+                <div key={task.id} className="flex items-start gap-2">
+                  {overdueSelectMode && (
+                    <input
+                      type="checkbox"
+                      className="mt-[17px] flex-none"
+                      checked={selectedOverdueIds.has(task.id)}
+                      onChange={() => toggleOverdueSelected(task.id)}
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <TimelineRow task={task} time={task.due_date} isLast={i === overdue.length - 1} {...taskRowProps} />
+                  </div>
+                </div>
               ))}
             </div>
+
+            {overdueSelectMode && selectedOverdueIds.size > 0 && (
+              <div className="flex flex-wrap gap-2 border-t border-border pt-2">
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleCompleteSelectedOverdue}
+                  disabled={completingOverdue}
+                >
+                  {completingOverdue ? 'Marking…' : `Mark complete (${selectedOverdueIds.size})`}
+                </button>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-sm border border-border bg-bg px-3 py-2 text-sm text-text disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleMoveSelectedOverdueToToday}
+                  disabled={movingSelectedOverdue}
+                >
+                  {movingSelectedOverdue ? 'Moving…' : `Move to today (${selectedOverdueIds.size})`}
+                </button>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-sm border border-border bg-bg px-3 py-2 text-sm text-text disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleArchiveSelectedOverdue}
+                  disabled={archivingOverdue}
+                >
+                  {archivingOverdue ? 'Archiving…' : `Archive (${selectedOverdueIds.size})`}
+                </button>
+              </div>
+            )}
           </ModalCard>
         </Modal>
       )}

@@ -1724,3 +1724,20 @@ end;
 $$;
 
 grant execute on function staff_submit_shift_report(uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Archived tasks (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project. A reversible "not doing this,
+-- but keep the record" state for a task — distinct from marking it done
+-- (dishonest for something that was never actually completed) and from
+-- deleting it (loses the record) — same "soft-disable, not delete"
+-- reasoning cork_notes.archived/rental_properties.active/work_sites.active
+-- already establish elsewhere in this schema. No RLS change needed —
+-- already covered by the existing unrestricted is_member() policies on
+-- tasks. Built for the Overdue pill's bulk-select flow (TaskBoard.jsx) —
+-- see that feature for the client-side filtering this actually needs
+-- (getOverdueTasks()/getTasksForDay()/groupTasksByDay() in tasks.js all
+-- now exclude archived tasks, so an archived task disappears from every
+-- planner view, not just Overdue).
+alter table tasks add column archived boolean not null default false;
