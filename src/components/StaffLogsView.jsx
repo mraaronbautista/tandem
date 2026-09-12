@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock3, MapPin, Pencil, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchRentalProperties } from '../lib/rentals'
 import {
   fetchStaffRoster,
   fetchWorkSites,
   fetchAllTimeEntries,
+  fetchTimeEntryRequests,
+  resolveTimeEntryRequest,
   approveTimeEntry,
   forceClockOutEntry,
   setStaffActive,
@@ -17,6 +19,7 @@ import {
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import IconButton from './IconButton'
 import StaffWorkSitesForm from './StaffWorkSitesForm'
+import StaffTimeEntryForm from './StaffTimeEntryForm'
 import StaffPayrollExport from './StaffPayrollExport'
 import StaffProfileForm from './StaffProfileForm'
 import StaffLocationsManager from './StaffLocationsManager'
@@ -49,6 +52,7 @@ export default function StaffLogsView({ me }) {
   const [sites, setSites] = useState([])
   const [rentalProperties, setRentalProperties] = useState([])
   const [entries, setEntries] = useState([])
+  const [requests, setRequests] = useState([])
   const [statusFilter, setStatusFilter] = useState('all')
   const [periodOffset, setPeriodOffset] = useState(0)
   const [showAllTime, setShowAllTime] = useState(false)
@@ -56,11 +60,14 @@ export default function StaffLogsView({ me }) {
   const [error, setError] = useState('')
   const [approvingId, setApprovingId] = useState(null)
   const [closingId, setClosingId] = useState(null)
+  const [resolvingRequestId, setResolvingRequestId] = useState(null)
   const [editingSite, setEditingSite] = useState(null)
   const [addingSite, setAddingSite] = useState(false)
   const [locationsOpen, setLocationsOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
+  const [editingEntry, setEditingEntry] = useState(null)
+  const [addingEntry, setAddingEntry] = useState(false)
 
   // Drives the period stepper — the first active roster member's own
   // cadence. There's currently exactly one property manager, so this is a
@@ -96,6 +103,17 @@ export default function StaffLogsView({ me }) {
     }
   }
 
+  // Its own function for the same reason reloadSites is — the new
+  // time_entry_requests Realtime channel below needs to re-fetch just
+  // this, not the whole page's worth of unrelated data.
+  async function reloadRequests() {
+    try {
+      setRequests(await fetchTimeEntryRequests())
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   async function reloadAll() {
     try {
       const [rosterData, sitesData, awaProperties, azuProperties] = await Promise.all([
@@ -111,7 +129,7 @@ export default function StaffLogsView({ me }) {
           `${a.company}-${a.unit_name}`.localeCompare(`${b.company}-${b.unit_name}`),
         ),
       )
-      await reloadEntries()
+      await Promise.all([reloadEntries(), reloadRequests()])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -162,6 +180,19 @@ export default function StaffLogsView({ me }) {
     return () => supabase.removeChannel(channel)
   }, [])
 
+  // Requires `alter publication supabase_realtime add table
+  // time_entry_requests;` — see the "Manual time entries and correction
+  // requests" migration's own note in schema.sql. Built alongside this
+  // feature from the start, not bolted on after a live report, unlike
+  // work_sites above.
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-time-entry-requests-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'time_entry_requests' }, reloadRequests)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [])
+
   async function handleApprove(entryId) {
     setApprovingId(entryId)
     try {
@@ -200,6 +231,20 @@ export default function StaffLogsView({ me }) {
     }
   }
 
+  // Deliberately quiet on success — no push notification, same reasoning
+  // resolveTimeEntryRequest()'s own comment in staff.js gives.
+  async function handleResolveRequest(id) {
+    setResolvingRequestId(id)
+    try {
+      await resolveTimeEntryRequest(id, me.id)
+      await reloadRequests()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setResolvingRequestId(null)
+    }
+  }
+
   async function handleToggleActive(staffMember) {
     try {
       await setStaffActive(staffMember.id, !staffMember.active)
@@ -231,6 +276,12 @@ export default function StaffLogsView({ me }) {
   const pendingApprovalCount = sites.filter((site) => workSiteStatus(site) === 'pendingApproval').length
   const locationNeedsSetupCount = sites.filter((site) => workSiteStatus(site) === 'needsSetup').length
   const unassignedUnitCount = rentalProperties.filter((property) => !property.work_site_id).length
+  // Only a ready site is a legitimate manual-entry destination — its own
+  // latitude/longitude are what createManualTimeEntry() reuses as the
+  // fabricated clock_in_lat/lng, and a needsSetup/pendingApproval site has
+  // no real coordinates to reuse yet.
+  const readySites = sites.filter((site) => workSiteStatus(site) === 'ready')
+  const openRequests = requests.filter((r) => r.status === 'open')
 
   if (loading) return <p className="loading">Loading…</p>
 
@@ -253,13 +304,20 @@ export default function StaffLogsView({ me }) {
             </PeriodTab>
           ))}
         </PeriodTabs>
-        <div className="flex flex-none gap-1.5">
+        <div className="flex flex-none flex-wrap justify-end gap-1.5">
           <button
             type="button"
             className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
             onClick={() => setLocationsOpen(true)}
           >
             <MapPin size={12} className="mr-1 inline align-[-2px]" /> Locations
+          </button>
+          <button
+            type="button"
+            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
+            onClick={() => setAddingEntry(true)}
+          >
+            <Plus size={12} className="mr-1 inline align-[-2px]" /> Add shift
           </button>
           <button
             type="button"
@@ -373,6 +431,13 @@ export default function StaffLogsView({ me }) {
                 </span>
                 <div className="flex items-center gap-2">
                   <span>{e.clock_out_at ? money(computeEntryPay(e)) : '—'}</span>
+                  <button
+                    type="button"
+                    className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h"
+                    onClick={() => setEditingEntry(e)}
+                  >
+                    <Pencil size={11} className="mr-1 inline align-[-1px]" /> Edit
+                  </button>
                   {!e.clock_out_at && (
                     <button
                       type="button"
@@ -395,6 +460,49 @@ export default function StaffLogsView({ me }) {
                   )}
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Only rendered when there's something to act on — unlike Clock-in
+          locations below (always relevant, always shown), a request stops
+          needing attention the moment it's resolved, so this section
+          disappears entirely rather than sitting around showing "0 open."
+          Resolved requests still exist in the database either way; there's
+          just no browsing UI for them yet (not asked for, so not built). */}
+      {openRequests.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-[13px] opacity-60">Correction requests</h3>
+          {openRequests.map((r) => (
+            <div
+              key={r.id}
+              className="flex flex-col gap-1.5 rounded-[8px] border border-accent bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-3 py-2.5 text-sm"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-text-h">{r.staff?.display_name || 'Property manager'}</span>
+                <span className="text-xs opacity-60">
+                  {new Date(r.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </span>
+              </div>
+              <p className="whitespace-pre-wrap opacity-85">{r.note}</p>
+              {/* time_entry_id is nullable — a request about a shift that was
+                  never logged at all has nothing to join to here, which is
+                  the normal case for that kind of request, not a broken
+                  join. */}
+              <p className="text-xs opacity-60">
+                {r.time_entries
+                  ? `About: ${r.time_entries.work_sites?.name || 'a shift'} — ${new Date(r.time_entries.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
+                  : 'About a shift that was never logged — add it with "Add shift" above, or ask them for more detail'}
+              </p>
+              <button
+                type="button"
+                className="cursor-pointer self-start rounded-sm border border-border bg-bg px-2.5 py-1 text-xs text-text-h disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => handleResolveRequest(r.id)}
+                disabled={resolvingRequestId === r.id}
+              >
+                {resolvingRequestId === r.id ? 'Marking resolved…' : 'Mark resolved'}
+              </button>
             </div>
           ))}
         </div>
@@ -505,6 +613,24 @@ export default function StaffLogsView({ me }) {
           onSaved={(saved) => {
             setRoster((current) => current.map((member) => (member.id === saved.id ? saved : member)))
             setEditingStaff(null)
+          }}
+        />
+      )}
+
+      {(editingEntry || addingEntry) && (
+        <StaffTimeEntryForm
+          entry={editingEntry}
+          staffRoster={roster}
+          workSites={readySites}
+          meId={me.id}
+          onClose={() => {
+            setEditingEntry(null)
+            setAddingEntry(false)
+          }}
+          onSaved={async () => {
+            setEditingEntry(null)
+            setAddingEntry(false)
+            await reloadEntries()
           }}
         />
       )}

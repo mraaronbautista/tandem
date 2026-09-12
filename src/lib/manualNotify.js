@@ -35,3 +35,14 @@ export async function sendClarificationAnswered(taskTitle, answer) {
   })
   if (error) throw error
 }
+
+// The one call in this file a staff account makes, not a member — every
+// other function here relies on manual-notify resolving "whoever isn't the
+// caller"; this kind instead always notifies both Ada and Aaron, since the
+// caller is neither (see manual-notify/index.ts).
+export async function sendTimeEntryCorrectionRequest(note) {
+  const { error } = await supabase.functions.invoke('manual-notify', {
+    body: { kind: 'time_entry_correction_request', note },
+  })
+  if (error) throw error
+}

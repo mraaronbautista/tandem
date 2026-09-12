@@ -1535,3 +1535,95 @@ create type staff_payroll_cadence as enum ('weekly', 'biweekly', 'twice_monthly'
 -- already encodes).
 alter table staff
   add column payroll_cadence staff_payroll_cadence not null default 'biweekly';
+
+-- ---------------------------------------------------------------------------
+-- Manual time entries and correction requests (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, after every earlier staff
+-- block above it. Two related gaps closed together: members had no way to
+-- correct a shift's clock-in/out times (or add one that was never logged at
+-- all — clock-in was staff-only INSERT), and the property manager had no
+-- way to flag either problem short of a side-channel message outside the
+-- app.
+
+-- Members previously had zero INSERT access to time_entries — only staff
+-- could ("staff can clock in" above). This lets a member add a shift by
+-- hand (e.g. one the property manager forgot to clock in for entirely).
+-- stamp_time_entry_meta() (schema.sql, earlier) still runs regardless of who
+-- inserts — it stamps rate_amount from staff.hourly_rate/emergency_rate the
+-- same way either path, and still requires clock_in_lat/lng not null, so a
+-- manual entry supplies the work site's own stored coordinates rather than
+-- leaving them blank (see createManualTimeEntry() in src/lib/staff.js) —
+-- there's no real GPS reading to attach to a shift nobody clocked into live,
+-- and reusing the site's own point keeps distance_from_site_m/flagged
+-- meaningful (0m, not flagged) instead of nonsensical for a fabricated
+-- reading.
+create policy "members can insert time entries"
+  on time_entries for insert
+  with check (is_member());
+
+-- A member editing clock_in_at/clock_out_at is already covered by the
+-- existing "members can update time entries" UPDATE policy above — no new
+-- policy needed for that; src/lib/staff.js's updateTimeEntryTimes() is just
+-- a new plain client update through it, same as approveTimeEntry()/
+-- forceClockOutEntry() already are.
+
+create type time_entry_request_status as enum ('open', 'resolved');
+
+-- The request/notification trail, not the fix itself — a member still makes
+-- the actual correction by hand (editing or inserting a real time_entries
+-- row, both already covered above). Deliberately its own table rather than
+-- a jsonb column on time_entries, unlike checklist/clarifications
+-- elsewhere in this schema: those always have exactly one natural parent
+-- row to live on, but a request about a shift that was never logged at all
+-- has no time_entries row to attach to yet, so time_entry_id is nullable
+-- rather than required.
+create table time_entry_requests (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid not null references staff (id) on delete cascade,
+  time_entry_id uuid references time_entries (id) on delete set null,
+  -- Free text, not structured date/time fields — staff still can't write
+  -- time_entries directly either way, so this is just context for whichever
+  -- member makes the real correction, same "describe it, don't try to
+  -- pre-structure it" reasoning cork_notes' comments already use.
+  note text not null,
+  status time_entry_request_status not null default 'open',
+  resolved_by uuid references members (id),
+  resolved_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index time_entry_requests_staff_id_idx on time_entry_requests (staff_id);
+create index time_entry_requests_status_idx on time_entry_requests (status);
+
+alter table time_entry_requests enable row level security;
+
+create policy "members can read time entry requests"
+  on time_entry_requests for select
+  using (is_member());
+
+create policy "members can update time entry requests"
+  on time_entry_requests for update
+  using (is_member())
+  with check (is_member());
+
+-- Staff can read and submit their own requests, never anyone else's, and
+-- never resolve one themselves — there's no staff UPDATE policy on this
+-- table at all, same RPC-only-elsewhere discipline time_entries/work_sites
+-- already established, just satisfied here by "no write path exists" rather
+-- than an RPC, since a plain INSERT of staff's own new row needs no
+-- security-definer trust boundary to cross the way an UPDATE onto an
+-- existing row (staff_clock_out(), staff_submit_location_capture()) did.
+create policy "staff can read own time entry requests"
+  on time_entry_requests for select
+  using (staff_id = auth.uid());
+
+create policy "staff can submit time entry requests"
+  on time_entry_requests for insert
+  with check (staff_id = auth.uid() and is_staff());
+
+-- Run once, by hand, same as time_entries/work_sites above:
+--   alter publication supabase_realtime add table time_entry_requests;
+-- Learned from the work_sites live-update gap just above — building the
+-- Realtime channel for both directions (StaffLogsView.jsx and
+-- StaffClockView.jsx) from the start this time, not after a live report.

@@ -94,5 +94,25 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // The one kind a STAFF account calls, not a member — every kind above
+  // this point assumes the caller is Ada or Aaron and targets "whoever
+  // isn't them," which makes no sense here (the caller is neither, so
+  // callerIsAda/senderName/targetId computed above are meaningless and
+  // deliberately unused in this branch). Both members are notified
+  // unconditionally instead. Resolves the caller's own display_name via
+  // the service-role client (staff can't be looked up through
+  // resolveMemberIds(), which only ever queries `members`).
+  if (payload.kind === 'time_entry_correction_request') {
+    const note = String(payload.note || '').slice(0, 300)
+    if (!note.trim()) return new Response('Missing note', { status: 400, headers: corsHeaders })
+    const { data: staffRow } = await supabaseAdmin.from('staff').select('display_name').eq('id', user.id).maybeSingle()
+    const staffName = staffRow?.display_name || 'The property manager'
+    await Promise.all([
+      notifyMember(yours, { title: `${staffName} requested a time correction`, body: note, url: '/' }),
+      notifyMember(assistant, { title: `${staffName} requested a time correction`, body: note, url: '/' }),
+    ])
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   return new Response('Unknown kind', { status: 400, headers: corsHeaders })
 })

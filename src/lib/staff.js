@@ -315,6 +315,129 @@ export async function forceClockOutEntry(entryId) {
   if (error) throw error
 }
 
+// A plain client update through the existing unrestricted "members can
+// update time entries" RLS, same as approveTimeEntry()/forceClockOutEntry()
+// above — lets a member correct a wrong clock-in/out time, or clear
+// clockOutAt back to null to reopen a shift that was closed by mistake. A
+// conflicting reopen (another shift already active for this staff member)
+// surfaces as a plain Postgres unique-violation error from the same
+// time_entries_one_active_per_staff index a normal clock-in already
+// respects — no special-cased check needed here.
+export async function updateTimeEntryTimes(entryId, { clockInAt, clockOutAt }) {
+  const { error } = await supabase
+    .from('time_entries')
+    .update({ clock_in_at: clockInAt, clock_out_at: clockOutAt })
+    .eq('id', entryId)
+  if (error) throw error
+}
+
+// The first member-side INSERT path onto time_entries (see "members can
+// insert time entries" in schema.sql) — for a shift the property manager
+// never clocked into at all. stamp_time_entry_meta() still runs regardless
+// of who inserts and still requires clock_in_lat/lng not null, so this
+// reuses the work site's own stored coordinates (siteLat/siteLng, passed in
+// by the caller rather than re-fetched here) instead of leaving them blank
+// — there's no real GPS reading to attach to a shift nobody was actually
+// present to clock into live, and the site's own point keeps
+// distance_from_site_m/flagged meaningful (0m, not flagged) instead of
+// nonsensical for a fabricated reading. Inserted already approved, not
+// pending — the member creating it by hand has already effectively
+// reviewed it; there's no second person who'd otherwise approve it the way
+// a staff-submitted entry needs.
+export async function createManualTimeEntry({
+  staffId,
+  workSiteId,
+  siteLat,
+  siteLng,
+  rateType,
+  clockInAt,
+  clockOutAt,
+  notes,
+  approverId,
+}) {
+  const { data, error } = await supabase
+    .from('time_entries')
+    .insert({
+      staff_id: staffId,
+      work_site_id: workSiteId,
+      rate_type: rateType,
+      clock_in_at: clockInAt,
+      clock_in_lat: siteLat,
+      clock_in_lng: siteLng,
+      clock_out_at: clockOutAt || null,
+      notes: notes || null,
+      status: 'approved',
+      approved_by: approverId,
+      approved_at: new Date().toISOString(),
+    })
+    .select(TIME_ENTRY_COLUMNS)
+    .single()
+  if (error) throw error
+  return data
+}
+
+const TIME_ENTRY_REQUEST_COLUMNS = 'id, staff_id, time_entry_id, note, status, resolved_by, resolved_at, created_at'
+
+// Admin dashboard — joined with the staff name and (when set) the linked
+// entry's own site/date, so StaffLogsView.jsx can show real context without
+// a second round-trip per row, same reasoning fetchAllTimeEntries()'s own
+// embeds already use. time_entry_id is nullable (a request about a shift
+// that was never logged has nothing to join), so the embed is naturally
+// null in that case rather than erroring.
+export async function fetchTimeEntryRequests() {
+  const { data, error } = await supabase
+    .from('time_entry_requests')
+    .select(`${TIME_ENTRY_REQUEST_COLUMNS}, staff(display_name), time_entries(clock_in_at, work_sites(name))`)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+// A staff account's own request history — RLS ("staff can read own time
+// entry requests" in schema.sql) already scopes this to staff_id =
+// auth.uid(), but the explicit .eq() here matches every other staff-scoped
+// fetch in this file (fetchOwnTimeEntries, fetchOwnStaffProfile) rather
+// than relying on RLS alone to narrow the result.
+export async function fetchOwnTimeEntryRequests(staffId) {
+  const { data, error } = await supabase
+    .from('time_entry_requests')
+    .select(TIME_ENTRY_REQUEST_COLUMNS)
+    .eq('staff_id', staffId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+// timeEntryId is optional — null means "a shift that was never logged at
+// all," not an error; see the migration's own comment in schema.sql. The
+// push notification itself (both members, since the caller is staff, not
+// one of the two people "the other" would normally mean) is a separate
+// call — sendTimeEntryCorrectionRequest() in manualNotify.js — fired by the
+// UI right after this insert succeeds, same two-step shape
+// createVaultEntry-style writes elsewhere in this app don't need but
+// task-clarification asks/answers already establish.
+export async function submitTimeEntryRequest({ staffId, timeEntryId, note }) {
+  const { data, error } = await supabase
+    .from('time_entry_requests')
+    .insert({ staff_id: staffId, time_entry_id: timeEntryId || null, note })
+    .select(TIME_ENTRY_REQUEST_COLUMNS)
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Deliberately quiet — no push notification, same reasoning cork_notes'
+// comments and resolving a task clarification already establish: closing
+// out a request isn't news worth pinging the property manager over the
+// way the original ask was.
+export async function resolveTimeEntryRequest(id, memberId) {
+  const { error } = await supabase
+    .from('time_entry_requests')
+    .update({ status: 'resolved', resolved_by: memberId, resolved_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
 // Hours * the rate snapshotted at clock-in — never a stored column, so
 // it can't drift if rate_amount is ever corrected before approval.
 // Same "derive it, don't store it" reasoning duration_minutes/end-time

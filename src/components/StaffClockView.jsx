@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, MapPin, Play, Square } from 'lucide-react'
+import { AlertTriangle, Flag, MapPin, Play, Square } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
 import {
@@ -7,12 +7,15 @@ import {
   fetchWorkSites,
   fetchActiveEntry,
   fetchOwnTimeEntries,
+  fetchOwnTimeEntryRequests,
+  submitTimeEntryRequest,
   clockIn,
   clockOut,
   computeEntryPay,
   workSiteStatus,
   submitWorkSiteLocationCapture,
 } from '../lib/staff'
+import { sendTimeEntryCorrectionRequest } from '../lib/manualNotify'
 import { findNearestSite } from '../lib/geo'
 import ThemeToggle from './ThemeToggle'
 
@@ -75,6 +78,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
   const [captureSites, setCaptureSites] = useState([])
   const [activeEntry, setActiveEntry] = useState(null)
   const [history, setHistory] = useState([])
+  const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -82,6 +86,16 @@ export default function StaffClockView({ theme, toggleTheme }) {
   const [capturingSiteId, setCapturingSiteId] = useState(null)
   const [captureError, setCaptureError] = useState('')
   const [captureMessage, setCaptureMessage] = useState('')
+
+  // Time-correction-request compose state — one shared panel, not a
+  // separate one per shift row: `requestTarget` is either { entryId } for
+  // "fix this specific shift" or { entryId: null } for "a shift I never
+  // logged at all," and null when the panel is closed. See
+  // "Manual time entries and correction requests" in schema.sql.
+  const [requestTarget, setRequestTarget] = useState(null)
+  const [requestNote, setRequestNote] = useState('')
+  const [submittingRequest, setSubmittingRequest] = useState(false)
+  const [requestError, setRequestError] = useState('')
 
   // Start-flow local state
   const [starting, setStarting] = useState(false)
@@ -109,10 +123,19 @@ export default function StaffClockView({ theme, toggleTheme }) {
       if (!entryData) {
         setHistory(await fetchOwnTimeEntries(session.user.id, { from: startOfWeek().toISOString() }))
       }
+      await reloadRequests()
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function reloadRequests() {
+    try {
+      setRequests(await fetchOwnTimeEntryRequests(session.user.id))
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -157,6 +180,25 @@ export default function StaffClockView({ theme, toggleTheme }) {
     const channel = supabase
       .channel('staff-clock-work-sites-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_sites' }, reloadSites)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // filter: only this pmanager's own requests — RLS already scopes
+  // fetchOwnTimeEntryRequests() the same way, but the filter here also
+  // keeps the channel from re-firing on a different staff member's
+  // requests (relevant once a second property manager ever exists).
+  // Lets a resolved status show up here without a manual reload, the same
+  // reason the member-side channel exists for the request it's replying to.
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-clock-time-entry-requests-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'time_entry_requests', filter: `staff_id=eq.${session.user.id}` },
+        reloadRequests,
+      )
       .subscribe()
     return () => supabase.removeChannel(channel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -282,6 +324,30 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setCaptureError(err.message || "Couldn't get your location. Check this site's location permission and try again.")
     } finally {
       setCapturingSiteId(null)
+    }
+  }
+
+  async function handleSubmitRequest() {
+    if (!requestNote.trim()) return
+    setSubmittingRequest(true)
+    setRequestError('')
+    try {
+      await submitTimeEntryRequest({ staffId: session.user.id, timeEntryId: requestTarget.entryId, note: requestNote.trim() })
+      // Best-effort — the request itself is already saved above regardless
+      // of whether the push actually reaches Ada/Aaron, so a notification
+      // failure here shouldn't read as the request having failed.
+      try {
+        await sendTimeEntryCorrectionRequest(requestNote.trim())
+      } catch (err) {
+        console.error('sendTimeEntryCorrectionRequest failed (request was still saved):', err)
+      }
+      setRequestTarget(null)
+      setRequestNote('')
+      await reloadRequests()
+    } catch (err) {
+      setRequestError(err.message)
+    } finally {
+      setSubmittingRequest(false)
     }
   }
 
@@ -505,17 +571,118 @@ export default function StaffClockView({ theme, toggleTheme }) {
           {!activeEntry && history.length > 0 && (
             <div className="flex flex-col gap-2">
               <h2 className="text-[13px] opacity-60">Recent shifts</h2>
-              {history.map((e) => (
-                <div key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-sm border border-border px-3 py-2 text-sm">
-                  <span className="min-w-0 truncate font-medium text-text-h">
-                    {sites.find((site) => site.id === e.work_site_id)?.name || 'Work site'}
-                  </span>
-                  <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>
-                  <span className="text-xs opacity-65">
-                    {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                    {e.flagged && <AlertTriangle size={12} className="ml-1 inline align-[-1px] text-overdue" />}
-                  </span>
-                  <span className="font-semibold">{e.clock_out_at ? money(computeEntryPay(e)) : 'in progress'}</span>
+              {history.map((e) => {
+                const hasOpenRequest = requests.some((r) => r.time_entry_id === e.id && r.status === 'open')
+                return (
+                  <div key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-sm border border-border px-3 py-2 text-sm">
+                    <span className="min-w-0 truncate font-medium text-text-h">
+                      {sites.find((site) => site.id === e.work_site_id)?.name || 'Work site'}
+                    </span>
+                    <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>
+                    <span className="text-xs opacity-65">
+                      {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                      {e.flagged && <AlertTriangle size={12} className="ml-1 inline align-[-1px] text-overdue" />}
+                    </span>
+                    <span className="font-semibold">{e.clock_out_at ? money(computeEntryPay(e)) : 'in progress'}</span>
+                    {/* Spans the full row width (col-span-2) rather than
+                        sitting in one of the two existing grid columns —
+                        this is a third line under the pair above, not a
+                        third value alongside site/status or date/pay. */}
+                    <div className="col-span-2">
+                      {hasOpenRequest ? (
+                        <span className="text-xs opacity-60">
+                          <Flag size={11} className="mr-1 inline align-[-1px]" /> Fix requested — waiting on Ada/Aaron
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="cursor-pointer text-xs text-accent-h underline"
+                          onClick={() => {
+                            setRequestTarget({ entryId: e.id })
+                            setRequestNote('')
+                            setRequestError('')
+                          }}
+                        >
+                          Something wrong with this shift?
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Not tied to a specific shift — for a shift that was never
+              clocked into at all, there's no history row to attach this to.
+              Shown regardless of activeEntry, unlike the sections above,
+              since reporting a past missed shift has nothing to do with
+              whether one happens to be running right now. */}
+          <button
+            type="button"
+            className="cursor-pointer self-start text-xs text-accent-h underline"
+            onClick={() => {
+              setRequestTarget({ entryId: null })
+              setRequestNote('')
+              setRequestError('')
+            }}
+          >
+            <Flag size={11} className="mr-1 inline align-[-1px]" /> Report a shift I forgot to clock in for
+          </button>
+
+          {requestTarget && (
+            <div className="flex flex-col gap-2 rounded-[8px] border border-border bg-card-bg p-4">
+              <h2 className="text-[13px] opacity-60">
+                {requestTarget.entryId ? 'What needs fixing?' : 'Describe the missed shift'}
+              </h2>
+              {requestError && <p className="error">{requestError}</p>}
+              <textarea
+                autoFocus
+                className="rounded-sm border border-border bg-bg p-2 text-sm text-text-h [font-family:inherit]"
+                rows={3}
+                placeholder={
+                  requestTarget.entryId
+                    ? 'e.g. clocked in 30 minutes late by mistake, actual start was 8am'
+                    : 'e.g. worked at Rachel on Sept 10, roughly 2pm-6pm, forgot to clock in'
+                }
+                value={requestNote}
+                onChange={(event) => setRequestNote(event.target.value)}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 cursor-pointer rounded-sm border border-border bg-bg px-3 py-2 text-sm text-text"
+                  onClick={() => setRequestTarget(null)}
+                  disabled={submittingRequest}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  onClick={handleSubmitRequest}
+                  disabled={submittingRequest || !requestNote.trim()}
+                >
+                  {submittingRequest ? 'Sending…' : 'Send to Ada & Aaron'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {requests.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-[13px] opacity-60">Your requests</h2>
+              {requests.map((r) => (
+                <div key={r.id} className="flex flex-col gap-1 rounded-sm border border-border px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={r.status === 'open' ? 'text-accent-h' : 'opacity-60'}>
+                      {r.status === 'open' ? 'Waiting on Ada/Aaron' : 'Resolved'}
+                    </span>
+                    <span className="text-xs opacity-60">
+                      {new Date(r.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <p className="truncate opacity-80">{r.note}</p>
                 </div>
               ))}
             </div>
