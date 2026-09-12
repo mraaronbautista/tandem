@@ -11,6 +11,7 @@ import {
   approveTimeEntry,
   forceClockOutEntry,
   deleteTimeEntry,
+  requestShiftReport,
   setStaffActive,
   computeEntryPay,
   workSiteStatus,
@@ -255,6 +256,21 @@ export default function StaffLogsView({ me }) {
     }
   }
 
+  // In-app prompt, not a push notification — staff accounts have no push
+  // subscription support at all yet (push_subscriptions only links to
+  // members), so requestShiftReport() just sets a flag the property
+  // manager sees the next time they open the clock screen, which they do
+  // every shift anyway. No confirm() needed; this is a non-destructive,
+  // reversible ask, not a data change.
+  async function handleAskForReport(entry) {
+    try {
+      await requestShiftReport(entry.id, me.id)
+      await reloadEntries()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   // Deliberately quiet on success — no push notification, same reasoning
   // resolveTimeEntryRequest()'s own comment in staff.js gives.
   async function handleResolveRequest(id) {
@@ -496,6 +512,28 @@ export default function StaffLogsView({ me }) {
                     </button>
                   )}
                 </div>
+              </div>
+              {/* Always rendered (unlike the requests section below, which
+                  disappears when empty) — this is per-shift state, not a
+                  count of open items, so "no report yet" is itself useful
+                  information here rather than noise. */}
+              <div className="flex items-center justify-between gap-2 border-t border-border pt-1.5">
+                <span className="min-w-0 truncate text-xs opacity-70">
+                  {e.notes
+                    ? e.notes
+                    : e.report_requested_at
+                      ? 'Report requested — waiting on them'
+                      : 'No report yet'}
+                </span>
+                {!e.report_requested_at && (
+                  <button
+                    type="button"
+                    className="flex-none cursor-pointer text-xs text-accent-h underline"
+                    onClick={() => handleAskForReport(e)}
+                  >
+                    Ask for report
+                  </button>
+                )}
               </div>
             </div>
           ))}

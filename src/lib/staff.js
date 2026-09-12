@@ -8,7 +8,7 @@ const WORK_SITE_COLUMNS =
 const TIME_ENTRY_COLUMNS =
   'id, staff_id, work_site_id, rate_type, rate_amount, clock_in_at, clock_in_lat, clock_in_lng, ' +
   'clock_in_accuracy_m, distance_from_site_m, flagged, clock_out_at, clock_out_lat, clock_out_lng, ' +
-  'status, approved_by, approved_at, notes, created_at'
+  'status, approved_by, approved_at, notes, report_requested_at, report_requested_by, created_at'
 
 // Whole roster (Ada/Aaron's admin dashboard) — includes inactive staff
 // so a deactivated account's history still shows a real name, not a
@@ -322,6 +322,31 @@ export async function forceClockOutEntry(entryId) {
 // this app already follows, rather than anything enforced here.
 export async function deleteTimeEntry(entryId) {
   const { error } = await supabase.from('time_entries').delete().eq('id', entryId)
+  if (error) throw error
+}
+
+// staff_submit_shift_report() in schema.sql — appends p_note onto the
+// entry's own notes (never overwrites) and clears report_requested_at
+// unconditionally, so this is the one call for every "add a report" case:
+// right after clocking out, added later from Recent shifts, or answering a
+// member's explicit request — all the same call, no separate code path.
+export async function submitShiftReport(entryId, note) {
+  const { data, error } = await supabase.rpc('staff_submit_shift_report', {
+    p_entry_id: entryId,
+    p_note: note,
+  })
+  if (error) throw error
+  return data
+}
+
+// The asking side — a plain member update, already covered by the
+// existing unrestricted "members can update time entries" RLS, same
+// reasoning approveTimeEntry()/forceClockOutEntry() above already rely on.
+export async function requestShiftReport(entryId, memberId) {
+  const { error } = await supabase
+    .from('time_entries')
+    .update({ report_requested_at: new Date().toISOString(), report_requested_by: memberId })
+    .eq('id', entryId)
   if (error) throw error
 }
 

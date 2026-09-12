@@ -1646,3 +1646,81 @@ create policy "staff can submit time entry requests"
 create policy "members can delete time entries"
   on time_entries for delete
   using (is_member());
+
+-- ---------------------------------------------------------------------------
+-- Shift reports and break/geofence-exit clock-out flow (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, after every earlier staff
+-- block above it. Requested directly: stopping the clock should offer a
+-- choice between taking a break and actually ending the shift, a real
+-- clock-out should be able to carry a report of what got done that
+-- reaches Ada/Aaron, that report should be addable/editable later too (not
+-- a one-shot prompt only at the exact moment of stopping), and Ada/Aaron
+-- should be able to ask for one if it's missing. "Break" needs no schema
+-- change at all — by product decision it's just an ordinary clock-out
+-- followed by an ordinary clock-in later, tagged with a note so the gap in
+-- the day reads as deliberate rather than unexplained; see
+-- StaffClockView.jsx. Geofence-exit detection is entirely client-side
+-- (continuous watchPosition against the active entry's own site while
+-- clocked in) and only ever prompts, never auto-acts, so it needs no
+-- server-side representation either — see that same file.
+
+-- Lets a member flag "I want to know what happened on this shift" —
+-- report_requested_by is nullable (not every request needs attribution
+-- shown, but recorded anyway for the same reason approved_by/resolved_by
+-- already are elsewhere in this schema) and both columns are plain member
+-- UPDATE, already covered by the existing unrestricted "members can update
+-- time entries" policy — no new RLS needed for the asking side.
+alter table time_entries
+  add column report_requested_at timestamptz,
+  add column report_requested_by uuid references members (id);
+
+-- The one write path staff gets for a shift's own report — mirrors
+-- staff_clock_out()'s shape exactly: security definer, re-checks
+-- staff_id = auth.uid() inline, and only ever touches notes (appending,
+-- not overwriting — same "old body + a new --- separated chunk" pattern
+-- upsert_eod_report() already uses, so a report added after the fact
+-- doesn't erase whatever was captured at clock-in or an earlier report
+-- submission) and report_requested_at (cleared unconditionally, so
+-- answering a request — however it's answered — closes the loop; a
+-- report submitted with nothing pending simply clears a column that was
+-- already null). Deliberately not folded into staff_clock_out() itself:
+-- a report needs to be addable long after a shift has already ended, not
+-- only in the same breath as clocking out, so it has to be its own call
+-- either way — reusing that same call for both moments avoids a second,
+-- clock-out-only code path with slightly different rules.
+create or replace function staff_submit_shift_report(
+  p_entry_id uuid,
+  p_note text
+)
+returns time_entries
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result time_entries;
+begin
+  if not is_staff() then
+    raise exception 'not an active staff member';
+  end if;
+
+  update time_entries
+  set notes = case
+        when notes is null or notes = '' then p_note
+        else notes || E'\n---\n' || p_note
+      end,
+      report_requested_at = null
+  where id = p_entry_id
+    and staff_id = auth.uid()
+  returning * into result;
+
+  if result.id is null then
+    raise exception 'time entry not found or not yours';
+  end if;
+
+  return result;
+end;
+$$;
+
+grant execute on function staff_submit_shift_report(uuid, text) to authenticated;

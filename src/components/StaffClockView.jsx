@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Flag, MapPin, Play, Square } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthContext'
@@ -9,6 +9,7 @@ import {
   fetchOwnTimeEntries,
   fetchOwnTimeEntryRequests,
   submitTimeEntryRequest,
+  submitShiftReport,
   clockIn,
   clockOut,
   computeEntryPay,
@@ -16,8 +17,16 @@ import {
   submitWorkSiteLocationCapture,
 } from '../lib/staff'
 import { sendTimeEntryCorrectionRequest } from '../lib/manualNotify'
-import { findNearestSite } from '../lib/geo'
+import { findNearestSite, haversineDistanceM } from '../lib/geo'
 import ThemeToggle from './ThemeToggle'
+
+// How long to wait after first noticing the property manager is outside
+// the active shift's geofence before actually prompting them — a single
+// reading isn't enough to act on (GPS drift near buildings, a brief step
+// outside for a delivery, a signal dropout mid-fix), and per product
+// decision this only ever prompts, never auto-clocks-out, so there's no
+// urgency pushing that window shorter.
+const GEOFENCE_PROMPT_DELAY_MS = 2 * 60 * 1000
 
 function money(n) {
   return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`
@@ -107,8 +116,32 @@ export default function StaffClockView({ theme, toggleTheme }) {
   const [locationError, setLocationError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const [stopping, setStopping] = useState(false)
+  // Stop-flow state — replaces a single "Stop -> immediately clocked out"
+  // action with a choice, per product decision: `stopFlow` is null when
+  // closed, or { reason: 'manual' | 'geofence', step: 'choose' | 'report' }.
+  // `reason` only changes which options the 'choose' step offers (geofence
+  // adds "I'm still working," since that trigger could be a false
+  // positive); both reasons run through the exact same clock-out/report
+  // logic once a choice is made.
+  const [stopFlow, setStopFlow] = useState(null)
+  const [stopReportNote, setStopReportNote] = useState('')
+  const [stopSubmitting, setStopSubmitting] = useState(false)
+  const [stopError, setStopError] = useState('')
   const [elapsedMs, setElapsedMs] = useState(0)
+
+  // Deferred/later shift-report compose state, for Recent shifts — a
+  // report isn't only addable in the moment of clocking out; see
+  // submitShiftReport() in staff.js.
+  const [reportComposeId, setReportComposeId] = useState(null)
+  const [reportDraft, setReportDraft] = useState('')
+  const [submittingReport, setSubmittingReport] = useState(false)
+  const [reportSubmitError, setReportSubmitError] = useState('')
+
+  // Geofence-exit detection state — plain refs, not React state, since
+  // neither needs to trigger a re-render on its own; they're read/written
+  // only from inside the watchPosition callback below.
+  const outsideSinceRef = useRef(null)
+  const geofencePromptedRef = useRef(false)
 
   async function loadAll() {
     try {
@@ -214,6 +247,54 @@ export default function StaffClockView({ theme, toggleTheme }) {
     return () => clearInterval(id)
   }, [activeEntry])
 
+  // Continuous geofence-exit check while clocked in — only ever prompts,
+  // per product decision, never auto-clocks-out on its own (a GPS glitch
+  // or a quick supply run shouldn't silently cut someone's pay). Location
+  // permission was already granted at Start, so this doesn't trigger a
+  // fresh unprompted permission request the way a cold watch would.
+  // enableHighAccuracy is deliberately false here (unlike the one-shot
+  // Start/Stop reads) — this can run for an entire shift's duration, so
+  // trading GPS precision for battery life is the right default for a
+  // continuous background-ish check, not a single point-in-time reading.
+  useEffect(() => {
+    if (!activeEntry || !navigator.geolocation) return
+    const site = sites.find((s) => s.id === activeEntry.work_site_id)
+    if (!site) return
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const distanceM = haversineDistanceM(pos.coords.latitude, pos.coords.longitude, site.latitude, site.longitude)
+        if (distanceM > site.geofence_radius_m) {
+          if (!outsideSinceRef.current) {
+            outsideSinceRef.current = Date.now()
+          } else if (!geofencePromptedRef.current && Date.now() - outsideSinceRef.current >= GEOFENCE_PROMPT_DELAY_MS) {
+            geofencePromptedRef.current = true
+            // Functional update, not a direct value — the effect's own
+            // closure over stopFlow would otherwise be stale, and this
+            // also means an already-open stop flow (e.g. the property
+            // manager already tapped Stop manually and is mid-report)
+            // never gets silently clobbered by this automatic trigger.
+            setStopFlow((current) => current ?? { reason: 'geofence', step: 'choose' })
+          }
+        } else {
+          // Back inside the radius — a real excursion or just drift
+          // either way, but no longer relevant; a future exit should be
+          // timed fresh, not credited against this one.
+          outsideSinceRef.current = null
+          geofencePromptedRef.current = false
+        }
+      },
+      // Errors here (denied/unavailable/timeout) are silently ignored —
+      // this is a soft, best-effort check layered on top of an already-
+      // successful clock-in, not something that should surface as an
+      // app-level error the way the Start flow's own location requirement
+      // does.
+      () => {},
+      { enableHighAccuracy: false, maximumAge: 60000, timeout: 20000 },
+    )
+    return () => navigator.geolocation.clearWatch(watchId)
+  }, [activeEntry, sites])
+
   async function handleStartTap() {
     setStarting(true)
     setError('')
@@ -277,9 +358,14 @@ export default function StaffClockView({ theme, toggleTheme }) {
     setRateType('standard')
   }
 
-  async function handleStop() {
-    setStopping(true)
-    setError('')
+  // The actual clock-out call, shared by both "taking a break" and
+  // "clocking out" below — those two differ only in what happens around
+  // this call (an auto-tagged break note vs. an optional typed report),
+  // never in how the clock-out itself works. Returns the closed entry's id
+  // so callers can attach a report afterward, since activeEntry is cleared
+  // by the time this returns.
+  async function runClockOut() {
+    const closedEntryId = activeEntry.id
     // A flaky GPS signal at the END of a shift shouldn't trap someone
     // unable to clock out — fall through to a coordinate-less clock-out
     // on any failure/timeout rather than blocking the action.
@@ -292,14 +378,101 @@ export default function StaffClockView({ theme, toggleTheme }) {
     } catch {
       // Silently proceed without coordinates — see comment above.
     }
+    await clockOut({ entryId: closedEntryId, lat, lng })
+    setActiveEntry(null)
+    await loadAll()
+    return closedEntryId
+  }
+
+  function handleStopTap() {
+    setStopError('')
+    setStopReportNote('')
+    setStopFlow({ reason: 'manual', step: 'choose' })
+  }
+
+  // Only reachable from a geofence-triggered prompt — dismisses it as a
+  // likely false positive (GPS drift, a brief step outside) and resets the
+  // debounce so a later, genuine excursion can still trigger a fresh
+  // prompt rather than being permanently suppressed by this one dismissal.
+  function handleStillWorking() {
+    outsideSinceRef.current = null
+    geofencePromptedRef.current = false
+    setStopFlow(null)
+  }
+
+  // Break = an ordinary clock-out, by product decision — no schema change,
+  // no separate pause/resume state. The auto-tagged note is the only thing
+  // that distinguishes it from a real end-of-shift in what Ada/Aaron see
+  // later: a gap in the day with an explicit reason, not an unexplained
+  // missing chunk. Best-effort — the clock-out itself has already
+  // succeeded by the time this runs, so a failure tagging the note
+  // shouldn't read as the whole action having failed.
+  async function handleTakeBreak() {
+    setStopSubmitting(true)
+    setStopError('')
     try {
-      await clockOut({ entryId: activeEntry.id, lat, lng })
-      setActiveEntry(null)
+      const closedEntryId = await runClockOut()
+      try {
+        await submitShiftReport(closedEntryId, '(Break — will resume shortly)')
+      } catch (err) {
+        console.error('Failed to tag break note (clock-out itself still succeeded):', err)
+      }
+      setStopFlow(null)
+    } catch (err) {
+      setStopError(err.message)
+    } finally {
+      setStopSubmitting(false)
+    }
+  }
+
+  function handleChooseClockOut() {
+    setStopFlow((current) => ({ ...current, step: 'report' }))
+  }
+
+  // The real end-of-shift path — clocks out first, then attaches whatever
+  // report text was typed (optional; per product decision Stop must never
+  // be blocked on this). A report-submission failure here is also
+  // best-effort for the same reason handleTakeBreak's is: the clock-out
+  // itself already succeeded, and the same report can always be added
+  // later from Recent shifts (handleSubmitShiftReport below) if this
+  // particular attempt doesn't land.
+  async function handleFinishClockOut() {
+    setStopSubmitting(true)
+    setStopError('')
+    try {
+      const closedEntryId = await runClockOut()
+      if (stopReportNote.trim()) {
+        try {
+          await submitShiftReport(closedEntryId, stopReportNote.trim())
+        } catch (err) {
+          console.error('Failed to submit shift report (clock-out itself still succeeded):', err)
+        }
+      }
+      setStopFlow(null)
+      setStopReportNote('')
+    } catch (err) {
+      setStopError(err.message)
+    } finally {
+      setStopSubmitting(false)
+    }
+  }
+
+  // Adding/editing a report later, from Recent shifts — same
+  // submitShiftReport() call the Stop flow above uses, just reached a
+  // different way (any past shift, not only the one just closed).
+  async function handleSubmitShiftReport(entryId) {
+    if (!reportDraft.trim()) return
+    setSubmittingReport(true)
+    setReportSubmitError('')
+    try {
+      await submitShiftReport(entryId, reportDraft.trim())
+      setReportComposeId(null)
+      setReportDraft('')
       await loadAll()
     } catch (err) {
-      setError(err.message)
+      setReportSubmitError(err.message)
     } finally {
-      setStopping(false)
+      setSubmittingReport(false)
     }
   }
 
@@ -541,17 +714,88 @@ export default function StaffClockView({ theme, toggleTheme }) {
               <button
                 type="button"
                 className="w-full cursor-pointer rounded-[8px] border-0 bg-overdue px-4 py-3 text-lg font-bold text-white disabled:opacity-50"
-                onClick={handleStop}
-                disabled={stopping}
+                onClick={handleStopTap}
+                disabled={Boolean(stopFlow)}
               >
-                {stopping ? (
-                  'Stopping…'
-                ) : (
-                  <>
-                    <Square size={16} className="mr-1.5 inline align-[-2px]" fill="currentColor" /> Stop
-                  </>
-                )}
+                <Square size={16} className="mr-1.5 inline align-[-2px]" fill="currentColor" /> Stop
               </button>
+            </div>
+          )}
+
+          {/* Stop flow — a choice, not an immediate clock-out. Reached
+              either by tapping Stop above (reason: 'manual') or
+              automatically once the geofence-exit watch decides this
+              isn't a fleeting blip (reason: 'geofence', which adds an
+              extra "I'm still working" escape). Both reasons converge on
+              the same 'choose' -> maybe 'report' steps either way. */}
+          {activeEntry && stopFlow && (
+            <div className="flex flex-col gap-3 rounded-[16px] border border-accent bg-card-bg p-4">
+              {stopError && <p className="error">{stopError}</p>}
+              {stopFlow.step === 'choose' && (
+                <>
+                  <h2 className="text-[13px] opacity-60">
+                    {stopFlow.reason === 'geofence' ? "Looks like you've left the site" : 'Stopping the clock'}
+                  </h2>
+                  <div className="flex flex-col gap-2">
+                    {stopFlow.reason === 'geofence' && (
+                      <button
+                        type="button"
+                        className="cursor-pointer rounded-sm border border-border bg-bg px-3 py-2 text-sm text-text-h"
+                        onClick={handleStillWorking}
+                      >
+                        I'm still working
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-sm border border-border bg-bg px-3 py-2 text-sm text-text-h disabled:opacity-50"
+                      onClick={handleTakeBreak}
+                      disabled={stopSubmitting}
+                    >
+                      {stopSubmitting ? 'Clocking out…' : 'Taking a break'}
+                    </button>
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-sm border-0 bg-overdue px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      onClick={handleChooseClockOut}
+                      disabled={stopSubmitting}
+                    >
+                      Clocking out for now
+                    </button>
+                  </div>
+                </>
+              )}
+              {stopFlow.step === 'report' && (
+                <>
+                  <h2 className="text-[13px] opacity-60">What did you work on? (optional)</h2>
+                  <textarea
+                    autoFocus
+                    className="rounded-sm border border-border bg-bg p-2 text-sm text-text-h [font-family:inherit]"
+                    rows={3}
+                    placeholder="e.g. cleaned unit 2, met the new tenant, fixed the porch light"
+                    value={stopReportNote}
+                    onChange={(event) => setStopReportNote(event.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 cursor-pointer rounded-sm border border-border bg-bg px-3 py-2 text-sm text-text"
+                      onClick={() => setStopFlow((current) => ({ ...current, step: 'choose' }))}
+                      disabled={stopSubmitting}
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      className="flex-1 cursor-pointer rounded-sm border-0 bg-overdue px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      onClick={handleFinishClockOut}
+                      disabled={stopSubmitting}
+                    >
+                      {stopSubmitting ? 'Clocking out…' : 'Finish clocking out'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -584,6 +828,65 @@ export default function StaffClockView({ theme, toggleTheme }) {
                       {e.flagged && <AlertTriangle size={12} className="ml-1 inline align-[-1px] text-overdue" />}
                     </span>
                     <span className="font-semibold">{e.clock_out_at ? money(computeEntryPay(e)) : 'in progress'}</span>
+                    {/* Shift report — existing notes shown read-only above a
+                        fresh compose box, mirroring EndOfDayReportForm.jsx's
+                        own "read-only existing body, compose a new chunk
+                        below" shape (submitShiftReport() appends, it never
+                        overwrites), so a later addition can't clobber a
+                        report already captured at clock-in or a previous
+                        submission. Highlighted when Ada/Aaron explicitly
+                        asked — see requestShiftReport() in staff.js. */}
+                    <div
+                      className={`col-span-2 flex flex-col gap-1.5 ${e.report_requested_at ? 'rounded-sm border border-accent bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-2 py-1.5' : ''}`}
+                    >
+                      {e.report_requested_at && (
+                        <p className="text-xs font-medium text-text-h">Ada/Aaron asked what you worked on</p>
+                      )}
+                      {e.notes && <p className="whitespace-pre-wrap text-xs opacity-70">{e.notes}</p>}
+                      {reportComposeId === e.id ? (
+                        <div className="flex flex-col gap-1.5">
+                          {reportSubmitError && <p className="error">{reportSubmitError}</p>}
+                          <textarea
+                            autoFocus
+                            rows={2}
+                            className="rounded-sm border border-border bg-bg p-1.5 text-xs text-text-h [font-family:inherit]"
+                            placeholder="What did you work on?"
+                            value={reportDraft}
+                            onChange={(event) => setReportDraft(event.target.value)}
+                          />
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              className="flex-1 cursor-pointer rounded-sm border border-border bg-bg px-2 py-1 text-xs text-text"
+                              onClick={() => setReportComposeId(null)}
+                              disabled={submittingReport}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                              onClick={() => handleSubmitShiftReport(e.id)}
+                              disabled={submittingReport || !reportDraft.trim()}
+                            >
+                              {submittingReport ? 'Sending…' : 'Submit'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="cursor-pointer self-start text-xs text-accent-h underline"
+                          onClick={() => {
+                            setReportComposeId(e.id)
+                            setReportDraft('')
+                            setReportSubmitError('')
+                          }}
+                        >
+                          {e.notes ? 'Add more' : e.report_requested_at ? 'Submit report' : 'Add a report'}
+                        </button>
+                      )}
+                    </div>
                     {/* Spans the full row width (col-span-2) rather than
                         sitting in one of the two existing grid columns —
                         this is a third line under the pair above, not a
