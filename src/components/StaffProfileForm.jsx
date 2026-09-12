@@ -174,13 +174,15 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
         <label>
           Job description (optional)
           <textarea
-            rows={3}
+            rows={6}
             placeholder="What this role covers…"
             value={jobDescription}
             onChange={(event) => setJobDescription(event.target.value)}
             className={`${FIELD_CLASS} [resize:vertical]`}
           />
-          <span className="mt-1 block text-xs opacity-65">Shown to them on their clock-in screen.</span>
+          <span className="mt-1 block text-xs opacity-65">
+            Shown to them on their clock-in screen. Markdown supported — ## headings, * bullets, **bold**.
+          </span>
         </label>
 
         <label>

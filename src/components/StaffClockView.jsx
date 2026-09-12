@@ -19,6 +19,7 @@ import {
 import { sendTimeEntryCorrectionRequest } from '../lib/manualNotify'
 import { findNearestSite, haversineDistanceM } from '../lib/geo'
 import ThemeToggle from './ThemeToggle'
+import MarkdownText from './MarkdownText'
 
 // How long to wait after first noticing the property manager is outside
 // the active shift's geofence before actually prompting them — a single
@@ -583,7 +584,9 @@ export default function StaffClockView({ theme, toggleTheme }) {
       {profile?.active !== false && profile?.job_description && (
         <div className="rounded-[8px] border border-border bg-card-bg p-4">
           <h2 className="text-[13px] opacity-60">Your role</h2>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-text-h">{profile.job_description}</p>
+          <div className="mt-1">
+            <MarkdownText text={profile.job_description} />
+          </div>
         </div>
       )}
 
