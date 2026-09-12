@@ -69,6 +69,7 @@ export default function StaffLogsView({ me }) {
   const [locationsOpen, setLocationsOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
+  const [addingStaff, setAddingStaff] = useState(false)
   const [editingEntry, setEditingEntry] = useState(null)
   const [addingEntry, setAddingEntry] = useState(false)
 
@@ -584,7 +585,16 @@ export default function StaffLogsView({ me }) {
       )}
 
       <div className="flex flex-col gap-2">
-        <h3 className="text-[13px] opacity-60">Staff roster</h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-[13px] opacity-60">Staff roster</h3>
+          <button
+            type="button"
+            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
+            onClick={() => setAddingStaff(true)}
+          >
+            <Plus size={12} className="mr-1 inline align-[-2px]" /> Add staff
+          </button>
+        </div>
         {roster.map((s) => (
           <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-sm border border-border px-3 py-2 text-sm">
             <span className="min-w-0">
@@ -681,13 +691,25 @@ export default function StaffLogsView({ me }) {
         />
       )}
 
-      {editingStaff && (
+      {(editingStaff || addingStaff) && (
         <StaffProfileForm
           staffMember={editingStaff}
-          onClose={() => setEditingStaff(null)}
-          onSaved={(saved) => {
-            setRoster((current) => current.map((member) => (member.id === saved.id ? saved : member)))
+          onClose={() => {
             setEditingStaff(null)
+            setAddingStaff(false)
+          }}
+          onSaved={async (saved) => {
+            // saved is null from a create — StaffProfileForm.jsx has no
+            // single updated row to hand back the way an edit's plain
+            // update does, so this branch just refetches the whole roster
+            // instead of trying to splice one in.
+            if (saved) {
+              setRoster((current) => current.map((member) => (member.id === saved.id ? saved : member)))
+            } else {
+              setRoster(await fetchStaffRoster())
+            }
+            setEditingStaff(null)
+            setAddingStaff(false)
           }}
         />
       )}

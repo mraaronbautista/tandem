@@ -19,6 +19,19 @@ export async function fetchStaffRoster() {
   return data
 }
 
+// The only staff write path that isn't a plain client call — creating a
+// new staff.id means creating a new auth.users row first, which needs the
+// service-role key (see create-staff-account/index.ts). username becomes
+// {username}@tandem.local, same convention every real login in this app
+// already follows (Login.jsx's toLoginEmail()).
+export async function createStaffAccount({ username, password, displayName, hourlyRate, emergencyRate, payrollCadence }) {
+  const { data, error } = await supabase.functions.invoke('create-staff-account', {
+    body: { username, password, displayName, hourlyRate, emergencyRate, payrollCadence },
+  })
+  if (error) throw error
+  return data
+}
+
 // A signed-in staff account's own row — RLS lets them read this even
 // while deactivated (see schema.sql), so StaffClockView.jsx can show a
 // clear "you're deactivated" state instead of an empty/ambiguous one.

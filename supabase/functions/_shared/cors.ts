@@ -1,6 +1,6 @@
-// Only needed by manual-notify — the other two Edge Functions are called
-// server-to-server (Database Webhook / pg_cron), never from a browser, so
-// they never hit CORS at all. This is the first client-invoked function.
+// Needed by manual-notify and create-staff-account — the other Edge
+// Functions are called server-to-server (Database Webhook / pg_cron),
+// never from a browser, so they never hit CORS at all.
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
