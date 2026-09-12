@@ -22,7 +22,14 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState(staffMember?.display_name || '')
   const [hourlyRate, setHourlyRate] = useState(staffMember?.hourly_rate ?? '')
+  // Not every role works emergency shifts — this toggle is what actually
+  // decides whether emergency_rate is saved as a number or null; defaults
+  // to on for a new account (preserves the old always-has-one behavior
+  // unless a member turns it off) and to whatever the existing row already
+  // has when editing.
+  const [hasEmergencyRate, setHasEmergencyRate] = useState(isCreate ? true : staffMember.emergency_rate != null)
   const [emergencyRate, setEmergencyRate] = useState(staffMember?.emergency_rate ?? '')
+  const [jobDescription, setJobDescription] = useState(staffMember?.job_description || '')
   const [payrollCadence, setPayrollCadence] = useState(staffMember?.payroll_cadence || 'biweekly')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -32,14 +39,17 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
     setSaving(true)
     setError('')
     try {
+      const cleanEmergencyRate = hasEmergencyRate ? Number(emergencyRate) : null
+      const cleanJobDescription = jobDescription.trim() || null
       if (isCreate) {
         await createStaffAccount({
           username: username.trim(),
           password,
           displayName: displayName.trim(),
           hourlyRate: Number(hourlyRate),
-          emergencyRate: Number(emergencyRate),
+          emergencyRate: cleanEmergencyRate,
           payrollCadence,
+          jobDescription: cleanJobDescription,
         })
         // No row to hand back the way updateStaffProfile()'s single-row
         // update does — the caller (StaffLogsView.jsx) just refetches the
@@ -49,8 +59,9 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
         const saved = await updateStaffProfile(staffMember.id, {
           display_name: displayName.trim(),
           hourly_rate: Number(hourlyRate),
-          emergency_rate: Number(emergencyRate),
+          emergency_rate: cleanEmergencyRate,
           payroll_cadence: payrollCadence,
+          job_description: cleanJobDescription,
         })
         onSaved(saved)
       }
@@ -120,19 +131,28 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-2">
-          <label className="min-w-0">
-            Standard rate ($/hr)
-            <input
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              value={hourlyRate}
-              onChange={(event) => setHourlyRate(event.target.value)}
-              className={FIELD_CLASS}
-            />
-          </label>
+        <label className="min-w-0">
+          Standard rate ($/hr)
+          <input
+            required
+            type="number"
+            min="0"
+            step="0.01"
+            value={hourlyRate}
+            onChange={(event) => setHourlyRate(event.target.value)}
+            className={FIELD_CLASS}
+          />
+        </label>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={hasEmergencyRate}
+            onChange={(event) => setHasEmergencyRate(event.target.checked)}
+          />
+          This role works emergency shifts
+        </label>
+        {hasEmergencyRate && (
           <label className="min-w-0">
             Emergency rate ($/hr)
             <input
@@ -145,11 +165,23 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
               className={FIELD_CLASS}
             />
           </label>
-        </div>
+        )}
 
         {!isCreate && (
           <p className="text-xs opacity-65">Rate changes apply only to future clock-ins. Past shifts keep their original rate.</p>
         )}
+
+        <label>
+          Job description (optional)
+          <textarea
+            rows={3}
+            placeholder="What this role covers…"
+            value={jobDescription}
+            onChange={(event) => setJobDescription(event.target.value)}
+            className={`${FIELD_CLASS} [resize:vertical]`}
+          />
+          <span className="mt-1 block text-xs opacity-65">Shown to them on their clock-in screen.</span>
+        </label>
 
         <label>
           Payroll cadence

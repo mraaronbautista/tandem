@@ -99,7 +99,17 @@ export default function StaffTimeEntryForm({ entry, staffRoster = [], workSites 
           <>
             <label>
               Property manager
-              <select value={staffId} onChange={(event) => setStaffId(event.target.value)} className={FIELD_CLASS}>
+              <select
+                value={staffId}
+                onChange={(event) => {
+                  setStaffId(event.target.value)
+                  // A different staff member may have no emergency rate at
+                  // all — reset back to Standard rather than leaving
+                  // Emergency selected against a role that doesn't offer it.
+                  setRateType('standard')
+                }}
+                className={FIELD_CLASS}
+              >
                 {staffRoster
                   .filter((s) => s.active)
                   .map((s) => (
@@ -124,7 +134,7 @@ export default function StaffTimeEntryForm({ entry, staffRoster = [], workSites 
               <p className="text-xs opacity-65">No ready clock-in locations yet — set one up first.</p>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid gap-2 ${selectedStaff?.emergency_rate != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <button
                 type="button"
                 className={`rounded-sm border px-3 py-2 text-sm ${rateType === 'standard' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'}`}
@@ -132,13 +142,20 @@ export default function StaffTimeEntryForm({ entry, staffRoster = [], workSites 
               >
                 Standard{selectedStaff ? ` ($${selectedStaff.hourly_rate}/hr)` : ''}
               </button>
-              <button
-                type="button"
-                className={`rounded-sm border px-3 py-2 text-sm ${rateType === 'emergency' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'}`}
-                onClick={() => setRateType('emergency')}
-              >
-                Emergency{selectedStaff ? ` ($${selectedStaff.emergency_rate}/hr)` : ''}
-              </button>
+              {/* Hidden outright, not just disabled, when this role has no
+                  emergency rate — stamp_time_entry_meta() (schema.sql)
+                  refuses an 'emergency' insert for such a role server-side
+                  anyway, but there's no reason to offer a choice that would
+                  just error. */}
+              {selectedStaff?.emergency_rate != null && (
+                <button
+                  type="button"
+                  className={`rounded-sm border px-3 py-2 text-sm ${rateType === 'emergency' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'}`}
+                  onClick={() => setRateType('emergency')}
+                >
+                  Emergency (${selectedStaff.emergency_rate}/hr)
+                </button>
+              )}
             </div>
           </>
         )}

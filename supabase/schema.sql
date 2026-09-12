@@ -1081,7 +1081,17 @@ create table staff (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text not null,
   hourly_rate numeric(10, 2) not null default 20,
-  emergency_rate numeric(10, 2) not null default 25,
+  -- Nullable: not every role works emergency shifts (e.g. a cleaner vs.
+  -- an on-call maintenance manager), so null means "this role has no
+  -- emergency rate" rather than a placeholder number nobody meant to set.
+  -- stamp_time_entry_meta() below refuses a clock-in at the emergency
+  -- rate for a staff row where this is null.
+  emergency_rate numeric(10, 2),
+  -- Free text, shown to the property manager themselves in
+  -- StaffClockView.jsx and editable by a member in StaffProfileForm.jsx —
+  -- what the role actually covers, since neither side had anywhere to
+  -- write that down before.
+  job_description text,
   -- Soft-disable rather than delete: keeps time_entries history intact
   -- if a property manager leaves. is_staff() below checks this, so
   -- deactivating someone revokes clock-in/work-site access immediately.
@@ -1402,6 +1412,9 @@ begin
   select * into v_staff from staff where id = new.staff_id;
   if v_staff.id is null then
     raise exception 'staff not found';
+  end if;
+  if new.rate_type = 'emergency' and v_staff.emergency_rate is null then
+    raise exception 'this role has no emergency rate';
   end if;
 
   new.rate_amount := case new.rate_type
@@ -1741,3 +1754,64 @@ grant execute on function staff_submit_shift_report(uuid, text) to authenticated
 -- now exclude archived tasks, so an archived task disappears from every
 -- planner view, not just Overdue).
 alter table tasks add column archived boolean not null default false;
+
+-- ---------------------------------------------------------------------------
+-- Optional emergency rate + job description for staff (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, after every earlier staff
+-- block above it. Two independent, unrelated changes bundled together only
+-- because they were requested in the same pass:
+--
+-- 1. emergency_rate becomes nullable, no default — not every property-
+--    manager role actually works emergency shifts, and a nonzero rate that
+--    nobody meant to set is worse than an explicit "this role doesn't have
+--    one." StaffProfileForm.jsx exposes this as an on/off toggle around the
+--    Emergency rate field; StaffClockView.jsx's/StaffTimeEntryForm.jsx's own
+--    Standard/Emergency picker only shows the Emergency option when
+--    profile.emergency_rate/selectedStaff.emergency_rate is not null.
+--    stamp_time_entry_meta() (redefined below, same body as the version
+--    above plus one new guard) refuses an 'emergency' clock-in server-side
+--    when the staff row's emergency_rate is null — belt-and-suspenders
+--    against a raw insert bypassing the UI's own gating.
+-- 2. job_description, a free-text field with nowhere to live before this —
+--    set by a member in StaffProfileForm.jsx, shown read-only to the
+--    property manager themselves in StaffClockView.jsx.
+alter table staff alter column emergency_rate drop not null;
+alter table staff alter column emergency_rate drop default;
+alter table staff add column job_description text;
+
+create or replace function stamp_time_entry_meta()
+returns trigger as $$
+declare
+  v_site work_sites;
+  v_staff staff;
+begin
+  select * into v_site from work_sites where id = new.work_site_id;
+  if v_site.id is null then
+    raise exception 'work site not found';
+  end if;
+  if not v_site.active or v_site.latitude is null or v_site.longitude is null then
+    raise exception 'work site is not ready for clock-in';
+  end if;
+
+  select * into v_staff from staff where id = new.staff_id;
+  if v_staff.id is null then
+    raise exception 'staff not found';
+  end if;
+  if new.rate_type = 'emergency' and v_staff.emergency_rate is null then
+    raise exception 'this role has no emergency rate';
+  end if;
+
+  new.rate_amount := case new.rate_type
+    when 'emergency' then v_staff.emergency_rate
+    else v_staff.hourly_rate
+  end;
+
+  new.distance_from_site_m := haversine_distance_m(
+    new.clock_in_lat, new.clock_in_lng, v_site.latitude, v_site.longitude
+  );
+  new.flagged := new.distance_from_site_m > v_site.geofence_radius_m;
+
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;

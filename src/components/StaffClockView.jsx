@@ -576,6 +576,17 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
       {error && <p className="error">{error}</p>}
 
+      {/* Read-only — set by a member in StaffProfileForm.jsx. Shown
+          regardless of clock-in state (not just on the not-clocked-in
+          screen) since "what does this role cover" is relevant whether or
+          not a shift happens to be running right now. */}
+      {profile?.active !== false && profile?.job_description && (
+        <div className="rounded-[8px] border border-border bg-card-bg p-4">
+          <h2 className="text-[13px] opacity-60">Your role</h2>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-text-h">{profile.job_description}</p>
+        </div>
+      )}
+
       {profile?.active !== false && (
         <>
           {!activeEntry && !starting && (
@@ -667,7 +678,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 </select>
               </label>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className={`grid gap-2 ${profile?.emergency_rate != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 <button
                   type="button"
                   className={`flex-1 cursor-pointer rounded-sm border px-3 py-2 text-sm ${
@@ -677,15 +688,21 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 >
                   Standard (${profile?.hourly_rate}/hr)
                 </button>
-                <button
-                  type="button"
-                  className={`flex-1 cursor-pointer rounded-sm border px-3 py-2 text-sm ${
-                    rateType === 'emergency' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'
-                  }`}
-                  onClick={() => setRateType('emergency')}
-                >
-                  Emergency (${profile?.emergency_rate}/hr)
-                </button>
+                {/* Not every role works emergency shifts — hidden outright
+                    (not just disabled) when this profile has no emergency
+                    rate; stamp_time_entry_meta() (schema.sql) would refuse
+                    an 'emergency' clock-in for one anyway. */}
+                {profile?.emergency_rate != null && (
+                  <button
+                    type="button"
+                    className={`flex-1 cursor-pointer rounded-sm border px-3 py-2 text-sm ${
+                      rateType === 'emergency' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'
+                    }`}
+                    onClick={() => setRateType('emergency')}
+                  >
+                    Emergency (${profile?.emergency_rate}/hr)
+                  </button>
+                )}
               </div>
 
               <label className="flex flex-col gap-1 text-sm">

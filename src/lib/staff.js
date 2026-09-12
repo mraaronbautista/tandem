@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 import { startOfPeriod } from './tasks'
 
-const STAFF_COLUMNS = 'id, display_name, hourly_rate, emergency_rate, active, payroll_cadence'
+const STAFF_COLUMNS = 'id, display_name, hourly_rate, emergency_rate, job_description, active, payroll_cadence'
 const WORK_SITE_COLUMNS =
   'id, name, address, latitude, longitude, geofence_radius_m, rental_property_id, active, ' +
   'pending_latitude, pending_longitude, pending_accuracy_m, pending_captured_by, pending_captured_at'
@@ -24,9 +24,17 @@ export async function fetchStaffRoster() {
 // service-role key (see create-staff-account/index.ts). username becomes
 // {username}@tandem.local, same convention every real login in this app
 // already follows (Login.jsx's toLoginEmail()).
-export async function createStaffAccount({ username, password, displayName, hourlyRate, emergencyRate, payrollCadence }) {
+export async function createStaffAccount({
+  username,
+  password,
+  displayName,
+  hourlyRate,
+  emergencyRate,
+  payrollCadence,
+  jobDescription,
+}) {
   const { data, error } = await supabase.functions.invoke('create-staff-account', {
-    body: { username, password, displayName, hourlyRate, emergencyRate, payrollCadence },
+    body: { username, password, displayName, hourlyRate, emergencyRate, payrollCadence, jobDescription },
   })
   if (error) throw error
   return data
@@ -41,10 +49,13 @@ export async function fetchOwnStaffProfile(id) {
   return data
 }
 
-export async function updateStaffProfile(id, { display_name, hourly_rate, emergency_rate, payroll_cadence }) {
+export async function updateStaffProfile(
+  id,
+  { display_name, hourly_rate, emergency_rate, payroll_cadence, job_description },
+) {
   const { data, error } = await supabase
     .from('staff')
-    .update({ display_name, hourly_rate, emergency_rate, payroll_cadence })
+    .update({ display_name, hourly_rate, emergency_rate, payroll_cadence, job_description })
     .eq('id', id)
     .select(STAFF_COLUMNS)
     .single()

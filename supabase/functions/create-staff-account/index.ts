@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
   const { data: memberRow } = await supabaseAdmin.from('members').select('id').eq('id', user.id).maybeSingle()
   if (!memberRow) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
 
-  const { username, password, displayName, hourlyRate, emergencyRate, payrollCadence } = await req.json()
+  const { username, password, displayName, hourlyRate, emergencyRate, payrollCadence, jobDescription } = await req.json()
   const cleanUsername = String(username || '').trim().toLowerCase()
   const cleanDisplayName = String(displayName || '').trim()
   if (!cleanUsername || !cleanDisplayName) {
@@ -62,11 +62,17 @@ Deno.serve(async (req) => {
   })
   if (createError) return new Response(createError.message, { status: 400, headers: corsHeaders })
 
+  // emergencyRate is optional — not every role works emergency shifts, so
+  // '', null, or undefined all mean "no emergency rate," not 0
+  // (stamp_time_entry_meta() in schema.sql refuses an 'emergency' clock-in
+  // for a null rate rather than silently paying $0/hr for it).
+  const cleanEmergencyRate = emergencyRate === '' || emergencyRate == null ? null : Number(emergencyRate)
   const { error: staffError } = await supabaseAdmin.from('staff').insert({
     id: created.user.id,
     display_name: cleanDisplayName,
     hourly_rate: Number(hourlyRate) || 0,
-    emergency_rate: Number(emergencyRate) || 0,
+    emergency_rate: cleanEmergencyRate,
+    job_description: jobDescription ? String(jobDescription).trim() || null : null,
     payroll_cadence: payrollCadence || 'biweekly',
     active: true,
   })

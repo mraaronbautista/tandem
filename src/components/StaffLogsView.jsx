@@ -599,7 +599,9 @@ export default function StaffLogsView({ me }) {
           <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-sm border border-border px-3 py-2 text-sm">
             <span className="min-w-0">
               <strong className="block truncate font-semibold text-text-h">{s.display_name}</strong>
-              <span className="text-xs opacity-65">${s.hourly_rate}/hr · ${s.emergency_rate}/hr emergency</span>
+              <span className="text-xs opacity-65">
+                ${s.hourly_rate}/hr{s.emergency_rate != null ? ` · $${s.emergency_rate}/hr emergency` : ''}
+              </span>
             </span>
             <div className="flex gap-1.5">
               <button
