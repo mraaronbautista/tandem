@@ -12,16 +12,37 @@ import { searchUsAddresses } from '../lib/geocoding'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
+
+const METERS_PER_FOOT = 0.3048
+
+// meters -> the displayed number in the given unit, rounded to a whole
+// number either way (geofence_radius_m is a plain integer column, and a
+// fractional foot/meter reading isn't meaningfully more precise than
+// browser geolocation accuracy already is).
+function radiusInUnit(meters, unit) {
+  return unit === 'ft' ? Math.round(meters / METERS_PER_FOOT) : Math.round(meters)
+}
 
 export default function StaffWorkSitesForm({ site, rentalProperties, onClose, onSaved, onArchived }) {
   const [name, setName] = useState(site?.name || '')
   const [address, setAddress] = useState(site?.address || '')
   const [latitude, setLatitude] = useState(site?.latitude ?? '')
   const [longitude, setLongitude] = useState(site?.longitude ?? '')
-  const [radiusM, setRadiusM] = useState(site?.geofence_radius_m ?? 150)
+  // Canonical value stays meters (geofence_radius_m, an integer column, and
+  // every server-side distance calculation — haversine_distance_m,
+  // stamp_time_entry_meta() — is already in meters) — radiusUnit only
+  // controls what's *displayed and typed*, converted at render/input time
+  // rather than storing feet as a second source of truth. Keeping one
+  // canonical number (not converting-and-overwriting on every toggle) means
+  // switching ft/m back and forth can't drift the actual value through
+  // repeated rounding. 152m (~500ft, a round number in either unit) is the
+  // new-site default, close to the previously-documented 150m.
+  const [radiusM, setRadiusM] = useState(site?.geofence_radius_m ?? 152)
+  const [radiusUnit, setRadiusUnit] = useState('ft')
   const [propertyIds, setPropertyIds] = useState(
     rentalProperties.filter((property) => property.work_site_id === site?.id).map((property) => property.id),
   )
@@ -147,7 +168,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
         address: address.trim(),
         latitude: hasCoordinates ? Number(latitude) : null,
         longitude: hasCoordinates ? Number(longitude) : null,
-        geofence_radius_m: Number(radiusM) || 150,
+        geofence_radius_m: Number(radiusM) || 152,
         active: shouldBeActive,
       }
       const saved = site ? await updateWorkSite(site.id, payload) : await createWorkSite(payload)
@@ -198,7 +219,9 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
                 service (no API key, no new dependency) this form already
                 attributes for address search. */}
             <p className="text-xs opacity-70">
-              {site.pending_latitude.toFixed(6)}, {site.pending_longitude.toFixed(6)} · geofence radius {site.geofence_radius_m}m ·{' '}
+              {site.pending_latitude.toFixed(6)}, {site.pending_longitude.toFixed(6)} · geofence radius{' '}
+              {radiusInUnit(site.geofence_radius_m, radiusUnit)}
+              {radiusUnit} ·{' '}
               <a
                 href={`https://www.openstreetmap.org/?mlat=${site.pending_latitude}&mlon=${site.pending_longitude}#map=18/${site.pending_latitude}/${site.pending_longitude}`}
                 target="_blank"
@@ -351,10 +374,34 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
                 <input type="number" step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} className={FIELD_INPUT_CLASS} />
               </label>
             </div>
-            <label>
-              Allowed radius (meters)
-              <input type="number" min="10" step="10" value={radiusM} onChange={(event) => setRadiusM(event.target.value)} className={FIELD_INPUT_CLASS} />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-text">Allowed radius</span>
+                {/* Toggles only which unit the input below reads/writes in —
+                    radiusM (the canonical, stored value) doesn't change just
+                    from switching units, so flipping back and forth can't
+                    drift the actual number through repeated rounding. */}
+                <PeriodTabs className="w-[92px] flex-none">
+                  <PeriodTab active={radiusUnit === 'ft'} onClick={() => setRadiusUnit('ft')} size="compact">
+                    ft
+                  </PeriodTab>
+                  <PeriodTab active={radiusUnit === 'm'} onClick={() => setRadiusUnit('m')} size="compact">
+                    m
+                  </PeriodTab>
+                </PeriodTabs>
+              </div>
+              <input
+                type="number"
+                min={radiusUnit === 'ft' ? 30 : 10}
+                step={radiusUnit === 'ft' ? 10 : 5}
+                value={radiusInUnit(radiusM, radiusUnit)}
+                onChange={(event) => {
+                  const typed = Number(event.target.value) || 0
+                  setRadiusM(radiusUnit === 'ft' ? Math.round(typed * METERS_PER_FOOT) : typed)
+                }}
+                className={FIELD_INPUT_CLASS}
+              />
+            </div>
           </div>
         </details>
 
