@@ -84,6 +84,18 @@ export default function StaffLogsView({ me }) {
     }
   }
 
+  // Its own function, not folded into reloadAll — the new work_sites
+  // Realtime channel below needs to re-fetch just this, without also
+  // re-running reloadEntries/fetchStaffRoster/fetchRentalProperties on
+  // every unrelated work_sites write.
+  async function reloadSites() {
+    try {
+      setSites(await fetchWorkSites())
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   async function reloadAll() {
     try {
       const [rosterData, sitesData, awaProperties, azuProperties] = await Promise.all([
@@ -127,6 +139,21 @@ export default function StaffLogsView({ me }) {
     return () => supabase.removeChannel(channel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, periodOffset, showAllTime, payrollCadence])
+
+  // Requires `alter publication supabase_realtime add table work_sites;`
+  // to be run by hand — see the "On-site location capture with member
+  // approval" migration's own note in schema.sql. Without this, a member
+  // sitting on an already-open Staff tab never saw a property manager's
+  // on-site capture land — sites was only ever fetched once, on mount.
+  // No filter dependencies (unlike the time_entries channel above), since
+  // reloadSites doesn't read statusFilter/periodOffset/etc.
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-work-sites-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_sites' }, reloadSites)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [])
 
   async function handleApprove(entryId) {
     setApprovingId(entryId)
@@ -450,7 +477,7 @@ export default function StaffLogsView({ me }) {
           }}
           onArchived={async () => {
             setEditingSite(null)
-            setSites(await fetchWorkSites())
+            await reloadSites()
           }}
         />
       )}

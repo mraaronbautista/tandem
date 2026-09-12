@@ -1061,9 +1061,15 @@ grant execute on function add_cork_note_comment(uuid, text) to authenticated;
 -- After running it, also run once, by hand:
 --   alter publication supabase_realtime add table time_entries;
 -- (needed for the admin dashboard's live updates — see TaskBoard.jsx's
--- staff tab / StaffLogsView.jsx). staff/work_sites don't need this —
--- they change rarely enough that an explicit reload after an admin
--- edit, same pattern archiveRentalProperty already uses, is enough.
+-- staff tab / StaffLogsView.jsx). `staff` still doesn't need this — it
+-- only ever changes via a member's own edit in this same dashboard, so
+-- an explicit reload right after that edit (the same pattern
+-- archiveRentalProperty already uses) is enough. `work_sites` used to
+-- fall under that same reasoning until the on-site capture/approval
+-- migration below gave staff their own independent write path onto it
+-- (staff_submit_location_capture()) — see that migration's own
+-- publication note for why it needs the same live-update treatment as
+-- time_entries now.
 
 create type staff_rate_type as enum ('standard', 'emergency');
 create type time_entry_status as enum ('pending', 'approved');
@@ -1499,6 +1505,17 @@ grant execute on function staff_submit_location_capture(uuid, double precision, 
 -- time_entries rather than an RPC. The RPC-only discipline above exists
 -- specifically for the staff write path, where the RLS gap is real; there's
 -- no equivalent gap on the member side to work around here.
+
+-- Run once, by hand, same as time_entries above:
+--   alter publication supabase_realtime add table work_sites;
+-- Real bug found via a live report ("the location the property manager
+-- captured never shows as pending on our side"): staff_submit_location_
+-- capture() is a write to work_sites that happens entirely outside any
+-- member action, so the "explicit reload after an admin edit is enough"
+-- reasoning the original staff/work_sites deployment note relied on no
+-- longer holds for this table specifically — a member sitting on an
+-- already-open Staff tab had no signal that a capture had landed, and
+-- StaffLogsView.jsx only ever fetched work_sites once, on mount.
 
 -- ---------------------------------------------------------------------------
 -- Staff payroll cadence (incremental migration)
