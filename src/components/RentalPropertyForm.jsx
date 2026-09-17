@@ -18,11 +18,18 @@ const FIELD_INPUT_CLASS =
 // RentalBookingForm.jsx/RentalExpenseForm.jsx. Properties had no in-app
 // way to add or edit at all before this — creating/renaming a unit
 // meant going straight into the Supabase table editor.
-export default function RentalPropertyForm({ company, property, onClose, onSaved, onArchived }) {
+//
+// `defaultTerm` seeds a new unit's term from whichever tab (Short/Midterm
+// vs. Long Term) was active in RentalsView.jsx when "+ Add unit" was
+// tapped — same reasoning the company picker already scopes a new unit to
+// whichever company tab you're on, rather than making term a choice with
+// no sensible default.
+export default function RentalPropertyForm({ company, property, defaultTerm, onClose, onSaved, onArchived }) {
   const [unitName, setUnitName] = useState(property?.unit_name || '')
   const [address, setAddress] = useState(property?.address || '')
   const [monthlyRent, setMonthlyRent] = useState(property?.monthly_rent ?? '')
   const [color, setColor] = useState(property?.color || DEFAULT_COLOR)
+  const [term, setTerm] = useState(property?.term || defaultTerm || 'short_midterm')
   const [saving, setSaving] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState('')
@@ -38,6 +45,7 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
         address: address.trim(),
         monthly_rent: monthlyRent === '' ? null : Number(monthlyRent),
         color,
+        term,
       }
       const saved = property
         ? await updateRentalProperty(property.id, payload)
@@ -81,6 +89,14 @@ export default function RentalPropertyForm({ company, property, onClose, onSaved
             onChange={(e) => setUnitName(e.target.value)}
             className={FIELD_INPUT_CLASS}
           />
+        </label>
+
+        <label>
+          Term
+          <select value={term} onChange={(e) => setTerm(e.target.value)} className={FIELD_INPUT_CLASS}>
+            <option value="short_midterm">Short/Midterm</option>
+            <option value="long_term">Long Term</option>
+          </select>
         </label>
 
         <label>

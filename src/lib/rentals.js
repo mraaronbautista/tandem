@@ -104,47 +104,51 @@ export function chargeDatesForBooking(booking) {
   return dates
 }
 
+const PROPERTY_COLUMNS = 'id, company, term, unit_name, address, monthly_rent, color, active, in_negotiation, work_site_id'
+
 export async function fetchRentalProperties(company) {
   let { data, error } = await supabase
     .from('rental_properties')
-    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation, work_site_id')
+    .select(PROPERTY_COLUMNS)
     .eq('company', company)
     .eq('active', true)
     .order('monthly_rent', { ascending: false })
   // The location-group frontend may deploy a few minutes before Aaron
   // runs its one-time SQL block. Keep Rentals and the Staff tab readable
   // during that window; configuration writes still correctly wait for
-  // the migration instead of pretending a link was persisted.
-  if (error?.code === '42703' && error.message?.includes('work_site_id')) {
+  // the migration instead of pretending a link was persisted. Same
+  // reasoning covers `term` — a unit fetched before that migration runs
+  // just reads as Short/Midterm (the column's own default) until it does.
+  if (error?.code === '42703' && (error.message?.includes('work_site_id') || error.message?.includes('term'))) {
     const fallback = await supabase
       .from('rental_properties')
       .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
       .eq('company', company)
       .eq('active', true)
       .order('monthly_rent', { ascending: false })
-    data = fallback.data?.map((property) => ({ ...property, work_site_id: null }))
+    data = fallback.data?.map((property) => ({ ...property, term: 'short_midterm', work_site_id: null }))
     error = fallback.error
   }
   if (error) throw error
   return data
 }
 
-export async function createRentalProperty(company, { unit_name, address, monthly_rent, color }) {
+export async function createRentalProperty(company, { unit_name, address, monthly_rent, color, term }) {
   const { data, error } = await supabase
     .from('rental_properties')
-    .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color })
-    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
+    .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term })
+    .select(PROPERTY_COLUMNS)
     .single()
   if (error) throw error
   return data
 }
 
-export async function updateRentalProperty(id, { unit_name, address, monthly_rent, color }) {
+export async function updateRentalProperty(id, { unit_name, address, monthly_rent, color, term }) {
   const { data, error } = await supabase
     .from('rental_properties')
-    .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color })
+    .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term })
     .eq('id', id)
-    .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
+    .select(PROPERTY_COLUMNS)
     .single()
   if (error) throw error
   return data
@@ -277,13 +281,36 @@ export function unitOccupancyStatus(bookings, propertyId) {
   return { occupied: false, next: null }
 }
 
+// Months+days remaining until `toStr`, calendar-accurate (not a flat
+// days/30 approximation) — same "age in years/months" style calculation a
+// birthday or anniversary counter would use. Backs RentalLongTermView.jsx's
+// "9 months, 13 days remaining" caption under the lease progress bar.
+export function monthsAndDaysBetween(fromStr, toStr) {
+  const [fy, fm, fd] = fromStr.split('-').map(Number)
+  const [ty, tm, td] = toStr.split('-').map(Number)
+  let months = (ty * 12 + tm) - (fy * 12 + fm)
+  let days = td - fd
+  if (days < 0) {
+    months -= 1
+    days += new Date(ty, tm - 1, 0).getDate() // days in the month before `to`
+  }
+  return { months: Math.max(0, months), days: Math.max(0, days) }
+}
+
+export function formatMonthsAndDays({ months, days }) {
+  const parts = []
+  if (months > 0) parts.push(`${months} month${months === 1 ? '' : 's'}`)
+  if (days > 0 || !months) parts.push(`${days} day${days === 1 ? '' : 's'}`)
+  return parts.join(', ')
+}
+
 function addDaysStr(dateStr, days) {
   const [y, m, d] = dateStr.split('-').map(Number)
   const dt = new Date(y, m - 1, d + days)
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
 }
 
-function daysBetweenStrs(a, b) {
+export function daysBetweenStrs(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
   return Math.round((new Date(by, bm - 1, bd) - new Date(ay, am - 1, ad)) / 86_400_000)

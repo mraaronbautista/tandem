@@ -13,10 +13,12 @@ import {
 import { useMediaQuery } from '../lib/useMediaQuery'
 import IconButton from './IconButton'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import RentalButton from './RentalButton'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
+import RentalLongTermView from './RentalLongTermView'
 import RentalPropertyForm from './RentalPropertyForm'
 
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
@@ -51,6 +53,12 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
     d.setDate(1)
     return d
   })
+  // A long-term unit's rent is fixed for the life of the lease and its
+  // income is static, so it doesn't belong on the same vacancy-monitoring
+  // dashboard a short/midterm room needs — see RentalLongTermView.jsx.
+  // Short/Midterm is the default: it's the view that actually needs
+  // checking day to day.
+  const [rentalTerm, setRentalTerm] = useState('short_midterm')
   const [properties, setProperties] = useState(null)
   const [expenses, setExpenses] = useState([])
   const [bookings, setBookings] = useState([])
@@ -158,10 +166,16 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       .catch((err) => setError(err.message))
   }
 
-  // Defaults to the first unit once properties actually load — can't be
-  // the useState initializer above since properties starts out null.
+  // Defaults to the first short/midterm unit once properties actually load
+  // — can't be the useState initializer above since properties starts out
+  // null. Scoped to short/midterm specifically, not just properties[0]:
+  // Findlay (long-term) sorts first by monthly_rent among Awa's units, and
+  // the calendar/unit-switcher below only ever renders short/midterm units
+  // anyway, so defaulting to it would select a unit that can't appear in
+  // either.
   useEffect(() => {
-    if (properties?.length && !selectedUnitId) setSelectedUnitId(properties[0].id)
+    const shortMidtermProperties = properties?.filter((p) => (p.term || 'short_midterm') === 'short_midterm')
+    if (shortMidtermProperties?.length && !selectedUnitId) setSelectedUnitId(shortMidtermProperties[0].id)
   }, [properties, selectedUnitId])
 
   function reloadGoals() {
@@ -253,10 +267,54 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
     )
   }
 
+  const shortMidtermProperties = properties.filter((p) => (p.term || 'short_midterm') === 'short_midterm')
+
+  const termToggle = (
+    <PeriodTabs className="w-auto min-w-0 flex-none">
+      <PeriodTab active={rentalTerm === 'short_midterm'} onClick={() => setRentalTerm('short_midterm')}>
+        Short/Midterm
+      </PeriodTab>
+      <PeriodTab active={rentalTerm === 'long_term'} onClick={() => setRentalTerm('long_term')}>
+        Long Term
+      </PeriodTab>
+    </PeriodTabs>
+  )
+
+  if (rentalTerm === 'long_term') {
+    return (
+      <div className="tab-panel">
+        {termToggle}
+        <RentalLongTermView
+          properties={properties}
+          bookings={upcomingBookings}
+          onEditUnit={openEditProperty}
+          onAddUnit={openNewProperty}
+        />
+        {propertyFormOpen && (
+          <RentalPropertyForm
+            company={company}
+            property={editingProperty}
+            defaultTerm={rentalTerm}
+            onClose={closePropertyForm}
+            onSaved={() => {
+              closePropertyForm()
+              reloadProperties()
+            }}
+            onArchived={() => {
+              closePropertyForm()
+              reloadProperties()
+            }}
+          />
+        )}
+      </div>
+    )
+  }
+
   if (isDesktop) {
     return (
       <div className="rentals-desktop-dashboard grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6">
         <div className="flex min-w-0 flex-col gap-3">
+          {termToggle}
           <div className="flex flex-wrap items-center gap-3.5">
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               <ChevronLeft size={14} />
@@ -288,7 +346,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
               unit's price, and the button moved up beside the unit nav. */}
           <RentalCalendar
             ref={calendarRef}
-            properties={properties}
+            properties={shortMidtermProperties}
             bookings={bookings}
             monthDate={monthDate}
             createdBy={me?.id}
@@ -300,7 +358,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
             showUnitHeader={false}
             unitTabsReplacement={
               <RentalOverview
-                properties={properties}
+                properties={shortMidtermProperties}
                 bookings={upcomingBookings}
                 selectedUnitId={selectedUnitId}
                 onSelectUnit={setSelectedUnitId}
@@ -314,7 +372,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           <h3 className="task-section-heading">Financials</h3>
           <RentalFinancials
             company={company}
-            properties={properties}
+            properties={shortMidtermProperties}
             bookings={bookings}
             allBookings={upcomingBookings}
             expenses={expenses}
@@ -329,6 +387,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           <RentalPropertyForm
             company={company}
             property={editingProperty}
+            defaultTerm={rentalTerm}
             onClose={closePropertyForm}
             onSaved={() => {
               closePropertyForm()
@@ -346,9 +405,10 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
 
   return (
     <div className="tab-panel">
+      {termToggle}
       <h3 className="task-section-heading">Overview</h3>
       <RentalOverview
-        properties={properties}
+        properties={shortMidtermProperties}
         bookings={upcomingBookings}
         selectedUnitId={selectedUnitId}
         onSelectUnit={setSelectedUnitId}
@@ -383,7 +443,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       <div onTouchStart={handleMonthSwipeStart} onTouchEnd={handleMonthSwipeEnd}>
         <RentalCalendar
           ref={calendarRef}
-          properties={properties}
+          properties={shortMidtermProperties}
           bookings={bookings}
           monthDate={monthDate}
           createdBy={me?.id}
@@ -398,7 +458,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       <h3 className="task-section-heading">Financials</h3>
       <RentalFinancials
         company={company}
-        properties={properties}
+        properties={shortMidtermProperties}
         bookings={bookings}
         allBookings={upcomingBookings}
         expenses={expenses}
@@ -412,6 +472,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
         <RentalPropertyForm
           company={company}
           property={editingProperty}
+          defaultTerm={rentalTerm}
           onClose={closePropertyForm}
           onSaved={() => {
             closePropertyForm()

@@ -646,9 +646,16 @@ create type rental_booking_source as enum (
   'airbnb', 'furnished_finder', 'rotating_room', 'zillow', 'referral', 'other'
 );
 
+-- Short/midterm rooms need active vacancy monitoring (an empty room is
+-- money lost); a long-term unit's rent is fixed for the lease and its
+-- income is static, so it doesn't belong on the same calendar-first
+-- dashboard — see RentalsView.jsx's term toggle and RentalLongTermView.jsx.
+create type rental_term as enum ('short_midterm', 'long_term');
+
 create table rental_properties (
   id uuid primary key default gen_random_uuid(),
   company rental_company not null,
+  term rental_term not null default 'short_midterm',
   unit_name text not null,
   address text,
   -- Asking/listed monthly rent for the unit — not the same as actual
@@ -702,6 +709,11 @@ create table rental_bookings (
   -- *date* rather than a boolean, naturally allows firing again on a
   -- later cycle's own due date without needing to be reset by hand.
   rent_reminder_sent_for date,
+  -- Long-term lease reminders (notify-reminders) — both one-shot, same
+  -- reasoning rent_reminder_sent_for gives, but a timestamp rather than a
+  -- date since each fires exactly once per booking, not once per cycle.
+  last_month_reminder_sent_at timestamptz,
+  turnover_reminder_sent_at timestamptz,
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
   constraint rental_bookings_dates_check check (check_out >= check_in)
@@ -1779,6 +1791,34 @@ alter table tasks add column archived boolean not null default false;
 alter table staff alter column emergency_rate drop not null;
 alter table staff alter column emergency_rate drop default;
 alter table staff add column job_description text;
+
+-- ---------------------------------------------------------------------------
+-- Short/midterm vs. long-term rentals (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project. Requested directly: a
+-- long-term unit's rent is fixed for the life of the lease and doesn't need
+-- the same day-to-day vacancy monitoring a short/midterm room does, so it
+-- shouldn't share that room's calendar-first dashboard — see
+-- RentalsView.jsx's Short/Midterm-vs-Long-Term pill toggle (default:
+-- Short/Midterm) and the new RentalLongTermView.jsx. rental_bookings has no
+-- company column of its own (it inherits company through property_id), and
+-- the same is true here — term lives on rental_properties only, and every
+-- booking for that unit is scoped by it automatically.
+create type rental_term as enum ('short_midterm', 'long_term');
+
+alter table rental_properties add column term rental_term not null default 'short_midterm';
+
+-- Findlay is the one unit that prompted this feature — a fixed-rent,
+-- year-long lease with known, static income, unlike the four short/midterm
+-- rooms it used to sit alongside in one dashboard.
+update rental_properties set term = 'long_term' where unit_name = '937 Findlay';
+
+-- Long-term lease reminders (notify-reminders) — both one-shot, same
+-- reasoning rent_reminder_sent_for already establishes, but a timestamp
+-- rather than a date since each fires exactly once per booking, not once
+-- per cycle the way a recurring monthly charge reminder does.
+alter table rental_bookings add column last_month_reminder_sent_at timestamptz;
+alter table rental_bookings add column turnover_reminder_sent_at timestamptz;
 
 create or replace function stamp_time_entry_meta()
 returns trigger as $$
