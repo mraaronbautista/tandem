@@ -5,7 +5,7 @@ import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge } from '../lib/manualNotify'
-import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, X, Pin } from 'lucide-react'
 import TaskForm, { recurrenceLabel as getRecurrenceLabel } from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -75,6 +75,7 @@ export default function TaskRow({
   onUpdate,
   onDelete,
   onDuplicate,
+  onArchiveToBoard,
   memberName,
   meId,
   defaultOpen = false,
@@ -135,6 +136,16 @@ export default function TaskRow({
   function handleDuplicate(e) {
     e.stopPropagation()
     onDuplicate(task)
+  }
+
+  // Archives this task and pins it to Cork Board in one motion — see
+  // archiveTaskToBoard() in corkNotes.js. Reversible (the pin's own
+  // "Restore to Today" button un-archives this exact task later), same
+  // "no confirm needed" reasoning cork_notes' own Archive button already
+  // follows for the identical reason.
+  function handleArchiveToBoard(e) {
+    e.stopPropagation()
+    onArchiveToBoard(task)
   }
 
   // nudgeSent is purely a local "yep, that went through" confirmation —
@@ -381,6 +392,11 @@ export default function TaskRow({
                 <button onClick={handleDuplicate} title="Duplicate" aria-label="Duplicate">
                   <Copy width={15} height={15} />
                 </button>
+                {onArchiveToBoard && (
+                  <button onClick={handleArchiveToBoard} title="Send to board" aria-label="Send to board">
+                    <Pin width={15} height={15} />
+                  </button>
+                )}
                 {canNudge && (
                   <button
                     onClick={handleNudge}

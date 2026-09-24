@@ -17,6 +17,7 @@ import {
   hasUnseenInboxItems,
   INBOX_LAST_VIEWED_KEY,
 } from '../lib/tasks'
+import { archiveTaskToBoard } from '../lib/corkNotes'
 import { fetchMembers, updateDefaultTimezone } from '../lib/members'
 import {
   detectDefaultTimezone,
@@ -702,28 +703,38 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }
 
   // Reversible — see tasks.archived in schema.sql. Not gated behind a
-  // confirm(): unlike a delete, this can be undone (currently only by
-  // hand in Supabase, since no "view archived tasks" UI was asked for
-  // alongside this — see CLAUDE.md), and getOverdueTasks()/
+  // confirm(): unlike a delete, this can be undone, and getOverdueTasks()/
   // getTasksForDay()/groupTasksByDay() (tasks.js) all exclude archived
   // tasks, so this is the one action here that actually removes something
   // from the list rather than rescheduling or completing it in place.
+  // Each archived task also gets a linked pin on Cork Board
+  // (archiveTaskToBoard(), corkNotes.js) — that pin's own "Restore to
+  // Today" button is the actual undo path, closing the gap this
+  // action's own comment used to flag ("no view/restore archived tasks
+  // UI... undoing an archive today means a direct database edit").
   async function handleArchiveSelectedOverdue() {
     if (selectedOverdueIds.size === 0) return
     setArchivingOverdue(true)
     try {
-      const updates = await Promise.all(
-        [...selectedOverdueIds].map((id) => updateTask(id, { archived: true })),
-      )
-      setTasks((prev) => {
-        const byId = new Map(updates.map((t) => [t.id, t]))
-        return prev.map((t) => byId.get(t.id) || t)
-      })
+      const selectedTasks = overdue.filter((t) => selectedOverdueIds.has(t.id))
+      await Promise.all(selectedTasks.map((task) => archiveTaskToBoard(task, me.id)))
+      setTasks((prev) => prev.map((t) => (selectedOverdueIds.has(t.id) ? { ...t, archived: true } : t)))
       setSelectedOverdueIds(new Set())
     } catch (err) {
       setError(err.message)
     } finally {
       setArchivingOverdue(false)
+    }
+  }
+
+  // The single-task version of the same action, from TaskRow.jsx's own
+  // "Send to board" button (any task, not only overdue ones).
+  async function handleArchiveToBoard(task) {
+    try {
+      await archiveTaskToBoard(task, me.id)
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, archived: true } : t)))
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -776,6 +787,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     onUpdate: handleUpdate,
     onDelete: handleDelete,
     onDuplicate: handleDuplicate,
+    onArchiveToBoard: handleArchiveToBoard,
     memberName,
     meId: session.user.id,
     overlappingIds,

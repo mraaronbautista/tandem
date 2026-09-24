@@ -1855,3 +1855,25 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+-- ---------------------------------------------------------------------------
+-- Archive a task to the board (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project. Requested directly — closes
+-- the exact gap tasks.archived's own migration comment flagged when it
+-- shipped ("no view/restore archived tasks UI built alongside this... so
+-- undoing an archive today means a direct database edit"). Rather than
+-- building a separate "Archived tasks" screen, an archived task now also
+-- gets a linked pin on the existing Cork Board, which already has a
+-- discoverable list, a shared/private toggle, and its own archive/
+-- unarchive mechanism — reusing all of it instead of a parallel one.
+--
+-- Nullable, not required — an ordinary pin (the overwhelming majority)
+-- has no task behind it at all. on delete set null rather than cascade:
+-- if the linked task is later hard-deleted outright (not just archived),
+-- the pin should degrade into a plain note rather than vanishing with it
+-- — it may still carry a comment thread or other context worth keeping.
+-- No RLS change needed — already covered by cork_notes' existing
+-- policies, same reasoning every other additive column on this table
+-- needed none either.
+alter table cork_notes add column archived_task_id uuid references tasks (id) on delete set null;

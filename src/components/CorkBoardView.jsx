@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Target, ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, Target, Undo2, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment } from '../lib/corkNotes'
+import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
 import { whoKeyForName } from '../lib/whoLabels'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
@@ -46,6 +46,7 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0 }) {
   // folders use.
   const [archivedOpen, setArchivedOpen] = useState(false)
   const [archivingId, setArchivingId] = useState(null)
+  const [restoringId, setRestoringId] = useState(null)
   // Keyed by note id, not a single shared string — commenting on two
   // different pins shouldn't clobber each other's in-progress draft.
   const [commentDrafts, setCommentDrafts] = useState({})
@@ -113,6 +114,23 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0 }) {
       setError(err.message)
     } finally {
       setArchivingId(null)
+    }
+  }
+
+  // A pin created by TaskRow.jsx's "Send to board" action (archived_task_id
+  // set) — un-archives that exact task and archives this pin in the same
+  // motion, see restoreArchivedTask() in corkNotes.js. Not author-gated,
+  // same reasoning handleFocusToday() below already isn't — anyone who can
+  // see the pin (own, or shared to them) can bring the task back.
+  async function handleRestoreToToday(note) {
+    setRestoringId(note.id)
+    try {
+      await restoreArchivedTask(note)
+      reload()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRestoringId(null)
     }
   }
 
@@ -274,6 +292,7 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0 }) {
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs opacity-65">
                   <span>
                     {memberName(note.author_id)} · {formatDate(note.created_at)}
+                    {note.archived_task_id && ' · Archived task'}
                   </span>
                   <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared ? 'border-accent text-accent' : 'border-border'}`}>
                     {note.shared ? 'Shared' : 'Only you'}
@@ -296,24 +315,49 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0 }) {
                     </>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
-                        onClick={() => handleFocusToday(note)}
-                        disabled={promotingId === note.id || promoted.has(note.id)}
-                      >
-                        {promoted.has(note.id) ? (
-                          <>
-                            <Check size={14} className="inline align-[-2px]" /> Added to Today
-                          </>
-                        ) : promotingId === note.id ? (
-                          'Adding…'
-                        ) : (
-                          <>
-                            <Target size={14} className="inline align-[-2px]" /> Focus today
-                          </>
-                        )}
-                      </button>
+                      {/* A task-linked pin gets Restore instead of Focus
+                          today — that button would otherwise create a
+                          second, detail-stripped duplicate of a task that
+                          already exists (just archived), rather than
+                          actually bringing the original back. Every other
+                          action (Edit/Share/Archive) applies the same way
+                          to both kinds of pin, so only this one button
+                          branches. */}
+                      {note.archived_task_id ? (
+                        <button
+                          type="button"
+                          className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
+                          onClick={() => handleRestoreToToday(note)}
+                          disabled={restoringId === note.id}
+                        >
+                          {restoringId === note.id ? (
+                            'Restoring…'
+                          ) : (
+                            <>
+                              <Undo2 size={14} className="inline align-[-2px]" /> Restore to Today
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
+                          onClick={() => handleFocusToday(note)}
+                          disabled={promotingId === note.id || promoted.has(note.id)}
+                        >
+                          {promoted.has(note.id) ? (
+                            <>
+                              <Check size={14} className="inline align-[-2px]" /> Added to Today
+                            </>
+                          ) : promotingId === note.id ? (
+                            'Adding…'
+                          ) : (
+                            <>
+                              <Target size={14} className="inline align-[-2px]" /> Focus today
+                            </>
+                          )}
+                        </button>
+                      )}
                       {isOwn && (
                         <>
                           <button type="button" className={itemActionClasses} onClick={() => startEdit(note)}>
