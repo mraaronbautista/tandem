@@ -4,7 +4,7 @@ import { updateTask } from './tasks'
 // RLS already scopes the select to "own or shared" (see schema.sql), so
 // this returns exactly what the caller is allowed to see with no extra
 // filtering needed client-side.
-const CORK_NOTE_COLUMNS = 'id, author_id, body, shared, comments, created_at, archived, archived_task_id'
+const CORK_NOTE_COLUMNS = 'id, author_id, body, shared, comments, created_at, archived, archived_task_id, roadmap_items'
 
 export async function fetchCorkNotes() {
   const { data, error } = await supabase
@@ -16,11 +16,14 @@ export async function fetchCorkNotes() {
 }
 
 // archived_task_id is optional — set only by archiveTaskToBoard() below,
-// null for every ordinary pin composed by hand.
-export async function createCorkNote({ body, shared, author_id, archived_task_id = null }) {
+// null for every ordinary pin composed by hand. roadmap_items is likewise
+// optional — an empty array (the column's own default) for every pin that
+// isn't a roadmap; CorkBoardView.jsx's compose form only passes a non-empty
+// one when the roadmap-steps textarea actually has content.
+export async function createCorkNote({ body, shared, author_id, archived_task_id = null, roadmap_items }) {
   const { data, error } = await supabase
     .from('cork_notes')
-    .insert({ body, shared, author_id, archived_task_id })
+    .insert({ body, shared, author_id, archived_task_id, ...(roadmap_items && { roadmap_items }) })
     .select(CORK_NOTE_COLUMNS)
     .single()
   if (error) throw error

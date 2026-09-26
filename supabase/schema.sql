@@ -1877,3 +1877,33 @@ $$ language plpgsql security definer set search_path = public;
 -- policies, same reasoning every other additive column on this table
 -- needed none either.
 alter table cork_notes add column archived_task_id uuid references tasks (id) on delete set null;
+
+-- ---------------------------------------------------------------------------
+-- Roadmap pins (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project. Requested directly: pasting a
+-- multi-step plan (e.g. a new project's roadmap) as a single pin meant
+-- either one giant note with no way to track which steps had actually been
+-- pulled into the timeline, or splitting it into N separate pins by hand.
+-- Same "doesn't need a child table" reasoning as cork_notes.comments/
+-- tasks.checklist — a flat jsonb array of { id, text, milestone, taskId }.
+-- `milestone` groups consecutive steps under a "## Heading" line typed into
+-- the compose form's roadmap textarea (parseRoadmapDraft() in
+-- CorkBoardView.jsx); null for a step typed before any heading, which
+-- renders with no milestone header/progress bar at all — the pre-milestone
+-- shape. `taskId` is null until that step is added to the real timeline
+-- (handleAddRoadmapItem(), with a modifiable deadline rather than always
+-- today) and, once set, is also how "done" is determined — CorkBoardView.jsx
+-- reads the linked task's own live `status` (via a `tasks` prop threaded
+-- down the same way InboxView already receives it), not a second stored
+-- flag on the item itself, so ticking the real task off is the only way a
+-- milestone step shows as done, with nothing here to fall out of sync.
+-- Nullable in spirit but not in SQL — every ordinary pin (still the
+-- overwhelming majority) just gets the empty-array default and renders
+-- exactly as it always has; CorkBoardView.jsx treats a pin as a roadmap pin
+-- (routed to BoardView.jsx's Projects section rather than Pins — see
+-- CorkBoardView.jsx's `mode` prop) purely by checking whether this array is
+-- non-empty, no separate boolean to keep in sync. No RLS change needed —
+-- already covered by cork_notes' existing policies, same reasoning
+-- archived_task_id above already gives.
+alter table cork_notes add column roadmap_items jsonb not null default '[]'::jsonb;
