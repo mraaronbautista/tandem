@@ -59,6 +59,45 @@ function groupRoadmapItems(items) {
   return groups
 }
 
+// The inverse of parseRoadmapDraft — reconstructs editable "## Heading" /
+// step-per-line text from the stored items, so opening Edit on a project
+// shows the same syntax that created it rather than a blank textarea. A
+// blank line between groups is purely readability (the parser doesn't need
+// it — it only cares about `##` lines vs. everything else), matching how
+// the compose form's own placeholder is written.
+function serializeRoadmapItems(items) {
+  return groupRoadmapItems(items)
+    .map((group) => {
+      const lines = group.milestone ? [`## ${group.milestone}`, ...group.items.map((i) => i.text)] : group.items.map((i) => i.text)
+      return lines.join('\n')
+    })
+    .join('\n\n')
+}
+
+// Saving an edited roadmap draft re-parses it from scratch (parseRoadmapDraft
+// gives every line a fresh id and taskId: null, same as a brand-new pin) —
+// this reconciles that fresh parse against what was actually stored before,
+// so a step whose wording didn't change keeps its real id and, critically,
+// its taskId. Without this, editing a project's steps at all would silently
+// unlink every already-added step from its real task (taskById would stop
+// finding it under the old id, and a hard-deleted-task-shaped "Added" label
+// would show for something that's actually still tracked fine — see the
+// taskId-not-in-taskById fallback below). Matches purely on exact trimmed
+// text, not milestone or position, since moving a step to a different
+// milestone or reordering it shouldn't be treated as replacing it; each old
+// item can only match once (removed from the pool as it's consumed) so two
+// identical-text lines pair up one-to-one rather than both claiming the
+// same link.
+function reconcileRoadmapItems(oldItems, newItems) {
+  const pool = [...oldItems]
+  return newItems.map((item) => {
+    const matchIndex = pool.findIndex((old) => old.text === item.text)
+    if (matchIndex === -1) return item
+    const [matched] = pool.splice(matchIndex, 1)
+    return { ...item, id: matched.id, taskId: matched.taskId }
+  })
+}
+
 // Persistent tab content, not a modal — see RentalsView.jsx for why.
 // Quick pins with no due date and no timeline, the opposite of a task,
 // which is deliberately scheduled. `shared` is the one place in the app
@@ -105,6 +144,11 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
   const [addDateDrafts, setAddDateDrafts] = useState({})
   const [editingId, setEditingId] = useState(null)
   const [editDraft, setEditDraft] = useState('')
+  // Only populated/rendered for a project pin (see startEdit below) —
+  // editing an ordinary pin never touches this. Reconciled against the
+  // stored items on save (reconcileRoadmapItems), not re-parsed cold, so
+  // editing steps doesn't unlink any already-added task.
+  const [editRoadmapDraft, setEditRoadmapDraft] = useState('')
   const [saving, setSaving] = useState(false)
   // Collapsed by default — an archived pin is meant to be tucked away,
   // not sitting open and competing with the active board for attention;
@@ -225,19 +269,26 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
   function startEdit(note) {
     setEditingId(note.id)
     setEditDraft(note.body)
+    setEditRoadmapDraft(note.roadmap_items?.length ? serializeRoadmapItems(note.roadmap_items) : '')
   }
 
   function cancelEdit() {
     setEditingId(null)
     setEditDraft('')
+    setEditRoadmapDraft('')
   }
 
   async function handleSaveEdit(note) {
     const trimmed = editDraft.trim()
     if (!trimmed) return
+    if (isRoadmapPin(note) && !editRoadmapDraft.trim()) return
     setSaving(true)
     try {
-      await updateCorkNote(note.id, { body: trimmed })
+      const patch = { body: trimmed }
+      if (isRoadmapPin(note)) {
+        patch.roadmap_items = reconcileRoadmapItems(note.roadmap_items, parseRoadmapDraft(editRoadmapDraft))
+      }
+      await updateCorkNote(note.id, patch)
       setEditingId(null)
       reload()
     } catch (err) {
@@ -437,6 +488,14 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
                       maxLength={2000}
                       autoFocus
                     />
+                    {isRoadmapPin(note) && (
+                      <label className="flex flex-col gap-1 text-[13px] opacity-85">
+                        Roadmap steps — one per line. Start a line with <code>##</code> to group the steps under it
+                        into a milestone. A step already on the timeline stays linked as long as its wording here
+                        doesn't change.
+                        <textarea value={editRoadmapDraft} onChange={(e) => setEditRoadmapDraft(e.target.value)} maxLength={4000} />
+                      </label>
+                    )}
                   </div>
                 ) : (
                   <p className="mb-2 break-words whitespace-pre-wrap">{note.body}</p>
@@ -557,7 +616,7 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
                         type="button"
                         className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
                         onClick={() => handleSaveEdit(note)}
-                        disabled={saving || !editDraft.trim()}
+                        disabled={saving || !editDraft.trim() || (isRoadmapPin(note) && !editRoadmapDraft.trim())}
                       >
                         {saving ? 'Saving…' : 'Save'}
                       </button>
