@@ -4,7 +4,7 @@
 create extension if not exists pgcrypto;
 
 create type task_status as enum ('to_do', 'in_progress', 'done');
-create type task_who as enum ('yours', 'assistant');
+create type task_who as enum ('yours', 'assistant', 'both');
 create type task_priority as enum ('low', 'med', 'high');
 create type task_source as enum ('teams', 'email', 'none');
 create type task_recurrence as enum (
@@ -238,8 +238,18 @@ begin
   end if;
 
   wall_time := (template.due_date at time zone template.due_timezone)::time;
+  -- assignee_id is only ever a *fallback* for created_by below
+  -- (coalesce(assignee_id, template.created_by)) — a 'both' template has
+  -- no single specific person to fall back to, so it skips this lookup
+  -- entirely (the null branch matches no display_name, leaving
+  -- assignee_id null) rather than guessing 'ada' the way the old
+  -- two-branch case did.
   select id into assignee_id from members
-  where lower(display_name) = case when template.who = 'assistant' then 'aaron' else 'ada' end
+  where lower(display_name) = case
+    when template.who = 'assistant' then 'aaron'
+    when template.who = 'both' then null
+    else 'ada'
+  end
   limit 1;
 
   if template.recurrence::text = 'selected_weekdays' then
@@ -1907,3 +1917,141 @@ alter table cork_notes add column archived_task_id uuid references tasks (id) on
 -- already covered by cork_notes' existing policies, same reasoning
 -- archived_task_id above already gives.
 alter table cork_notes add column roadmap_items jsonb not null default '[]'::jsonb;
+
+-- ---------------------------------------------------------------------------
+-- Shared ("both") tasks (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project. Requested directly: a task
+-- both people are genuinely doing together (a joint interview session, say)
+-- previously had to be split into two separate copies via TaskRow.jsx's
+-- Duplicate button, one per person, with no link between them — editing
+-- one never updated the other, and each counted as its own separate
+-- overlap/reminder/report entry. `task_who` gains a third value, 'both',
+-- alongside the existing 'yours'/'assistant' — one real task row that
+-- shows on both people's timelines, not two.
+--
+-- Adding an enum value is the one schema change here; everywhere that
+-- reads/writes `who` already treats it as data, not as a hardcoded
+-- two-branch decision, once updated:
+--   - src/lib/whoLabels.js: WHO_LABEL.both/WHO_COLOR.both (a plain lookup
+--     table entry — every existing WHO_LABEL[task.who]/WHO_COLOR[task.who]
+--     badge render across TaskRow.jsx/AllDayRow.jsx/DayTimeline.jsx/
+--     InboxView.jsx/BulkAddTasksForm.jsx picks this up for free), plus two
+--     new helpers: whoMatchesFilter() (a 'both' task matches either
+--     person's yours/assistant-scoped filter tab — TaskBoard.jsx's
+--     whoFiltered, BulkAddTasksForm.jsx's Edit-tab filter,
+--     TaskExportForm.jsx, getCompletedInPeriod/getCompletedSince) and
+--     whoSharesPerson() (a 'both' task can conflict with either person's
+--     own tasks, not just another 'both' one — getOverlappingTaskIds in
+--     tasks.js, DayTimeline.jsx's matching stack-conflict check).
+--   - TaskForm.jsx/BulkAddTasksForm.jsx: a third "Both" <option> on
+--     their who <select>s. PriorityItemsEditor.jsx's who-badge toggle
+--     now cycles yours -> assistant -> both (WHO_CYCLE/nextWho) instead
+--     of a plain two-way flip.
+--   - Edge Functions (redeploy notify-task-events and notify-reminders
+--     after running this — see Commands): resolveTaskWho() in
+--     _shared/notify.ts resolves 'both' to both real member ids.
+--     notify-task-events' assignment ping notifies every resolved target
+--     except whoever created the task (so a 'both' task still doesn't
+--     ping its own creator); its completion ping can't attribute a
+--     'both' task's completion to one specific name the way a
+--     single-owner task's "Ada completed a task" can (this webhook has
+--     no caller identity, only task.who), so it notifies both members
+--     with generic wording instead. notify-reminders' due-soon and
+--     stale-overdue checks just iterate resolveTaskWho()'s targets.
+--   - generate_month_occurrences below: its assignee_id lookup (a
+--     fallback for created_by, not for `who` itself — see the base
+--     definition's own comment) used to silently mis-resolve a 'both'
+--     template to Ada; now skips the lookup entirely for 'both',
+--     leaving created_by's own fallback to do the right thing.
+alter type task_who add value if not exists 'both';
+
+create or replace function generate_month_occurrences(template_id uuid, target_month date)
+returns void as $$
+declare
+  template tasks%rowtype;
+  month_start date := date_trunc('month', target_month)::date;
+  month_end date := (date_trunc('month', target_month) + interval '1 month - 1 day')::date;
+  month_end_ts timestamptz;
+  wall_time time;
+  assignee_id uuid;
+  step interval;
+begin
+  select * into template from tasks where id = template_id;
+  if not found or template.recurrence::text = 'none'
+     or template.recurrence_series_id <> template.id or template.due_date is null then
+    return;
+  end if;
+
+  wall_time := (template.due_date at time zone template.due_timezone)::time;
+  select id into assignee_id from members
+  where lower(display_name) = case
+    when template.who = 'assistant' then 'aaron'
+    when template.who = 'both' then null
+    else 'ada'
+  end
+  limit 1;
+
+  if template.recurrence::text = 'selected_weekdays' then
+    insert into tasks (
+      title, who, priority, icon, due_date, due_timezone, duration_minutes,
+      source, source_note, notes, checklist, recurrence, recurrence_days,
+      created_by, recurrence_series_id
+    )
+    select template.title, template.who, template.priority, template.icon,
+      (day_stamp::date + wall_time) at time zone template.due_timezone,
+      template.due_timezone, template.duration_minutes, template.source,
+      template.source_note, template.notes, template.checklist,
+      template.recurrence, template.recurrence_days,
+      coalesce(assignee_id, template.created_by), template.id
+    from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
+    where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
+      and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
+      and not exists (
+        select 1 from task_recurrence_exclusions e
+        where e.recurrence_series_id = template.id
+          and e.due_date = (day_stamp::date + wall_time) at time zone template.due_timezone
+      )
+    on conflict (recurrence_series_id, due_date)
+      where recurrence_series_id is not null and due_date is not null do nothing;
+    return;
+  end if;
+
+  step := case template.recurrence::text
+    when 'daily' then interval '1 day'
+    when 'weekly' then interval '7 days'
+    when 'biweekly' then interval '14 days'
+    when 'every_3_weeks' then interval '21 days'
+    when 'monthly' then interval '1 month'
+    when 'every_2_months' then interval '2 months'
+    when 'quarterly' then interval '3 months'
+    when 'every_6_months' then interval '6 months'
+    when 'annually' then interval '1 year'
+  end;
+  if step is null then
+    return;
+  end if;
+
+  month_end_ts := (month_end + 1)::timestamp at time zone template.due_timezone;
+
+  insert into tasks (
+    title, who, priority, icon, due_date, due_timezone, duration_minutes,
+    source, source_note, notes, checklist, recurrence, recurrence_days,
+    created_by, recurrence_series_id
+  )
+  select template.title, template.who, template.priority, template.icon,
+    occurrence, template.due_timezone, template.duration_minutes, template.source,
+    template.source_note, template.notes, template.checklist,
+    template.recurrence, template.recurrence_days,
+    coalesce(assignee_id, template.created_by), template.id
+  from generate_series(template.due_date, month_end_ts, step) as occ(occurrence)
+  where (occurrence at time zone template.due_timezone)::date between month_start and month_end
+    and occurrence <> template.due_date
+    and not exists (
+      select 1 from task_recurrence_exclusions e
+      where e.recurrence_series_id = template.id and e.due_date = occurrence
+    )
+  on conflict (recurrence_series_id, due_date)
+    where recurrence_series_id is not null and due_date is not null do nothing;
+end;
+$$ language plpgsql security definer;

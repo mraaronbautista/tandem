@@ -1,4 +1,4 @@
-import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
+import { WHO_LABEL, WHO_COLOR, nextWho } from '../lib/whoLabels'
 
 function newItem(who) {
   return { id: crypto.randomUUID(), text: '', who }
@@ -17,7 +17,7 @@ export default function PriorityItemsEditor({ items, onChange, defaultWho }) {
   }
 
   function toggleWho(item) {
-    updateItem(item.id, { who: item.who === 'yours' ? 'assistant' : 'yours' })
+    updateItem(item.id, { who: nextWho(item.who) })
   }
 
   return (

@@ -27,10 +27,12 @@
 //
 // (1) and (2) are symmetric regardless of who created the task —
 // reminders and nudges are about who the task belongs to, unlike the
-// assignment ping in notify-task-events. (3), (4), and (5) all notify
-// both members — none of these are tied to a specific person the way a
+// assignment ping in notify-task-events. A 'both' task (src/lib/
+// whoLabels.js) resolves to both real members via resolveTaskWho, same
+// as (3), (4), and (5) already notify both members unconditionally —
+// none of these are tied to a specific person the way a single-owner
 // task is, and Rentals is already mutually visible to both.
-import { resolveMemberIds, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
+import { resolveMemberIds, resolveTaskWho, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
 
 const REMINDER_WINDOW_MINUTES = 15
 const OVERDUE_NUDGE_DAYS = 3
@@ -111,12 +113,8 @@ Deno.serve(async () => {
     .lte('due_date', windowEnd.toISOString())
 
   for (const task of dueSoon || []) {
-    const memberId = task.who === 'assistant' ? assistant : yours
-    await notifyMember(memberId, {
-      title: 'Starting soon',
-      body: task.title,
-      url: '/',
-    })
+    const targets = resolveTaskWho(task.who, yours, assistant)
+    await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Starting soon', body: task.title, url: '/' })))
     await supabaseAdmin.from('tasks').update({ reminder_sent_at: new Date().toISOString() }).eq('id', task.id)
   }
 
@@ -131,12 +129,8 @@ Deno.serve(async () => {
     .lt('due_date', overdueCutoff.toISOString())
 
   for (const task of staleOverdue || []) {
-    const memberId = task.who === 'assistant' ? assistant : yours
-    await notifyMember(memberId, {
-      title: 'Still on your plate?',
-      body: task.title,
-      url: '/',
-    })
+    const targets = resolveTaskWho(task.who, yours, assistant)
+    await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Still on your plate?', body: task.title, url: '/' })))
     await supabaseAdmin.from('tasks').update({ overdue_nudge_sent_at: new Date().toISOString() }).eq('id', task.id)
   }
 

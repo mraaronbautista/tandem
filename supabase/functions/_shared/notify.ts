@@ -42,6 +42,17 @@ export async function resolveMemberIds() {
   return { yours, assistant }
 }
 
+// A task's `who` ('yours'/'assistant'/'both' — mirrors src/lib/whoLabels.js's
+// WHO_LABEL, same reasoning resolveMemberIds() above already gives for why
+// this mapping is re-derived here instead of imported) resolves to one
+// member's id or, for a shared task, both — returned as an array either
+// way so every call site can just iterate/notifyMember each target the
+// same way, rather than branching on array-vs-single at every call site.
+export function resolveTaskWho(who, yours, assistant) {
+  if (who === 'both') return [yours, assistant]
+  return [who === 'assistant' ? assistant : yours]
+}
+
 export async function notifyMember(memberId, payload) {
   if (!memberId) return
   const { data: subs } = await supabaseAdmin.from('push_subscriptions').select('*').eq('member_id', memberId)

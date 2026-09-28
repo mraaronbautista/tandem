@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { isAllDayTask } from '../lib/tasks'
 import { DEFAULT_TIMEZONE, splitDueDateInZone, zoneAbbreviation } from '../lib/timezone'
-import { WHO_LABEL } from '../lib/whoLabels'
+import { WHO_LABEL, whoMatchesFilter } from '../lib/whoLabels'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
@@ -93,7 +93,7 @@ export default function TaskExportForm({ tasks, onClose }) {
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
       if (!includeDone && t.status === 'done') return false
-      if (whoFilter !== 'all' && t.who !== whoFilter) return false
+      if (whoFilter !== 'all' && !whoMatchesFilter(t.who, whoFilter)) return false
       return true
     })
   }, [tasks, whoFilter, includeDone])

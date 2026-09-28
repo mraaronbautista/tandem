@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { CheckSquare, StickyNote, MessageCircle, Repeat2 } from 'lucide-react'
 import { isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
-import { WHO_LABEL, WHO_COLOR } from '../lib/whoLabels'
+import { WHO_LABEL, WHO_COLOR, whoSharesPerson } from '../lib/whoLabels'
 import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 import TaskIcon from './TaskIcon'
@@ -298,7 +298,7 @@ function layoutClusters(clusters, overlappingIds) {
         (other) =>
           overlappingIds?.has(other.task.id) &&
           overlappingIds?.has(item.task.id) &&
-          other.task.who === item.task.who &&
+          whoSharesPerson(other.task.who, item.task.who) &&
           item.start.getTime() < other.end.getTime() &&
           other.start.getTime() < item.end.getTime(),
       )

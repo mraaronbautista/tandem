@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from './timezone'
+import { whoSharesPerson, whoMatchesFilter } from './whoLabels'
 
 const TASK_COLUMNS =
   'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at, archived'
@@ -72,8 +73,11 @@ export function formatDuration(minutes) {
 // tasks with both a due_date and a duration_minutes actually occupy a
 // span; point-in-time tasks (no duration) can't conflict with anything.
 // Done tasks are excluded — a finished task isn't a live conflict anymore.
-// Scoped per-person (`who`), not per currently-viewed tab, since two
-// different people having tasks at the same time isn't a real conflict.
+// Scoped per-person via whoSharesPerson (`who`), not per currently-viewed
+// tab, since two different people having tasks at the same time isn't a
+// real conflict — but a 'both' task genuinely occupies both people's
+// time, so it's compared against everyone's own tasks, not just another
+// 'both' one.
 export function getOverlappingTaskIds(tasks) {
   // isAllDayTask() excluded explicitly — a multi-day All Day task now
   // also has a (whole-day-multiple) duration, but a date range isn't a
@@ -93,7 +97,7 @@ export function getOverlappingTaskIds(tasks) {
     for (let j = i + 1; j < timed.length; j++) {
       const a = timed[i]
       const b = timed[j]
-      if (a.who !== b.who) continue
+      if (!whoSharesPerson(a.who, b.who)) continue
       // Two tasks with no real duration of their own are each just a
       // single instant — flagging them only when they land on the
       // exact same millisecond isn't a meaningful conflict worth
@@ -281,12 +285,16 @@ export function reportDateForPeriod(period, offset = 0) {
 // before (the period isn't over yet); a past bucket (offset < 0, e.g.
 // submitting August's report in September because it got missed) is
 // bounded by the start of the *next* bucket instead, so it doesn't
-// silently pull in everything completed between then and today too.
+// silently pull in everything completed between then and today too. A
+// 'both' task counts toward either person's own report via
+// whoMatchesFilter — either of you could be the one writing it up, and a
+// shared task (a joint interview, say) is fair to mention in either
+// report, not just one arbitrarily-chosen person's.
 export function getCompletedInPeriod(tasks, whoKey, period, offset = 0) {
   const start = startOfPeriod(period, offset)
   const end = offset === 0 ? new Date() : startOfPeriod(period, offset + 1)
   return tasks.filter((t) => {
-    if (t.who !== whoKey || t.status !== 'done' || !t.completed_at) return false
+    if (!whoMatchesFilter(t.who, whoKey) || t.status !== 'done' || !t.completed_at) return false
     const completedAt = new Date(t.completed_at)
     return completedAt >= start && completedAt < end
   })
@@ -298,7 +306,7 @@ export function getCompletedInPeriod(tasks, whoKey, period, offset = 0) {
 export function getCompletedSince(tasks, whoKey, since) {
   const now = new Date()
   return tasks.filter((t) => {
-    if (t.who !== whoKey || t.status !== 'done' || !t.completed_at) return false
+    if (!whoMatchesFilter(t.who, whoKey) || t.status !== 'done' || !t.completed_at) return false
     const completedAt = new Date(t.completed_at)
     return completedAt > since && completedAt <= now
   })

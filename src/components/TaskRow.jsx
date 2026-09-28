@@ -109,7 +109,11 @@ export default function TaskRow({
   // returns '' until then, and whoKeyForName('') finds no match) — checked
   // explicitly rather than just `!== task.who`, since undefined !== 'yours'
   // is true, which would show this on your own task for a beat on first
-  // load instead of staying hidden.
+  // load instead of staying hidden. `task.who !== myWhoKey` already does
+  // the right thing for a 'both' task with no extra branching — 'both'
+  // never equals 'yours'/'assistant', so the button shows (nudging a
+  // shared task is fine, it just isn't exclusively "your own" the way a
+  // plain self-assigned task is).
   const myWhoKey = whoKeyForName(memberName(meId))
   const canNudge = overdue && myWhoKey && task.who !== myWhoKey
   const checklist = task.checklist || []

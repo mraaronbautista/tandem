@@ -378,6 +378,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           <select value={form.who} onChange={(e) => set('who', e.target.value)}>
             <option value="yours">{WHO_LABEL.yours}</option>
             <option value="assistant">{WHO_LABEL.assistant}</option>
+            <option value="both">{WHO_LABEL.both}</option>
           </select>
         </label>
 

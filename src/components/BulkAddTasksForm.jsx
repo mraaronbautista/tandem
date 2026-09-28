@@ -9,7 +9,7 @@ import {
   zoneLabel,
   DEFAULT_TIMEZONE,
 } from '../lib/timezone'
-import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { WHO_LABEL, WHO_COLOR, whoKeyForName, whoMatchesFilter } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -212,7 +212,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   // (and still count toward "N selected") if you flip back to All.
   const [editWhoFilter, setEditWhoFilter] = useState('all')
   const visibleEditableTasks = useMemo(
-    () => (editWhoFilter === 'all' ? editableTasks : editableTasks.filter((t) => t.who === editWhoFilter)),
+    () => (editWhoFilter === 'all' ? editableTasks : editableTasks.filter((t) => whoMatchesFilter(t.who, editWhoFilter))),
     [editableTasks, editWhoFilter],
   )
   const [selectedIds, setSelectedIds] = useState(() => new Set())
@@ -406,6 +406,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
               <select value={who} onChange={(e) => handleWhoChange(e.target.value)}>
                 <option value="yours">{WHO_LABEL.yours}</option>
                 <option value="assistant">{WHO_LABEL.assistant}</option>
+                <option value="both">{WHO_LABEL.both}</option>
               </select>
             </label>
 
@@ -700,6 +701,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                       <select value={editWho} onChange={(e) => setEditWho(e.target.value)} disabled={!applyWho}>
                         <option value="yours">{WHO_LABEL.yours}</option>
                         <option value="assistant">{WHO_LABEL.assistant}</option>
+                        <option value="both">{WHO_LABEL.both}</option>
                       </select>
                     </label>
 

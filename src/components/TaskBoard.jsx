@@ -30,7 +30,7 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
 import { useAuth } from '../lib/AuthContext'
-import { WHO_LABEL, whoKeyForName } from '../lib/whoLabels'
+import { WHO_LABEL, whoKeyForName, whoMatchesFilter } from '../lib/whoLabels'
 import TaskRow from './TaskRow'
 import TimelineRow from './TimelineRow'
 import DayTimeline from './DayTimeline'
@@ -414,7 +414,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     whoTab === 'yours' || whoTab === 'assistant' ? whoTab : whoKeyForName(me?.display_name) || 'yours'
 
   const whoFiltered = useMemo(() => {
-    return tasks.filter((t) => whoTab === 'all' || t.who === whoTab)
+    return tasks.filter((t) => whoTab === 'all' || whoMatchesFilter(t.who, whoTab))
   }, [tasks, whoTab])
 
   // All Day is date-agnostic — undated tasks aren't "for" any particular
