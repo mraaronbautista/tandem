@@ -1,7 +1,13 @@
 import { supabase } from './supabaseClient'
 
 export async function fetchMembers() {
-  const { data, error } = await supabase.from('members').select('id, display_name, working_since, default_timezone')
+  // color/permissions/is_admin were missing here for a while — nothing
+  // broke server-side (RLS still enforced the real permissions), but
+  // every client-side read of them (hasPermission() gating the nav,
+  // me.is_admin, badge colors) was silently working off `undefined`.
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, display_name, working_since, default_timezone, color, permissions, is_admin')
   if (error) throw error
   return data
 }

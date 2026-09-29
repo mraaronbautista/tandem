@@ -45,6 +45,7 @@ import WorkingStatusToggle from './WorkingStatusToggle'
 import EndOfDayReportForm from './EndOfDayReportForm'
 import EodReportsList from './EodReportsList'
 import SettingsMenu from './SettingsMenu'
+import ManageMemberAccessView from './ManageMemberAccessView'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
 import BoardView from './BoardView'
@@ -166,6 +167,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [reportOpen, setReportOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
+  const [manageAccessOpen, setManageAccessOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
   const quickAddHandlerRef = useRef(null)
   const registerQuickAdd = useCallback((handler) => {
@@ -1349,6 +1351,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
 
+      {manageAccessOpen && (
+        <ManageMemberAccessView members={members} me={me} onClose={() => setManageAccessOpen(false)} />
+      )}
+
       {settingsOpen && (
         <SettingsMenu
           theme={theme}
@@ -1370,6 +1376,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
             setSettingsOpen(false)
             setVaultOpen(true)
           }}
+          onOpenManageAccess={
+            me?.is_admin
+              ? () => {
+                  setSettingsOpen(false)
+                  setManageAccessOpen(true)
+                }
+              : undefined
+          }
         />
       )}
     </div>

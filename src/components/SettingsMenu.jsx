@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bell, BellOff, Moon, Sun, Globe, HelpCircle, Lock, LogOut } from 'lucide-react'
+import { Bell, BellOff, Moon, Sun, Globe, HelpCircle, Lock, LogOut, ShieldCheck } from 'lucide-react'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone } from '../lib/timezone'
 import Modal from './Modal'
 import HowToGuide from './HowToGuide'
@@ -26,6 +26,7 @@ export default function SettingsMenu({
   defaultTimezone,
   onChangeDefaultTimezone,
   onOpenVault,
+  onOpenManageAccess,
 }) {
   const [guideOpen, setGuideOpen] = useState(false)
 
@@ -100,6 +101,15 @@ export default function SettingsMenu({
                 <Lock size={17} />
               </span>
               Vault
+            </button>
+          )}
+
+          {onOpenManageAccess && (
+            <button type="button" className={settingsItemClasses} onClick={onOpenManageAccess}>
+              <span className="text-[17px]">
+                <ShieldCheck size={17} />
+              </span>
+              Manage member access
             </button>
           )}
 

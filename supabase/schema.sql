@@ -657,11 +657,129 @@ create policy "members can read all members"
 
 -- A viewer can read their own outgoing grants (what they've been granted
 -- about others), never the reverse (who can see them) — full admin
--- read/write over every grant is a security definer RPC for the (future)
--- access-management screen, not a general policy here.
+-- read/write over every grant is the security definer RPC below.
 create policy "members can read their own outgoing task access grants"
   on task_access for select
   using (is_member() and viewer_id = auth.uid());
+
+-- Admin-managed access (ManageMemberAccessView.jsx / MemberAccessForm.jsx).
+-- Mirrors is_member()/has_permission()'s shape.
+create or replace function is_admin_member()
+returns boolean as $$
+  select exists (select 1 from members where id = auth.uid() and is_admin);
+$$ language sql security definer stable;
+
+-- members' only UPDATE policy ("members can update own working status",
+-- below) has no column restriction — it was written before permissions/
+-- is_admin existed as columns, so as-is it would let any member update
+-- either one on their own row via a raw client call (self-granting admin
+-- status, or clearing their own restrictions). This trigger closes that:
+-- permissions/is_admin can only change through the flag-guarded RPC
+-- below. before insert isn't needed — members has no INSERT policy at
+-- all today (rows are only ever created by hand), so there's no insert
+-- path to guard yet.
+create or replace function guard_member_privilege_columns()
+returns trigger as $$
+begin
+  if (new.permissions is distinct from old.permissions or new.is_admin is distinct from old.is_admin)
+     and coalesce(current_setting('app.member_privilege_write', true), '0') <> '1' then
+    raise exception 'permissions/is_admin can only be changed via set_member_permissions()';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger members_guard_privilege_columns
+before update on members
+for each row execute function guard_member_privilege_columns();
+
+-- The one controlled write path for `permissions`. Deliberately has no
+-- way to set `is_admin` — admin-role transfer stays SQL-editor-only for
+-- now (promoting/demoting an admin needs
+-- `select set_config('app.member_privilege_write', '1', true);` run
+-- first in the same session, then a plain update — the guard trigger
+-- above blocks it otherwise, from any role including the SQL editor's).
+-- set_config's is_local=true flag is transaction-scoped — PostgREST
+-- wraps each RPC call in its own transaction, so it can never leak into
+-- a later, unrelated request; reset explicitly anyway to match this
+-- schema's existing app.recurrence_sync convention. The jsonb_typeof
+-- guard matters because has_permission()'s
+-- (permissions ->> feature)::boolean lookup fails OPEN (coalesce(...,
+-- true)) when the key is missing or the value isn't parseable — a
+-- malformed permissions value would silently grant everything rather
+-- than denying it, so a non-object is rejected outright here.
+create or replace function set_member_permissions(target_id uuid, new_permissions jsonb)
+returns members
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated members%rowtype;
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if jsonb_typeof(new_permissions) <> 'object' then
+    raise exception 'permissions must be a JSON object';
+  end if;
+
+  perform set_config('app.member_privilege_write', '1', true);
+  update members set permissions = new_permissions where id = target_id
+  returning * into updated;
+  perform set_config('app.member_privilege_write', '0', true);
+
+  if not found then
+    raise exception 'Member not found';
+  end if;
+  return updated;
+end;
+$$;
+
+grant execute on function set_member_permissions(uuid, jsonb) to authenticated;
+
+-- An admin needs to read grants between two OTHER members too, not just
+-- their own outgoing ones — the self-only policy above stays as-is.
+create policy "admins can read all task access grants"
+  on task_access for select
+  using (is_member() and is_admin_member());
+
+-- The one write path for task_access — no direct INSERT/UPDATE policy
+-- needed since this RPC is the sole mechanism. viewer_id/target_id's own
+-- FK constraints (references members(id)) already reject a non-member
+-- id, so no redundant existence check here — it would only turn a raw
+-- foreign-key-violation error into a friendlier message, not add
+-- correctness.
+create or replace function upsert_task_access(
+  p_viewer_id uuid, p_target_id uuid, p_level task_access_level,
+  p_can_create boolean, p_can_delete boolean, p_can_reassign boolean
+)
+returns task_access
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result task_access%rowtype;
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if p_viewer_id = p_target_id then
+    raise exception 'Cannot grant a member access to themselves';
+  end if;
+
+  insert into task_access (viewer_id, target_id, level, can_create, can_delete, can_reassign)
+  values (p_viewer_id, p_target_id, p_level, p_can_create, p_can_delete, p_can_reassign)
+  on conflict (viewer_id, target_id) do update set
+    level = excluded.level, can_create = excluded.can_create,
+    can_delete = excluded.can_delete, can_reassign = excluded.can_reassign
+  returning * into result;
+  return result;
+end;
+$$;
+
+grant execute on function upsert_task_access(uuid, uuid, task_access_level, boolean, boolean, boolean) to authenticated;
 
 create policy "members can view accessible tasks"
   on tasks for select
@@ -2716,3 +2834,101 @@ drop policy "members can delete tasks" on tasks;
 create policy "members can delete accessible tasks"
   on tasks for delete
   using (is_member() and can_delete_task(assignee_ids));
+
+-- ---------------------------------------------------------------------------
+-- Admin-managed member access (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, any time — fully additive,
+-- no existing policy is touched. Backs ManageMemberAccessView.jsx /
+-- MemberAccessForm.jsx (an admin-only screen editing another member's
+-- permissions/task_access). Also closes a real hole: members' only
+-- UPDATE policy ("members can update own working status") has no column
+-- restriction, so before this, any member could self-grant admin status
+-- or clear their own restrictions via a raw client update — see the
+-- matching comment in the base schema above for the full reasoning.
+create or replace function is_admin_member()
+returns boolean as $$
+  select exists (select 1 from members where id = auth.uid() and is_admin);
+$$ language sql security definer stable;
+
+create or replace function guard_member_privilege_columns()
+returns trigger as $$
+begin
+  if (new.permissions is distinct from old.permissions or new.is_admin is distinct from old.is_admin)
+     and coalesce(current_setting('app.member_privilege_write', true), '0') <> '1' then
+    raise exception 'permissions/is_admin can only be changed via set_member_permissions()';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists members_guard_privilege_columns on members;
+create trigger members_guard_privilege_columns
+before update on members
+for each row execute function guard_member_privilege_columns();
+
+create or replace function set_member_permissions(target_id uuid, new_permissions jsonb)
+returns members
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated members%rowtype;
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if jsonb_typeof(new_permissions) <> 'object' then
+    raise exception 'permissions must be a JSON object';
+  end if;
+
+  perform set_config('app.member_privilege_write', '1', true);
+  update members set permissions = new_permissions where id = target_id
+  returning * into updated;
+  perform set_config('app.member_privilege_write', '0', true);
+
+  if not found then
+    raise exception 'Member not found';
+  end if;
+  return updated;
+end;
+$$;
+
+grant execute on function set_member_permissions(uuid, jsonb) to authenticated;
+
+drop policy if exists "admins can read all task access grants" on task_access;
+create policy "admins can read all task access grants"
+  on task_access for select
+  using (is_member() and is_admin_member());
+
+create or replace function upsert_task_access(
+  p_viewer_id uuid, p_target_id uuid, p_level task_access_level,
+  p_can_create boolean, p_can_delete boolean, p_can_reassign boolean
+)
+returns task_access
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result task_access%rowtype;
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if p_viewer_id = p_target_id then
+    raise exception 'Cannot grant a member access to themselves';
+  end if;
+
+  insert into task_access (viewer_id, target_id, level, can_create, can_delete, can_reassign)
+  values (p_viewer_id, p_target_id, p_level, p_can_create, p_can_delete, p_can_reassign)
+  on conflict (viewer_id, target_id) do update set
+    level = excluded.level, can_create = excluded.can_create,
+    can_delete = excluded.can_delete, can_reassign = excluded.can_reassign
+  returning * into result;
+  return result;
+end;
+$$;
+
+grant execute on function upsert_task_access(uuid, uuid, task_access_level, boolean, boolean, boolean) to authenticated;
