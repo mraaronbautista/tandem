@@ -6,6 +6,38 @@ import { supabase } from './supabaseClient'
 // permission gate — reports stay mutually visible).
 export const PERMISSION_FEATURES = ['rentals', 'vault', 'staff', 'reports', 'workingStatus']
 
+// Shared between MemberAccessForm.jsx (editing an existing member) and
+// AddMemberForm.jsx (creating a new one) — one copy so the two forms
+// can't drift into describing the same permission key differently.
+export const FEATURE_LABELS = {
+  rentals: 'Rentals',
+  vault: 'Vault',
+  staff: 'Staff',
+  // Gates *submitting* a report, not reading one — EodReportsList.jsx has
+  // no permission gate, reports stay mutually visible to everyone.
+  reports: 'Submit EOD/EOW/EOM reports',
+  workingStatus: 'Set own working status (online/busy/in a meeting)',
+}
+
+// Ada/Aaron's existing colors plus a few unused suggestions, same list
+// README.md's onboarding SQL snippet already documents — kept in sync by
+// hand, since there's no single source of truth for "colors already in
+// use" beyond querying live members (AddMemberForm.jsx does that to pick
+// a sensible default, this is just the fixed palette to pick from).
+export const MEMBER_COLOR_PALETTE = ['#a8567e', '#4a7ba6', '#7d6ab8', '#4a9d6f', '#c17a3a']
+
+// The one path for creating a brand-new member — see
+// create-member-account/index.ts for why this has to be an Edge Function
+// (auth.admin.createUser() needs the service-role key) rather than a
+// plain client insert. Mirrors staff.js's createStaffAccount() exactly.
+export async function createMemberAccount({ username, password, displayName, color, permissions }) {
+  const { data, error } = await supabase.functions.invoke('create-member-account', {
+    body: { username, password, displayName, color, permissions },
+  })
+  if (error) throw error
+  return data
+}
+
 // The only controlled write path for members.permissions (see
 // set_member_permissions() in schema.sql) — a guard trigger blocks a
 // plain .update() on this column outside this RPC.

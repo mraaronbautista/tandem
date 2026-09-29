@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AddMemberForm from './AddMemberForm'
 import MemberAccessForm from './MemberAccessForm'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -11,9 +12,22 @@ import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 // need live-sync; `members` is already the same Realtime-synced array
 // TaskBoard.jsx passes everywhere else, so a save here shows up
 // elsewhere on its own.
-export default function ManageMemberAccessView({ members, me, onClose }) {
+export default function ManageMemberAccessView({ members, me, onClose, onMembersChanged }) {
   const others = members.filter((m) => m.id !== me?.id)
   const [editing, setEditing] = useState(null)
+  const [adding, setAdding] = useState(false)
+
+  // Chains straight from creation into editing that same member's task
+  // visibility, rather than a combined "review and create" screen —
+  // reuses MemberAccessForm.jsx as-is instead of duplicating its Task
+  // visibility UI. Uses the row handed back by AddMemberForm directly
+  // (not a refetch-and-find) so there's no race with the members-changes
+  // Realtime round-trip still in flight.
+  function handleCreated(newMember) {
+    setAdding(false)
+    onMembersChanged?.()
+    setEditing(newMember)
+  }
 
   return (
     <Modal onClose={onClose}>
@@ -49,8 +63,13 @@ export default function ManageMemberAccessView({ members, me, onClose }) {
 
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Close</SubmissionButton>
+          <SubmissionButton variant="primary" onClick={() => setAdding(true)}>
+            + Add member
+          </SubmissionButton>
         </SubmissionActions>
       </ModalCard>
+
+      {adding && <AddMemberForm members={members} onClose={() => setAdding(false)} onCreated={handleCreated} />}
 
       {editing && (
         <MemberAccessForm

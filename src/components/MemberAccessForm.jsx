@@ -1,18 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { PERMISSION_FEATURES, fetchTaskAccessFor, setMemberPermissions, upsertTaskAccess } from '../lib/memberAccess'
+import {
+  FEATURE_LABELS,
+  PERMISSION_FEATURES,
+  fetchTaskAccessFor,
+  setMemberPermissions,
+  upsertTaskAccess,
+} from '../lib/memberAccess'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
-
-const FEATURE_LABELS = {
-  rentals: 'Rentals',
-  vault: 'Vault',
-  staff: 'Staff',
-  // Gates *submitting* a report, not reading one — EodReportsList.jsx has
-  // no permission gate, reports stay mutually visible to everyone.
-  reports: 'Submit EOD/EOW/EOM reports',
-  workingStatus: 'Set own working status (online/busy/in a meeting)',
-}
 
 const LEVEL_OPTIONS = [
   { value: '', label: 'Hidden' },

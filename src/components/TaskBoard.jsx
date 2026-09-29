@@ -1358,7 +1358,12 @@ export default function TaskBoard({ theme, toggleTheme }) {
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
 
       {manageAccessOpen && (
-        <ManageMemberAccessView members={members} me={me} onClose={() => setManageAccessOpen(false)} />
+        <ManageMemberAccessView
+          members={members}
+          me={me}
+          onClose={() => setManageAccessOpen(false)}
+          onMembersChanged={reloadMembers}
+        />
       )}
 
       {settingsOpen && (
