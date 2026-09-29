@@ -566,6 +566,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }
 
   const monthLabel = selectedDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
+  // Shown instead of the long form under 480px — freeing real width is
+  // what actually gets the title and the working-status/nudge/settings
+  // cluster onto one shared line on a phone, rather than wrapping to a
+  // second row the way this header always has before.
+  const monthLabelShort = selectedDate.toLocaleDateString([], { month: 'short', year: 'numeric' })
 
   // Computed across all tasks, not just whoFiltered — a conflict is real
   // regardless of which "who" tab you happen to be looking at.
@@ -877,7 +882,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       )}
 
       <div className="min-w-0">
-        <header className="mb-4 flex flex-wrap items-center gap-2">
+        <header className="mb-4 flex flex-wrap items-center gap-2 max-[480px]:gap-1.5">
           {activeTab === 'today' && (
             <MonthNavRow>
               {/* Removed the desktop ‹ › month-step arrows that used to
@@ -888,13 +893,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   arbitrary date (below) and .view-mode-row's stepper
                   cover this without a redundant second control. */}
               <MonthNavLabel
-                className="text-[26px] max-[480px]:text-[22px]"
+                className="text-[26px] max-[480px]:text-[19px]"
                 onClick={() => setDatePickerOpen(true)}
                 title="Jump to a date"
               >
-                {monthLabel}{' '}
+                <span className="hidden max-[480px]:inline">{monthLabelShort}</span>
+                <span className="max-[480px]:hidden">{monthLabel}</span>{' '}
                 <span className="inline-flex opacity-60">
-                  {datePickerOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  {datePickerOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </span>
               </MonthNavLabel>
             </MonthNavRow>
@@ -946,7 +952,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 are now fully orphaned, left in place until a dedicated
                 dead-CSS cleanup pass. */}
             {isDesktop && <nav className="flex gap-1">{renderNavButtons('desktop')}</nav>}
-            <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-1.5">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {otherMembers.length > 0 && (
                 <div className="relative">

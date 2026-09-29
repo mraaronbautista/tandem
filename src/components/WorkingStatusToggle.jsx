@@ -16,6 +16,13 @@ function formatTime(iso) {
 }
 
 const STATUS_LABEL = { available: 'Available', busy: 'Busy', in_meeting: 'In a meeting' }
+// Shorter forms shown under 480px — same dual-span "render both, toggle
+// visibility with a breakpoint class" technique TaskBoard.jsx's own
+// month title uses, so the toggle/summary pill's own text is what
+// actually frees the width needed to keep the whole header row (title +
+// status + nudge + settings) on one line on a phone, not just avoid
+// overlap within the row's own bounds.
+const STATUS_LABEL_SHORT = { available: 'On', busy: 'Busy', in_meeting: 'Meeting' }
 
 // Raw stored working_status/working_status_until can be stale — the
 // member it belongs to might have their own browser closed/asleep well
@@ -116,7 +123,7 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
         <>
           <button
             type="button"
-            className={`cursor-pointer whitespace-nowrap rounded-full border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] ${
+            className={`cursor-pointer whitespace-nowrap rounded-full border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] max-[480px]:px-2 max-[480px]:text-xs ${
               isWorking ? 'border-[var(--color-online)] text-[var(--color-online)]' : 'border-border text-text-h'
             }`}
             onClick={handleToggleClick}
@@ -127,7 +134,13 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
                 even though the sheet below uses Available/Busy/In a
                 meeting — Busy/In a meeting still shows here directly so
                 the status is visible without opening the sheet at all. */}
-            <StatusDot /> {isWorking ? (myStatus === 'available' ? 'Online' : STATUS_LABEL[myStatus]) : 'Offline'}
+            <StatusDot />{' '}
+            <span className="hidden max-[480px]:inline">
+              {isWorking ? (myStatus === 'available' ? 'On' : STATUS_LABEL_SHORT[myStatus]) : 'Off'}
+            </span>
+            <span className="max-[480px]:hidden">
+              {isWorking ? (myStatus === 'available' ? 'Online' : STATUS_LABEL[myStatus]) : 'Offline'}
+            </span>
           </button>
           <IconButton size="header" onClick={() => setSheetOpen((v) => !v)} title="Status" aria-label="Status details">
             <ChevronDown size={16} />
@@ -136,12 +149,14 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
       ) : (
         <button
           type="button"
-          className={`cursor-pointer whitespace-nowrap rounded-full border border-border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] ${
+          className={`cursor-pointer whitespace-nowrap rounded-full border border-border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] max-[480px]:px-2 max-[480px]:text-xs ${
             othersWorking.length ? 'text-[var(--color-online)]' : 'text-text opacity-70'
           }`}
           onClick={() => setSheetOpen((v) => !v)}
         >
-          <StatusDot /> {othersWorking.length ? `${othersWorking.length} working` : 'Nobody working'}
+          <StatusDot />{' '}
+          <span className="hidden max-[480px]:inline">{othersWorking.length ? `${othersWorking.length} on` : 'None on'}</span>
+          <span className="max-[480px]:hidden">{othersWorking.length ? `${othersWorking.length} working` : 'Nobody working'}</span>
         </button>
       )}
 
