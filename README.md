@@ -1,31 +1,45 @@
 # Tandem
 
-Shared task board for Ada and Aaron — one place to drop requests, see status, and know what's in motion without checking in.
+Shared task board for Ada's team — one place to drop requests, see status, and know what's in motion without checking in. Started as exactly Ada and Aaron; the schema and frontend now support any number of member accounts, each with their own feature permissions (Rentals/Vault/Staff/Reports) and per-pair task visibility — see `CLAUDE.md`'s "Members, permissions, and task access" section for how that actually works.
 
 ## Stack
 
 - **Frontend:** React + Vite, deployed to Netlify
 - **Backend:** Supabase (Postgres + Auth + Realtime), free tier
-- Exactly two accounts allowed — no public sign-up
+- No public sign-up — every account is invited and added to the `members` allowlist by hand (no in-app "add a member" flow yet)
 
 ## First-time setup
 
 ### 1. Create the Supabase project
 
 1. Create a new project at [supabase.com](https://supabase.com).
-2. In the SQL editor, run [`supabase/schema.sql`](supabase/schema.sql). This creates the `tasks` table, the `members` allowlist, and the RLS policies that restrict the whole app to your two accounts.
+2. In the SQL editor, run [`supabase/schema.sql`](supabase/schema.sql). This creates the `tasks` table, the `members` allowlist, `task_access`, and the RLS policies that restrict the whole app to allow-listed member accounts.
 3. Under **Authentication → Providers**, make sure **Email** is enabled and **Confirm email** / magic link (OTP) is on.
 4. Under **Authentication → Settings**, turn **off** "Allow new users to sign up" — accounts are invite-only.
-5. Under **Authentication → Users**, click **Invite user** for both your email and Ada's. This sends each of you a magic link and creates the `auth.users` row.
-6. Back in the SQL editor, add both accounts to the allowlist (swap in the real UUIDs from `auth.users` and display names):
+5. Under **Authentication → Users**, click **Invite user** for each account you're setting up (you, Ada, and — later, whenever the team grows — anyone else joining). This sends a magic link and creates the `auth.users` row.
+6. Back in the SQL editor, add each account to the allowlist (swap in the real UUID from `auth.users`, a display name, and a badge color — a few unused ones: `#7d6ab8` purple, `#4a9d6f` green, `#c17a3a` orange). `permissions` defaults to `{}` (full access) when omitted — only set it to restrict a member from Rentals/Vault/Staff/EOD-report submission. `is_admin` controls who can manage other members' access; make at least one account `true`:
 
    ```sql
-   insert into members (id, display_name) values
-     ('00000000-0000-0000-0000-000000000001', 'Aaron'),
-     ('00000000-0000-0000-0000-000000000002', 'Ada');
+   insert into members (id, display_name, color, is_admin) values
+     ('00000000-0000-0000-0000-000000000001', 'Aaron', '#4a7ba6', true),
+     ('00000000-0000-0000-0000-000000000002', 'Ada', '#a8567e', false);
+
+   -- A restricted member (e.g. a healthcare VA who shouldn't see Ada's
+   -- rental business or the shared vault) instead sets permissions:
+   -- insert into members (id, display_name, color, permissions) values
+   --   ('00000000-0000-0000-0000-000000000003', 'New hire', '#7d6ab8',
+   --    '{"rentals": false, "vault": false, "staff": false}'::jsonb);
    ```
 
-7. Copy the **Project URL** and **anon public key** from **Settings → API** — you'll need them next.
+7. A new member starts with **no visibility into anyone else's tasks, and no one has visibility into hers** — except every existing `is_admin` account automatically gets view & update access to her tasks the moment her row is inserted (no extra step). To grant visibility in the other direction (e.g. let her see an existing member's tasks too), insert a row into `task_access` by hand:
+
+   ```sql
+   insert into task_access (viewer_id, target_id, level) values
+     ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'view');
+   ```
+
+   See `CLAUDE.md`'s "Members, permissions, and task access" section for the full model (view vs. update, and the separate create/delete/reassign grants) — there's no admin UI for this yet, so it's all done by hand in the SQL editor for now.
+8. Copy the **Project URL** and **anon public key** from **Settings → API** — you'll need them next.
 
 ### 2. Configure the frontend
 
@@ -33,7 +47,7 @@ Shared task board for Ada and Aaron — one place to drop requests, see status, 
 cp .env.example .env
 ```
 
-Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from step 1.7.
+Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from step 1.8.
 
 ```bash
 npm install
