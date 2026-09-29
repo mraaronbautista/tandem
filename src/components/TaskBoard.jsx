@@ -233,12 +233,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
     if (key === 'today') resetToToday()
   }
 
-  // The 👋 header icon (see .header-actions below) now opens a picker
-  // once there's more than one other member — with exactly one (today's
-  // reality), it skips straight to nudging them, same one-tap UX as
-  // before. Every member gets the icon now (the Ada-only gate is gone) —
-  // it's not sensitive who gets nudged, just a delivery target, same
-  // reasoning manual-notify's own server-side target check follows.
+  // The 👋 header icon (see .header-actions below) always opens the
+  // picker now, even with just one other member — requested directly,
+  // so nudging is always a deliberate "pick who" action rather than a
+  // one-tap surprise send. Every member gets the icon (the Ada-only gate
+  // is gone) — it's not sensitive who gets nudged, just a delivery
+  // target, same reasoning manual-notify's own server-side target check
+  // follows.
   const [nudgeMenuOpen, setNudgeMenuOpen] = useState(false)
 
   async function sendNudgeTo(targetId) {
@@ -255,8 +256,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }
 
   function handleNudgeClick() {
-    if (otherMembers.length === 1) sendNudgeTo(otherMembers[0].id)
-    else setNudgeMenuOpen((v) => !v)
+    setNudgeMenuOpen((v) => !v)
   }
 
   useEffect(() => {
