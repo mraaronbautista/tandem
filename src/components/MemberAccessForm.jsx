@@ -11,6 +11,7 @@ const FEATURE_LABELS = {
   // Gates *submitting* a report, not reading one — EodReportsList.jsx has
   // no permission gate, reports stay mutually visible to everyone.
   reports: 'Submit EOD/EOW/EOM reports',
+  workingStatus: 'Set own working status (online/busy/in a meeting)',
 }
 
 const LEVEL_OPTIONS = [

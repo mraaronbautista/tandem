@@ -4,7 +4,7 @@ import { supabase } from './supabaseClient'
 // feature-name comment in schema.sql. 'reports' gates *submitting* an
 // EOD/EOW/EOM report, not reading them (EodReportsList.jsx has no
 // permission gate — reports stay mutually visible).
-export const PERMISSION_FEATURES = ['rentals', 'vault', 'staff', 'reports']
+export const PERMISSION_FEATURES = ['rentals', 'vault', 'staff', 'reports', 'workingStatus']
 
 // The only controlled write path for members.permissions (see
 // set_member_permissions() in schema.sql) — a guard trigger blocks a

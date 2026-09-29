@@ -20,6 +20,11 @@ create type task_recurrence as enum (
 -- restrict access, so a missing grant must mean no access, never full.
 create type task_access_level as enum ('view', 'update');
 
+-- Available (default while online) / Busy / In a meeting — see
+-- working_status below. Busy/In a meeting still count as "working"; only
+-- the absence of working_since means offline.
+create type member_working_status as enum ('available', 'busy', 'in_meeting');
+
 -- Allowlist of the accounts permitted to use the app. Populate this
 -- manually after inviting each account via Supabase Auth.
 create table members (
@@ -29,6 +34,18 @@ create table members (
   -- flag (is/isn't null) and lets the UI show "working since 2:15 PM" for
   -- free, with no second column that could drift out of sync.
   working_since timestamptz,
+  -- Null means offline (mirrors working_since is null); 'available' is
+  -- the default the moment someone goes online. Switching between
+  -- available/busy/in_meeting never touches working_since, so the
+  -- original start time survives a status change.
+  working_status member_working_status,
+  -- Expiry for busy/in_meeting ('until changed' = null, never expires on
+  -- its own). Deliberately NOT the source of truth on its own — every
+  -- reader (WorkingStatusToggle.jsx) computes the *effective* status by
+  -- comparing this against the current time at render time, rather than
+  -- trusting whatever's stored, so an expiry stays correct even if the
+  -- member it belongs to has their own browser closed/asleep past it.
+  working_status_until timestamptz,
   -- IANA zone this person's own tasks/schedules should default to (set via
   -- SettingsMenu.jsx) — null means "not set yet", falling back to
   -- timezone.js's device-detection/hardcoded default, same as before this
@@ -45,10 +62,17 @@ create table members (
   -- explicit `true` means allowed, only an explicit `false` denies it.
   -- Deny-list (not allow-list) specifically so every existing member
   -- needs zero data to keep full access. Keys in use: 'rentals', 'vault',
-  -- 'staff', 'reports' (EOD/EOW/EOM submission) — see has_permission()
-  -- below. A member managed entirely through SettingsMenu.jsx's admin
-  -- panel (is_admin below), not created through it — member rows are
-  -- still added by hand via Supabase Auth + a manual insert here.
+  -- 'staff', 'reports' (EOD/EOW/EOM submission), 'workingStatus' (can set
+  -- their own online/busy/in-meeting status at all — off for Ada, who's a
+  -- viewer only) — see has_permission() below. Enforcement for
+  -- 'workingStatus' is UI-only for now (same as 'reports'): the existing
+  -- "members can update own working status" policy below is a plain
+  -- self-row check with no column restriction, so a real server-side gate
+  -- would need the same trigger-guard machinery permissions/is_admin
+  -- already got, more than this cosmetic feature justifies yet. A
+  -- member managed entirely through SettingsMenu.jsx's admin panel
+  -- (is_admin below), not created through it — member rows are still
+  -- added by hand via Supabase Auth + a manual insert here.
   permissions jsonb not null default '{}'::jsonb,
   -- Who can edit *other* members' permissions above — separate from the
   -- permissions object itself, since this is about who can grant/revoke
@@ -2932,3 +2956,20 @@ end;
 $$;
 
 grant execute on function upsert_task_access(uuid, uuid, task_access_level, boolean, boolean, boolean) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Working status: availability states + expiry (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, any time — purely additive
+-- (two new nullable columns, one new enum), no existing policy touched.
+-- The existing "members can update own working status" RLS policy
+-- already covers these two new columns for free (a plain self-row check,
+-- no column restriction) — see the matching comment on working_status in
+-- the base schema above for why that's an accepted gap, not an oversight.
+do $$ begin
+  create type member_working_status as enum ('available', 'busy', 'in_meeting');
+exception when duplicate_object then null;
+end $$;
+
+alter table members add column if not exists working_status member_working_status;
+alter table members add column if not exists working_status_until timestamptz;

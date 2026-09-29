@@ -7,15 +7,37 @@ export async function fetchMembers() {
   // me.is_admin, badge colors) was silently working off `undefined`.
   const { data, error } = await supabase
     .from('members')
-    .select('id, display_name, working_since, default_timezone, color, permissions, is_admin')
+    .select(
+      'id, display_name, working_since, working_status, working_status_until, default_timezone, color, permissions, is_admin',
+    )
   if (error) throw error
   return data
 }
 
+// Going online always resets to Available with no expiry (a fresh
+// session shouldn't inherit whatever busy/in-meeting state a previous
+// one happened to end on); going offline clears all three fields
+// together, so there's never a stored status/expiry left dangling for
+// someone who's actually offline.
 export async function updateWorkingStatus(memberId, working) {
   const { error } = await supabase
     .from('members')
-    .update({ working_since: working ? new Date().toISOString() : null })
+    .update(
+      working
+        ? { working_since: new Date().toISOString(), working_status: 'available', working_status_until: null }
+        : { working_since: null, working_status: null, working_status_until: null },
+    )
+    .eq('id', memberId)
+  if (error) throw error
+}
+
+// Switching available/busy/in_meeting while already online — deliberately
+// leaves working_since untouched, so changing status mid-session doesn't
+// reset how long you've actually been working.
+export async function setAvailability(memberId, status, until) {
+  const { error } = await supabase
+    .from('members')
+    .update({ working_status: status, working_status_until: until })
     .eq('id', memberId)
   if (error) throw error
 }
