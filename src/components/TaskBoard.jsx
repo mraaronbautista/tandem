@@ -15,6 +15,7 @@ import {
   getWeekDays,
   groupTasksByDay,
   hasUnseenInboxItems,
+  taskBelongsTo,
   INBOX_LAST_VIEWED_KEY,
 } from '../lib/tasks'
 import { archiveTaskToBoard } from '../lib/corkNotes'
@@ -30,7 +31,6 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
 import { useAuth } from '../lib/AuthContext'
-import { WHO_LABEL, whoKeyForName, whoMatchesFilter } from '../lib/whoLabels'
 import TaskRow from './TaskRow'
 import TimelineRow from './TimelineRow'
 import DayTimeline from './DayTimeline'
@@ -55,12 +55,6 @@ import IconButton from './IconButton'
 import NavItem from './NavItem'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
-
-const WHO_TABS = [
-  { key: 'all', label: 'All' },
-  { key: 'yours', label: WHO_LABEL.yours },
-  { key: 'assistant', label: WHO_LABEL.assistant },
-]
 
 const VIEW_MODES = [
   { key: 'day', label: 'Day' },
@@ -100,12 +94,19 @@ function daySectionLabel(day, today) {
 // task" quick-action icon (and BoardView.jsx's own "Pins" sub-tab), so
 // reusing it here for the top-level nav destination would give the same
 // glyph two unrelated meanings depending on where you saw it.
+// `permission`, when set, is a members.permissions key that must not be
+// explicitly false for the signed-in member — see renderNavButtons below.
+// Rentals/Staff are specific to Ada's rental businesses, not relevant to
+// every member's job; Timeline/Reports/Board stay universally visible
+// (Reports the tab is just for reading — submitting one is its own
+// separate 'reports' permission, gated on the Submit-report quick action
+// instead, not on being able to see the list at all).
 const TABS = [
   { key: 'today', icon: GanttChart, label: 'Timeline' },
-  { key: 'rentals', icon: Home, label: 'Rentals' },
+  { key: 'rentals', icon: Home, label: 'Rentals', permission: 'rentals' },
   { key: 'reports', icon: FileText, label: 'Reports' },
   { key: 'board', icon: LayoutGrid, label: 'Board' },
-  { key: 'staff', icon: Timer, label: 'Staff' },
+  { key: 'staff', icon: Timer, label: 'Staff', permission: 'staff' },
 ]
 
 // The header's page title for every tab except Today (which shows the
@@ -230,20 +231,30 @@ export default function TaskBoard({ theme, toggleTheme }) {
     if (key === 'today') resetToToday()
   }
 
-  // The 👋 header icon this triggers (see .header-actions below) is a
-  // single tap with no per-click local state of its own — a quick
-  // confirmation alert is simpler feedback than adding a "sent" flash
-  // state just for this one button.
-  async function handleNudge() {
+  // The 👋 header icon (see .header-actions below) now opens a picker
+  // once there's more than one other member — with exactly one (today's
+  // reality), it skips straight to nudging them, same one-tap UX as
+  // before. Every member gets the icon now (the Ada-only gate is gone) —
+  // it's not sensitive who gets nudged, just a delivery target, same
+  // reasoning manual-notify's own server-side target check follows.
+  const [nudgeMenuOpen, setNudgeMenuOpen] = useState(false)
+
+  async function sendNudgeTo(targetId) {
+    setNudgeMenuOpen(false)
     try {
-      await sendNudge()
-      alert('Nudge sent to Aaron.')
+      await sendNudge(targetId)
+      alert(`Nudge sent to ${memberName(targetId)}.`)
     } catch {
       // No persistent surface to show this inline on, so alert() is the
       // only option — but the raw Supabase error text isn't meant for a
       // person to read.
       alert("Couldn't send the nudge — try again.")
     }
+  }
+
+  function handleNudgeClick() {
+    if (otherMembers.length === 1) sendNudgeTo(otherMembers[0].id)
+    else setNudgeMenuOpen((v) => !v)
   }
 
   useEffect(() => {
@@ -334,6 +345,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
   const me = useMemo(() => members.find((m) => m.id === session.user.id), [members, session])
   const memberName = (id) => members.find((m) => m.id === id)?.display_name
+  const otherMembers = members.filter((m) => m.id !== me?.id)
   const displayTimezone = me?.default_timezone || detectDefaultTimezone()
 
   // displayToday used to be a plain `new Date()` snapshot taken once
@@ -386,9 +398,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }, [selectedMonthKey])
 
   // Default to your own tasks, not the shared "All" view — you should only
-  // see the other person's tasks by deliberately switching to their tab.
+  // see another member's tasks by deliberately switching to their tab.
   useEffect(() => {
-    if (me) setWhoTab(whoKeyForName(me.display_name) || 'all')
+    if (me) setWhoTab(me.id)
   }, [me])
 
   // Keeps timezone.js's detectDefaultTimezone() in sync with whatever the
@@ -408,13 +420,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
   }
 
   // Whichever "who" filter is active becomes the default for a new task —
-  // viewing Ada's list and tapping + New task assumes it's for Ada. On the
-  // "All" tab there's no filter context, so default to whoever is logged in.
-  const defaultWho =
-    whoTab === 'yours' || whoTab === 'assistant' ? whoTab : whoKeyForName(me?.display_name) || 'yours'
+  // viewing a member's list and tapping + New task assumes it's for them.
+  // On the "All" tab there's no filter context, so default to whoever is
+  // logged in. whoTab now holds either 'all' or a real member id (not a
+  // fixed yours/assistant key), so this is just that id in an array.
+  const defaultAssigneeIds = whoTab !== 'all' ? [whoTab] : me ? [me.id] : []
 
   const whoFiltered = useMemo(() => {
-    return tasks.filter((t) => whoTab === 'all' || whoMatchesFilter(t.who, whoTab))
+    return tasks.filter((t) => whoTab === 'all' || taskBelongsTo(t.assignee_ids, whoTab))
   }, [tasks, whoTab])
 
   // All Day is date-agnostic — undated tasks aren't "for" any particular
@@ -767,7 +780,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     }))
     await handleCreate({
       title: task.title,
-      who: task.who,
+      assignee_ids: task.assignee_ids,
       status: 'to_do',
       priority: task.priority,
       due_date: task.due_date,
@@ -789,6 +802,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     onDuplicate: handleDuplicate,
     onArchiveToBoard: handleArchiveToBoard,
     memberName,
+    members,
     meId: session.user.id,
     overlappingIds,
     displayTimezone,
@@ -802,7 +816,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <NewTaskForm
           variant={variant}
           onCreate={handleCreate}
-          defaultWho={defaultWho}
+          defaultAssigneeIds={defaultAssigneeIds}
           selectedDate={selectedDate}
           me={me}
           members={members}
@@ -812,12 +826,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
         />
       )
     }
-    if (activeTab === 'reports' && me?.display_name === 'Aaron') {
+    if (activeTab === 'reports' && hasPermission('reports')) {
       return <FloatingAddButton variant={variant} onClick={() => setReportOpen(true)} label="Submit report" />
     }
-    if (activeTab === 'rentals' || activeTab === 'board') {
-      const label = activeTab === 'rentals' ? 'Add booking' : 'Add pin'
-      return <FloatingAddButton variant={variant} onClick={() => quickAddHandlerRef.current?.()} label={label} />
+    if (activeTab === 'rentals' && hasPermission('rentals')) {
+      return <FloatingAddButton variant={variant} onClick={() => quickAddHandlerRef.current?.()} label="Add booking" />
+    }
+    if (activeTab === 'board') {
+      return <FloatingAddButton variant={variant} onClick={() => quickAddHandlerRef.current?.()} label="Add pin" />
     }
     return null
   }
@@ -827,8 +843,17 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // desktop .header-nav row (size="desktop") each call this rather than
   // sharing one pre-built array, so the context-specific presentation
   // lives in NavItem, not stuffed into the TABS data model itself.
+  // Mirrors has_permission() in schema.sql exactly (a deny-list — absent
+  // or explicit true means allowed, only explicit false denies) so the
+  // frontend's own gating can never drift from what RLS actually enforces
+  // server-side; this just keeps a denied member from seeing a nav item
+  // that would 403 anyway.
+  function hasPermission(feature) {
+    return me?.permissions?.[feature] !== false
+  }
+
   function renderNavButtons(size) {
-    return TABS.map((tab) => (
+    return TABS.filter((tab) => !tab.permission || hasPermission(tab.permission)).map((tab) => (
       <NavItem
         key={tab.key}
         size={size}
@@ -921,10 +946,29 @@ export default function TaskBoard({ theme, toggleTheme }) {
             {isDesktop && <nav className="flex gap-1">{renderNavButtons('desktop')}</nav>}
             <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-2">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
-              {me?.display_name === 'Ada' && (
-                <IconButton size="header" onClick={handleNudge} title="Nudge Aaron" aria-label="Nudge Aaron">
-                  <Hand size={16} />
-                </IconButton>
+              {otherMembers.length > 0 && (
+                <div className="relative">
+                  <IconButton size="header" onClick={handleNudgeClick} title="Nudge" aria-label="Nudge">
+                    <Hand size={16} />
+                  </IconButton>
+                  {nudgeMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setNudgeMenuOpen(false)} />
+                      <div className="absolute right-0 top-full z-20 mt-1 flex flex-col gap-0.5 rounded-md border border-border bg-card-bg p-1 shadow-raised">
+                        {otherMembers.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="cursor-pointer rounded-sm px-2.5 py-1.5 text-left text-[13px] whitespace-nowrap text-text-h hover:bg-pill-bg [font-family:inherit]"
+                            onClick={() => sendNudgeTo(m.id)}
+                          >
+                            Nudge {m.display_name}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
               <IconButton size="header" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
                 <Settings size={16} />
@@ -933,12 +977,15 @@ export default function TaskBoard({ theme, toggleTheme }) {
           </div>
         </header>
 
-        {activeTab === 'rentals' && <RentalsView me={me} company={rentalsCompany} registerQuickAdd={registerQuickAdd} />}
+        {activeTab === 'rentals' && hasPermission('rentals') && (
+          <RentalsView me={me} company={rentalsCompany} registerQuickAdd={registerQuickAdd} />
+        )}
         {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
         {activeTab === 'board' && (
           <BoardView
             me={me}
             memberName={memberName}
+            members={members}
             tasks={tasks}
             meId={session.user.id}
             onSelectTask={(task) => setPeekTaskId(task.id)}
@@ -948,7 +995,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
             registerQuickAdd={registerQuickAdd}
           />
         )}
-        {activeTab === 'staff' && <StaffLogsView me={me} />}
+        {activeTab === 'staff' && hasPermission('staff') && <StaffLogsView me={me} />}
 
         {activeTab === 'today' && (
           <PullToRefresh onRefresh={reload}>
@@ -1001,9 +1048,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
               </PeriodTabs>
 
               <select className="who-select" value={whoTab} onChange={(e) => setWhoTab(e.target.value)}>
-                {WHO_TABS.map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.label}
+                <option value="all">All</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.display_name}
                   </option>
                 ))}
               </select>
@@ -1066,6 +1114,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                     <h2 className="task-section-heading">All Day</h2>
                     <AllDayRow
                       tasks={allDay}
+                      members={members}
                       onSelect={(task) => setPeekTaskId(task.id)}
                       onStatusChange={handleStatusChange}
                     />
@@ -1082,6 +1131,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                         {viewMode === 'day' ? (
                           <DayTimeline
                             tasks={dTasks}
+                            members={members}
                             onSelect={(task) => setPeekTaskId(task.id)}
                             onStatusChange={handleStatusChange}
                             overlappingIds={overlappingIds}
@@ -1295,7 +1345,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
         </Modal>
       )}
 
-      {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} onClose={() => setReportOpen(false)} />}
+      {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} members={members} onClose={() => setReportOpen(false)} />}
 
       {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
 

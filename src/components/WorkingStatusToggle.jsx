@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Circle } from 'lucide-react'
 import { updateWorkingStatus } from '../lib/members'
 
@@ -13,68 +12,51 @@ function formatSince(iso) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
-// Aaron gets an actual toggle for his own status; Ada gets a read-only
-// badge reflecting it — never the other way around, since "I'm working"
-// is inherently about yourself, not something to set on someone else's
-// behalf. Always visible on Ada's side now, online or offline — it lives
-// in the shared header (.header-actions), so it's already on every tab
-// without any extra work here.
-//
-// .working-toggle/-on and .working-badge/-online (App.css) had exactly
-// one consumer — this component. Both migrated branches share the same
-// simplification as ThemeToggle.jsx: the original set two different
-// transition durations across three properties (transform 120ms;
-// border-color/color 180ms) — collapsed to one uniform 120ms transition
-// (transition-all), since Tailwind can't combine two transition-*
-// utilities' differing durations on one element. Visually inconsequential
-// on a rarely-toggled status control.
+// Every member gets their own toggle for their own status now — "I'm
+// working" is inherently about yourself, not something to set on
+// someone else's behalf, but that no longer means only one hardcoded
+// person gets a real control. Everyone else's status collapses into one
+// dynamic-text summary pill next to it (deliberately not N separate
+// mini-badges) — avoids the header running out of room as the team
+// grows, and looks visually identical to the original two-person layout
+// when there are only 2 members total. Always visible, online or
+// offline — it lives in the shared header (.header-actions), so it's
+// already on every tab without any extra work here.
 export default function WorkingStatusToggle({ me, members, onChange }) {
-  const [busy, setBusy] = useState(false)
-
   if (!me) return null
 
-  if (me.display_name === 'Aaron') {
-    const isWorking = Boolean(me.working_since)
+  const isWorking = Boolean(me.working_since)
 
-    async function handleClick() {
-      setBusy(true)
-      try {
-        await updateWorkingStatus(me.id, !isWorking)
-        await onChange?.()
-      } finally {
-        setBusy(false)
-      }
-    }
+  async function handleClick() {
+    await updateWorkingStatus(me.id, !isWorking)
+    await onChange?.()
+  }
 
-    return (
+  const others = members.filter((m) => m.id !== me.id)
+  const othersWorking = others.filter((m) => m.working_since)
+
+  return (
+    <div className="flex items-center gap-2">
       <button
         className={`cursor-pointer whitespace-nowrap rounded-full border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] ${
           isWorking ? 'border-[var(--color-online)] text-[var(--color-online)]' : 'border-border text-text-h'
         }`}
         onClick={handleClick}
-        disabled={busy}
         title={isWorking ? `Online since ${formatSince(me.working_since)} — tap to go offline` : 'Go online'}
       >
         <StatusDot /> {isWorking ? 'Online' : 'Offline'}
       </button>
-    )
-  }
 
-  const aaron = members.find((m) => m.display_name === 'Aaron')
-  const aaronOnline = Boolean(aaron?.working_since)
-
-  // The dot color alone already carries online/offline — "Aaron is
-  // online"/"Aaron is offline" was saying the same thing twice. The
-  // title tooltip still spells it out for anyone who can't tell green
-  // from gray at a glance.
-  return (
-    <span
-      className={`whitespace-nowrap text-[13px] ${
-        aaronOnline ? 'text-[var(--color-online)] opacity-100' : 'text-text opacity-60'
-      }`}
-      title={aaronOnline ? `Online since ${formatSince(aaron.working_since)}` : 'Offline'}
-    >
-      <StatusDot /> Aaron
-    </span>
+      {others.length > 0 && (
+        <span
+          className={`whitespace-nowrap text-[13px] ${
+            othersWorking.length ? 'text-[var(--color-online)] opacity-100' : 'text-text opacity-60'
+          }`}
+          title={othersWorking.length ? othersWorking.map((m) => m.display_name).join(', ') : 'Nobody else working'}
+        >
+          <StatusDot /> {othersWorking.length ? `Working: ${othersWorking.map((m) => m.display_name).join(', ')}` : 'Nobody else working'}
+        </span>
+      )}
+    </div>
   )
 }

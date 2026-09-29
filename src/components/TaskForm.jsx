@@ -1,6 +1,5 @@
 import { useId, useState } from 'react'
 import { CalendarClock, ChevronRight } from 'lucide-react'
-import { WHO_LABEL } from '../lib/whoLabels'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso, zoneAbbreviation } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
 import { PRIORITY_SHORT_LABEL } from '../lib/priorityColors'
@@ -8,6 +7,7 @@ import ChecklistEditor from './ChecklistEditor'
 import ScrollSelect from './ScrollSelect'
 import TaskIcon from './TaskIcon'
 import TaskIconPicker from './TaskIconPicker'
+import AssigneePicker from './AssigneePicker'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -21,7 +21,7 @@ import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 // preference).
 export const emptyTaskForm = {
   title: '',
-  who: 'yours',
+  assignee_ids: [],
   priority: 'med',
   icon: null,
   duration_minutes: '',
@@ -224,7 +224,7 @@ function dueSummaryLabel(form) {
   return `${dateLabel} · ${timeLabel}${endLabel ? `–${endLabel}` : ''} · ${zoneLabel}`
 }
 
-export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true, header = null }) {
+export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true, header = null, members = [] }) {
   // Multiple TaskForm instances can be mounted at once (each TaskRow
   // owns its own `editing` state independently), so the title/notes
   // label ids below need to be unique per instance, not a fixed string.
@@ -373,13 +373,9 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
       )}
 
       <div className="new-task-row">
-        <label>
+        <label className="flex flex-col gap-1.5">
           Who
-          <select value={form.who} onChange={(e) => set('who', e.target.value)}>
-            <option value="yours">{WHO_LABEL.yours}</option>
-            <option value="assistant">{WHO_LABEL.assistant}</option>
-            <option value="both">{WHO_LABEL.both}</option>
-          </select>
+          <AssigneePicker members={members} value={form.assignee_ids} onChange={(ids) => set('assignee_ids', ids)} />
         </label>
 
         <label>
@@ -634,7 +630,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
         <button type="button" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" disabled={saving}>
+        <button type="submit" disabled={saving || form.assignee_ids.length === 0}>
           {saving ? 'Saving…' : submitLabel}
         </button>
       </div>

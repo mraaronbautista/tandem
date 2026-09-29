@@ -1,19 +1,27 @@
--- Tandem schema: shared task board for exactly two accounts (you + Ada).
+-- Tandem schema: shared task board for a small household/team of member
+-- accounts (started as exactly Ada + Aaron; see members.permissions below
+-- for how a member's access narrows past that original pair).
 -- Run this in the Supabase SQL editor (or via `supabase db push`) on a fresh project.
 
 create extension if not exists pgcrypto;
 
 create type task_status as enum ('to_do', 'in_progress', 'done');
-create type task_who as enum ('yours', 'assistant', 'both');
 create type task_priority as enum ('low', 'med', 'high');
 create type task_source as enum ('teams', 'email', 'none');
 create type task_recurrence as enum (
   'none', 'daily', 'weekly', 'selected_weekdays', 'biweekly', 'every_3_weeks', 'monthly',
   'every_2_months', 'quarterly', 'every_6_months', 'annually'
 );
+-- Per-ordered-pair task-access grant level (see task_access below) — null
+-- (no row for that pair) means fully hidden, 'view' means read-only,
+-- 'update' means can edit. Deliberately the opposite of members.
+-- permissions' deny-list shape: that one exists so every existing member
+-- keeps full access with zero data; this one exists specifically to
+-- restrict access, so a missing grant must mean no access, never full.
+create type task_access_level as enum ('view', 'update');
 
--- Allowlist of the exactly-two accounts permitted to use the app.
--- Populate this manually after inviting each account via Supabase Auth.
+-- Allowlist of the accounts permitted to use the app. Populate this
+-- manually after inviting each account via Supabase Auth.
 create table members (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text not null,
@@ -27,13 +35,39 @@ create table members (
   -- column existed. Lives here rather than a per-device localStorage value
   -- (like theme) because it has to be mutually visible — the other person
   -- needs to see it too when bulk-adding *your* schedule for you.
-  default_timezone text
+  default_timezone text,
+  -- Per-member badge color (replaces a hardcoded name->color map that
+  -- only had room for exactly two people) — pick one when adding a new
+  -- member's row; the default is a plain neutral fallback, not a real
+  -- suggestion, so a forgotten value renders as gray rather than broken.
+  color text not null default '#8a8a8a',
+  -- Deny-list of feature access, {} by default — an absent key or an
+  -- explicit `true` means allowed, only an explicit `false` denies it.
+  -- Deny-list (not allow-list) specifically so every existing member
+  -- needs zero data to keep full access. Keys in use: 'rentals', 'vault',
+  -- 'staff', 'reports' (EOD/EOW/EOM submission) — see has_permission()
+  -- below. A member managed entirely through SettingsMenu.jsx's admin
+  -- panel (is_admin below), not created through it — member rows are
+  -- still added by hand via Supabase Auth + a manual insert here.
+  permissions jsonb not null default '{}'::jsonb,
+  -- Who can edit *other* members' permissions above — separate from the
+  -- permissions object itself, since this is about who can grant/revoke
+  -- access, not what one member can personally see.
+  is_admin boolean not null default false
 );
 
 create table tasks (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  who task_who not null default 'yours',
+  -- Every member assigned to this task — an empty array is a task with
+  -- no one on it yet (the UI doesn't allow saving one, but the column
+  -- itself doesn't enforce it). A native array, not a join table: RLS
+  -- here is table-wide (is_member()), not per-assignee, and every
+  -- consumer (overlap detection, EOD-report scoping, the who-filter)
+  -- already operates client-side over a fully-fetched task list rather
+  -- than a server-side WHERE query — a GIN index would be the answer if
+  -- that ever changes, not a schema change.
+  assignee_ids uuid[] not null default '{}',
   status task_status not null default 'to_do',
   priority task_priority not null default 'med',
   -- A manually-picked Lucide icon *name* (e.g. 'Dumbbell'), from
@@ -127,6 +161,74 @@ create index tasks_due_date_idx on tasks (due_date);
 create unique index tasks_recurrence_series_due_unique
   on tasks (recurrence_series_id, due_date)
   where recurrence_series_id is not null and due_date is not null;
+
+-- What viewer_id may see/do regarding target_id's own tasks — one row per
+-- ordered pair, not per task; a task's actual accessibility is resolved
+-- at query time from every one of its assignee_ids (see can_view_task()
+-- and friends below), not stored per-task. Absence of a row is the
+-- default and means fully hidden (see task_access_level above for why).
+-- can_create/can_delete/can_reassign are checked with a stricter "every
+-- other assignee" rule than plain view/update's "any assignee" rule —
+-- being a co-assignee on a shared task must not let someone delete or
+-- reassign it away from people they have no such grant for.
+create table task_access (
+  viewer_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  level task_access_level,
+  can_create boolean not null default false,
+  can_delete boolean not null default false,
+  can_reassign boolean not null default false,
+  updated_at timestamptz not null default now(),
+  -- Nullable: rows written by the grant_admin_access_to_new_member
+  -- trigger below or a migration backfill have no human granter.
+  updated_by uuid references members (id) on delete set null,
+  primary key (viewer_id, target_id),
+  constraint task_access_no_self_grant check (viewer_id <> target_id),
+  -- Can't grant Create/Delete/Reassign on a row still set to Hidden —
+  -- matches the admin UI's own "disable incompatible controls" rule.
+  constraint task_access_actions_require_access check (
+    level is not null or (not can_create and not can_delete and not can_reassign)
+  )
+);
+
+alter table task_access enable row level security;
+
+create or replace function stamp_task_access_meta()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  new.updated_by = auth.uid();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger task_access_stamp_meta
+before insert or update on task_access
+for each row execute function stamp_task_access_meta();
+
+-- The moment a new member's row is created, every existing admin
+-- automatically gets full view & update access to THAT member's own
+-- tasks ("as her supervisors") — no manual grant needed before they can
+-- oversee her work. The reverse (what the new member can see of an
+-- admin) stays fully hidden by default, since this only ever inserts
+-- rows with the new member as target_id, never as viewer_id.
+-- Deliberately does not set can_delete/can_reassign — left for an admin
+-- to grant explicitly via the (future) access-management screen.
+create or replace function grant_admin_access_to_new_member()
+returns trigger as $$
+begin
+  insert into task_access (viewer_id, target_id, level)
+  select m.id, new.id, 'update'
+  from members m
+  where m.is_admin and m.id <> new.id
+  on conflict (viewer_id, target_id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger members_grant_admin_access_to_new_member
+after insert on members
+for each row execute function grant_admin_access_to_new_member();
 
 -- Tombstones for individual generated occurrences the user deliberately
 -- deletes. Without this, the monthly ensure pass sees a missing date and
@@ -228,7 +330,6 @@ declare
   month_end date := (date_trunc('month', target_month) + interval '1 month - 1 day')::date;
   month_end_ts timestamptz;
   wall_time time;
-  assignee_id uuid;
   step interval;
 begin
   select * into template from tasks where id = template_id;
@@ -238,32 +339,23 @@ begin
   end if;
 
   wall_time := (template.due_date at time zone template.due_timezone)::time;
-  -- assignee_id is only ever a *fallback* for created_by below
-  -- (coalesce(assignee_id, template.created_by)) — a 'both' template has
-  -- no single specific person to fall back to, so it skips this lookup
-  -- entirely (the null branch matches no display_name, leaving
-  -- assignee_id null) rather than guessing 'ada' the way the old
-  -- two-branch case did.
-  select id into assignee_id from members
-  where lower(display_name) = case
-    when template.who = 'assistant' then 'aaron'
-    when template.who = 'both' then null
-    else 'ada'
-  end
-  limit 1;
+  -- No assignee lookup needed here any more — assignee_ids is copied
+  -- straight from the template (below), and created_by (not null, no
+  -- default, always supplied by every real insert path) needs no
+  -- fallback resolution either.
 
   if template.recurrence::text = 'selected_weekdays' then
     insert into tasks (
-      title, who, priority, icon, due_date, due_timezone, duration_minutes,
+      title, assignee_ids, priority, icon, due_date, due_timezone, duration_minutes,
       source, source_note, notes, checklist, recurrence, recurrence_days,
       created_by, recurrence_series_id
     )
-    select template.title, template.who, template.priority, template.icon,
+    select template.title, template.assignee_ids, template.priority, template.icon,
       (day_stamp::date + wall_time) at time zone template.due_timezone,
       template.due_timezone, template.duration_minutes, template.source,
       template.source_note, template.notes, template.checklist,
       template.recurrence, template.recurrence_days,
-      coalesce(assignee_id, template.created_by), template.id
+      template.created_by, template.id
     from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
     where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
       and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
@@ -298,15 +390,15 @@ begin
   month_end_ts := (month_end + 1)::timestamp at time zone template.due_timezone;
 
   insert into tasks (
-    title, who, priority, icon, due_date, due_timezone, duration_minutes,
+    title, assignee_ids, priority, icon, due_date, due_timezone, duration_minutes,
     source, source_note, notes, checklist, recurrence, recurrence_days,
     created_by, recurrence_series_id
   )
-  select template.title, template.who, template.priority, template.icon,
+  select template.title, template.assignee_ids, template.priority, template.icon,
     occurrence, template.due_timezone, template.duration_minutes, template.source,
     template.source_note, template.notes, template.checklist,
     template.recurrence, template.recurrence_days,
-    coalesce(assignee_id, template.created_by), template.id
+    template.created_by, template.id
   from generate_series(template.due_date, month_end_ts, step) as occ(occurrence)
   where (occurrence at time zone template.due_timezone)::date between month_start and month_end
     and occurrence <> template.due_date
@@ -377,6 +469,14 @@ begin
 
   select * into target from tasks where id = target_task_id;
   if not found then return; end if;
+  -- security definer bypasses tasks' own RLS entirely, so this can't rely
+  -- on the DELETE policy to keep an unauthorized caller out — can_delete_task
+  -- (defined further down, forward-referenced here; fine for plpgsql, which
+  -- only resolves other functions at call time, not at CREATE time) is
+  -- called explicitly instead, same check the DELETE policy itself uses.
+  if not can_delete_task(target.assignee_ids) then
+    raise exception 'Not authorized';
+  end if;
   series_id := coalesce(target.recurrence_series_id, target.id);
 
   if delete_future then
@@ -418,9 +518,11 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- RLS: both allow-listed members get full read/write on the shared board.
--- Mutual visibility is the entire point of this app, so there is no
--- per-row ownership check beyond "is this one of our two accounts."
+-- RLS: every allow-listed member can read every other member's own row
+-- (needed for attribution/greeting/badges) and can read the whole staff
+-- roster. Task-level access is NOT uniform mutual visibility any more —
+-- see can_view_task() and friends below, which resolve access per task
+-- from task_access grants, not a blanket is_member() check.
 alter table members enable row level security;
 alter table tasks enable row level security;
 
@@ -431,27 +533,152 @@ returns boolean as $$
   select exists (select 1 from members where id = auth.uid());
 $$ language sql security definer stable;
 
+-- Per-member feature gating, alongside is_member() (never instead of it) —
+-- members.permissions is a deny-list jsonb blob ({} by default), so an
+-- absent key or explicit `true` means allowed and only an explicit
+-- `false` denies it. Deny-list rather than allow-list specifically so
+-- every existing member needs zero data to keep full access — a brand
+-- new feature key someday needs no migration either, just a caller that
+-- starts checking has_permission('newFeature'). Feature names in use:
+-- 'rentals', 'vault', 'staff', 'reports' (EOD/EOW/EOM submission).
+create or replace function has_permission(feature text)
+returns boolean as $$
+  select exists (
+    select 1 from members
+    where id = auth.uid()
+      and coalesce((permissions ->> feature)::boolean, true)
+  );
+$$ language sql security definer stable;
+
+-- Task-level authorization, alongside is_member() (never instead of it).
+-- Two shapes, matching task_access's own comment: "any assignee" for
+-- view/update (being assigned to a task always grants baseline access to
+-- it; a non-assignee viewer needs the matching grant for at least one
+-- assignee), and "every other assignee" for delete/reassign/create
+-- (stricter — co-assignment alone must never let someone delete/reassign
+-- a task away from people they have no grant for). security definer
+-- stable, same shape as is_member()/has_permission(), so checking
+-- task_access doesn't recursively re-trigger RLS on task_access itself.
+create or replace function can_view_task(assignees uuid[])
+returns boolean as $$
+  select auth.uid() = any(assignees)
+    or exists (
+      select 1 from task_access
+      where viewer_id = auth.uid() and target_id = any(assignees)
+        and level in ('view', 'update')
+    );
+$$ language sql security definer stable;
+
+create or replace function can_update_task(assignees uuid[])
+returns boolean as $$
+  select auth.uid() = any(assignees)
+    or exists (
+      select 1 from task_access
+      where viewer_id = auth.uid() and target_id = any(assignees) and level = 'update'
+    );
+$$ language sql security definer stable;
+
+-- "Every other assignee" shape, shared by can_delete_task/
+-- can_reassign_task/can_create_task_for — a task assigned solely to the
+-- caller has no "other assignee" to check, so unnest() over that empty
+-- set makes the inner not exists() vacuously satisfied and this returns
+-- true: you're always fully able to delete/reassign/create for your own
+-- solo tasks.
+create or replace function can_delete_task(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_delete
+      )
+  );
+$$ language sql security definer stable;
+
+create or replace function can_reassign_task(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_reassign
+      )
+  );
+$$ language sql security definer stable;
+
+-- Gates who a task may be created for/reassigned to: the caller needs a
+-- can_create grant for every OTHER member being assigned. Assigning
+-- purely to yourself needs no grant at all.
+create or replace function can_create_task_for(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_create
+      )
+  );
+$$ language sql security definer stable;
+
+-- Reassignment (changing assignee_ids on an existing task) needs the
+-- stricter can_reassign_task/can_create_task_for grants, not just plain
+-- can_update_task — but RLS's UPDATE policy (using/with check below)
+-- never sees OLD and NEW at once, so "did assignee_ids actually change"
+-- can't be expressed there. Only a trigger can compare both, so this
+-- rule lives here instead — a plain field edit (checklist, notes) never
+-- fires this at all, since it's scoped to "before update of assignee_ids".
+create or replace function enforce_task_reassignment_access()
+returns trigger as $$
+begin
+  if new.assignee_ids is distinct from old.assignee_ids then
+    if not can_reassign_task(old.assignee_ids) then
+      raise exception 'Not authorized to reassign this task away from its current assignees';
+    end if;
+    if not can_create_task_for(new.assignee_ids) then
+      raise exception 'Not authorized to assign this task to one or more of the new assignees';
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger tasks_enforce_reassignment_access
+before update of assignee_ids on tasks
+for each row execute function enforce_task_reassignment_access();
+
 -- Both members can see each other's display name — needed for the greeting
 -- and task attribution features.
 create policy "members can read all members"
   on members for select
   using (is_member());
 
-create policy "members can read all tasks"
+-- A viewer can read their own outgoing grants (what they've been granted
+-- about others), never the reverse (who can see them) — full admin
+-- read/write over every grant is a security definer RPC for the (future)
+-- access-management screen, not a general policy here.
+create policy "members can read their own outgoing task access grants"
+  on task_access for select
+  using (is_member() and viewer_id = auth.uid());
+
+create policy "members can view accessible tasks"
   on tasks for select
-  using (is_member());
+  using (is_member() and can_view_task(assignee_ids));
 
-create policy "members can insert tasks"
+create policy "members can insert tasks they may create"
   on tasks for insert
-  with check (is_member());
+  with check (is_member() and can_create_task_for(assignee_ids));
 
-create policy "members can update tasks"
+create policy "members can update accessible tasks"
   on tasks for update
-  using (is_member());
+  using (is_member() and can_update_task(assignee_ids))
+  with check (is_member() and can_update_task(assignee_ids));
 
-create policy "members can delete tasks"
+create policy "members can delete accessible tasks"
   on tasks for delete
-  using (is_member());
+  using (is_member() and can_delete_task(assignee_ids));
 
 -- Storage bucket for optional completion screenshots/photos. Public
 -- (read) since these are casual task attachments, not sensitive
@@ -744,6 +971,7 @@ returns trigger as $$
 declare
   property_name text;
   cleaning_due timestamptz;
+  aaron_id uuid;
 begin
   -- Pending bookings are not firm move-outs. If a confirmed booking is
   -- moved back to pending, remove its not-yet-needed automatic task.
@@ -760,12 +988,18 @@ begin
   -- day's 10:00 AM wall time in Central before storing it as timestamptz.
   cleaning_due := ((new.check_out - 7) + time '10:00') at time zone 'America/Chicago';
 
+  -- This is a Rentals *operations* decision (who actually handles
+  -- turnover), not a general person-count thing, so it deliberately
+  -- stays Aaron-specific rather than becoming a config option — just
+  -- resolved to a real member id now instead of a fixed enum literal.
+  select id into aaron_id from members where lower(display_name) = 'aaron' limit 1;
+
   insert into tasks (
-    title, who, priority, due_date, due_timezone, source, notes, checklist,
+    title, assignee_ids, priority, due_date, due_timezone, source, notes, checklist,
     created_by, rental_turnover_booking_id
   ) values (
     'Schedule turnover cleaning for ' || property_name,
-    'assistant',
+    array[aaron_id],
     'med',
     cleaning_due,
     'America/Chicago',
@@ -786,7 +1020,7 @@ begin
     due_date = excluded.due_date,
     due_timezone = excluded.due_timezone,
     notes = excluded.notes,
-    who = 'assistant';
+    assignee_ids = array[aaron_id];
 
   return new;
 end;
@@ -802,35 +1036,35 @@ alter table rental_bookings enable row level security;
 
 create policy "members can read all rental properties"
   on rental_properties for select
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can insert rental properties"
   on rental_properties for insert
-  with check (is_member());
+  with check (is_member() and has_permission('rentals'));
 
 create policy "members can update rental properties"
   on rental_properties for update
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can delete rental properties"
   on rental_properties for delete
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can read all rental bookings"
   on rental_bookings for select
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can insert rental bookings"
   on rental_bookings for insert
-  with check (is_member());
+  with check (is_member() and has_permission('rentals'));
 
 create policy "members can update rental bookings"
   on rental_bookings for update
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can delete rental bookings"
   on rental_bookings for delete
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 -- Recurring monthly costs (mortgage, utilities, ...) scoped to a company
 -- as a whole rather than to one rental_properties row — a mortgage can
@@ -849,19 +1083,19 @@ alter table rental_expenses enable row level security;
 
 create policy "members can read all rental expenses"
   on rental_expenses for select
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can insert rental expenses"
   on rental_expenses for insert
-  with check (is_member());
+  with check (is_member() and has_permission('rentals'));
 
 create policy "members can update rental expenses"
   on rental_expenses for update
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can delete rental expenses"
   on rental_expenses for delete
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 -- Multiple milestones against the same accumulating savings (e.g. a
 -- $20k short-term goal, then $75k for the actual down payment) rather
@@ -885,19 +1119,19 @@ alter table rental_savings_goal enable row level security;
 
 create policy "members can read all rental savings goals"
   on rental_savings_goal for select
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can insert rental savings goals"
   on rental_savings_goal for insert
-  with check (is_member());
+  with check (is_member() and has_permission('rentals'));
 
 create policy "members can update rental savings goals"
   on rental_savings_goal for update
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 create policy "members can delete rental savings goals"
   on rental_savings_goal for delete
-  using (is_member());
+  using (is_member() and has_permission('rentals'));
 
 -- Shared password vault, encrypted client-side (AES-GCM, key derived from
 -- a master password via PBKDF2) before anything ever reaches Supabase —
@@ -931,15 +1165,15 @@ alter table vault_meta enable row level security;
 
 create policy "members can read vault meta"
   on vault_meta for select
-  using (is_member());
+  using (is_member() and has_permission('vault'));
 
 create policy "members can insert vault meta"
   on vault_meta for insert
-  with check (is_member());
+  with check (is_member() and has_permission('vault'));
 
 create policy "members can delete vault meta"
   on vault_meta for delete
-  using (is_member());
+  using (is_member() and has_permission('vault'));
 
 -- One row per credential. `ciphertext` decrypts (with the vault key) to
 -- one JSON blob `{ label, username, loginMethod, password, url, notes }`
@@ -961,19 +1195,19 @@ alter table vault_entries enable row level security;
 
 create policy "members can read all vault entries"
   on vault_entries for select
-  using (is_member());
+  using (is_member() and has_permission('vault'));
 
 create policy "members can insert vault entries"
   on vault_entries for insert
-  with check (is_member());
+  with check (is_member() and has_permission('vault'));
 
 create policy "members can update vault entries"
   on vault_entries for update
-  using (is_member());
+  using (is_member() and has_permission('vault'));
 
 create policy "members can delete vault entries"
   on vault_entries for delete
-  using (is_member());
+  using (is_member() and has_permission('vault'));
 
 -- Cork Board: quick pins with no due date, no timeline — the opposite of
 -- a task, which is deliberately scheduled. This is the one place in the
@@ -1140,7 +1374,7 @@ $$ language sql security definer stable;
 -- client-side instead of an ambiguous RLS-denied empty result.
 create policy "members can read all staff"
   on staff for select
-  using (is_member());
+  using (is_member() and has_permission('staff'));
 
 create policy "staff can read own row"
   on staff for select
@@ -1148,12 +1382,12 @@ create policy "staff can read own row"
 
 create policy "members can insert staff"
   on staff for insert
-  with check (is_member());
+  with check (is_member() and has_permission('staff'));
 
 create policy "members can update staff"
   on staff for update
-  using (is_member())
-  with check (is_member());
+  using (is_member() and has_permission('staff'))
+  with check (is_member() and has_permission('staff'));
 
 -- Known clock-in locations: existing Awa Rentalz units
 -- (rental_property_id set) plus other non-rental properties in the
@@ -1182,7 +1416,7 @@ alter table work_sites enable row level security;
 
 create policy "members can read all work sites"
   on work_sites for select
-  using (is_member());
+  using (is_member() and has_permission('staff'));
 
 -- Staff only ever needs active sites to clock in at — an archived
 -- site shouldn't appear in their nearest-site picker.
@@ -1192,16 +1426,16 @@ create policy "staff can read active work sites"
 
 create policy "members can insert work sites"
   on work_sites for insert
-  with check (is_member());
+  with check (is_member() and has_permission('staff'));
 
 create policy "members can update work sites"
   on work_sites for update
-  using (is_member())
-  with check (is_member());
+  using (is_member() and has_permission('staff'))
+  with check (is_member() and has_permission('staff'));
 
 create policy "members can delete work sites"
   on work_sites for delete
-  using (is_member());
+  using (is_member() and has_permission('staff'));
 
 -- Haversine great-circle distance in meters. Kept as its own small SQL
 -- function (not inlined into the trigger below) so it's independently
@@ -1325,7 +1559,7 @@ alter table time_entries enable row level security;
 
 create policy "members and own staff can read time entries"
   on time_entries for select
-  using (is_member() or staff_id = auth.uid());
+  using ((is_member() and has_permission('staff')) or staff_id = auth.uid());
 
 create policy "staff can clock in"
   on time_entries for insert
@@ -1337,8 +1571,8 @@ create policy "staff can clock in"
 -- way that's structurally impossible, not just discouraged by the UI.
 create policy "members can update time entries"
   on time_entries for update
-  using (is_member())
-  with check (is_member());
+  using (is_member() and has_permission('staff'))
+  with check (is_member() and has_permission('staff'));
 
 -- The one RPC a staff account gets, mirroring add_cork_note_comment()'s
 -- shape above: security definer, re-checks ownership inline, and only
@@ -1595,7 +1829,7 @@ alter table staff
 -- reading.
 create policy "members can insert time entries"
   on time_entries for insert
-  with check (is_member());
+  with check (is_member() and has_permission('staff'));
 
 -- A member editing clock_in_at/clock_out_at is already covered by the
 -- existing "members can update time entries" UPDATE policy above — no new
@@ -1635,12 +1869,12 @@ alter table time_entry_requests enable row level security;
 
 create policy "members can read time entry requests"
   on time_entry_requests for select
-  using (is_member());
+  using (is_member() and has_permission('staff'));
 
 create policy "members can update time entry requests"
   on time_entry_requests for update
-  using (is_member())
-  with check (is_member());
+  using (is_member() and has_permission('staff'))
+  with check (is_member() and has_permission('staff'));
 
 -- Staff can read and submit their own requests, never anyone else's, and
 -- never resolve one themselves — there's no staff UPDATE policy on this
@@ -1680,7 +1914,7 @@ create policy "staff can submit time entry requests"
 -- plain confirm() on the client rather than a database-level restriction.
 create policy "members can delete time entries"
   on time_entries for delete
-  using (is_member());
+  using (is_member() and has_permission('staff'));
 
 -- ---------------------------------------------------------------------------
 -- Shift reports and break/geofence-exit clock-out flow (incremental migration)
@@ -1919,52 +2153,111 @@ alter table cork_notes add column archived_task_id uuid references tasks (id) on
 alter table cork_notes add column roadmap_items jsonb not null default '[]'::jsonb;
 
 -- ---------------------------------------------------------------------------
--- Shared ("both") tasks (incremental migration)
+-- N members with per-feature permissions (incremental migration — PHASE A)
 -- ---------------------------------------------------------------------------
--- Run this block once on an existing project. Requested directly: a task
--- both people are genuinely doing together (a joint interview session, say)
--- previously had to be split into two separate copies via TaskRow.jsx's
--- Duplicate button, one per person, with no link between them — editing
--- one never updated the other, and each counted as its own separate
--- overlap/reminder/report entry. `task_who` gains a third value, 'both',
--- alongside the existing 'yours'/'assistant' — one real task row that
--- shows on both people's timelines, not two.
+-- Run this block once on an existing project. Supersedes the older "Shared
+-- ('both') tasks" block this replaced — if that one was already run, this
+-- still works fine (every comparison below reads `who::text`, never a bare
+-- enum literal, so it doesn't matter whether 'both' ever actually got added
+-- to task_who). Requested directly: the team is growing past exactly Ada
+-- and Aaron, and `tasks.who` (a fixed yours/assistant/both enum) has no
+-- meaning once there's a third real person — replaced with
+-- `tasks.assignee_ids`, a plain array of real member ids, any subset of
+-- however many members exist. Separately, a new hire needs real feature
+-- restrictions (no Rentals/Vault/Staff) that the old model had no way to
+-- express at all (every member saw everything, always) — `members.
+-- permissions` is a deny-list jsonb blob covering that, plus EOD/EOW/EOM
+-- report submission (Ada never submits one — a role, not a hardcoded name
+-- check), managed through a new admin-only screen in SettingsMenu.jsx.
 --
--- Adding an enum value is the one schema change here; everywhere that
--- reads/writes `who` already treats it as data, not as a hardcoded
--- two-branch decision, once updated:
---   - src/lib/whoLabels.js: WHO_LABEL.both/WHO_COLOR.both (a plain lookup
---     table entry — every existing WHO_LABEL[task.who]/WHO_COLOR[task.who]
---     badge render across TaskRow.jsx/AllDayRow.jsx/DayTimeline.jsx/
---     InboxView.jsx/BulkAddTasksForm.jsx picks this up for free), plus two
---     new helpers: whoMatchesFilter() (a 'both' task matches either
---     person's yours/assistant-scoped filter tab — TaskBoard.jsx's
---     whoFiltered, BulkAddTasksForm.jsx's Edit-tab filter,
---     TaskExportForm.jsx, getCompletedInPeriod/getCompletedSince) and
---     whoSharesPerson() (a 'both' task can conflict with either person's
---     own tasks, not just another 'both' one — getOverlappingTaskIds in
---     tasks.js, DayTimeline.jsx's matching stack-conflict check).
---   - TaskForm.jsx/BulkAddTasksForm.jsx: a third "Both" <option> on
---     their who <select>s. PriorityItemsEditor.jsx's who-badge toggle
---     now cycles yours -> assistant -> both (WHO_CYCLE/nextWho) instead
---     of a plain two-way flip.
---   - Edge Functions (redeploy notify-task-events and notify-reminders
---     after running this — see Commands): resolveTaskWho() in
---     _shared/notify.ts resolves 'both' to both real member ids.
---     notify-task-events' assignment ping notifies every resolved target
---     except whoever created the task (so a 'both' task still doesn't
---     ping its own creator); its completion ping can't attribute a
---     'both' task's completion to one specific name the way a
---     single-owner task's "Ada completed a task" can (this webhook has
---     no caller identity, only task.who), so it notifies both members
---     with generic wording instead. notify-reminders' due-soon and
---     stale-overdue checks just iterate resolveTaskWho()'s targets.
---   - generate_month_occurrences below: its assignee_id lookup (a
---     fallback for created_by, not for `who` itself — see the base
---     definition's own comment) used to silently mis-resolve a 'both'
---     template to Ada; now skips the lookup entirely for 'both',
---     leaving created_by's own fallback to do the right thing.
-alter type task_who add value if not exists 'both';
+-- This phase is purely additive — the old `who` column and `task_who` type
+-- are left fully intact here (see the separate PHASE C block below, run
+-- only once the new frontend/Edge Functions are confirmed live), so the
+-- app keeps working exactly as before through this step regardless of
+-- deploy timing on the frontend side.
+alter table members add column if not exists color text not null default '#8a8a8a';
+alter table members add column if not exists permissions jsonb not null default '{}'::jsonb;
+alter table members add column if not exists is_admin boolean not null default false;
+alter table tasks add column if not exists assignee_ids uuid[] not null default '{}';
+
+do $$
+declare
+  ada_id uuid;
+  aaron_id uuid;
+begin
+  select id into ada_id from members where lower(display_name) = 'ada' limit 1;
+  select id into aaron_id from members where lower(display_name) = 'aaron' limit 1;
+
+  update tasks set assignee_ids = case
+    when who::text = 'both' then array[ada_id, aaron_id]
+    when who::text = 'assistant' then array[aaron_id]
+    else array[ada_id]
+  end
+  where assignee_ids = '{}';
+
+  update members set color = '#a8567e' where id = ada_id;
+  update members set color = '#4a7ba6' where id = aaron_id;
+  update members set is_admin = true where id = aaron_id;
+  update members set permissions = jsonb_set(permissions, '{reports}', 'false') where id = ada_id;
+end $$;
+
+-- Per-member feature gating, alongside is_member() (never instead of it) —
+-- see the matching comment on the base definition above for the deny-list
+-- reasoning.
+create or replace function has_permission(feature text)
+returns boolean as $$
+  select exists (
+    select 1 from members
+    where id = auth.uid()
+      and coalesce((permissions ->> feature)::boolean, true)
+  );
+$$ language sql security definer stable;
+
+alter policy "members can read all rental properties" on rental_properties using (is_member() and has_permission('rentals'));
+alter policy "members can insert rental properties" on rental_properties with check (is_member() and has_permission('rentals'));
+alter policy "members can update rental properties" on rental_properties using (is_member() and has_permission('rentals'));
+alter policy "members can delete rental properties" on rental_properties using (is_member() and has_permission('rentals'));
+
+alter policy "members can read all rental bookings" on rental_bookings using (is_member() and has_permission('rentals'));
+alter policy "members can insert rental bookings" on rental_bookings with check (is_member() and has_permission('rentals'));
+alter policy "members can update rental bookings" on rental_bookings using (is_member() and has_permission('rentals'));
+alter policy "members can delete rental bookings" on rental_bookings using (is_member() and has_permission('rentals'));
+
+alter policy "members can read all rental expenses" on rental_expenses using (is_member() and has_permission('rentals'));
+alter policy "members can insert rental expenses" on rental_expenses with check (is_member() and has_permission('rentals'));
+alter policy "members can update rental expenses" on rental_expenses using (is_member() and has_permission('rentals'));
+alter policy "members can delete rental expenses" on rental_expenses using (is_member() and has_permission('rentals'));
+
+alter policy "members can read all rental savings goals" on rental_savings_goal using (is_member() and has_permission('rentals'));
+alter policy "members can insert rental savings goals" on rental_savings_goal with check (is_member() and has_permission('rentals'));
+alter policy "members can update rental savings goals" on rental_savings_goal using (is_member() and has_permission('rentals'));
+alter policy "members can delete rental savings goals" on rental_savings_goal using (is_member() and has_permission('rentals'));
+
+alter policy "members can read vault meta" on vault_meta using (is_member() and has_permission('vault'));
+alter policy "members can insert vault meta" on vault_meta with check (is_member() and has_permission('vault'));
+alter policy "members can delete vault meta" on vault_meta using (is_member() and has_permission('vault'));
+
+alter policy "members can read all vault entries" on vault_entries using (is_member() and has_permission('vault'));
+alter policy "members can insert vault entries" on vault_entries with check (is_member() and has_permission('vault'));
+alter policy "members can update vault entries" on vault_entries using (is_member() and has_permission('vault'));
+alter policy "members can delete vault entries" on vault_entries using (is_member() and has_permission('vault'));
+
+alter policy "members can read all staff" on staff using (is_member() and has_permission('staff'));
+alter policy "members can insert staff" on staff with check (is_member() and has_permission('staff'));
+alter policy "members can update staff" on staff using (is_member() and has_permission('staff')) with check (is_member() and has_permission('staff'));
+
+alter policy "members can read all work sites" on work_sites using (is_member() and has_permission('staff'));
+alter policy "members can insert work sites" on work_sites with check (is_member() and has_permission('staff'));
+alter policy "members can update work sites" on work_sites using (is_member() and has_permission('staff')) with check (is_member() and has_permission('staff'));
+alter policy "members can delete work sites" on work_sites using (is_member() and has_permission('staff'));
+
+alter policy "members and own staff can read time entries" on time_entries using ((is_member() and has_permission('staff')) or staff_id = auth.uid());
+alter policy "members can update time entries" on time_entries using (is_member() and has_permission('staff')) with check (is_member() and has_permission('staff'));
+alter policy "members can insert time entries" on time_entries with check (is_member() and has_permission('staff'));
+alter policy "members can delete time entries" on time_entries using (is_member() and has_permission('staff'));
+
+alter policy "members can read time entry requests" on time_entry_requests using (is_member() and has_permission('staff'));
+alter policy "members can update time entry requests" on time_entry_requests using (is_member() and has_permission('staff')) with check (is_member() and has_permission('staff'));
 
 create or replace function generate_month_occurrences(template_id uuid, target_month date)
 returns void as $$
@@ -1974,7 +2267,6 @@ declare
   month_end date := (date_trunc('month', target_month) + interval '1 month - 1 day')::date;
   month_end_ts timestamptz;
   wall_time time;
-  assignee_id uuid;
   step interval;
 begin
   select * into template from tasks where id = template_id;
@@ -1984,26 +2276,19 @@ begin
   end if;
 
   wall_time := (template.due_date at time zone template.due_timezone)::time;
-  select id into assignee_id from members
-  where lower(display_name) = case
-    when template.who = 'assistant' then 'aaron'
-    when template.who = 'both' then null
-    else 'ada'
-  end
-  limit 1;
 
   if template.recurrence::text = 'selected_weekdays' then
     insert into tasks (
-      title, who, priority, icon, due_date, due_timezone, duration_minutes,
+      title, assignee_ids, priority, icon, due_date, due_timezone, duration_minutes,
       source, source_note, notes, checklist, recurrence, recurrence_days,
       created_by, recurrence_series_id
     )
-    select template.title, template.who, template.priority, template.icon,
+    select template.title, template.assignee_ids, template.priority, template.icon,
       (day_stamp::date + wall_time) at time zone template.due_timezone,
       template.due_timezone, template.duration_minutes, template.source,
       template.source_note, template.notes, template.checklist,
       template.recurrence, template.recurrence_days,
-      coalesce(assignee_id, template.created_by), template.id
+      template.created_by, template.id
     from generate_series(month_start::timestamp, month_end::timestamp, interval '1 day') as days(day_stamp)
     where extract(dow from day_stamp)::smallint = any(template.recurrence_days)
       and (day_stamp::date + wall_time) at time zone template.due_timezone <> template.due_date
@@ -2035,15 +2320,15 @@ begin
   month_end_ts := (month_end + 1)::timestamp at time zone template.due_timezone;
 
   insert into tasks (
-    title, who, priority, icon, due_date, due_timezone, duration_minutes,
+    title, assignee_ids, priority, icon, due_date, due_timezone, duration_minutes,
     source, source_note, notes, checklist, recurrence, recurrence_days,
     created_by, recurrence_series_id
   )
-  select template.title, template.who, template.priority, template.icon,
+  select template.title, template.assignee_ids, template.priority, template.icon,
     occurrence, template.due_timezone, template.duration_minutes, template.source,
     template.source_note, template.notes, template.checklist,
     template.recurrence, template.recurrence_days,
-    coalesce(assignee_id, template.created_by), template.id
+    template.created_by, template.id
   from generate_series(template.due_date, month_end_ts, step) as occ(occurrence)
   where (occurrence at time zone template.due_timezone)::date between month_start and month_end
     and occurrence <> template.due_date
@@ -2055,3 +2340,379 @@ begin
     where recurrence_series_id is not null and due_date is not null do nothing;
 end;
 $$ language plpgsql security definer;
+
+create or replace function sync_rental_turnover_task()
+returns trigger as $$
+declare
+  property_name text;
+  cleaning_due timestamptz;
+  aaron_id uuid;
+begin
+  if new.status <> 'confirmed' then
+    delete from tasks where rental_turnover_booking_id = new.id;
+    return new;
+  end if;
+
+  select unit_name into property_name
+  from rental_properties
+  where id = new.property_id;
+
+  cleaning_due := ((new.check_out - 7) + time '10:00') at time zone 'America/Chicago';
+
+  select id into aaron_id from members where lower(display_name) = 'aaron' limit 1;
+
+  insert into tasks (
+    title, assignee_ids, priority, due_date, due_timezone, source, notes, checklist,
+    created_by, rental_turnover_booking_id
+  ) values (
+    'Schedule turnover cleaning for ' || property_name,
+    array[aaron_id],
+    'med',
+    cleaning_due,
+    'America/Chicago',
+    'none',
+    'Automatically created seven days before ' || new.guest_name || '''s move-out.',
+    jsonb_build_array(jsonb_build_object(
+      'id', 'add-cleaner-visit-task',
+      'text', 'Add a task for when the cleaner will actually come.',
+      'done', false,
+      'blocked', false,
+      'blockedReason', ''
+    )),
+    new.created_by,
+    new.id
+  )
+  on conflict (rental_turnover_booking_id) do update set
+    title = excluded.title,
+    due_date = excluded.due_date,
+    due_timezone = excluded.due_timezone,
+    notes = excluded.notes,
+    assignee_ids = array[aaron_id];
+
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- ---------------------------------------------------------------------------
+-- N members with per-feature permissions (incremental migration — PHASE C)
+-- ---------------------------------------------------------------------------
+-- Run this block only after the new frontend build and the redeployed
+-- notify-task-events/notify-reminders/manual-notify Edge Functions are
+-- confirmed live and working (they stop reading/writing `who` entirely —
+-- see PHASE A above for what changed). Drops the now-unused legacy column
+-- and type; nothing references either by this point.
+alter table tasks drop column who;
+drop type task_who;
+
+-- ---------------------------------------------------------------------------
+-- Per-member-pair task-access authorization (incremental migration — PHASE A)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, any time. Purely additive —
+-- the tasks SELECT/INSERT/UPDATE/DELETE policies stay exactly as they are
+-- (flat is_member()-only, full mutual visibility) until the separate
+-- PHASE B block below explicitly flips them, so nothing here changes what
+-- anyone can currently see or do. Ada and Aaron are backfilled to full
+-- mutual access at the end of this block, so their behavior is unchanged
+-- even once PHASE B does flip the policies. See task_access's own comment
+-- in the base schema above for the full reasoning.
+do $$ begin
+  create type task_access_level as enum ('view', 'update');
+exception when duplicate_object then null;
+end $$;
+
+create table if not exists task_access (
+  viewer_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  level task_access_level,
+  can_create boolean not null default false,
+  can_delete boolean not null default false,
+  can_reassign boolean not null default false,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references members (id) on delete set null,
+  primary key (viewer_id, target_id),
+  constraint task_access_no_self_grant check (viewer_id <> target_id),
+  constraint task_access_actions_require_access check (
+    level is not null or (not can_create and not can_delete and not can_reassign)
+  )
+);
+
+alter table task_access enable row level security;
+
+create or replace function stamp_task_access_meta()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  new.updated_by = auth.uid();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists task_access_stamp_meta on task_access;
+create trigger task_access_stamp_meta
+before insert or update on task_access
+for each row execute function stamp_task_access_meta();
+
+create or replace function grant_admin_access_to_new_member()
+returns trigger as $$
+begin
+  insert into task_access (viewer_id, target_id, level)
+  select m.id, new.id, 'update'
+  from members m
+  where m.is_admin and m.id <> new.id
+  on conflict (viewer_id, target_id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists members_grant_admin_access_to_new_member on members;
+create trigger members_grant_admin_access_to_new_member
+after insert on members
+for each row execute function grant_admin_access_to_new_member();
+
+-- Read-only visibility into the table itself (its own grants), same
+-- shape as the base schema's copy of this policy — full admin CRUD is a
+-- separate, not-yet-built access-management screen's security definer RPC.
+drop policy if exists "members can read their own outgoing task access grants" on task_access;
+create policy "members can read their own outgoing task access grants"
+  on task_access for select
+  using (is_member() and viewer_id = auth.uid());
+
+-- These five are also created in PHASE B, but defining them here too
+-- means anyone testing task_access grants against a real can_view_task()
+-- call doesn't have to wait for PHASE B to try it — create or replace is
+-- idempotent, so PHASE B's identical redeclaration is a safe no-op.
+create or replace function can_view_task(assignees uuid[])
+returns boolean as $$
+  select auth.uid() = any(assignees)
+    or exists (
+      select 1 from task_access
+      where viewer_id = auth.uid() and target_id = any(assignees)
+        and level in ('view', 'update')
+    );
+$$ language sql security definer stable;
+
+create or replace function can_update_task(assignees uuid[])
+returns boolean as $$
+  select auth.uid() = any(assignees)
+    or exists (
+      select 1 from task_access
+      where viewer_id = auth.uid() and target_id = any(assignees) and level = 'update'
+    );
+$$ language sql security definer stable;
+
+create or replace function can_delete_task(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_delete
+      )
+  );
+$$ language sql security definer stable;
+
+create or replace function can_reassign_task(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_reassign
+      )
+  );
+$$ language sql security definer stable;
+
+create or replace function can_create_task_for(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_create
+      )
+  );
+$$ language sql security definer stable;
+
+do $$
+declare
+  ada_id uuid;
+  aaron_id uuid;
+begin
+  select id into ada_id from members where lower(display_name) = 'ada' limit 1;
+  select id into aaron_id from members where lower(display_name) = 'aaron' limit 1;
+
+  insert into task_access (viewer_id, target_id, level, can_create, can_delete, can_reassign)
+  values
+    (ada_id, aaron_id, 'update', true, true, true),
+    (aaron_id, ada_id, 'update', true, true, true)
+  on conflict (viewer_id, target_id) do update set
+    level = excluded.level, can_create = excluded.can_create,
+    can_delete = excluded.can_delete, can_reassign = excluded.can_reassign;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Per-member-pair task-access authorization (incremental migration — PHASE B)
+-- ---------------------------------------------------------------------------
+-- Run this block only after PHASE A above has been run AND you've
+-- confirmed (e.g. via the verification queries in the governing plan)
+-- that Ada/Aaron's task_access rows are in place. This is the actual
+-- cutover — task visibility stops being flat is_member()-only mutual
+-- access and starts being governed by task_access grants. Bundle this
+-- deploy with the frontend's deleteTask() fix (src/lib/tasks.js — adds
+-- .select().single() so an RLS-denied delete throws instead of silently
+-- affecting zero rows) since that bug only matters once denial is
+-- actually possible.
+create or replace function can_view_task(assignees uuid[])
+returns boolean as $$
+  select auth.uid() = any(assignees)
+    or exists (
+      select 1 from task_access
+      where viewer_id = auth.uid() and target_id = any(assignees)
+        and level in ('view', 'update')
+    );
+$$ language sql security definer stable;
+
+create or replace function can_update_task(assignees uuid[])
+returns boolean as $$
+  select auth.uid() = any(assignees)
+    or exists (
+      select 1 from task_access
+      where viewer_id = auth.uid() and target_id = any(assignees) and level = 'update'
+    );
+$$ language sql security definer stable;
+
+create or replace function can_delete_task(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_delete
+      )
+  );
+$$ language sql security definer stable;
+
+create or replace function can_reassign_task(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_reassign
+      )
+  );
+$$ language sql security definer stable;
+
+create or replace function can_create_task_for(assignees uuid[])
+returns boolean as $$
+  select not exists (
+    select 1 from unnest(assignees) as other(id)
+    where other.id <> auth.uid()
+      and not exists (
+        select 1 from task_access
+        where viewer_id = auth.uid() and target_id = other.id and can_create
+      )
+  );
+$$ language sql security definer stable;
+
+create or replace function enforce_task_reassignment_access()
+returns trigger as $$
+begin
+  if new.assignee_ids is distinct from old.assignee_ids then
+    if not can_reassign_task(old.assignee_ids) then
+      raise exception 'Not authorized to reassign this task away from its current assignees';
+    end if;
+    if not can_create_task_for(new.assignee_ids) then
+      raise exception 'Not authorized to assign this task to one or more of the new assignees';
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists tasks_enforce_reassignment_access on tasks;
+create trigger tasks_enforce_reassignment_access
+before update of assignee_ids on tasks
+for each row execute function enforce_task_reassignment_access();
+
+-- Same authorization delete_recurring_task's base definition above now
+-- has — redeclared here so an existing project's already-created copy of
+-- this function (from before this migration) picks up the check too.
+create or replace function delete_recurring_task(target_task_id uuid, delete_future boolean)
+returns void as $$
+declare
+  target tasks%rowtype;
+  series_id uuid;
+  replacement_id uuid;
+begin
+  if not exists (select 1 from members where id = auth.uid()) then
+    raise exception 'Not authorized';
+  end if;
+
+  select * into target from tasks where id = target_task_id;
+  if not found then return; end if;
+  if not can_delete_task(target.assignee_ids) then
+    raise exception 'Not authorized';
+  end if;
+  series_id := coalesce(target.recurrence_series_id, target.id);
+
+  if delete_future then
+    update tasks set recurrence = 'none', recurrence_days = '{}',
+      recurrence_series_id = null
+    where recurrence_series_id = series_id
+      and id <> series_id
+      and due_date < target.due_date;
+    delete from tasks where id = series_id;
+    return;
+  end if;
+
+  if target.id <> series_id then
+    delete from tasks where id = target.id;
+    return;
+  end if;
+
+  select id into replacement_id from tasks
+  where recurrence_series_id = series_id and id <> series_id
+  order by due_date nulls last limit 1;
+
+  if replacement_id is null then
+    delete from tasks where id = target.id;
+    return;
+  end if;
+
+  update tasks set recurrence_series_id = replacement_id where id = replacement_id;
+  update tasks set recurrence_series_id = replacement_id
+    where recurrence_series_id = series_id and id <> series_id;
+  update task_recurrence_exclusions set recurrence_series_id = replacement_id
+    where recurrence_series_id = series_id;
+  insert into task_recurrence_exclusions (recurrence_series_id, due_date)
+    values (replacement_id, target.due_date) on conflict do nothing;
+  delete from tasks where id = target.id;
+end;
+$$ language plpgsql security definer;
+
+drop policy "members can read all tasks" on tasks;
+create policy "members can view accessible tasks"
+  on tasks for select
+  using (is_member() and can_view_task(assignee_ids));
+
+drop policy "members can insert tasks" on tasks;
+create policy "members can insert tasks they may create"
+  on tasks for insert
+  with check (is_member() and can_create_task_for(assignee_ids));
+
+drop policy "members can update tasks" on tasks;
+create policy "members can update accessible tasks"
+  on tasks for update
+  using (is_member() and can_update_task(assignee_ids))
+  with check (is_member() and can_update_task(assignee_ids));
+
+drop policy "members can delete tasks" on tasks;
+create policy "members can delete accessible tasks"
+  on tasks for delete
+  using (is_member() and can_delete_task(assignee_ids));

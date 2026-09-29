@@ -26,7 +26,7 @@ export function FloatingAddButton({ onClick, variant = 'desktop', label = 'Add' 
 // task-planning workflows into one tabbed modal instead of a speed dial.
 export default function NewTaskForm({
   onCreate,
-  defaultWho,
+  defaultAssigneeIds,
   selectedDate,
   me,
   members,
@@ -66,7 +66,11 @@ export default function NewTaskForm({
             <TaskForm
               header={tabs}
               submitLabel="Save task"
-              initialValues={{ who: defaultWho, ...(selectedDate ? { due_date: dateStr(selectedDate) } : null) }}
+              members={members}
+              initialValues={{
+                assignee_ids: defaultAssigneeIds,
+                ...(selectedDate ? { due_date: dateStr(selectedDate) } : null),
+              }}
               onCancel={close}
               onSubmit={async (values) => {
                 await onCreate(values)
@@ -81,7 +85,7 @@ export default function NewTaskForm({
               me={me}
               members={members}
               tasks={tasks}
-              defaultWho={defaultWho}
+              defaultAssigneeIds={defaultAssigneeIds}
               onClose={close}
               onCreated={() => {
                 onTasksChanged()
@@ -90,7 +94,7 @@ export default function NewTaskForm({
             />
           )}
           {mode === 'priorities' && (
-            <PrioritiesForm embedded header={tabs} me={me} memberName={memberName} onClose={close} />
+            <PrioritiesForm embedded header={tabs} me={me} memberName={memberName} members={members} onClose={close} />
           )}
         </Modal>
       )}

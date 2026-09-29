@@ -26,13 +26,14 @@
 //    looking at.
 //
 // (1) and (2) are symmetric regardless of who created the task —
-// reminders and nudges are about who the task belongs to, unlike the
-// assignment ping in notify-task-events. A 'both' task (src/lib/
-// whoLabels.js) resolves to both real members via resolveTaskWho, same
-// as (3), (4), and (5) already notify both members unconditionally —
-// none of these are tied to a specific person the way a single-owner
-// task is, and Rentals is already mutually visible to both.
-import { resolveMemberIds, resolveTaskWho, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
+// reminders and nudges are about who the task belongs to (task.
+// assignee_ids, already real member ids, no resolution step needed),
+// unlike the assignment ping in notify-task-events. (3), (4), and (5)
+// notify every member with Rentals permission (not just two hardcoded
+// ids) — none of these are tied to a specific assignee the way a task
+// is, and Rentals is mutually visible to every member who has access to
+// it, not necessarily every member in the app any more.
+import { fetchAllMembers, memberHasPermission, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
 
 const REMINDER_WINDOW_MINUTES = 15
 const OVERDUE_NUDGE_DAYS = 3
@@ -99,7 +100,8 @@ function monthIndex(dateStr: string): number {
 }
 
 Deno.serve(async () => {
-  const { yours, assistant } = await resolveMemberIds()
+  const allMembers = await fetchAllMembers()
+  const rentalsMembers = allMembers.filter((m) => memberHasPermission(m, 'rentals'))
 
   const now = new Date()
   const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_MINUTES * 60_000)
@@ -113,7 +115,7 @@ Deno.serve(async () => {
     .lte('due_date', windowEnd.toISOString())
 
   for (const task of dueSoon || []) {
-    const targets = resolveTaskWho(task.who, yours, assistant)
+    const targets: string[] = task.assignee_ids || []
     await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Starting soon', body: task.title, url: '/' })))
     await supabaseAdmin.from('tasks').update({ reminder_sent_at: new Date().toISOString() }).eq('id', task.id)
   }
@@ -129,7 +131,7 @@ Deno.serve(async () => {
     .lt('due_date', overdueCutoff.toISOString())
 
   for (const task of staleOverdue || []) {
-    const targets = resolveTaskWho(task.who, yours, assistant)
+    const targets: string[] = task.assignee_ids || []
     await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Still on your plate?', body: task.title, url: '/' })))
     await supabaseAdmin.from('tasks').update({ overdue_nudge_sent_at: new Date().toISOString() }).eq('id', task.id)
   }
@@ -157,10 +159,9 @@ Deno.serve(async () => {
     const property = b.rental_properties
     const amount = property ? `$${Number(property.monthly_rent).toLocaleString()}` : ''
     const unitName = property?.unit_name || 'A unit'
-    await Promise.all([
-      notifyMember(yours, { title: 'Rent due today', body: `${unitName} — ${amount}`, url: '/' }),
-      notifyMember(assistant, { title: 'Rent due today', body: `${unitName} — ${amount}`, url: '/' }),
-    ])
+    await Promise.all(
+      rentalsMembers.map((m) => notifyMember(m.id, { title: 'Rent due today', body: `${unitName} — ${amount}`, url: '/' })),
+    )
     await supabaseAdmin.from('rental_bookings').update({ rent_reminder_sent_for: todayStr }).eq('id', b.id)
   }
 
@@ -192,10 +193,9 @@ Deno.serve(async () => {
     // check_out's exact date would not: see monthIndex's own comment).
     if (!b.last_month_reminder_sent_at && monthIndex(todayStr) >= monthIndex(b.check_out) - 1) {
       const body = `Their lease ends ${longDate(b.check_out)} — this is their final month.`
-      await Promise.all([
-        notifyMember(yours, { title: `${guest}'s last month at ${unitName}`, body, url: '/' }),
-        notifyMember(assistant, { title: `${guest}'s last month at ${unitName}`, body, url: '/' }),
-      ])
+      await Promise.all(
+        rentalsMembers.map((m) => notifyMember(m.id, { title: `${guest}'s last month at ${unitName}`, body, url: '/' })),
+      )
       await supabaseAdmin
         .from('rental_bookings')
         .update({ last_month_reminder_sent_at: new Date().toISOString() })
@@ -225,10 +225,7 @@ Deno.serve(async () => {
         ? `${guest} moves out ${shortDate(b.check_out)}, ${nextGuest} moves in ${shortDate(nextBooking.check_in)}. Confirm the turnover cleaning task is set.`
         : `${guest}'s last day is ${longDate(b.check_out)}. One week left to line up the next tenant.`
 
-      await Promise.all([
-        notifyMember(yours, { title, body, url: '/' }),
-        notifyMember(assistant, { title, body, url: '/' }),
-      ])
+      await Promise.all(rentalsMembers.map((m) => notifyMember(m.id, { title, body, url: '/' })))
       await supabaseAdmin
         .from('rental_bookings')
         .update({ turnover_reminder_sent_at: new Date().toISOString() })

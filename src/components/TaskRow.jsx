@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
-import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { assigneeBadge } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge } from '../lib/manualNotify'
@@ -77,6 +77,7 @@ export default function TaskRow({
   onDuplicate,
   onArchiveToBoard,
   memberName,
+  members = [],
   meId,
   defaultOpen = false,
   overlappingIds,
@@ -103,19 +104,14 @@ export default function TaskRow({
   const hasLongNotes = task.notes && (task.notes.length > 240 || task.notes.split('\n').length > 4)
   const sourceLabel = SOURCE_LABEL[task.source]
   const creatorName = memberName(task.created_by)
+  const badge = assigneeBadge(members, task.assignee_ids)
   // Nudging yourself makes no sense — same "assigning yourself a task
   // doesn't ping you, since you already know" reasoning notify-task-events
-  // already uses. myWhoKey is falsy until members have loaded (memberName
-  // returns '' until then, and whoKeyForName('') finds no match) — checked
-  // explicitly rather than just `!== task.who`, since undefined !== 'yours'
-  // is true, which would show this on your own task for a beat on first
-  // load instead of staying hidden. `task.who !== myWhoKey` already does
-  // the right thing for a 'both' task with no extra branching — 'both'
-  // never equals 'yours'/'assistant', so the button shows (nudging a
-  // shared task is fine, it just isn't exclusively "your own" the way a
-  // plain self-assigned task is).
-  const myWhoKey = whoKeyForName(memberName(meId))
-  const canNudge = overdue && myWhoKey && task.who !== myWhoKey
+  // already uses. Shows whenever the viewer isn't one of the task's own
+  // assignees — for a multi-assignee task that still includes the viewer,
+  // this stays hidden (nudging a task you're already on yourself doesn't
+  // fit "still on your plate?" the way it would for someone not on it).
+  const canNudge = overdue && !(task.assignee_ids || []).includes(meId)
   const checklist = task.checklist || []
   const checklistDone = checklist.filter((item) => item.done).length
   const recurrence = task.recurrence ?? 'none'
@@ -246,6 +242,7 @@ export default function TaskRow({
         <TaskForm
           autoFocus={false}
           submitLabel="Save changes"
+          members={members}
           initialValues={{ ...task, ...splitDueDateInZone(task.due_date, task.due_timezone || DEFAULT_TIMEZONE) }}
           onCancel={() => setEditing(false)}
           onSubmit={async (values) => {
@@ -275,8 +272,8 @@ export default function TaskRow({
             so swapping the dot out for an icon here doesn't leave
             priority with no visual signal at all. */}
         {!hidePriorityDot && <TaskIcon task={task} title={PRIORITY_LABEL[task.priority]} />}
-        <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
-          {WHO_LABEL[task.who]}
+        <span className="task-who-badge" style={{ background: badge.color }}>
+          {badge.label}
         </span>
         <span className={`min-w-0 flex-[1_1_140px] text-sm font-medium text-text-h ${task.status === 'done' ? 'line-through opacity-55' : ''}`}>{task.title}</span>
         {overlapping && (

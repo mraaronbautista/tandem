@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPriorities, fetchLatestPriorities } from '../lib/priorities'
 import { createTask } from '../lib/tasks'
-import { whoKeyForName } from '../lib/whoLabels'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
 import PriorityItemsEditor from './PriorityItemsEditor'
@@ -33,7 +32,7 @@ function todayDateString() {
 // "Last set" below is read-only reference only, never pre-filled into the
 // editable list — otherwise reopening this and hitting Save would
 // recreate a task for every old item, not just anything new.
-export default function PrioritiesForm({ me, memberName, onClose, embedded = false, header = null }) {
+export default function PrioritiesForm({ me, memberName, members = [], onClose, embedded = false, header = null }) {
   const [period, setPeriod] = useState('day')
   const [latest, setLatest] = useState(null)
   // Keyed per period so switching the Day/Week/Month tab never discards
@@ -48,7 +47,7 @@ export default function PrioritiesForm({ me, memberName, onClose, embedded = fal
     setItemsByPeriod((prev) => ({ ...prev, [period]: next }))
   }
 
-  const defaultWho = whoKeyForName(me.display_name) || 'yours'
+  const defaultAssigneeIds = [me.id]
 
   useEffect(() => {
     fetchLatestPriorities()
@@ -79,7 +78,7 @@ export default function PrioritiesForm({ me, memberName, onClose, embedded = fal
         validItems.map((item) =>
           createTask({
             title: item.text.trim(),
-            who: item.who,
+            assignee_ids: item.assigneeIds,
             due_date: dueDate,
             due_timezone: zone,
             created_by: me.id,
@@ -128,7 +127,7 @@ export default function PrioritiesForm({ me, memberName, onClose, embedded = fal
         )}
 
         <span className="submission-field-label">What are we prioritizing this {period}?</span>
-        <PriorityItemsEditor items={items} onChange={setItems} defaultWho={defaultWho} />
+        <PriorityItemsEditor items={items} onChange={setItems} members={members} defaultAssigneeIds={defaultAssigneeIds} />
 
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>

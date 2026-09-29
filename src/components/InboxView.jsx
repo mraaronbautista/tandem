@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Paperclip, Bell } from 'lucide-react'
 import { getInboxItems, getCompletedSubmissions, getNudgedTasks } from '../lib/tasks'
-import { WHO_LABEL, WHO_COLOR, whoKeyForName } from '../lib/whoLabels'
+import { assigneeBadge, memberColor } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
@@ -46,14 +46,9 @@ function formatWhen(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
-function personBadge(personId, memberName) {
-  const name = memberName(personId)
-  const whoKey = whoKeyForName(name)
-  return { name, color: whoKey ? WHO_COLOR[whoKey] : undefined }
-}
-
-function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResolve }) {
-  const { name, color } = personBadge(item.otherPersonId, memberName)
+function InboxItem({ item, kind, task, memberName, members, unread, onSelectTask, onResolve }) {
+  const name = memberName(item.otherPersonId)
+  const color = memberColor(members, item.otherPersonId)
   return (
     <li
       className={`${inboxItemBaseClasses} ${inboxItemKindClasses[kind]} ${kind === 'answer' && !unread ? 'opacity-65' : ''}`}
@@ -87,12 +82,13 @@ function InboxItem({ item, kind, task, memberName, unread, onSelectTask, onResol
 // as InboxItem above, but keyed by task rather than clarification (no
 // per-item resolve action; clicking straight through to the task is the
 // only interaction) since a submission isn't a conversation thread with
-// its own read/unread state. Badged by task.who (who the task was
-// assigned to) rather than an otherPersonId, since completion_note/
+// its own read/unread state. Badged by task.assignee_ids (who the task
+// was assigned to) rather than an otherPersonId, since completion_note/
 // completion_attachments carry no separate "who actually submitted
 // this" of their own — consistent with the rest of the app treating a
-// task's `who` as its owning-person label.
-function SubmissionItem({ task, onSelectTask }) {
+// task's own assignees as its owning-person label.
+function SubmissionItem({ task, members, onSelectTask }) {
+  const badge = assigneeBadge(members, task.assignee_ids)
   const attachmentCount = task.completion_attachments?.length || 0
   return (
     <li className={`${inboxItemBaseClasses} ${inboxItemKindClasses.submission}`} onClick={() => onSelectTask(task)}>
@@ -106,8 +102,8 @@ function SubmissionItem({ task, onSelectTask }) {
         <p className="my-0.5 mb-2 overflow-hidden text-ellipsis italic opacity-60 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">No note — attachments only.</p>
       )}
       <div className="flex items-center justify-between gap-2">
-        <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
-          {WHO_LABEL[task.who]}
+        <span className="task-who-badge" style={{ background: badge.color }}>
+          {badge.label}
         </span>
         {attachmentCount > 0 && (
           <span className="flex flex-none items-center gap-1 text-xs whitespace-nowrap opacity-70">
@@ -121,10 +117,11 @@ function SubmissionItem({ task, onSelectTask }) {
 
 // A task whose overdue nudge fired — same .inbox-item card family as
 // SubmissionItem above, keyed by task rather than a conversation, no
-// per-item action. Badged by task.who (who got nudged) for the same
-// reason SubmissionItem is: overdue_nudge_sent_at carries no separate
-// "who sent this" of its own to badge by instead.
-function NudgeItem({ task, onSelectTask }) {
+// per-item action. Badged by task.assignee_ids (who got nudged) for the
+// same reason SubmissionItem is: overdue_nudge_sent_at carries no
+// separate "who sent this" of its own to badge by instead.
+function NudgeItem({ task, members, onSelectTask }) {
+  const badge = assigneeBadge(members, task.assignee_ids)
   return (
     <li className={`${inboxItemBaseClasses} ${inboxItemKindClasses.nudge}`} onClick={() => onSelectTask(task)}>
       <div className="flex items-baseline justify-between gap-2">
@@ -135,8 +132,8 @@ function NudgeItem({ task, onSelectTask }) {
         <Bell size={13} /> Still on your plate?
       </p>
       <div className="flex items-center justify-between gap-2">
-        <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
-          {WHO_LABEL[task.who]}
+        <span className="task-who-badge" style={{ background: badge.color }}>
+          {badge.label}
         </span>
       </div>
     </li>
@@ -156,7 +153,7 @@ function NudgeItem({ task, onSelectTask }) {
 // Frozen into local state on mount so it stays stable for this visit,
 // rather than flipping every item to "read" mid-visit once TaskBoard bumps
 // it for next time.
-export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpdate, lastViewedAt }) {
+export default function InboxView({ tasks, meId, memberName, members = [], onSelectTask, onUpdate, lastViewedAt }) {
   const [frozenLastViewedAt] = useState(() => lastViewedAt)
   const [view, setView] = useState('all')
 
@@ -238,6 +235,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
         kind={kind}
         task={task}
         memberName={memberName}
+        members={members}
         unread={unread}
         onSelectTask={onSelectTask}
         onResolve={kind === 'question' ? () => handleResolve(item, task) : undefined}
@@ -295,7 +293,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
           <h3 className="task-section-heading">Submissions</h3>
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {submissions.map((task) => (
-              <SubmissionItem key={task.id} task={task} onSelectTask={onSelectTask} />
+              <SubmissionItem key={task.id} task={task} members={members} onSelectTask={onSelectTask} />
             ))}
           </ul>
         </section>
@@ -310,7 +308,7 @@ export default function InboxView({ tasks, meId, memberName, onSelectTask, onUpd
           <h3 className="task-section-heading">Nudges</h3>
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {nudged.map((task) => (
-              <NudgeItem key={task.id} task={task} onSelectTask={onSelectTask} />
+              <NudgeItem key={task.id} task={task} members={members} onSelectTask={onSelectTask} />
             ))}
           </ul>
         </section>

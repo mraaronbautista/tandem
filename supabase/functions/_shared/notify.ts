@@ -19,38 +19,27 @@ webpush.setVapidDetails(
 
 export { supabaseAdmin }
 
-// The `who` enum ('yours'/'assistant') maps to Ada/Aaron by display_name
-// — mirrors src/lib/whoLabels.js, which is the one place that mapping is
-// otherwise defined. Kept here too since an Edge Function can't import
-// from the frontend's src/.
-export async function resolveMemberIds() {
-  const { data, error } = await supabaseAdmin.from('members').select('id, display_name')
-  if (error) throw new Error(`resolveMemberIds: failed to load members: ${error.message}`)
-  const byName = Object.fromEntries((data || []).map((m) => [m.display_name, m.id]))
-  const { yours, assistant } = { yours: byName['Ada'], assistant: byName['Aaron'] }
-  // A failed query and a genuinely-missing/renamed member both used to
-  // collapse into the same silent-undefined outcome — every downstream
-  // notifyMember(undefined, ...) call just no-ops with no visible error
-  // anywhere, and in manual-notify specifically it also skews
-  // callerIsAda (== caller.id === yours) to always false, misattributing
-  // who a notification is from. Throwing here instead surfaces the
-  // failure loudly (visible in the function's own logs) rather than
-  // silently dropping notifications.
-  if (!yours || !assistant) {
-    throw new Error("resolveMemberIds: couldn't find both 'Ada' and 'Aaron' in members")
-  }
-  return { yours, assistant }
+// Every real member — no more hardcoded Ada/Aaron extraction now that a
+// task's own assignee_ids already carries real member ids directly (no
+// resolution step needed there any more). `permissions` included so
+// callers can skip a feature-specific notification (e.g. a Rentals
+// reminder) for a member who's been denied that feature — same
+// deny-list semantics has_permission() enforces in RLS, just read
+// directly here since this is a plain data fetch, not a query needing
+// row-level security of its own. Still worth throwing on a failed query
+// rather than returning an empty array silently: every downstream
+// notifyMember() call would otherwise just no-op with nothing in the
+// logs to explain why a notification never went out.
+export async function fetchAllMembers() {
+  const { data, error } = await supabaseAdmin.from('members').select('id, display_name, permissions')
+  if (error) throw new Error(`fetchAllMembers: failed to load members: ${error.message}`)
+  return data || []
 }
 
-// A task's `who` ('yours'/'assistant'/'both' — mirrors src/lib/whoLabels.js's
-// WHO_LABEL, same reasoning resolveMemberIds() above already gives for why
-// this mapping is re-derived here instead of imported) resolves to one
-// member's id or, for a shared task, both — returned as an array either
-// way so every call site can just iterate/notifyMember each target the
-// same way, rather than branching on array-vs-single at every call site.
-export function resolveTaskWho(who, yours, assistant) {
-  if (who === 'both') return [yours, assistant]
-  return [who === 'assistant' ? assistant : yours]
+// Mirrors has_permission() in schema.sql — a deny-list, so an absent key
+// or explicit true means allowed, only an explicit false denies it.
+export function memberHasPermission(member, feature) {
+  return member?.permissions?.[feature] !== false
 }
 
 export async function notifyMember(memberId, payload) {

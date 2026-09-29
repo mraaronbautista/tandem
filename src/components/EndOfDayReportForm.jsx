@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getCompletedInPeriod, getCompletedSince, reportDateForPeriod, periodBucketLabel } from '../lib/tasks'
 import IconButton from './IconButton'
-import { whoKeyForName } from '../lib/whoLabels'
 import { submitEodReport, fetchOwnEodReport } from '../lib/eodReports'
 import { sendEodReportNotification } from '../lib/manualNotify'
 import AttachmentList from './AttachmentList'
@@ -36,10 +35,10 @@ const MINUTE_OPTIONS = ['00', '15', '30', '45']
 // Same "since last submission" vs. "whole period" branch the draft body
 // and the actual attachment snapshot both need — factored out so they
 // can't quietly disagree about which tasks this submission covers.
-function getRelevantCompletedTasks(tasks, whoKey, period, offset, existingReport) {
+function getRelevantCompletedTasks(tasks, memberId, period, offset, existingReport) {
   return existingReport
-    ? getCompletedSince(tasks, whoKey, new Date(existingReport.updated_at))
-    : getCompletedInPeriod(tasks, whoKey, period, offset)
+    ? getCompletedSince(tasks, memberId, new Date(existingReport.updated_at))
+    : getCompletedInPeriod(tasks, memberId, period, offset)
 }
 
 // Flattens completion_attachments off whichever tasks this submission's
@@ -76,8 +75,8 @@ function formatTimeNow() {
 // total (matching an external time tracker), not something summed from
 // sessions — leaving it blank on a given submission keeps whatever total
 // was last set; entering a new one replaces it outright.
-export default function EndOfDayReportForm({ tasks, me, onClose }) {
-  const whoKey = whoKeyForName(me?.display_name)
+export default function EndOfDayReportForm({ tasks, me, members = [], onClose }) {
+  const memberId = me?.id
   const [period, setPeriod] = useState('day')
   // Whole periods back from the current one (0 = current, -1 = one
   // period ago, etc.) — lets a bucket that got missed entirely (e.g. it
@@ -109,7 +108,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
         setExistingReport(existing)
 
         if (existing) {
-          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, offset, existing), period, true))
+          setBody(buildDraft(getRelevantCompletedTasks(tasks, memberId, period, offset, existing), period, true))
           if (existing.minutes_logged != null) {
             setHoursInput(String(Math.floor(existing.minutes_logged / 60)))
             setMinutesInput(String(existing.minutes_logged % 60).padStart(2, '0'))
@@ -118,7 +117,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
             setMinutesInput('')
           }
         } else {
-          setBody(buildDraft(getRelevantCompletedTasks(tasks, whoKey, period, offset, null), period, false))
+          setBody(buildDraft(getRelevantCompletedTasks(tasks, memberId, period, offset, null), period, false))
           setHoursInput('')
           setMinutesInput('')
         }
@@ -128,7 +127,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
     return () => {
       cancelled = true
     }
-    // Deliberately not keyed on `tasks`/`whoKey` — the draft is a one-time
+    // Deliberately not keyed on `tasks`/`memberId` — the draft is a one-time
     // convenience computed when you land on/switch a tab, not something
     // that should shift under you mid-edit as realtime task updates come in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,7 +144,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
       // Re-derived at submit time rather than reused from the initial
       // draft state — matches whichever tasks are actually completed
       // right now, not a stale snapshot from when the form was opened.
-      const attachments = collectAttachments(getRelevantCompletedTasks(tasks, whoKey, period, offset, existingReport))
+      const attachments = collectAttachments(getRelevantCompletedTasks(tasks, memberId, period, offset, existingReport))
 
       await submitEodReport(period, reportDateForPeriod(period, offset), { bodyChunk, minutesLogged, attachments })
 
@@ -167,6 +166,13 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
   }
 
   const loading = existingReport === undefined
+
+  // "Send to Ada" used to be a hardcoded literal — now dynamically names
+  // whoever doesn't submit reports themselves (members.permissions.reports
+  // === false, today just Ada), falling back to generic copy once that
+  // list is empty (e.g. every member submits their own).
+  const nonSubmitters = members.filter((m) => m.permissions?.reports === false)
+  const submitLabel = nonSubmitters.length ? `Send to ${nonSubmitters.map((m) => m.display_name).join(' & ')}` : 'Submit report'
 
   return (
     <Modal onClose={onClose}>
@@ -247,7 +253,7 @@ export default function EndOfDayReportForm({ tasks, me, onClose }) {
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           <SubmissionButton type="submit" variant="primary" disabled={submitting || loading}>
-            {submitting ? 'Sending…' : 'Send to Ada'}
+            {submitting ? 'Sending…' : submitLabel}
           </SubmissionButton>
         </SubmissionActions>
       </ModalCard>

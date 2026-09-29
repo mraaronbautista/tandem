@@ -7,32 +7,21 @@ import {
   splitDueDateInZone,
   zoneAbbreviation,
   zoneLabel,
+  detectDefaultTimezone,
   DEFAULT_TIMEZONE,
 } from '../lib/timezone'
-import { WHO_LABEL, WHO_COLOR, whoKeyForName, whoMatchesFilter } from '../lib/whoLabels'
+import { assigneeBadge } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import PriorityDot from './PriorityDot'
+import AssigneePicker from './AssigneePicker'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
 
 const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
-
-// A bulk paste is often one person entering the OTHER person's schedule
-// (e.g. Aaron, in the Philippines, pasting in Ada's US shift times) —
-// defaulting the zone to whoever's device is filling out the form
-// (detectDefaultTimezone, same as the regular task form) would silently
-// read those times in the wrong zone. Defaulting to the selected
-// person's own known zone instead — same hardcoded two-person mapping
-// whoLabels.js already uses for names — gets it right by default in the
-// common case, while still leaving the picker open for the "actually,
-// this batch is in a different zone" exception. Used only as a fallback
-// when that person hasn't set an explicit default_timezone in Settings
-// (see zoneForWho below) — this hardcoded guess predates that setting.
-const WHO_DEFAULT_ZONE = { yours: 'America/Chicago', assistant: 'Asia/Manila' }
 
 const PLACEHOLDER = `Aug 28 8am-9am CT !high – Plumber at 1072 Rachel
   - Confirm parts on hand
@@ -105,15 +94,15 @@ function formatTaskDue(task) {
 // to be two separate parsers behind a manual format toggle; merged (see
 // lib/bulkTasks.js's parseBulkTasks) once that toggle turned out to just
 // be a way to fail confusingly by pasting into the wrong one. All tasks
-// in one paste get the same `who`; there's no per-line assignee since a
-// pasted batch like this is normally all one person's.
+// in one paste get the same assignee_ids; there's no per-line assignee
+// since a pasted batch like this is normally all one person's.
 //
 // A second tab, Edit, handles the opposite direction: picking a batch of
 // already-existing tasks and changing one field across all of them at
 // once (e.g. every task from a mis-set timezone). Sharing this modal
 // with Add rather than a separate one since they're both "bulk task
 // operations" opened from the same quick action.
-export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClose, onCreated, embedded = false, header = null }) {
+export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeIds, onClose, onCreated, embedded = false, header = null }) {
   const [view, setView] = useState('add')
   // Stacked on top via Modal's own portal (same as ScrollSelect nested
   // inside a task form, or HowToGuide inside SettingsMenu) rather than a
@@ -123,28 +112,36 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   const [exportOpen, setExportOpen] = useState(false)
 
   const [text, setText] = useState('')
-  const [who, setWho] = useState(defaultWho || 'yours')
+  const [assigneeIds, setAssigneeIds] = useState(defaultAssigneeIds || (me ? [me.id] : []))
 
-  // That person's own saved preference (Settings) if they've set one,
-  // else the hardcoded guess above. Looked up by `who` rather than a
-  // fixed member id since either "yours" or "assistant" can be selected.
-  function zoneForWho(w) {
-    const member = members?.find((m) => whoKeyForName(m.display_name) === w)
-    return member?.default_timezone || WHO_DEFAULT_ZONE[w]
+  // A bulk paste is often one person entering someone ELSE's schedule
+  // (e.g. Aaron, in the Philippines, pasting in Ada's US shift times) —
+  // defaulting the zone to whoever's device is filling out the form
+  // (detectDefaultTimezone, same as the regular task form) would silently
+  // read those times in the wrong zone. Defaulting to the first selected
+  // assignee's own saved preference (Settings) instead gets it right by
+  // default in the common single-assignee case, while still leaving the
+  // picker open for the "actually, this batch is in a different zone"
+  // exception. Falls back to the general-purpose device/hardcoded default
+  // (same as everywhere else in the app) once there's no specific
+  // assignee to prefer, or they haven't set one.
+  function zoneForAssignees(ids) {
+    const member = members?.find((m) => m.id === ids?.[0])
+    return member?.default_timezone || detectDefaultTimezone()
   }
 
-  const [zone, setZone] = useState(() => zoneForWho(defaultWho || 'yours'))
+  const [zone, setZone] = useState(() => zoneForAssignees(defaultAssigneeIds))
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  // Re-defaults the zone to the newly-selected person's own — see
-  // zoneForWho above. If they'd already picked a different zone on
-  // purpose they can just re-pick it after switching; silently keeping a
-  // stale zone selected across a Who switch would risk the exact mistake
-  // this default exists to avoid.
-  function handleWhoChange(nextWho) {
-    setWho(nextWho)
-    setZone(zoneForWho(nextWho))
+  // Re-defaults the zone to the newly-selected assignee's own — see
+  // zoneForAssignees above. If a different zone had already been picked
+  // on purpose it can just be re-picked after switching; silently keeping
+  // a stale zone selected across an assignee change would risk the exact
+  // mistake this default exists to avoid.
+  function handleAssigneesChange(nextIds) {
+    setAssigneeIds(nextIds)
+    setZone(zoneForAssignees(nextIds))
   }
 
   const { tasks: parsedTasks, errors } = useMemo(() => parseBulkTasks(text), [text])
@@ -159,7 +156,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         parsedTasks.map((t) =>
           createTask({
             title: t.title,
-            who,
+            assignee_ids: assigneeIds,
             // due_time carries a real time regardless of type now — an
             // item line can bring its own (e.g. "next Monday 1pm –
             // Lunch"), not just the shift-schedule format. Falls back to
@@ -204,15 +201,19 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
     [tasks],
   )
 
-  // A picker list mixing both people's tasks gets long fast once there's
-  // any real volume — this narrows it to "just Ada's" / "just Aaron's"
-  // before picking rows to edit, same idea as the Today tab's who-select.
-  // Selection isn't cleared on switch: filtering only changes what's
-  // visible, and a task selected under one filter should stay selected
-  // (and still count toward "N selected") if you flip back to All.
+  // A picker list mixing every member's tasks gets long fast once there's
+  // any real volume — this narrows it to one member's own before picking
+  // rows to edit, same idea as the Today tab's who-select. Selection isn't
+  // cleared on switch: filtering only changes what's visible, and a task
+  // selected under one filter should stay selected (and still count
+  // toward "N selected") if you flip back to All. editWhoFilter now holds
+  // either 'all' or a real member id, not a fixed yours/assistant key.
   const [editWhoFilter, setEditWhoFilter] = useState('all')
   const visibleEditableTasks = useMemo(
-    () => (editWhoFilter === 'all' ? editableTasks : editableTasks.filter((t) => whoMatchesFilter(t.who, editWhoFilter))),
+    () =>
+      editWhoFilter === 'all'
+        ? editableTasks
+        : editableTasks.filter((t) => (t.assignee_ids || []).includes(editWhoFilter)),
     [editableTasks, editWhoFilter],
   )
   const [selectedIds, setSelectedIds] = useState(() => new Set())
@@ -258,10 +259,10 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
   const [shiftUnit, setShiftUnit] = useState('days')
   const [setToDate, setSetToDate] = useState('')
   const [setToTime, setSetToTime] = useState('09:00')
-  const [applyWho, setApplyWho] = useState(false)
-  const [editWho, setEditWho] = useState('yours')
+  const [applyAssignees, setApplyAssignees] = useState(false)
+  const [editAssigneeIds, setEditAssigneeIds] = useState(() => (me ? [me.id] : []))
   const [applyTimezone, setApplyTimezone] = useState(false)
-  const [editTimezone, setEditTimezone] = useState(() => zoneForWho(defaultWho || 'yours'))
+  const [editTimezone, setEditTimezone] = useState(() => zoneForAssignees(defaultAssigneeIds))
   const [applyNotes, setApplyNotes] = useState(false)
   const [editNotes, setEditNotes] = useState('')
   const [applying, setApplying] = useState(false)
@@ -276,7 +277,11 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
     applyDateTime &&
     (dateTimeMode === 'shift' ? shiftAmount.trim() !== '' && !Number.isNaN(Number(shiftAmount)) : Boolean(setToDate))
   const hasFieldToApply =
-    applyWho || applyTimezone || applyNotes || dateTimeReady || (applyTitle && titleText.trim())
+    (applyAssignees && editAssigneeIds.length > 0) ||
+    applyTimezone ||
+    applyNotes ||
+    dateTimeReady ||
+    (applyTitle && titleText.trim())
 
   async function handleApply(e) {
     e.preventDefault()
@@ -293,7 +298,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             patch.title =
               titleMode === 'replace' ? word : titleMode === 'prepend' ? `${word} ${task.title}` : `${task.title} ${word}`
           }
-          if (applyWho) patch.who = editWho
+          if (applyAssignees) patch.assignee_ids = editAssigneeIds
           if (applyNotes) patch.notes = editNotes.trim() || null
           // Keeps the wall-clock date/time exactly as originally entered
           // and reinterprets it in the new zone — the fix for "this whole
@@ -401,13 +406,9 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
               </ul>
             </div>
 
-            <label>
+            <label className="flex flex-col gap-1.5">
               Who
-              <select value={who} onChange={(e) => handleWhoChange(e.target.value)}>
-                <option value="yours">{WHO_LABEL.yours}</option>
-                <option value="assistant">{WHO_LABEL.assistant}</option>
-                <option value="both">{WHO_LABEL.both}</option>
-              </select>
+              <AssigneePicker members={members} value={assigneeIds} onChange={handleAssigneesChange} />
             </label>
 
             <label>
@@ -525,12 +526,11 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
             ) : (
               <>
                 <PeriodTabs>
-                  <PeriodTab active={editWhoFilter === 'yours'} onClick={() => setEditWhoFilter('yours')}>
-                    {WHO_LABEL.yours}
-                  </PeriodTab>
-                  <PeriodTab active={editWhoFilter === 'assistant'} onClick={() => setEditWhoFilter('assistant')}>
-                    {WHO_LABEL.assistant}
-                  </PeriodTab>
+                  {members.map((m) => (
+                    <PeriodTab key={m.id} active={editWhoFilter === m.id} onClick={() => setEditWhoFilter(m.id)}>
+                      {m.display_name}
+                    </PeriodTab>
+                  ))}
                   <PeriodTab active={editWhoFilter === 'all'} onClick={() => setEditWhoFilter('all')}>
                     All
                   </PeriodTab>
@@ -555,7 +555,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                 ) : (
                 <ul className="bulk-edit-task-list">
                   {visibleEditableTasks.map((task) => {
-                    const whoKey = task.who
+                    const badge = assigneeBadge(members, task.assignee_ids)
                     const selected = selectedIds.has(task.id)
                     return (
                       <li key={task.id}>
@@ -564,8 +564,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
                           <span className="bulk-edit-task-info">
                             <span className="bulk-edit-task-title">{task.title}</span>
                             <span className="bulk-edit-task-meta">
-                              <span className="task-who-badge" style={{ background: WHO_COLOR[whoKey] }}>
-                                {WHO_LABEL[whoKey]}
+                              <span className="task-who-badge" style={{ background: badge.color }}>
+                                {badge.label}
                               </span>
                               <span>{formatTaskDue(task)}</span>
                               {task.due_date && !isAllDayTask(task) && (
@@ -696,13 +696,11 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
 
                   <div className="bulk-edit-fields-row">
                     <label className="bulk-edit-field-row">
-                      <input type="checkbox" checked={applyWho} onChange={(e) => setApplyWho(e.target.checked)} />
+                      <input type="checkbox" checked={applyAssignees} onChange={(e) => setApplyAssignees(e.target.checked)} />
                       <span className="bulk-edit-field-label">Who</span>
-                      <select value={editWho} onChange={(e) => setEditWho(e.target.value)} disabled={!applyWho}>
-                        <option value="yours">{WHO_LABEL.yours}</option>
-                        <option value="assistant">{WHO_LABEL.assistant}</option>
-                        <option value="both">{WHO_LABEL.both}</option>
-                      </select>
+                      {applyAssignees && (
+                        <AssigneePicker members={members} value={editAssigneeIds} onChange={setEditAssigneeIds} />
+                      )}
                     </label>
 
                     <label className="bulk-edit-field-row">
@@ -755,7 +753,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {view === 'add' ? (
-            <SubmissionButton type="submit" variant="primary" disabled={saving || parsedTasks.length === 0}>
+            <SubmissionButton type="submit" variant="primary" disabled={saving || parsedTasks.length === 0 || assigneeIds.length === 0}>
               {saving
                 ? 'Creating…'
                 : parsedTasks.length
@@ -783,7 +781,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultWho, onClo
         </SubmissionActions>
       </ModalCard>
 
-      {exportOpen && <TaskExportForm tasks={tasks} onClose={() => setExportOpen(false)} />}
+      {exportOpen && <TaskExportForm tasks={tasks} members={members} onClose={() => setExportOpen(false)} />}
     </>
   )
 

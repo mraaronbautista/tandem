@@ -63,7 +63,7 @@ export default function Login({ theme, toggleTheme }) {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
       <h1 className="mb-2 text-[28px]">Tandem</h1>
-      <p className="mb-5 text-sm opacity-65">A web app built for Ada</p>
+      <p className="mb-5 text-sm opacity-65">A web app built for Ada's team</p>
 
       <form onSubmit={handlePasswordSubmit} className={loginFormClasses}>
         <label className="visually-hidden" htmlFor="login-username">

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { isAllDayTask } from '../lib/tasks'
 import { DEFAULT_TIMEZONE, splitDueDateInZone, zoneAbbreviation } from '../lib/timezone'
-import { WHO_LABEL, whoMatchesFilter } from '../lib/whoLabels'
+import { assigneeBadge } from '../lib/whoLabels'
 import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
@@ -50,7 +50,7 @@ function timeLabel(task) {
 // cluster the same way the app's own Today/Week view does — dateless
 // tasks trail in their own group at the end, same sort order Bulk
 // Edit's own task picker already uses.
-function buildExportText(tasks) {
+function buildExportText(tasks, members) {
   const sorted = [...tasks].sort((a, b) => {
     if (!a.due_date && !b.due_date) return 0
     if (!a.due_date) return 1
@@ -67,7 +67,7 @@ function buildExportText(tasks) {
       lines.push(dayKey ? dayHeaderLabel(dayKey) : 'No date')
       currentDayKey = dayKey
     }
-    const who = WHO_LABEL[task.who] || task.who
+    const who = assigneeBadge(members, task.assignee_ids).label
     const done = task.status === 'done' ? ' [Completed]' : ''
     const time = task.due_date ? timeLabel(task) : 'No date'
     lines.push(`  ${time} — [${who}] ${task.title}${done}`)
@@ -81,10 +81,11 @@ function buildExportText(tasks) {
 // not something the app itself parses back in (unlike Bulk add's own
 // paste format, which this deliberately echoes the shape of anyway,
 // since it's a familiar layout already established in this app).
-export default function TaskExportForm({ tasks, onClose }) {
+export default function TaskExportForm({ tasks, members = [], onClose }) {
   // Defaults to All, not the signed-in member's own tasks (unlike Bulk
   // Add's Who picker) — double-checking a shared schedule is normally
   // about seeing everything at once, not just one person's slice of it.
+  // Holds either 'all' or a real member id now, not a fixed who key.
   const [whoFilter, setWhoFilter] = useState('all')
   const [includeDone, setIncludeDone] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -93,12 +94,12 @@ export default function TaskExportForm({ tasks, onClose }) {
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
       if (!includeDone && t.status === 'done') return false
-      if (whoFilter !== 'all' && !whoMatchesFilter(t.who, whoFilter)) return false
+      if (whoFilter !== 'all' && !(t.assignee_ids || []).includes(whoFilter)) return false
       return true
     })
   }, [tasks, whoFilter, includeDone])
 
-  const text = useMemo(() => buildExportText(filtered), [filtered])
+  const text = useMemo(() => buildExportText(filtered, members), [filtered, members])
 
   async function handleCopy() {
     try {
@@ -129,12 +130,11 @@ export default function TaskExportForm({ tasks, onClose }) {
         <h2>Export tasks</h2>
 
         <PeriodTabs>
-          <PeriodTab active={whoFilter === 'yours'} onClick={() => setWhoFilter('yours')}>
-            {WHO_LABEL.yours}
-          </PeriodTab>
-          <PeriodTab active={whoFilter === 'assistant'} onClick={() => setWhoFilter('assistant')}>
-            {WHO_LABEL.assistant}
-          </PeriodTab>
+          {members.map((m) => (
+            <PeriodTab key={m.id} active={whoFilter === m.id} onClick={() => setWhoFilter(m.id)}>
+              {m.display_name}
+            </PeriodTab>
+          ))}
           <PeriodTab active={whoFilter === 'all'} onClick={() => setWhoFilter('all')}>
             All
           </PeriodTab>

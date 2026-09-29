@@ -10,8 +10,14 @@ export async function sendEodReportNotification(body) {
   if (error) throw error
 }
 
-export async function sendNudge() {
-  const { error } = await supabase.functions.invoke('manual-notify', { body: { kind: 'nudge' } })
+// targetId is a real members.id now, not resolved server-side as "whoever
+// isn't the caller" — there can be more than one valid target once the
+// team's past 2 people. Not a trust concern: manual-notify still verifies
+// targetId server-side (a real member, not the caller's own id) before
+// sending, the same way every other write in this app already treats
+// "notify member X" as a delivery target, not sensitive data.
+export async function sendNudge(targetId) {
+  const { error } = await supabase.functions.invoke('manual-notify', { body: { kind: 'nudge', targetId } })
   if (error) throw error
 }
 
@@ -37,8 +43,8 @@ export async function sendClarificationAnswered(taskTitle, answer) {
 }
 
 // The one call in this file a staff account makes, not a member — every
-// other function here relies on manual-notify resolving "whoever isn't the
-// caller"; this kind instead always notifies both Ada and Aaron, since the
+// other function here relies on manual-notify resolving a real member
+// target; this kind instead always notifies every member, since the
 // caller is neither (see manual-notify/index.ts).
 export async function sendTimeEntryCorrectionRequest(note) {
   const { error } = await supabase.functions.invoke('manual-notify', {

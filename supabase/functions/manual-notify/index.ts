@@ -2,10 +2,10 @@
 // notify-task-events/notify-reminders which are only ever called by
 // Supabase's own webhook/cron system. Deployed WITHOUT --no-verify-jwt —
 // the platform rejects a missing/invalid session before this code runs —
-// but that only proves "some signed-in user called this," not which of
-// the two members it is, so the caller's identity is still resolved
-// explicitly below rather than trusted from anything the client sends.
-import { resolveMemberIds, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
+// but that only proves "some signed-in user called this," not which real
+// member it is, so the caller's identity is still resolved explicitly
+// below rather than trusted from anything the client sends.
+import { fetchAllMembers, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -23,23 +23,38 @@ Deno.serve(async (req) => {
   } = await supabaseUser.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401, headers: corsHeaders })
 
-  const { yours, assistant } = await resolveMemberIds()
-  const callerIsAda = user.id === yours
-  const senderName = callerIsAda ? 'Ada' : 'Aaron'
-  // The target is always "whoever isn't the caller" — never accepted from
-  // the client, since this app only ever has these two people.
-  const targetId = callerIsAda ? assistant : yours
+  const allMembers = await fetchAllMembers()
+  const caller = allMembers.find((m) => m.id === user.id)
+  const senderName = caller?.display_name || 'A member'
+  // Most kinds below broadcast to "everyone but the caller" — with N
+  // members that's not a single fixed target any more (see 'nudge' and
+  // 'task_nudge' below for the two kinds that resolve a narrower target
+  // instead).
+  const otherMemberIds = allMembers.filter((m) => m.id !== user.id).map((m) => m.id)
 
   const payload = await req.json()
 
   if (payload.kind === 'eod_report') {
     const body = String(payload.body || '').slice(0, 300)
     if (!body.trim()) return new Response('Missing report body', { status: 400, headers: corsHeaders })
-    await notifyMember(targetId, { title: `${senderName}'s end-of-day report`, body, url: '/' })
+    await Promise.all(
+      otherMemberIds.map((id) => notifyMember(id, { title: `${senderName}'s end-of-day report`, body, url: '/' })),
+    )
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Person-level 👋 nudge — the one kind here that takes a client-supplied
+  // target, since with more than one other member there's no longer a
+  // single unambiguous "whoever isn't the caller." Not a trust concern:
+  // under is_member() RLS every member can already see every other
+  // member's tasks, so "notify member X" isn't sensitive, just a delivery
+  // target — still verified as a real member (and not the caller) before
+  // sending, rather than trusted outright.
   if (payload.kind === 'nudge') {
+    const targetId = String(payload.targetId || '')
+    if (!targetId || targetId === user.id || !allMembers.some((m) => m.id === targetId)) {
+      return new Response('Invalid target', { status: 400, headers: corsHeaders })
+    }
     await notifyMember(targetId, {
       title: `${senderName} needs you`,
       body: 'Something urgent — check the board.',
@@ -52,32 +67,29 @@ Deno.serve(async (req) => {
     const taskTitle = String(payload.taskTitle || '')
     const question = String(payload.question || '').slice(0, 300)
     if (!question.trim()) return new Response('Missing question', { status: 400, headers: corsHeaders })
-    await notifyMember(targetId, {
-      title: `${senderName} has a question`,
-      body: `${taskTitle}: ${question}`,
-      url: '/',
-    })
+    await Promise.all(
+      otherMemberIds.map((id) =>
+        notifyMember(id, { title: `${senderName} has a question`, body: `${taskTitle}: ${question}`, url: '/' }),
+      ),
+    )
     return new Response('ok', { headers: corsHeaders })
   }
 
   // A one-tap nudge on a specific overdue task, distinct from the plain
   // 'nudge' kind above (which is person-level, "something urgent, check
-  // the board" with no task attached). The caller is always the task's
-  // *other* person by construction — TaskRow.jsx only ever shows this
-  // button on a task that isn't the viewer's own (see CLAUDE.md), so
-  // targetId ("whoever isn't the caller") already equals "whoever the
-  // task belongs to" here; no separate task.who-based resolution needed.
-  // Also marks overdue_nudge_sent_at so the automatic overdue-nudge cron
-  // pass (notify-reminders) doesn't duplicate this shortly after.
+  // the board" with no task attached). Targets that task's own
+  // assignee_ids (looked up server-side from taskId, not client-supplied)
+  // minus the caller — no picker needed the way person-level nudge now
+  // has, since the task itself already names who's relevant. Also marks
+  // overdue_nudge_sent_at so the automatic overdue-nudge cron pass
+  // (notify-reminders) doesn't duplicate this shortly after.
   if (payload.kind === 'task_nudge') {
     const taskId = String(payload.taskId || '')
     const taskTitle = String(payload.taskTitle || '')
     if (!taskId || !taskTitle.trim()) return new Response('Missing taskId/taskTitle', { status: 400, headers: corsHeaders })
-    await notifyMember(targetId, {
-      title: 'Still on your plate?',
-      body: taskTitle,
-      url: '/',
-    })
+    const { data: task } = await supabaseAdmin.from('tasks').select('assignee_ids').eq('id', taskId).maybeSingle()
+    const targets = (task?.assignee_ids || []).filter((id: string) => id !== user.id)
+    await Promise.all(targets.map((id: string) => notifyMember(id, { title: 'Still on your plate?', body: taskTitle, url: '/' })))
     await supabaseAdmin.from('tasks').update({ overdue_nudge_sent_at: new Date().toISOString() }).eq('id', taskId)
     return new Response('ok', { headers: corsHeaders })
   }
@@ -86,31 +98,31 @@ Deno.serve(async (req) => {
     const taskTitle = String(payload.taskTitle || '')
     const answer = String(payload.answer || '').slice(0, 300)
     if (!answer.trim()) return new Response('Missing answer', { status: 400, headers: corsHeaders })
-    await notifyMember(targetId, {
-      title: `${senderName} answered your question`,
-      body: `${taskTitle}: ${answer}`,
-      url: '/',
-    })
+    await Promise.all(
+      otherMemberIds.map((id) =>
+        notifyMember(id, { title: `${senderName} answered your question`, body: `${taskTitle}: ${answer}`, url: '/' }),
+      ),
+    )
     return new Response('ok', { headers: corsHeaders })
   }
 
   // The one kind a STAFF account calls, not a member — every kind above
-  // this point assumes the caller is Ada or Aaron and targets "whoever
-  // isn't them," which makes no sense here (the caller is neither, so
-  // callerIsAda/senderName/targetId computed above are meaningless and
-  // deliberately unused in this branch). Both members are notified
-  // unconditionally instead. Resolves the caller's own display_name via
-  // the service-role client (staff can't be looked up through
-  // resolveMemberIds(), which only ever queries `members`).
+  // this point assumes the caller is a member (senderName/otherMemberIds
+  // are meaningless here, deliberately unused in this branch, since the
+  // caller is neither). Every member is notified unconditionally instead.
+  // Resolves the caller's own display_name via the service-role client
+  // (staff can't be looked up through fetchAllMembers(), which only ever
+  // queries `members`).
   if (payload.kind === 'time_entry_correction_request') {
     const note = String(payload.note || '').slice(0, 300)
     if (!note.trim()) return new Response('Missing note', { status: 400, headers: corsHeaders })
     const { data: staffRow } = await supabaseAdmin.from('staff').select('display_name').eq('id', user.id).maybeSingle()
     const staffName = staffRow?.display_name || 'The property manager'
-    await Promise.all([
-      notifyMember(yours, { title: `${staffName} requested a time correction`, body: note, url: '/' }),
-      notifyMember(assistant, { title: `${staffName} requested a time correction`, body: note, url: '/' }),
-    ])
+    await Promise.all(
+      allMembers.map((m) =>
+        notifyMember(m.id, { title: `${staffName} requested a time correction`, body: note, url: '/' }),
+      ),
+    )
     return new Response('ok', { headers: corsHeaders })
   }
 

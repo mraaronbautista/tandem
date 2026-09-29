@@ -1,9 +1,24 @@
 import { supabase } from './supabaseClient'
 import { splitDueDateInZone, DEFAULT_TIMEZONE } from './timezone'
-import { whoSharesPerson, whoMatchesFilter } from './whoLabels'
+
+// True when a task's assignee_ids includes `memberId` — trivial now that
+// assignment is just a real array, kept as a named helper purely so every
+// call site (the who-filter, EOD report scoping) reads the same way.
+export function taskBelongsTo(assigneeIds, memberId) {
+  return (assigneeIds || []).includes(memberId)
+}
+
+// True when two tasks' assignee_ids share at least one real member —
+// used by overlap detection below and DayTimeline.jsx's matching
+// same-shape stack-conflict check, so a multi-assignee task can genuinely
+// conflict with either assignee's own tasks, not just an identical-array
+// one.
+export function assigneeIdsOverlap(a, b) {
+  return (a || []).some((id) => (b || []).includes(id))
+}
 
 const TASK_COLUMNS =
-  'id, title, who, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at, archived'
+  'id, title, assignee_ids, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at, archived'
 
 export async function fetchTasks() {
   const { data, error } = await supabase
@@ -39,7 +54,10 @@ export async function updateTask(id, patch) {
 }
 
 export async function deleteTask(id) {
-  const { error } = await supabase.from('tasks').delete().eq('id', id)
+  // .select().single() so an RLS-denied delete (matches zero rows) throws
+  // instead of silently "succeeding" while deleting nothing — a bare
+  // .delete() with no .select() gets no error at all when RLS blocks it.
+  const { error } = await supabase.from('tasks').delete().eq('id', id).select().single()
   if (error) throw error
 }
 
@@ -68,16 +86,17 @@ export function formatDuration(minutes) {
   return `${minutes} min`
 }
 
-// Task IDs whose time span overlaps another active task belonging to the
-// same person — e.g. breakfast 9:00–9:15 and a shower 9:10–10:00. Only
-// tasks with both a due_date and a duration_minutes actually occupy a
-// span; point-in-time tasks (no duration) can't conflict with anything.
-// Done tasks are excluded — a finished task isn't a live conflict anymore.
-// Scoped per-person via whoSharesPerson (`who`), not per currently-viewed
-// tab, since two different people having tasks at the same time isn't a
-// real conflict — but a 'both' task genuinely occupies both people's
-// time, so it's compared against everyone's own tasks, not just another
-// 'both' one.
+// Task IDs whose time span overlaps another active task sharing at least
+// one assignee — e.g. breakfast 9:00–9:15 and a shower 9:10–10:00 both on
+// Ada's own list. Only tasks with both a due_date and a duration_minutes
+// actually occupy a span; point-in-time tasks (no duration) can't
+// conflict with anything. Done tasks are excluded — a finished task isn't
+// a live conflict anymore. Scoped via assigneeIdsOverlap (assignee_ids),
+// not per currently-viewed filter tab, since two different people having
+// tasks at the same time isn't a real conflict — but a multi-assignee
+// task genuinely occupies every one of its assignees' time, so it's
+// compared against each of their own tasks individually, not just
+// against another task with the identical assignee set.
 export function getOverlappingTaskIds(tasks) {
   // isAllDayTask() excluded explicitly — a multi-day All Day task now
   // also has a (whole-day-multiple) duration, but a date range isn't a
@@ -97,7 +116,7 @@ export function getOverlappingTaskIds(tasks) {
     for (let j = i + 1; j < timed.length; j++) {
       const a = timed[i]
       const b = timed[j]
-      if (!whoSharesPerson(a.who, b.who)) continue
+      if (!assigneeIdsOverlap(a.assignee_ids, b.assignee_ids)) continue
       // Two tasks with no real duration of their own are each just a
       // single instant — flagging them only when they land on the
       // exact same millisecond isn't a meaningful conflict worth
@@ -279,22 +298,22 @@ export function reportDateForPeriod(period, offset = 0) {
   return localDayKey(startOfPeriod(period, offset))
 }
 
-// Completed tasks belonging to a given `who` within a day/week/month
+// Completed tasks belonging to a given member within a day/week/month
 // bucket — the starting draft for a fresh end-of-day/week/month report.
 // The current bucket (offset 0) is still bounded by "now", same as
 // before (the period isn't over yet); a past bucket (offset < 0, e.g.
 // submitting August's report in September because it got missed) is
 // bounded by the start of the *next* bucket instead, so it doesn't
 // silently pull in everything completed between then and today too. A
-// 'both' task counts toward either person's own report via
-// whoMatchesFilter — either of you could be the one writing it up, and a
-// shared task (a joint interview, say) is fair to mention in either
-// report, not just one arbitrarily-chosen person's.
-export function getCompletedInPeriod(tasks, whoKey, period, offset = 0) {
+// multi-assignee task counts toward every one of its assignees' own
+// reports via taskBelongsTo — whoever's actually writing it up, a shared
+// task (a joint interview, say) is fair to mention, not just one
+// arbitrarily-chosen assignee's.
+export function getCompletedInPeriod(tasks, memberId, period, offset = 0) {
   const start = startOfPeriod(period, offset)
   const end = offset === 0 ? new Date() : startOfPeriod(period, offset + 1)
   return tasks.filter((t) => {
-    if (!whoMatchesFilter(t.who, whoKey) || t.status !== 'done' || !t.completed_at) return false
+    if (!taskBelongsTo(t.assignee_ids, memberId) || t.status !== 'done' || !t.completed_at) return false
     const completedAt = new Date(t.completed_at)
     return completedAt >= start && completedAt < end
   })
@@ -303,10 +322,10 @@ export function getCompletedInPeriod(tasks, whoKey, period, offset = 0) {
 // Like getCompletedInPeriod, but only tasks completed after `since` — used
 // when appending to an already-started report, so a second session's
 // draft doesn't re-list what an earlier session already reported.
-export function getCompletedSince(tasks, whoKey, since) {
+export function getCompletedSince(tasks, memberId, since) {
   const now = new Date()
   return tasks.filter((t) => {
-    if (!whoMatchesFilter(t.who, whoKey) || t.status !== 'done' || !t.completed_at) return false
+    if (!taskBelongsTo(t.assignee_ids, memberId) || t.status !== 'done' || !t.completed_at) return false
     const completedAt = new Date(t.completed_at)
     return completedAt > since && completedAt <= now
   })

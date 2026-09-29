@@ -3,7 +3,6 @@ import { Check, Target, Undo2, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
-import { whoKeyForName } from '../lib/whoLabels'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 
 const composeClasses = 'flex flex-col gap-2 [&_textarea]:min-h-[70px] [&_textarea]:resize-y [&_textarea]:rounded-[8px] [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-card-bg [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-[15px] [&_textarea]:text-text-h [&_textarea]:[font-family:inherit] [&_textarea]:[font-style:inherit] [&_textarea]:[font-variant:inherit] [&_textarea]:[font-weight:inherit] [&_textarea]:[line-height:inherit]'
@@ -351,7 +350,7 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
       }))
       await createTask({
         title: note.body,
-        who: whoKeyForName(me.display_name) || 'yours',
+        assignee_ids: [me.id],
         due_date: zonedTimeToUtcIso(todayDateString(), '23:59', zone),
         due_timezone: zone,
         created_by: me.id,
@@ -385,7 +384,7 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
       const zone = detectDefaultTimezone()
       const task = await createTask({
         title: item.text,
-        who: whoKeyForName(me.display_name) || 'yours',
+        assignee_ids: [me.id],
         due_date: zonedTimeToUtcIso(dateStr || todayDateString(), '23:59', zone),
         due_timezone: zone,
         created_by: me.id,

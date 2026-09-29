@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { CheckSquare, StickyNote, MessageCircle, Repeat2 } from 'lucide-react'
-import { isAllDayTask, formatDuration } from '../lib/tasks'
+import { isAllDayTask, formatDuration, assigneeIdsOverlap } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
-import { WHO_LABEL, WHO_COLOR, whoSharesPerson } from '../lib/whoLabels'
+import { assigneeBadge } from '../lib/whoLabels'
 import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 import TaskIcon from './TaskIcon'
@@ -298,7 +298,7 @@ function layoutClusters(clusters, overlappingIds) {
         (other) =>
           overlappingIds?.has(other.task.id) &&
           overlappingIds?.has(item.task.id) &&
-          whoSharesPerson(other.task.who, item.task.who) &&
+          assigneeIdsOverlap(other.task.assignee_ids, item.task.assignee_ids) &&
           item.start.getTime() < other.end.getTime() &&
           other.start.getTime() < item.end.getTime(),
       )
@@ -359,7 +359,7 @@ function layoutClusters(clusters, overlappingIds) {
 // details inline the way TaskRow normally does — a block's height is
 // fixed to its time span, and full task details (notes, checklist,
 // clarifications) don't fit inside that without breaking the layout.
-export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappingIds, meId, displayTimezone = DEFAULT_TIMEZONE }) {
+export default function DayTimeline({ tasks, members = [], onSelect, onStatusChange, overlappingIds, meId, displayTimezone = DEFAULT_TIMEZONE }) {
   const untimed = tasks.filter((t) => t.status !== 'done' && isAllDayTask(t))
   const timed = tasks.filter((t) => !(t.status !== 'done' && isAllDayTask(t)))
 
@@ -389,7 +389,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
 
   return (
     <div className="day-timeline-wrap">
-      {untimed.length > 0 && <AllDayRow tasks={untimed} onSelect={onSelect} onStatusChange={onStatusChange} />}
+      {untimed.length > 0 && <AllDayRow tasks={untimed} members={members} onSelect={onSelect} onStatusChange={onStatusChange} />}
 
       {layout && (
         <div className="day-timeline" style={{ height: layout.height }}>
@@ -490,6 +490,7 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
               // tooltip (matching notes/question's own icon-only
               // treatment) rather than competing for width.
               const isRecurring = Boolean(task.recurrence) && task.recurrence !== 'none'
+              const badge = assigneeBadge(members, task.assignee_ids)
               return (
                 <div
                   key={task.id}
@@ -516,8 +517,8 @@ export default function DayTimeline({ tasks, onSelect, onStatusChange, overlappi
                     <span className="day-timeline-block-main">
                       <span className="day-timeline-block-top">
                         <TaskIcon task={task} size={13} className="mt-[3px]" title={PRIORITY_LABEL[task.priority]} />
-                        <span className="task-who-badge" style={{ background: WHO_COLOR[task.who] }}>
-                          {WHO_LABEL[task.who]}
+                        <span className="task-who-badge" style={{ background: badge.color }}>
+                          {badge.label}
                         </span>
                         <span className="day-timeline-block-title">{task.title}</span>
                       </span>

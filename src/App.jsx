@@ -57,7 +57,7 @@ function App() {
   if (role === 'blocked') {
     return (
       <div className="app-loading app-loading-error">
-        <p>This account isn't set up in Tandem yet — check with Ada or Aaron.</p>
+        <p>This account isn't set up in Tandem yet — check with whoever administers this team's Tandem.</p>
         <button type="button" onClick={signOut}>
           Sign out
         </button>
