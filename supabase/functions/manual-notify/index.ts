@@ -55,6 +55,11 @@ Deno.serve(async (req) => {
     if (!targetId || targetId === user.id || !allMembers.some((m) => m.id === targetId)) {
       return new Response('Invalid target', { status: 400, headers: corsHeaders })
     }
+    // Persists regardless of push delivery (push is best-effort throughout
+    // this app) — InboxView.jsx's Nudges section is what actually reads
+    // this; the record existing is what matters, not whether the push
+    // itself landed.
+    await supabaseAdmin.from('member_nudges').insert({ sender_id: user.id, target_id: targetId })
     await notifyMember(targetId, {
       title: `${senderName} needs you`,
       body: 'Something urgent — check the board.',

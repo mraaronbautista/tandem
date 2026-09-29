@@ -822,6 +822,28 @@ create policy "members can delete accessible tasks"
   on tasks for delete
   using (is_member() and can_delete_task(assignee_ids));
 
+-- A record of the person-level 👋 header nudge (TaskBoard.jsx's picker —
+-- distinct from the task-level 🔔 nudge, which just sets
+-- tasks.overdue_nudge_sent_at and needs no table of its own). Was
+-- previously a pure fire-and-forget push with nothing persisted, so
+-- there was no way to browse "who nudged whom" afterward and no in-app
+-- record for someone who missed the push. The only write path is
+-- manual-notify's own service-role client (see its 'nudge' branch) — no
+-- client-facing INSERT policy needed at all, same reasoning time_entries
+-- locks staff writes to one controlled RPC rather than a broad policy.
+create table member_nudges (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table member_nudges enable row level security;
+
+create policy "members can read all member nudges"
+  on member_nudges for select
+  using (is_member());
+
 -- Storage bucket for optional completion screenshots/photos. Public
 -- (read) since these are casual task attachments, not sensitive
 -- documents — a public bucket also means getPublicUrl() works directly
@@ -2973,3 +2995,23 @@ end $$;
 
 alter table members add column if not exists working_status member_working_status;
 alter table members add column if not exists working_status_until timestamptz;
+
+-- ---------------------------------------------------------------------------
+-- Person-level nudge history (incremental migration)
+-- ---------------------------------------------------------------------------
+-- Run this block once on an existing project, any time — fully additive,
+-- no existing policy touched. See the matching comment on member_nudges
+-- in the base schema above for the full reasoning.
+create table if not exists member_nudges (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table member_nudges enable row level security;
+
+drop policy if exists "members can read all member nudges" on member_nudges;
+create policy "members can read all member nudges"
+  on member_nudges for select
+  using (is_member());

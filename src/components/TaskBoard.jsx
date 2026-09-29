@@ -20,6 +20,7 @@ import {
 } from '../lib/tasks'
 import { archiveTaskToBoard } from '../lib/corkNotes'
 import { fetchMembers, updateDefaultTimezone } from '../lib/members'
+import { fetchMemberNudges } from '../lib/nudges'
 import {
   detectDefaultTimezone,
   setPreferredTimezone,
@@ -141,6 +142,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState([])
+  const [memberNudges, setMemberNudges] = useState([])
   const [whoTab, setWhoTab] = useState('all')
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()))
   const [loading, setLoading] = useState(true)
@@ -310,9 +312,20 @@ export default function TaskBoard({ theme, toggleTheme }) {
     }
   }
 
+  async function reloadMemberNudges() {
+    try {
+      setMemberNudges(await fetchMemberNudges())
+    } catch (err) {
+      // Same reasoning as reloadMembers — this backs the Inbox's Nudges
+      // section, not something that should fail silently.
+      setError(err.message)
+    }
+  }
+
   useEffect(() => {
     reload()
     reloadMembers()
+    reloadMemberNudges()
 
     // A recurring-series deletion can remove many generated rows in one
     // database operation. Realtime emits one event per row; reloading the
@@ -338,10 +351,19 @@ export default function TaskBoard({ theme, toggleTheme }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => reloadMembers())
       .subscribe()
 
+    // So a nudge sent while the recipient already has Inbox open shows up
+    // live there too, not just as a push — same "refetch the whole table
+    // on any change" shape as the two channels above.
+    const memberNudgesChannel = supabase
+      .channel('member-nudges-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'member_nudges' }, () => reloadMemberNudges())
+      .subscribe()
+
     return () => {
       window.clearTimeout(taskReloadTimer)
       supabase.removeChannel(tasksChannel)
       supabase.removeChannel(membersChannel)
+      supabase.removeChannel(memberNudgesChannel)
     }
   }, [])
 
@@ -996,6 +1018,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
             members={members}
             tasks={tasks}
             meId={session.user.id}
+            memberNudges={memberNudges}
             onSelectTask={(task) => setPeekTaskId(task.id)}
             onUpdate={handleUpdate}
             lastViewedAt={inboxLastViewedAt}

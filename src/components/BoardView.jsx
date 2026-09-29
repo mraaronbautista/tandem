@@ -20,7 +20,19 @@ const SECTIONS = ['pins', 'projects', 'inbox']
 // notes — CorkBoardView itself still owns both (via its `mode` prop), so
 // there's still only one component's worth of pin CRUD/comments/archive
 // logic to maintain, just two different content filters over it.
-export default function BoardView({ me, memberName, members, tasks, meId, onSelectTask, onUpdate, lastViewedAt, hasUnseenInbox, registerQuickAdd }) {
+export default function BoardView({
+  me,
+  memberName,
+  members,
+  tasks,
+  meId,
+  memberNudges,
+  onSelectTask,
+  onUpdate,
+  lastViewedAt,
+  hasUnseenInbox,
+  registerQuickAdd,
+}) {
   // Inbox carried the nav's unread badge before this merge — opening
   // Board should land on whatever the badge was pointing at, not bury it
   // behind Pins by default.
@@ -96,6 +108,7 @@ export default function BoardView({ me, memberName, members, tasks, meId, onSele
             meId={meId}
             memberName={memberName}
             members={members}
+            memberNudges={memberNudges}
             onSelectTask={onSelectTask}
             onUpdate={onUpdate}
             lastViewedAt={lastViewedAt}

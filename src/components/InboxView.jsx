@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Paperclip, Bell } from 'lucide-react'
+import { Paperclip, Bell, Hand } from 'lucide-react'
 import { getInboxItems, getCompletedSubmissions, getNudgedTasks } from '../lib/tasks'
 import { assigneeBadge, memberColor } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
@@ -140,6 +140,26 @@ function NudgeItem({ task, members, onSelectTask }) {
   )
 }
 
+// The person-level 👋 header nudge (TaskBoard.jsx's picker) — distinct
+// from NudgeItem above (the task-level 🔔 one). No task to peek into, so
+// no onClick/cursor-pointer and no task-who-badge (there's no assignee
+// to badge by, just two real people named directly in the text).
+function PersonNudgeItem({ nudge, memberName }) {
+  return (
+    <li className={`${inboxItemBaseClasses} ${inboxItemKindClasses.nudge} !cursor-default hover:!translate-y-0 hover:!shadow-resting active:!shadow-resting`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-semibold text-text-h">
+          {memberName(nudge.sender_id)} nudged {memberName(nudge.target_id)}
+        </span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(nudge.created_at)}</span>
+      </div>
+      <p className="my-0.5 flex items-center gap-1 italic opacity-60">
+        <Hand size={13} /> Something urgent — check the board.
+      </p>
+    </li>
+  )
+}
+
 // Persistent tab content, not a modal — see RentalsView.jsx for why. Unlike
 // CorkBoardView/EodReportsList this isn't self-fetching: fetchTasks() (see
 // tasks.js) already loads every task with no date filter, and TaskBoard.jsx
@@ -153,7 +173,16 @@ function NudgeItem({ task, members, onSelectTask }) {
 // Frozen into local state on mount so it stays stable for this visit,
 // rather than flipping every item to "read" mid-visit once TaskBoard bumps
 // it for next time.
-export default function InboxView({ tasks, meId, memberName, members = [], onSelectTask, onUpdate, lastViewedAt }) {
+export default function InboxView({
+  tasks,
+  meId,
+  memberName,
+  members = [],
+  memberNudges = [],
+  onSelectTask,
+  onUpdate,
+  lastViewedAt,
+}) {
   const [frozenLastViewedAt] = useState(() => lastViewedAt)
   const [view, setView] = useState('all')
 
@@ -169,12 +198,19 @@ export default function InboxView({ tasks, meId, memberName, members = [], onSel
     .filter((item) => item.kind === 'answer' || item.kind === 'finished')
     .sort((a, b) => new Date(b.at) - new Date(a.at))
   const submissions = getCompletedSubmissions(tasks)
-  const nudged = getNudgedTasks(tasks)
-  const totalCount = questions.length + resolved.length + submissions.length + nudged.length
+  // Two different underlying sources (a task column vs. a whole separate
+  // table) merged into one chronological list — the Nudges tab means
+  // "things that got nudged," and a person-level 👋 nudge is just
+  // another kind of that, not a reason for a 6th tab.
+  const nudgeEvents = [
+    ...getNudgedTasks(tasks).map((task) => ({ type: 'task', at: task.overdue_nudge_sent_at, task })),
+    ...memberNudges.map((nudge) => ({ type: 'person', at: nudge.created_at, nudge })),
+  ].sort((a, b) => new Date(b.at) - new Date(a.at))
+  const totalCount = questions.length + resolved.length + submissions.length + nudgeEvents.length
   const showQuestions = (view === 'all' || view === 'question') && questions.length > 0
   const showResolved = (view === 'all' || view === 'resolved') && resolved.length > 0
   const showSubmissions = (view === 'all' || view === 'submission') && submissions.length > 0
-  const showNudges = (view === 'all' || view === 'nudge') && nudged.length > 0
+  const showNudges = (view === 'all' || view === 'nudge') && nudgeEvents.length > 0
 
   // Same "not every clarification is a question" reasoning as
   // TaskClarifications.jsx's own handleResolve — this is the quick path
@@ -261,7 +297,7 @@ export default function InboxView({ tasks, meId, memberName, members = [], onSel
           section doesn't render at all (unchanged from before tabs
           existed) — this message is only for a specific tab selected on
           purpose that turns out to have nothing in it right now. */}
-      {view !== 'all' && { question: questions, resolved, submission: submissions, nudge: nudged }[view].length === 0 && (
+      {view !== 'all' && { question: questions, resolved, submission: submissions, nudge: nudgeEvents }[view].length === 0 && (
         <p className="task-notes-empty">{TAB_EMPTY_LABEL[view]}</p>
       )}
 
@@ -307,9 +343,13 @@ export default function InboxView({ tasks, meId, memberName, members = [], onSel
         <section>
           <h3 className="task-section-heading">Nudges</h3>
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {nudged.map((task) => (
-              <NudgeItem key={task.id} task={task} members={members} onSelectTask={onSelectTask} />
-            ))}
+            {nudgeEvents.map((event) =>
+              event.type === 'task' ? (
+                <NudgeItem key={`task-${event.task.id}`} task={event.task} members={members} onSelectTask={onSelectTask} />
+              ) : (
+                <PersonNudgeItem key={`person-${event.nudge.id}`} nudge={event.nudge} memberName={memberName} />
+              ),
+            )}
           </ul>
         </section>
       )}
