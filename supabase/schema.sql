@@ -3425,6 +3425,14 @@ create policy "members can delete vault entries"
 
 -- permissions.vault is retired — vault_access now expresses "which
 -- vault(s)" a member can see, which a single blanket boolean never could.
+-- A raw update of `permissions` is blocked by members_guard_privilege_columns
+-- (see that trigger's own comment above) from any role, SQL editor included
+-- — set_member_permissions() is the only normal write path, but it's
+-- admin-gated and per-member, so this one-time cleanup instead opens the
+-- same session-scoped escape hatch that trigger's comment documents for
+-- exactly this kind of SQL-editor maintenance.
+select set_config('app.member_privilege_write', '1', true);
 update members set permissions = permissions - 'vault';
+select set_config('app.member_privilege_write', '0', true);
 
 commit;
