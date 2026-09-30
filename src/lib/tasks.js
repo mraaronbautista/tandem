@@ -416,6 +416,14 @@ const INBOX_KIND_ORDER = { question: 0, answer: 1, finished: 2 }
 export function getInboxItems(tasks, meId) {
   const items = []
   for (const task of tasks) {
+    // Being able to VIEW a task (task_access grant, not assignment) is not
+    // the same as being a party to it — a member merely granted View
+    // access to another member's tasks would otherwise see every open
+    // question/answer on every one of those tasks in their own Inbox, not
+    // just the ones actually concerning them. The task's own detail view
+    // still shows its full clarification thread to any viewer who can
+    // open it; this only narrows what surfaces unprompted in the Inbox.
+    if (!task.assignee_ids?.includes(meId)) continue
     for (const c of task.clarifications || []) {
       if (c.resolved) {
         if (c.askedBy === meId) {
@@ -479,12 +487,16 @@ export function hasUnseenInboxItems(tasks, meId, lastViewedAt) {
 // sections close, just for submissions instead of comments. Before
 // this, the only way to notice one was stumbling onto that task's own
 // detail view, or catching the push notification before it scrolled
-// away. Not scoped to `meId` like getInboxItems above — a submission is
-// mutually visible regardless of who completed the task or who's
-// looking, same as everything else in this app.
-export function getCompletedSubmissions(tasks) {
+// away. Scoped to `meId` the same way getInboxItems now is — a task a
+// member can merely view via a task_access grant shouldn't flood their
+// Inbox with every completion on it; only tasks they're actually
+// assigned to surface here (the task itself, if visible, still shows
+// its own submission untouched).
+export function getCompletedSubmissions(tasks, meId) {
   return tasks
-    .filter((t) => t.status === 'done' && (t.completion_note || t.completion_attachments?.length))
+    .filter(
+      (t) => t.assignee_ids?.includes(meId) && t.status === 'done' && (t.completion_note || t.completion_attachments?.length),
+    )
     .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
 }
 
@@ -495,12 +507,12 @@ export function getCompletedSubmissions(tasks) {
 // instead of a conversation or a completion. Full history, same
 // reasoning as submissions: a task can go on to get completed (or nudged
 // again by a later cycle, overwriting this same column) without aging
-// out of findability here in the meantime. Not scoped to a viewer like
-// getCompletedSubmissions above — mutually visible regardless of who
-// sent or received the nudge.
-export function getNudgedTasks(tasks) {
+// out of findability here in the meantime. Scoped to `meId` the same
+// reason getCompletedSubmissions above now is — a nudge on a task you
+// can merely view isn't a nudge concerning you.
+export function getNudgedTasks(tasks, meId) {
   return tasks
-    .filter((t) => t.overdue_nudge_sent_at)
+    .filter((t) => t.assignee_ids?.includes(meId) && t.overdue_nudge_sent_at)
     .sort((a, b) => new Date(b.overdue_nudge_sent_at) - new Date(a.overdue_nudge_sent_at))
 }
 

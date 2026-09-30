@@ -2,9 +2,11 @@ import { supabase } from './supabaseClient'
 
 // Full history of person-level 👋 nudges (see manual-notify's 'nudge'
 // branch, the only write path — there's no client-facing insert here).
-// Not scoped to a viewer, same reasoning every other Inbox source
-// (getNudgedTasks, getCompletedSubmissions) already uses — mutual
-// visibility, this is a shared log, not a per-person mailbox.
+// Fetches every nudge any member can read under member_nudges' own
+// is_member() RLS, same as fetchTasks() pulling every RLS-visible task
+// regardless of who it's ultimately relevant to — InboxView.jsx is what
+// narrows this down to nudges the current viewer actually sent or
+// received before rendering it, not this function.
 export async function fetchMemberNudges() {
   const { data, error } = await supabase
     .from('member_nudges')

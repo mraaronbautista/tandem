@@ -197,14 +197,19 @@ export default function InboxView({
   const resolved = items
     .filter((item) => item.kind === 'answer' || item.kind === 'finished')
     .sort((a, b) => new Date(b.at) - new Date(a.at))
-  const submissions = getCompletedSubmissions(tasks)
+  const submissions = getCompletedSubmissions(tasks, meId)
   // Two different underlying sources (a task column vs. a whole separate
   // table) merged into one chronological list — the Nudges tab means
   // "things that got nudged," and a person-level 👋 nudge is just
-  // another kind of that, not a reason for a 6th tab.
+  // another kind of that, not a reason for a 6th tab. Both scoped to
+  // meId now for the same reason getInboxItems/getCompletedSubmissions
+  // are — a person-level nudge concerns its sender and target, nobody
+  // else, same as a task-level nudge concerns that task's assignees.
   const nudgeEvents = [
-    ...getNudgedTasks(tasks).map((task) => ({ type: 'task', at: task.overdue_nudge_sent_at, task })),
-    ...memberNudges.map((nudge) => ({ type: 'person', at: nudge.created_at, nudge })),
+    ...getNudgedTasks(tasks, meId).map((task) => ({ type: 'task', at: task.overdue_nudge_sent_at, task })),
+    ...memberNudges
+      .filter((nudge) => nudge.sender_id === meId || nudge.target_id === meId)
+      .map((nudge) => ({ type: 'person', at: nudge.created_at, nudge })),
   ].sort((a, b) => new Date(b.at) - new Date(a.at))
   const totalCount = questions.length + resolved.length + submissions.length + nudgeEvents.length
   const showQuestions = (view === 'all' || view === 'question') && questions.length > 0
