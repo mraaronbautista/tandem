@@ -1,3 +1,4 @@
+import PrivateAttachment from './PrivateAttachment'
 import { Paperclip, X } from 'lucide-react'
 import { isImageAttachment } from '../lib/attachments'
 
@@ -47,18 +48,18 @@ export default function AttachmentList({ attachments, onRemove }) {
           {files.map((a) =>
             onRemove ? (
               <div className="task-submission-attachment task-submission-file-link" key={a._i}>
-                <a href={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
+                <PrivateAttachment url={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
                   <span className="task-submission-file-icon">
                   <Paperclip size={13} />
                 </span>
                   <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
-                </a>
+                </PrivateAttachment>
                 {removeButton(a._i)}
               </div>
             ) : (
-              <a
+              <PrivateAttachment
                 className="task-submission-attachment task-submission-file-link"
-                href={a.url}
+                url={a.url}
                 target="_blank"
                 rel="noreferrer"
                 key={a._i}
@@ -67,7 +68,7 @@ export default function AttachmentList({ attachments, onRemove }) {
                   <Paperclip size={13} />
                 </span>
                 <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
-              </a>
+              </PrivateAttachment>
             ),
           )}
         </div>
@@ -77,7 +78,7 @@ export default function AttachmentList({ attachments, onRemove }) {
         <div className="task-submission-images-row">
           {images.map((a) => (
             <div className="task-submission-attachment task-submission-attachment-image" key={a._i}>
-              <img src={a.url} alt={a.name || 'Attachment'} />
+              <PrivateAttachment image url={a.url} alt={a.name || 'Attachment'} />
               {onRemove && removeButton(a._i)}
             </div>
           ))}

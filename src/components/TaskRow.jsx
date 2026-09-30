@@ -1,3 +1,4 @@
+import PrivateAttachment from './PrivateAttachment'
 import { useRef, useState } from 'react'
 import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
@@ -441,12 +442,12 @@ export default function TaskRow({
                 {attachments.map((a, i) =>
                   isImageAttachment(a.name) ? (
                     <div className="task-submission-attachment task-submission-attachment-image" key={i}>
-                      <img src={a.url} alt={a.name || 'Attachment'} />
+                      <PrivateAttachment image url={a.url} alt={a.name || 'Attachment'} />
                     </div>
                   ) : (
-                    <a
+                    <PrivateAttachment
                       className="task-submission-attachment task-submission-file-link"
-                      href={a.url}
+                      url={a.url}
                       target="_blank"
                       rel="noreferrer"
                       key={i}
@@ -455,7 +456,7 @@ export default function TaskRow({
                         <Paperclip size={13} />
                       </span>
                       <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
-                    </a>
+                    </PrivateAttachment>
                   ),
                 )}
               </div>
@@ -519,7 +520,7 @@ export default function TaskRow({
                   {attachments.map((a, i) =>
                     isImageAttachment(a.name) ? (
                       <div className="task-submission-attachment task-submission-attachment-image" key={i}>
-                        <img src={a.url} alt={a.name || 'Attachment'} />
+                        <PrivateAttachment image url={a.url} alt={a.name || 'Attachment'} />
                         <button
                           type="button"
                           className="task-submission-remove"
@@ -532,12 +533,12 @@ export default function TaskRow({
                       </div>
                     ) : (
                       <div className="task-submission-attachment task-submission-file-link" key={i}>
-                        <a href={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
+                        <PrivateAttachment url={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
                           <span className="task-submission-file-icon">
                         <Paperclip size={13} />
                       </span>
                           <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
-                        </a>
+                        </PrivateAttachment>
                         <button
                           type="button"
                           className="task-submission-remove"

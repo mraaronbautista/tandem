@@ -844,11 +844,13 @@ create policy "members can read all member nudges"
   on member_nudges for select
   using (is_member());
 
--- Storage bucket for optional completion screenshots/photos. Public
--- (read) since these are casual task attachments, not sensitive
--- documents — a public bucket also means getPublicUrl() works directly
--- with no signed-URL/expiry logic needed client-side. Writes are still
--- restricted to the two allow-listed members.
+-- Storage bucket for optional completion screenshots/photos. Created
+-- public here so a fresh project has something to migrate from — the
+-- "Private task attachments" incremental migration far below flips this
+-- same bucket to public=false and replaces every policy below with
+-- authenticated, per-task-access-gated ones. Don't take this block's own
+-- policies as the current behavior; they're superseded, not this app's
+-- actual attachment privacy model.
 insert into storage.buckets (id, name, public)
 values ('task-attachments', 'task-attachments', true)
 on conflict (id) do nothing;
@@ -3015,3 +3017,99 @@ drop policy if exists "members can read all member nudges" on member_nudges;
 create policy "members can read all member nudges"
   on member_nudges for select
   using (is_member());
+
+-- The Inbox subscribes to this table; publication membership is not automatic.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename = 'member_nudges'
+  ) then
+    alter publication supabase_realtime add table public.member_nudges;
+  end if;
+end $$;
+
+-- Private task attachments: deploy the authenticated attachment UI first.
+begin;
+
+-- Casting t.id (uuid) to text to compare against a text prefix defeats
+-- tasks_pkey's uuid-ops index — a seq scan on every RLS check, which runs
+-- once per storage row evaluated. Casting the parsed prefix to uuid
+-- instead (comparing directly against t.id) lets the index apply, but a
+-- bare ::uuid cast throws on a malformed/foreign object name, and
+-- Postgres doesn't guarantee AND-clause evaluation order, so a regex
+-- guard placed before the cast isn't a reliable way to avoid that. This
+-- wrapper just degrades a bad cast to "no match" instead.
+create or replace function public.safe_uuid(v text)
+returns uuid language plpgsql immutable as $$
+begin
+  return v::uuid;
+exception when others then
+  return null;
+end;
+$$;
+
+create or replace function public.can_access_task_attachment(object_name text, writing boolean default false)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select public.is_member() and (
+    exists (
+      select 1 from public.tasks t
+      where t.id = public.safe_uuid(left(object_name, 36))
+        and substring(object_name from 37 for 1) = '-'
+        and case when writing then public.can_update_task(t.assignee_ids)
+                 else public.can_view_task(t.assignee_ids) end
+    )
+    -- eod_reports are mutually visible to every member regardless of
+    -- task_access ("members can read all eod reports" above is a plain
+    -- is_member() policy) — an attachment a submitter chose to include
+    -- in their report is exactly as disclosed as the report text sitting
+    -- next to it, so a reader who can open the report but has no
+    -- task_access grant on the source task must still be able to open
+    -- its attachment. Read-only: never applies while writing, since an
+    -- eod_report attachment is never re-uploaded/edited/deleted through
+    -- this path.
+    or (
+      not writing
+      and exists (
+        select 1 from public.eod_reports r
+        where r.attachments @> jsonb_build_array(jsonb_build_object('url', 'storage://task-attachments/' || object_name))
+      )
+    )
+  );
+$$;
+
+drop policy if exists "members can upload task attachments" on storage.objects;
+drop policy if exists "members can update task attachments" on storage.objects;
+drop policy if exists "members can view task attachments" on storage.objects;
+drop policy if exists "members can delete task attachments" on storage.objects;
+create policy "members can view task attachments" on storage.objects for select to authenticated
+using (bucket_id = 'task-attachments' and public.can_access_task_attachment(name));
+create policy "members can upload task attachments" on storage.objects for insert to authenticated
+with check (bucket_id = 'task-attachments' and public.can_access_task_attachment(name, true));
+create policy "members can update task attachments" on storage.objects for update to authenticated
+using (bucket_id = 'task-attachments' and public.can_access_task_attachment(name, true))
+with check (bucket_id = 'task-attachments' and public.can_access_task_attachment(name, true));
+-- Delete additionally allows any member to remove an attachment whose
+-- owning task row no longer exists at all (a hard delete, not just
+-- tasks.archived) — without this, can_access_task_attachment's task
+-- lookup unconditionally returns false once the task is gone, and the
+-- object becomes permanently unreadable *and* undeletable by anyone,
+-- including whoever uploaded it. There's no real per-task permission
+-- left to check once the task itself is gone, so this is plain orphan
+-- cleanup, not a privilege relaxation.
+create policy "members can delete task attachments" on storage.objects for delete to authenticated
+using (
+  bucket_id = 'task-attachments'
+  and public.is_member()
+  and (
+    public.can_access_task_attachment(name, true)
+    or not exists (
+      select 1 from public.tasks t
+      where t.id = public.safe_uuid(left(name, 36)) and substring(name from 37 for 1) = '-'
+    )
+  )
+);
+update storage.buckets set public = false where id = 'task-attachments';
+commit;

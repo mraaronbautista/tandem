@@ -1,10 +1,5 @@
-// Triggered directly from the browser (supabase.functions.invoke), unlike
-// notify-task-events/notify-reminders which are only ever called by
-// Supabase's own webhook/cron system. Deployed WITHOUT --no-verify-jwt —
-// the platform rejects a missing/invalid session before this code runs —
-// but that only proves "some signed-in user called this," not which real
-// member it is, so the caller's identity is still resolved explicitly
-// below rather than trusted from anything the client sends.
+// Triggered directly from the browser. Deployed with --no-verify-jwt;
+// the handler validates the caller session explicitly below.
 import { fetchAllMembers, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -69,7 +64,13 @@ Deno.serve(async (req) => {
     // this app) — InboxView.jsx's Nudges section is what actually reads
     // this; the record existing is what matters, not whether the push
     // itself landed.
-    await supabaseAdmin.from('member_nudges').insert({ sender_id: user.id, target_id: targetId })
+    const { error: nudgeError } = await supabaseAdmin
+      .from('member_nudges')
+      .insert({ sender_id: user.id, target_id: targetId })
+    if (nudgeError) {
+      console.error('Could not save member nudge', nudgeError.code)
+      return new Response('Could not save the nudge. Please try again.', { status: 500, headers: corsHeaders })
+    }
     await notifyMember(targetId, {
       title: `${senderName} needs you`,
       body: 'Something urgent — check the board.',
