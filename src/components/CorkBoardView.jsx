@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Target, Undo2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, Target, Undo2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
@@ -7,6 +7,15 @@ import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 
 const composeClasses = 'flex flex-col gap-2 [&_textarea]:min-h-[70px] [&_textarea]:resize-y [&_textarea]:rounded-[8px] [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-card-bg [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-[15px] [&_textarea]:text-text-h [&_textarea]:[font-family:inherit] [&_textarea]:[font-style:inherit] [&_textarea]:[font-variant:inherit] [&_textarea]:[font-weight:inherit] [&_textarea]:[line-height:inherit]'
 const itemActionClasses = 'cursor-pointer rounded-[6px] border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h'
+
+// How long a removed roadmap step stays undoable. The removal is already
+// persisted by the time this window starts — Undo just re-inserts and
+// re-saves, same as any other edit, so there's no hidden "pending" state
+// a reload would lose. Navigating away or waiting this out simply
+// forfeits the undo, which is honest about what this actually is (a
+// quick re-insert, not a true transactional rollback the plan doc itself
+// warned not to overpromise).
+const REMOVE_UNDO_MS = 8000
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
@@ -106,6 +115,89 @@ function reconcileRoadmapItems(oldItems, newItems) {
   })
 }
 
+// One roadmap step — extracted out of the milestone-group loop since it's
+// now rendered from two different lists (open items, and the collapsed
+// Completed section below them) instead of one straight .map(). isOwn
+// gates the remove button the same way Edit/Share/Archive are already
+// gated elsewhere on the pin — not just UX consistency, the underlying
+// cork_notes UPDATE policy is author-only, so a non-author's write here
+// would fail RLS regardless of what the UI shows.
+function RoadmapItemRow({
+  note,
+  item,
+  done,
+  linkedTask,
+  isOwn,
+  openAddKey,
+  addDateDrafts,
+  setAddDateDrafts,
+  addingItemKey,
+  onOpenAddRow,
+  onAddRoadmapItem,
+  onRemoveItem,
+}) {
+  const key = `${note.id}:${item.id}`
+  return (
+    <li className="flex items-center justify-between gap-2 rounded-[6px] border border-border bg-bg px-2.5 py-1.5 text-[13px]">
+      <span className={`break-words whitespace-pre-wrap ${done ? 'text-text line-through opacity-55' : ''}`}>{item.text}</span>
+      <span className="flex flex-none items-center gap-1.5">
+        {done ? (
+          <span className="text-xs text-accent">
+            <Check size={13} className="inline align-[-2px]" /> Done
+          </span>
+        ) : item.taskId ? (
+          // A taskId that no longer resolves means the linked task was
+          // hard-deleted (not just archived — an archived task still
+          // shows up in taskById, see TaskBoard.jsx's own unfiltered
+          // `tasks` state) — falls back to a bare "Added" rather than a
+          // due date that doesn't exist any more.
+          <span className="text-xs opacity-70">{linkedTask ? `Due ${formatDate(linkedTask.due_date)}` : 'Added'}</span>
+        ) : openAddKey === key ? (
+          <span className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={addDateDrafts[key] || todayDateString()}
+              onChange={(e) => setAddDateDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+              className="rounded-[6px] border border-border bg-card-bg px-1.5 py-1 text-xs text-text-h"
+            />
+            <button
+              type="button"
+              className="cursor-pointer rounded-[6px] border-0 bg-accent px-2 py-1 text-xs font-semibold text-white disabled:cursor-default disabled:opacity-60"
+              onClick={() => onAddRoadmapItem(note, item, addDateDrafts[key])}
+              disabled={addingItemKey === key}
+            >
+              {addingItemKey === key ? '…' : 'Add'}
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            className="cursor-pointer rounded-[6px] border border-accent bg-transparent px-2 py-1 text-xs font-semibold text-accent"
+            onClick={() => onOpenAddRow(note, item)}
+          >
+            Add to timeline
+          </button>
+        )}
+        {/* Only removable before it's been scheduled — once a step has a
+            real linked task (taskId set), removing it here would just
+            delete the roadmap entry and silently orphan the task itself
+            rather than the two staying in sync; deleting the task (from
+            Timeline) is the real removal path at that point. */}
+        {isOwn && !item.taskId && (
+          <button
+            type="button"
+            aria-label={`Remove "${item.text}"`}
+            className="cursor-pointer rounded-[6px] border border-border bg-transparent p-1 text-text opacity-60 hover:opacity-100"
+            onClick={() => onRemoveItem(note, item)}
+          >
+            <X size={13} />
+          </button>
+        )}
+      </span>
+    </li>
+  )
+}
+
 // Persistent tab content, not a modal — see RentalsView.jsx for why.
 // Quick pins with no due date and no timeline, the opposite of a task,
 // which is deliberately scheduled. `shared_with` is the one place in the
@@ -163,6 +255,26 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
   // deadline per step, requested directly once milestones needed their own
   // timeline instead of every step landing on today's date by default.
   const [addDateDrafts, setAddDateDrafts] = useState({})
+  // Which pin's "+ Add subtask" input is open right now — a single id,
+  // not a Set, same single-value shape openAddKey already uses above.
+  // The text draft doesn't need to be keyed by note id for the same
+  // reason: only one can ever be open at a time.
+  const [addSubtaskId, setAddSubtaskId] = useState(null)
+  const [addSubtaskDraft, setAddSubtaskDraft] = useState('')
+  // Which milestone groups have their "Completed · N" section expanded —
+  // keyed "noteId:milestone" (or "noteId:_" when there's no milestone), a
+  // Set since several can be open across different projects/groups at
+  // once, unlike the single-value pickers above. Collapsed by default,
+  // same "collapsed until you go looking" reasoning the Archived section
+  // below and VaultView.jsx's own folders already use.
+  const [openCompletedGroups, setOpenCompletedGroups] = useState(() => new Set())
+  // A single most-recent removal, not a stack — undoing anything but the
+  // very last removal would be confusing ("undo" should mean "put back
+  // what I just took out"). See REMOVE_UNDO_MS above for what this
+  // actually promises.
+  const [removedItem, setRemovedItem] = useState(null)
+  const removeUndoTimer = useRef(null)
+  useEffect(() => () => clearTimeout(removeUndoTimer.current), [])
   const [editingId, setEditingId] = useState(null)
   const [editDraft, setEditDraft] = useState('')
   // Only populated/rendered for a project pin (see startEdit below) —
@@ -446,6 +558,68 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
     setAddDateDrafts((prev) => (prev[key] ? prev : { ...prev, [key]: todayDateString() }))
   }
 
+  function toggleCompletedGroup(key) {
+    setOpenCompletedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  // New steps join whatever milestone the last existing step belongs to
+  // (or no milestone, for a plain ungrouped roadmap) — "add another step
+  // to what I'm currently doing" is the common case; a step meant for a
+  // different or new milestone still needs the full Edit textarea.
+  // Doesn't close the input on success — "Enter saves and readies
+  // another input for quick additions" per the plan doc, so adding
+  // several in a row doesn't mean reopening it each time.
+  async function handleAddSubtask(note) {
+    const trimmed = addSubtaskDraft.trim()
+    if (!trimmed) return
+    const existing = note.roadmap_items || []
+    const lastMilestone = existing.length ? existing[existing.length - 1].milestone : null
+    const nextItems = [...existing, { id: crypto.randomUUID(), text: trimmed, taskId: null, milestone: lastMilestone }]
+    try {
+      await updateCorkNote(note.id, { roadmap_items: nextItems })
+      setAddSubtaskDraft('')
+      reload()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Removal is persisted immediately, same as every other edit here —
+  // Undo (below) re-inserts and re-saves rather than holding anything
+  // back client-side, so there's no unsaved state a reload could lose.
+  async function handleRemoveItem(note, item) {
+    clearTimeout(removeUndoTimer.current)
+    const nextItems = (note.roadmap_items || []).filter((i) => i.id !== item.id)
+    try {
+      await updateCorkNote(note.id, { roadmap_items: nextItems })
+      setRemovedItem({ noteId: note.id, item })
+      removeUndoTimer.current = setTimeout(() => setRemovedItem(null), REMOVE_UNDO_MS)
+      reload()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleUndoRemove() {
+    const pending = removedItem
+    if (!pending) return
+    clearTimeout(removeUndoTimer.current)
+    setRemovedItem(null)
+    const note = notes?.find((n) => n.id === pending.noteId)
+    if (!note) return
+    try {
+      await updateCorkNote(note.id, { roadmap_items: [...(note.roadmap_items || []), pending.item] })
+      reload()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   const isProjects = mode === 'projects'
   const modeNotes = notes?.filter((n) => isRoadmapPin(n) === isProjects) ?? []
   const activeNotes = modeNotes.filter((n) => !n.archived)
@@ -560,13 +734,30 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                     status via taskById — not just whether taskId is set —
                     so checking a step off on the real timeline is what
                     marks it done here too, with nothing to keep in sync
-                    by hand. */}
+                    by hand. Each group's done items collapse under their
+                    own "Completed · N" toggle so a long-running project
+                    stays scannable instead of growing a wall of
+                    struck-through text. */}
                 {!isEditing && note.roadmap_items?.length > 0 && (
                   <div className="mb-2 flex flex-col gap-3">
                     {groupRoadmapItems(note.roadmap_items).map((group, groupIndex) => {
-                      const doneCount = group.items.filter((item) => taskById.get(item.taskId)?.status === 'done').length
+                      const doneItems = group.items.filter((item) => taskById.get(item.taskId)?.status === 'done')
+                      const openItems = group.items.filter((item) => taskById.get(item.taskId)?.status !== 'done')
                       const total = group.items.length
-                      const pct = total ? Math.round((doneCount / total) * 100) : 0
+                      const pct = total ? Math.round((doneItems.length / total) * 100) : 0
+                      const completedKey = `${note.id}:${group.milestone ?? '_'}`
+                      const completedOpen = openCompletedGroups.has(completedKey)
+                      const rowProps = {
+                        note,
+                        isOwn,
+                        openAddKey,
+                        addDateDrafts,
+                        setAddDateDrafts,
+                        addingItemKey,
+                        onOpenAddRow: openAddRow,
+                        onAddRoadmapItem: handleAddRoadmapItem,
+                        onRemoveItem: handleRemoveItem,
+                      }
                       return (
                         <div key={group.milestone ?? `_${groupIndex}`}>
                           {group.milestone && (
@@ -574,7 +765,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                               <div className="mb-1.5 flex items-baseline justify-between gap-2">
                                 <span className="text-[13px] font-bold text-text-h">{group.milestone}</span>
                                 <span className="flex-none text-[11.5px] font-semibold opacity-70">
-                                  {doneCount} of {total} done
+                                  {doneItems.length} of {total} done
                                 </span>
                               </div>
                               <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-pill-bg">
@@ -586,66 +777,100 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                             </>
                           )}
                           <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-                            {group.items.map((item) => {
-                              const key = `${note.id}:${item.id}`
-                              const linkedTask = item.taskId ? taskById.get(item.taskId) : null
-                              const done = linkedTask?.status === 'done'
-                              return (
-                                <li
-                                  key={item.id}
-                                  className="flex items-center justify-between gap-2 rounded-[6px] border border-border bg-bg px-2.5 py-1.5 text-[13px]"
-                                >
-                                  <span className={`break-words whitespace-pre-wrap ${done ? 'text-text line-through opacity-55' : ''}`}>
-                                    {item.text}
-                                  </span>
-                                  {done ? (
-                                    <span className="flex-none text-xs text-accent">
-                                      <Check size={13} className="inline align-[-2px]" /> Done
-                                    </span>
-                                  ) : item.taskId ? (
-                                    // A taskId that no longer resolves means the
-                                    // linked task was hard-deleted (not just
-                                    // archived — an archived task still shows up
-                                    // in taskById, see TaskBoard.jsx's own
-                                    // unfiltered `tasks` state) — falls back to a
-                                    // bare "Added" rather than a due date that
-                                    // doesn't exist any more.
-                                    <span className="flex-none text-xs opacity-70">
-                                      {linkedTask ? `Due ${formatDate(linkedTask.due_date)}` : 'Added'}
-                                    </span>
-                                  ) : openAddKey === key ? (
-                                    <span className="flex flex-none items-center gap-1.5">
-                                      <input
-                                        type="date"
-                                        value={addDateDrafts[key] || todayDateString()}
-                                        onChange={(e) => setAddDateDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
-                                        className="rounded-[6px] border border-border bg-card-bg px-1.5 py-1 text-xs text-text-h"
-                                      />
-                                      <button
-                                        type="button"
-                                        className="cursor-pointer rounded-[6px] border-0 bg-accent px-2 py-1 text-xs font-semibold text-white disabled:cursor-default disabled:opacity-60"
-                                        onClick={() => handleAddRoadmapItem(note, item, addDateDrafts[key])}
-                                        disabled={addingItemKey === key}
-                                      >
-                                        {addingItemKey === key ? '…' : 'Add'}
-                                      </button>
-                                    </span>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      className="flex-none cursor-pointer rounded-[6px] border border-accent bg-transparent px-2 py-1 text-xs font-semibold text-accent"
-                                      onClick={() => openAddRow(note, item)}
-                                    >
-                                      Add to timeline
-                                    </button>
-                                  )}
-                                </li>
-                              )
-                            })}
+                            {openItems.map((item) => (
+                              <RoadmapItemRow key={item.id} item={item} done={false} linkedTask={null} {...rowProps} />
+                            ))}
                           </ul>
+                          {doneItems.length > 0 && (
+                            <div className="mt-1.5">
+                              <button
+                                type="button"
+                                onClick={() => toggleCompletedGroup(completedKey)}
+                                className="flex cursor-pointer items-center gap-1 text-xs font-semibold text-text opacity-65"
+                              >
+                                Completed · {doneItems.length}
+                                {completedOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                              </button>
+                              {completedOpen && (
+                                <ul className="m-0 mt-1.5 flex list-none flex-col gap-1.5 p-0">
+                                  {doneItems.map((item) => (
+                                    <RoadmapItemRow
+                                      key={item.id}
+                                      item={item}
+                                      done
+                                      linkedTask={taskById.get(item.taskId)}
+                                      {...rowProps}
+                                    />
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
+                  </div>
+                )}
+
+                {!isEditing && isOwn && (
+                  <div className="mb-2">
+                    {addSubtaskId === note.id ? (
+                      <form
+                        className="flex gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          handleAddSubtask(note)
+                        }}
+                      >
+                        <input
+                          autoFocus
+                          type="text"
+                          value={addSubtaskDraft}
+                          onChange={(e) => setAddSubtaskDraft(e.target.value)}
+                          placeholder="New step…"
+                          maxLength={500}
+                          className="min-w-0 flex-1 rounded-[8px] border border-border bg-card-bg px-2.5 py-[7px] text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
+                        />
+                        <button
+                          type="submit"
+                          className="flex-none cursor-pointer rounded-[8px] border border-border bg-pill-bg px-3 py-[7px] text-[13px] text-text-h disabled:cursor-default disabled:opacity-60"
+                          disabled={!addSubtaskDraft.trim()}
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          className="flex-none cursor-pointer rounded-[8px] border border-border bg-transparent px-3 py-[7px] text-[13px] text-text-h"
+                          onClick={() => {
+                            setAddSubtaskId(null)
+                            setAddSubtaskDraft('')
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        type="button"
+                        className="flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-accent"
+                        onClick={() => setAddSubtaskId(note.id)}
+                      >
+                        <Plus size={14} className="inline align-[-2px]" /> Add subtask
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {removedItem?.noteId === note.id && (
+                  <div className="mb-2 flex items-center justify-between gap-2 rounded-[6px] border border-border bg-pill-bg px-2.5 py-1.5 text-xs text-text-h">
+                    <span>Removed "{removedItem.item.text}"</span>
+                    <button
+                      type="button"
+                      className="cursor-pointer font-semibold text-accent"
+                      onClick={handleUndoRemove}
+                    >
+                      Undo
+                    </button>
                   </div>
                 )}
 
