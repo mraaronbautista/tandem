@@ -28,16 +28,23 @@ export async function sendTaskNudge(taskId, taskTitle) {
   if (error) throw error
 }
 
-export async function sendClarificationAsked(taskTitle, question) {
+// notifyIds is who this specific question/reply is actually tagged for
+// (TaskClarifications.jsx's own "Notify" picker) — no longer resolved
+// server-side as "everyone but the caller", since a comment that
+// concerns one specific member (the healthcare VA, say) shouldn't also
+// ping every other member by default. Same trust reasoning sendNudge's
+// targetId already established: manual-notify still verifies every id
+// server-side (a real member, not the caller) before sending.
+export async function sendClarificationAsked(taskTitle, question, notifyIds) {
   const { error } = await supabase.functions.invoke('manual-notify', {
-    body: { kind: 'clarification_asked', taskTitle, question },
+    body: { kind: 'clarification_asked', taskTitle, question, notifyIds },
   })
   if (error) throw error
 }
 
-export async function sendClarificationAnswered(taskTitle, answer) {
+export async function sendClarificationAnswered(taskTitle, answer, notifyIds) {
   const { error } = await supabase.functions.invoke('manual-notify', {
-    body: { kind: 'clarification_answered', taskTitle, answer },
+    body: { kind: 'clarification_answered', taskTitle, answer, notifyIds },
   })
   if (error) throw error
 }

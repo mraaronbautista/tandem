@@ -21,14 +21,15 @@ Deno.serve(async (req) => {
   const allMembers = await fetchAllMembers()
   const caller = allMembers.find((m) => m.id === user.id)
   const senderName = caller?.display_name || 'A member'
-  // Most kinds below broadcast to "everyone but the caller" — with N
-  // members that's not a single fixed target any more (see 'nudge' and
-  // 'task_nudge' below for the two kinds that resolve a narrower target
-  // instead). otherMemberIds is computed from allMembers regardless of
-  // whether the caller is actually in it, so a valid-but-non-member
-  // session (a staff account, for instance) would otherwise get
-  // "everyone but the caller" collapsing to "everyone" — every
-  // member-only kind (eod_report/nudge/clarification_asked/
+  // eod_report still broadcasts to "everyone but the caller" — a report
+  // genuinely is for the whole team. clarification_asked/
+  // clarification_answered used to as well, but no longer do by default
+  // (see resolveNotifyIds below) now that a comment often concerns one
+  // specific member, not everyone. otherMemberIds is computed from
+  // allMembers regardless of whether the caller is actually in it, so a
+  // valid-but-non-member session (a staff account, for instance) would
+  // otherwise get "everyone but the caller" collapsing to "everyone" —
+  // every member-only kind (eod_report/nudge/clarification_asked/
   // clarification_answered) explicitly checks `!caller` first and
   // refuses rather than silently broadcasting on a non-member's behalf.
   // time_entry_correction_request is the one kind a staff account is
@@ -36,6 +37,19 @@ Deno.serve(async (req) => {
   const otherMemberIds = allMembers.filter((m) => m.id !== user.id).map((m) => m.id)
 
   const payload = await req.json()
+
+  // Resolves a client-supplied notify list (TaskClarifications.jsx's own
+  // "Notify" picker) down to real, non-caller member ids — dropping
+  // anything else (a stale id, a typo, the caller's own id) rather than
+  // trusting the array outright, same reasoning 'nudge' already verifies
+  // its single targetId. Missing/non-array (an older cached frontend
+  // that predates this field) falls back to the old "everyone but the
+  // caller" broadcast, so a deploy-order gap between this function and
+  // the frontend can't silently drop every recipient instead.
+  function resolveNotifyIds(raw: unknown): string[] {
+    if (!Array.isArray(raw)) return otherMemberIds
+    return raw.filter((id) => typeof id === 'string' && id !== user.id && allMembers.some((m) => m.id === id))
+  }
 
   if (payload.kind === 'eod_report') {
     if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
@@ -84,8 +98,9 @@ Deno.serve(async (req) => {
     const taskTitle = String(payload.taskTitle || '')
     const question = String(payload.question || '').slice(0, 300)
     if (!question.trim()) return new Response('Missing question', { status: 400, headers: corsHeaders })
+    const targets = resolveNotifyIds(payload.notifyIds)
     await Promise.all(
-      otherMemberIds.map((id) =>
+      targets.map((id) =>
         notifyMember(id, { title: `${senderName} has a question`, body: `${taskTitle}: ${question}`, url: '/' }),
       ),
     )
@@ -116,8 +131,9 @@ Deno.serve(async (req) => {
     const taskTitle = String(payload.taskTitle || '')
     const answer = String(payload.answer || '').slice(0, 300)
     if (!answer.trim()) return new Response('Missing answer', { status: 400, headers: corsHeaders })
+    const targets = resolveNotifyIds(payload.notifyIds)
     await Promise.all(
-      otherMemberIds.map((id) =>
+      targets.map((id) =>
         notifyMember(id, { title: `${senderName} answered your question`, body: `${taskTitle}: ${answer}`, url: '/' }),
       ),
     )

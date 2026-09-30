@@ -384,6 +384,8 @@ export default function TaskRow({
             onChange={handleClarificationsChange}
             meId={meId}
             memberName={memberName}
+            members={members}
+            assigneeIds={task.assignee_ids}
             taskTitle={task.title}
             taskId={task.id}
             extraActions={

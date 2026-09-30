@@ -3,16 +3,26 @@ import { Paperclip, Check } from 'lucide-react'
 import { sendClarificationAsked, sendClarificationAnswered } from '../lib/manualNotify'
 import { uploadCompletionAttachment } from '../lib/attachments'
 import AttachmentList from './AttachmentList'
+import AssigneePicker from './AssigneePicker'
 
 // Its own component so the answer textarea can keep local draft state
 // while typing, same reasoning as ChecklistView's blocked-reason input —
 // only the final "Answer" click writes to Supabase, not every keystroke.
-function AnswerRow({ item, onChange, taskTitle, taskId }) {
+// Defaults to notifying whoever the question was originally tagged for
+// (item.notifyIds — falls back to just the asker for a pre-tagging entry
+// that predates this field), minus whoever's replying — same reasoning
+// TaskClarifications' own ask-side default uses, just scoped to this one
+// entry's own thread instead of the task's current assignees.
+function AnswerRow({ item, onChange, taskTitle, taskId, meId, otherMembers }) {
   const [answerDraft, setAnswerDraft] = useState('')
   const [answerAttachments, setAnswerAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [sending, setSending] = useState(false)
+  const [notifyIds, setNotifyIds] = useState(() => {
+    const base = item.notifyIds?.length ? item.notifyIds : [item.askedBy]
+    return base.filter((id) => id !== meId)
+  })
 
   async function handleAttachmentUpload(e) {
     const files = Array.from(e.target.files || [])
@@ -41,7 +51,7 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
       // The Edge Function rejects an empty body — an attachment-only reply
       // still needs some text to notify with, even though the stored
       // `answer` itself is allowed to be blank.
-      await sendClarificationAnswered(taskTitle, answer || '📎 Sent an attachment')
+      await sendClarificationAnswered(taskTitle, answer || '📎 Sent an attachment', notifyIds)
     } catch {
       // Best-effort — the answer is already saved regardless of whether
       // the push notification succeeds (e.g. manual-notify not yet
@@ -65,6 +75,12 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
         onRemove={(i) => setAnswerAttachments((prev) => prev.filter((_, idx) => idx !== i))}
       />
       {uploadError && <p className="error">{uploadError}</p>}
+      {(answerDraft.trim() || answerAttachments.length > 0) && otherMembers.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide opacity-60">Notify</span>
+          <AssigneePicker members={otherMembers} value={notifyIds} onChange={setNotifyIds} />
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
           {uploading ? 'Uploading…' : <Paperclip width={15} height={15} />}
@@ -86,9 +102,12 @@ function AnswerRow({ item, onChange, taskTitle, taskId }) {
 }
 
 // Lightweight thread for clarifying a vague assignment — a question, a
-// comment, a suggestion, whatever. Either person can send one on any
-// task regardless of who created or is assigned it; the other gets
-// pinged, and replying pings back. Writes straight to Supabase via
+// comment, a suggestion, whatever. Any member can send one on any task
+// regardless of who created or is assigned it — but with more than two
+// members, "the other person" isn't a single fixed target any more, so
+// who gets pinged is now an explicit choice (the "Notify" picker below)
+// rather than every other member getting pushed regardless of whether
+// the comment actually concerns them. Writes straight to Supabase via
 // onChange (the full updated array), same pattern as ChecklistEditor/
 // ChecklistView. The push notification is best-effort and never blocks
 // saving the message itself.
@@ -97,12 +116,25 @@ export default function TaskClarifications({
   onChange,
   meId,
   memberName,
+  members = [],
+  assigneeIds = [],
   taskTitle,
   taskId,
   extraActions,
 }) {
+  const otherMembers = members.filter((m) => m.id !== meId)
+  // Defaults to the task's own other assignees — the people it already
+  // concerns — falling back to every other member only when there's
+  // nobody else assigned to default to (e.g. a solo task), so the
+  // picker never defaults to an empty, dead-end selection. Still fully
+  // adjustable before sending, same as Cork Board's own share picker.
+  const defaultNotifyIds = () => {
+    const otherAssignees = assigneeIds.filter((id) => id !== meId)
+    return otherAssignees.length > 0 ? otherAssignees : otherMembers.map((m) => m.id)
+  }
   const [questionDraft, setQuestionDraft] = useState('')
   const [questionAttachments, setQuestionAttachments] = useState([])
+  const [notifyIds, setNotifyIds] = useState(defaultNotifyIds)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [asking, setAsking] = useState(false)
@@ -134,6 +166,11 @@ export default function TaskClarifications({
       askedBy: meId,
       question,
       questionAttachments,
+      // Persisted on the entry itself so a later reply (AnswerRow above)
+      // can default to notifying the same people this question was
+      // originally tagged for, without needing its own separate picker
+      // state passed down — see AnswerRow's own notifyIds default.
+      notifyIds,
       answer: null,
       answerAttachments: [],
       askedAt: new Date().toISOString(),
@@ -147,11 +184,12 @@ export default function TaskClarifications({
     setQuestionDraft('')
     setQuestionAttachments([])
     try {
-      await sendClarificationAsked(taskTitle, question || '📎 Sent an attachment')
+      await sendClarificationAsked(taskTitle, question || '📎 Sent an attachment', notifyIds)
     } catch {
       // Best-effort, see AnswerRow above.
     } finally {
       setAsking(false)
+      setNotifyIds(defaultNotifyIds())
     }
   }
 
@@ -205,7 +243,14 @@ export default function TaskClarifications({
                 <p className="text-[13px] italic opacity-60">Waiting for a reply…</p>
               ) : (
                 <>
-                  <AnswerRow item={item} onChange={handleEntryAnswered} taskTitle={taskTitle} taskId={taskId} />
+                  <AnswerRow
+                    item={item}
+                    onChange={handleEntryAnswered}
+                    taskTitle={taskTitle}
+                    taskId={taskId}
+                    meId={meId}
+                    otherMembers={otherMembers}
+                  />
                   <input
                     type="checkbox"
                     className="task-done-checkbox self-start"
@@ -233,6 +278,18 @@ export default function TaskClarifications({
           onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
         />
         {uploadError && <p className="error">{uploadError}</p>}
+        {/* Same visibility condition as the Send button below — only
+            worth showing once there's actually a message to send, so an
+            idle compose box stays exactly as uncluttered as before this
+            feature. Reuses AssigneePicker (the same toggle-pill multi-
+            select TaskForm.jsx already uses for assignees) rather than a
+            separate checkbox list. */}
+        {(questionDraft.trim() || questionAttachments.length > 0) && otherMembers.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide opacity-60">Notify</span>
+            <AssigneePicker members={otherMembers} value={notifyIds} onChange={setNotifyIds} />
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
