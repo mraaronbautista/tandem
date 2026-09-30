@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Pencil, X } from 'lucide-react'
 import {
+  fetchAccessibleVaults,
+  fetchVaultAccessRoster,
   fetchVaultMeta,
   setupVault,
   unlockVault,
@@ -14,6 +16,7 @@ import {
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import VaultEntryForm from './VaultEntryForm'
 import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
@@ -54,7 +57,20 @@ function groupByFolder(entries, folderNames) {
 // component's state — never persisted to localStorage/sessionStorage —
 // so it's re-derived from the master password every time the vault is
 // reopened, even within the same browser session.
-export default function VaultView({ me, onClose }) {
+export default function VaultView({ me, members = [], onClose }) {
+  // Which vaults this member has access to, and which one's currently
+  // open. A member with access to exactly one (the common case — Ada/
+  // Aaron on the household vault, or a healthcare-only member) never
+  // sees the picker below at all; `activeVaultId` just defaults to it.
+  const [vaults, setVaults] = useState(null)
+  const [activeVaultId, setActiveVaultId] = useState(null)
+  // Other members who share access to the *active* vault — only fetched
+  // for the picker's own use and the healthcare vault's per-entry share
+  // checkboxes; cross-referenced against the live `members` prop for
+  // display names rather than joining server-side (see
+  // fetchVaultAccessRoster's own comment in lib/vault.js).
+  const [accessRoster, setAccessRoster] = useState([])
+
   const [meta, setMeta] = useState(undefined)
   const [vaultKey, setVaultKey] = useState(null)
   const [entries, setEntries] = useState([])
@@ -96,16 +112,56 @@ export default function VaultView({ me, onClose }) {
   const [folderBusy, setFolderBusy] = useState(false)
 
   useEffect(() => {
-    fetchVaultMeta()
-      .then(setMeta)
+    fetchAccessibleVaults()
+      .then((rows) => {
+        setVaults(rows)
+        setActiveVaultId((current) => current ?? rows[0]?.id ?? null)
+      })
       .catch((err) => setError(err.message))
   }, [])
 
+  // Switching vaults means re-locking — each vault's key is genuinely
+  // separate (its own salt/canary), so there's no way to carry an
+  // unlocked state across the switch even if we wanted to. Every
+  // per-vault UI state resets here too (RentalsView.jsx's own company
+  // switch resets its fetched data the same way), so a stale entry list
+  // or an open form from the previous vault can't linger into this one.
+  useEffect(() => {
+    if (!activeVaultId) return
+    setMeta(undefined)
+    setVaultKey(null)
+    setEntries([])
+    setError('')
+    setMasterPassword('')
+    setConfirmPassword('')
+    setShowReset(false)
+    setResetConfirmText('')
+    setFormOpen(false)
+    setEditingEntry(null)
+    setSelectedEntry(null)
+    setAccessRoster([])
+    fetchVaultMeta(activeVaultId)
+      .then(setMeta)
+      .catch((err) => setError(err.message))
+    fetchVaultAccessRoster(activeVaultId)
+      .then(setAccessRoster)
+      .catch((err) => setError(err.message))
+  }, [activeVaultId])
+
+  const activeVault = vaults?.find((v) => v.id === activeVaultId)
+  const isPrivateVault = !!activeVault?.private_entries
+  const otherVaultMembers = members.filter((m) => m.id !== me?.id && accessRoster.includes(m.id))
+
   async function loadEntries(key) {
     try {
-      const rows = await fetchVaultEntries()
+      const rows = await fetchVaultEntries(activeVaultId)
       const decrypted = await Promise.all(
-        rows.map(async (row) => ({ ...(await decryptJSON(key, row.ciphertext, row.iv)), id: row.id })),
+        rows.map(async (row) => ({
+          ...(await decryptJSON(key, row.ciphertext, row.iv)),
+          id: row.id,
+          sharedWith: row.shared_with,
+          createdBy: row.created_by,
+        })),
       )
       setEntries(decrypted)
     } catch (err) {
@@ -135,7 +191,7 @@ export default function VaultView({ me, onClose }) {
     setUnlocking(true)
     setError('')
     try {
-      const { meta: savedMeta, key } = await setupVault(masterPassword)
+      const { meta: savedMeta, key } = await setupVault(activeVaultId, masterPassword)
       setMeta(savedMeta)
       setVaultKey(key)
       setMasterPassword('')
@@ -167,7 +223,7 @@ export default function VaultView({ me, onClose }) {
   async function handleReset() {
     setResetting(true)
     try {
-      await resetVault()
+      await resetVault(activeVaultId)
       setMeta(null)
       setVaultKey(null)
       setEntries([])
@@ -234,7 +290,11 @@ export default function VaultView({ me, onClose }) {
     }
     setFolderBusy(true)
     try {
-      const affected = entries.filter((e) => e.folder === oldName)
+      // In a private vault, only entries this member created are
+      // manageable at all (see schema.sql's update policy) — a shared,
+      // not-mine entry with the same folder name is left untouched rather
+      // than letting Promise.all reject outright on the first RLS denial.
+      const affected = entries.filter((e) => e.folder === oldName && (!isPrivateVault || e.createdBy === me?.id))
       await Promise.all(affected.map((entry) => saveEntryFolder(entry, trimmed)))
       setRenamingFolder(null)
       await loadEntries(vaultKey)
@@ -249,7 +309,7 @@ export default function VaultView({ me, onClose }) {
   // folder tag — they fall back into General, same as any entry that
   // never had a folder set.
   async function handleDeleteFolder(name) {
-    const affected = entries.filter((e) => e.folder === name)
+    const affected = entries.filter((e) => e.folder === name && (!isPrivateVault || e.createdBy === me?.id))
     if (!window.confirm(`Remove the "${name}" folder? Its ${affected.length} ${affected.length === 1 ? 'entry moves' : 'entries move'} back to General — nothing gets deleted.`)) {
       return
     }
@@ -272,9 +332,26 @@ export default function VaultView({ me, onClose }) {
       <ModalCard modifier="vault-modal">
         <h2>Vault</h2>
 
+        {/* Only a member with access to 2+ vaults ever sees this — the
+            common case (one vault) looks exactly like it did before this
+            feature existed. */}
+        {vaults && vaults.length > 1 && (
+          <PeriodTabs>
+            {vaults.map((v) => (
+              <PeriodTab key={v.id} active={v.id === activeVaultId} onClick={() => setActiveVaultId(v.id)}>
+                {v.name}
+              </PeriodTab>
+            ))}
+          </PeriodTabs>
+        )}
+
         {error && <p className="error">{error}</p>}
 
-        {meta === undefined && <p className="loading">Loading…</p>}
+        {vaults === null && <p className="loading">Loading…</p>}
+
+        {vaults?.length === 0 && <p className="task-notes-empty">You don't have access to any vault.</p>}
+
+        {vaults && vaults.length > 0 && meta === undefined && <p className="loading">Loading…</p>}
 
         {meta === null && (
           <form onSubmit={handleSetup}>
@@ -524,10 +601,13 @@ export default function VaultView({ me, onClose }) {
 
         {formOpen && (
           <VaultEntryForm
+            vaultId={activeVaultId}
             vaultKey={vaultKey}
             createdBy={me.id}
             entry={editingEntry}
             existingFolders={folderNames}
+            isPrivateVault={isPrivateVault}
+            otherVaultMembers={otherVaultMembers}
             onClose={() => {
               setFormOpen(false)
               setEditingEntry(null)
@@ -540,6 +620,9 @@ export default function VaultView({ me, onClose }) {
           <VaultEntryDetail
             entry={selectedEntry}
             existingFolders={folderNames}
+            isPrivateVault={isPrivateVault}
+            meId={me.id}
+            memberName={(id) => members.find((m) => m.id === id)?.display_name || 'Someone'}
             onClose={() => setSelectedEntry(null)}
             onEdit={() => {
               setEditingEntry(selectedEntry)

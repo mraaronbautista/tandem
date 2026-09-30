@@ -97,23 +97,44 @@ export function generateStrongPassword(length = 20) {
   return chars.join('')
 }
 
-export async function fetchVaultMeta() {
+// Every vault the caller has vault_access to — RLS already scopes this,
+// so no extra filtering needed client-side. `private_entries` rides
+// along so VaultView.jsx/VaultEntryForm.jsx know whether to show the
+// per-entry sharing picker at all, without a second round-trip.
+export async function fetchAccessibleVaults() {
+  const { data, error } = await supabase.from('vaults').select('id, name, private_entries').order('name')
+  if (error) throw error
+  return data
+}
+
+// Member ids with access to one vault — just the raw ids, not joined
+// against members here, since the caller (VaultView.jsx) already has the
+// live `members` array in memory and can map names itself rather than
+// this doing a second round-trip for data the app already fetched.
+export async function fetchVaultAccessRoster(vaultId) {
+  const { data, error } = await supabase.from('vault_access').select('member_id').eq('vault_id', vaultId)
+  if (error) throw error
+  return data.map((row) => row.member_id)
+}
+
+export async function fetchVaultMeta(vaultId) {
   const { data, error } = await supabase
     .from('vault_meta')
-    .select('id, salt, canary_ciphertext, canary_iv')
+    .select('id, vault_id, salt, canary_ciphertext, canary_iv')
+    .eq('vault_id', vaultId)
     .maybeSingle()
   if (error) throw error
   return data
 }
 
-export async function setupVault(masterPassword) {
+export async function setupVault(vaultId, masterPassword) {
   const salt = generateSalt()
   const key = await deriveKey(masterPassword, salt)
   const { ciphertext, iv } = await encryptJSON(key, CANARY_TEXT)
   const { data, error } = await supabase
     .from('vault_meta')
-    .insert({ salt, canary_ciphertext: ciphertext, canary_iv: iv })
-    .select('id, salt, canary_ciphertext, canary_iv')
+    .insert({ vault_id: vaultId, salt, canary_ciphertext: ciphertext, canary_iv: iv })
+    .select('id, vault_id, salt, canary_ciphertext, canary_iv')
     .single()
   if (error) throw error
   return { meta: data, key }
@@ -127,42 +148,50 @@ export async function unlockVault(masterPassword, meta) {
 }
 
 // The forgot-password safety valve — there is no way to recover a
-// forgotten master password by design, so this wipes everything and lets
-// setup start over. Matches PostgREST's requirement that DELETE specify
-// a filter; `.not('id', 'is', null)` matches every row since id is never
-// null.
-export async function resetVault() {
-  const { error: entriesError } = await supabase.from('vault_entries').delete().not('id', 'is', null)
+// forgotten master password by design, so this wipes everything *for
+// this one vault* and lets setup start over. Scoped by vaultId now — a
+// global delete here would wipe every vault, not just the one whose
+// password was actually forgotten. Matches PostgREST's requirement that
+// DELETE specify a filter, same as the vault_id filter itself already
+// does.
+export async function resetVault(vaultId) {
+  const { error: entriesError } = await supabase.from('vault_entries').delete().eq('vault_id', vaultId)
   if (entriesError) throw entriesError
-  const { error: metaError } = await supabase.from('vault_meta').delete().not('id', 'is', null)
+  const { error: metaError } = await supabase.from('vault_meta').delete().eq('vault_id', vaultId)
   if (metaError) throw metaError
 }
 
-export async function fetchVaultEntries() {
+export async function fetchVaultEntries(vaultId) {
   const { data, error } = await supabase
     .from('vault_entries')
-    .select('id, ciphertext, iv, created_by, created_at, updated_at')
+    .select('id, ciphertext, iv, shared_with, created_by, created_at, updated_at')
+    .eq('vault_id', vaultId)
     .order('created_at', { ascending: true })
   if (error) throw error
   return data
 }
 
-export async function createVaultEntry({ ciphertext, iv, created_by }) {
+// shared_with only matters for a vault with private_entries — harmless
+// no-op for the household vault, since its RLS ignores the column
+// entirely (see schema.sql).
+export async function createVaultEntry({ vault_id, ciphertext, iv, shared_with = [], created_by }) {
   const { data, error } = await supabase
     .from('vault_entries')
-    .insert({ ciphertext, iv, created_by })
-    .select('id, ciphertext, iv, created_by, created_at, updated_at')
+    .insert({ vault_id, ciphertext, iv, shared_with, created_by })
+    .select('id, ciphertext, iv, shared_with, created_by, created_at, updated_at')
     .single()
   if (error) throw error
   return data
 }
 
-export async function updateVaultEntry(id, { ciphertext, iv }) {
+export async function updateVaultEntry(id, { ciphertext, iv, shared_with }) {
+  const patch = { ciphertext, iv, updated_at: new Date().toISOString() }
+  if (shared_with !== undefined) patch.shared_with = shared_with
   const { data, error } = await supabase
     .from('vault_entries')
-    .update({ ciphertext, iv, updated_at: new Date().toISOString() })
+    .update(patch)
     .eq('id', id)
-    .select('id, ciphertext, iv, created_by, created_at, updated_at')
+    .select('id, ciphertext, iv, shared_with, created_by, created_at, updated_at')
     .single()
   if (error) throw error
   return data

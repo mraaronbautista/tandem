@@ -8,11 +8,14 @@ import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 const FIELD_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
 
-// Doc's proposed starting template: Rentals/Vault/Staff off, Reports and
+// Doc's proposed starting template: Rentals/Staff off, Reports and
 // Working status left allowed (deny-list, so "on" just means absent —
 // see PERMISSION_FEATURES' own comment). Editable before creation, same
-// as everything else in this form.
-const DEFAULT_DENIED = new Set(['rentals', 'vault', 'staff'])
+// as everything else in this form. Vault access isn't set here at all
+// any more — it's a separate per-vault vault_access grant (schema.sql),
+// SQL-editor-only for now, not one of this app's own permissions.vault
+// keys.
+const DEFAULT_DENIED = new Set(['rentals', 'staff'])
 
 // Creates a brand-new member account — the piece Add Member was missing:
 // creating an auth.users row needs the service-role key, so this goes

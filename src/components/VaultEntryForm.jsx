@@ -4,7 +4,17 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
-export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFolders = [], onClose, onSaved }) {
+export default function VaultEntryForm({
+  vaultId,
+  vaultKey,
+  createdBy,
+  entry,
+  existingFolders = [],
+  isPrivateVault = false,
+  otherVaultMembers = [],
+  onClose,
+  onSaved,
+}) {
   const [label, setLabel] = useState(entry?.label || '')
   const [username, setUsername] = useState(entry?.username || '')
   const [loginMethod, setLoginMethod] = useState(entry?.loginMethod || '')
@@ -12,9 +22,18 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFol
   const [url, setUrl] = useState(entry?.url || '')
   const [notes, setNotes] = useState(entry?.notes || '')
   const [folder, setFolder] = useState(entry?.folder || '')
+  // Only meaningful (and only rendered) when isPrivateVault — an entry in
+  // a non-private vault stays visible to every vault member regardless of
+  // this. Defaults to empty (private to the creator) for a new entry,
+  // same default cork_notes.shared_with already established.
+  const [sharedWith, setSharedWith] = useState(entry?.sharedWith || [])
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  function toggleShared(memberId) {
+    setSharedWith((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]))
+  }
 
   // A freshly generated password (or any other edit) is gone for good if
   // this closes without saving — unlike the rest of the app, the vault
@@ -24,6 +43,7 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFol
   // just the click-outside case, since a stray Escape or a misclicked
   // Cancel loses the draft exactly the same way.
   function hasUnsavedChanges() {
+    const originalShared = entry?.sharedWith || []
     return (
       label !== (entry?.label || '') ||
       username !== (entry?.username || '') ||
@@ -31,7 +51,9 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFol
       password !== (entry?.password || '') ||
       url !== (entry?.url || '') ||
       notes !== (entry?.notes || '') ||
-      folder !== (entry?.folder || '')
+      folder !== (entry?.folder || '') ||
+      sharedWith.length !== originalShared.length ||
+      sharedWith.some((id) => !originalShared.includes(id))
     )
   }
 
@@ -57,9 +79,15 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFol
       }
       const { ciphertext, iv } = await encryptJSON(vaultKey, value)
       const saved = entry
-        ? await updateVaultEntry(entry.id, { ciphertext, iv })
-        : await createVaultEntry({ ciphertext, iv, created_by: createdBy })
-      onSaved({ ...value, id: saved.id })
+        ? await updateVaultEntry(entry.id, { ciphertext, iv, shared_with: isPrivateVault ? sharedWith : undefined })
+        : await createVaultEntry({
+            vault_id: vaultId,
+            ciphertext,
+            iv,
+            shared_with: sharedWith,
+            created_by: createdBy,
+          })
+      onSaved({ ...value, id: saved.id, sharedWith: saved.shared_with })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -146,6 +174,25 @@ export default function VaultEntryForm({ vaultKey, createdBy, entry, existingFol
           Notes
           <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
+
+        {/* Only this vault type has per-entry privacy at all — a
+            household-vault entry stays visible to every vault member
+            regardless, no picker needed (see schema.sql's
+            vault_has_private_entries()). Empty by default, same as
+            cork_notes' own pin-sharing checkboxes. */}
+        {isPrivateVault && otherVaultMembers.length > 0 && (
+          <div className="submission-field">
+            <span className="submission-field-label">Share with</span>
+            <div className="flex flex-col gap-1.5 text-sm">
+              {otherVaultMembers.map((m) => (
+                <label key={m.id} className="flex items-center gap-2">
+                  <input type="checkbox" checked={sharedWith.includes(m.id)} onChange={() => toggleShared(m.id)} />
+                  {m.display_name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         <SubmissionActions>
           <SubmissionButton onClick={handleClose}>Cancel</SubmissionButton>

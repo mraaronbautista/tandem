@@ -3,15 +3,18 @@ import { supabase } from './supabaseClient'
 // Feature keys members.permissions can deny — mirrors has_permission()'s
 // feature-name comment in schema.sql. 'reports' gates *submitting* an
 // EOD/EOW/EOM report, not reading them (EodReportsList.jsx has no
-// permission gate — reports stay mutually visible).
-export const PERMISSION_FEATURES = ['rentals', 'vault', 'staff', 'reports', 'workingStatus']
+// permission gate — reports stay mutually visible). 'vault' used to be
+// here — a single blanket on/off flag, retired once a second vault
+// needed per-vault access (vault_access in schema.sql) rather than one
+// flag that couldn't express "trusted with the healthcare vault but not
+// the household one."
+export const PERMISSION_FEATURES = ['rentals', 'staff', 'reports', 'workingStatus']
 
 // Shared between MemberAccessForm.jsx (editing an existing member) and
 // AddMemberForm.jsx (creating a new one) — one copy so the two forms
 // can't drift into describing the same permission key differently.
 export const FEATURE_LABELS = {
   rentals: 'Rentals',
-  vault: 'Vault',
   staff: 'Staff',
   // Gates *submitting* a report, not reading one — EodReportsList.jsx has
   // no permission gate, reports stay mutually visible to everyone.

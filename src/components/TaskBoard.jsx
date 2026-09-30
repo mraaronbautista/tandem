@@ -1380,7 +1380,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} members={members} onClose={() => setReportOpen(false)} />}
 
-      {vaultOpen && <VaultView me={me} onClose={() => setVaultOpen(false)} />}
+      {vaultOpen && <VaultView me={me} members={members} onClose={() => setVaultOpen(false)} />}
 
       {manageAccessOpen && (
         <ManageMemberAccessView

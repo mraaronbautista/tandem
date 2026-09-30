@@ -7,7 +7,24 @@ import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
 // something a stray tap on the list can trigger.
-export default function VaultEntryDetail({ entry, existingFolders = [], onClose, onEdit, onDeleted, onMoveFolder }) {
+export default function VaultEntryDetail({
+  entry,
+  existingFolders = [],
+  isPrivateVault = false,
+  meId,
+  memberName,
+  onClose,
+  onEdit,
+  onDeleted,
+  onMoveFolder,
+}) {
+  // Matches schema.sql's own update/delete RLS exactly: a household-vault
+  // entry stays editable/deletable by any vault member; a healthcare-
+  // vault entry only by whoever created it — sharing grants visibility,
+  // not co-ownership (same "the other member can see it, not manage it"
+  // rule cork_notes already established). Hiding the buttons here is UX
+  // only — the real enforcement is server-side either way.
+  const canManage = !isPrivateVault || entry.createdBy === meId
   const [revealed, setRevealed] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -60,7 +77,16 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
 
         {error && <p className="error">{error}</p>}
 
-        {onMoveFolder && (
+        {isPrivateVault && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-[70px] flex-none text-[13px] opacity-60">Shared</span>
+            <span className="flex-1 text-text-h">
+              {entry.sharedWith?.length ? entry.sharedWith.map((id) => memberName(id)).join(', ') : 'Only you'}
+            </span>
+          </div>
+        )}
+
+        {onMoveFolder && canManage && (
           <div className="flex items-center gap-2 text-sm">
             <span className="w-[70px] flex-none text-[13px] opacity-60">Folder</span>
             <select value={entry.folder || ''} onChange={handleFolderChange} disabled={moving}>
@@ -115,12 +141,16 @@ export default function VaultEntryDetail({ entry, existingFolders = [], onClose,
 
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Close</SubmissionButton>
-          <SubmissionButton variant="destructive" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
-          </SubmissionButton>
-          <SubmissionButton variant="primary" onClick={onEdit}>
-            Edit
-          </SubmissionButton>
+          {canManage && (
+            <SubmissionButton variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </SubmissionButton>
+          )}
+          {canManage && (
+            <SubmissionButton variant="primary" onClick={onEdit}>
+              Edit
+            </SubmissionButton>
+          )}
         </SubmissionActions>
       </ModalCard>
     </Modal>

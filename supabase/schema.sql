@@ -1299,47 +1299,110 @@ create policy "members can delete rental savings goals"
   on rental_savings_goal for delete
   using (is_member() and has_permission('rentals'));
 
--- Shared password vault, encrypted client-side (AES-GCM, key derived from
--- a master password via PBKDF2) before anything ever reaches Supabase —
--- both members share one master password, consistent with everything
--- else in this app being mutually visible. RLS here only governs who can
--- read/write ciphertext; it is not the security boundary for the
--- passwords themselves, the encryption is. A single row: salt for key
--- derivation, plus a canary ciphertext that lets a later unlock attempt
--- verify the master password before any real entry exists to test
--- against. Delete policy exists for the forgot-password reset flow
--- (there is no recovery path by design, so resetting is the only way
--- out of a forgotten master password).
+-- Password vault(s), encrypted client-side (AES-GCM, key derived from a
+-- master password via PBKDF2) before anything ever reaches Supabase. Was
+-- a single global vault_meta row (literally enforced by a unique index on
+-- a constant expression) until a second, healthcare-scoped vault was
+-- needed, shared with a third member (a household VA) who shouldn't see
+-- the original household vault's contents — a feature toggle or
+-- client-side filter can't give that, since it wouldn't stop a member
+-- who already has the *other* vault's master password from decrypting
+-- entries they merely couldn't otherwise query. `vaults` is the real
+-- separation: each row gets its own vault_meta (own salt/canary, so a
+-- genuinely different master password), and vault_access (below) is who
+-- even knows a given vault exists.
+create table vaults (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  -- Off (false) for the original household vault, preserving its
+  -- existing "whoever has access sees and can edit every entry, no extra
+  -- step" behavior exactly. On for the healthcare vault: an entry
+  -- defaults to visible only to its creator, with an explicit per-entry
+  -- share to specific other vault members (vault_entries.shared_with
+  -- below) — same targeted-sharing shape cork_notes.shared_with already
+  -- established, requested directly once a shared household vault's
+  -- "everyone sees everything" model stopped fitting a vault meant to
+  -- hold a VA's own working credentials too.
+  private_entries boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Who can see a given vault exists, unlock it, and read/write its
+-- entries — the real access boundary every policy below is keyed off of.
+-- No client-facing write policy: granting/revoking vault access is
+-- SQL-editor-only for now, same precedent is_admin promotion already
+-- established for a privileged action with no admin UI built yet.
+-- Declared before `vaults`' own policies since has_vault_access()
+-- (below) already needs it to exist.
+create table vault_access (
+  vault_id uuid not null references vaults (id) on delete cascade,
+  member_id uuid not null references members (id) on delete cascade,
+  primary key (vault_id, member_id)
+);
+
+-- security definer, same reasoning is_member() already is — a plain
+-- "exists (select 1 from vault_access where ...)" inline in vault_access's
+-- own select policy would mean evaluating that table's RLS from within
+-- itself. This bypasses RLS for the lookup instead of recursing into it,
+-- same fix is_member() already applies to the equivalent members-table
+-- problem.
+create or replace function has_vault_access(check_vault_id uuid)
+returns boolean as $$
+  select exists (select 1 from vault_access where vault_id = check_vault_id and member_id = auth.uid());
+$$ language sql security definer stable;
+
+alter table vaults enable row level security;
+
+create policy "members can read accessible vaults"
+  on vaults for select
+  using (is_member() and has_vault_access(id));
+
+alter table vault_access enable row level security;
+
+-- Any member with access to a vault can see the rest of that vault's
+-- roster — needed so the healthcare vault's per-entry share picker can
+-- list who else to share with, not just confirm your own row exists. Not
+-- sensitive: knowing who else shares a vault with you isn't a secret,
+-- same reasoning a shared cork_notes pin's targets are visible to each
+-- other.
+create policy "members can read their vault's access roster"
+  on vault_access for select
+  using (is_member() and has_vault_access(vault_id));
+
+-- Salt for key derivation, plus a canary ciphertext that lets a later
+-- unlock attempt verify the master password before any real entry exists
+-- to test against — one row per vault now, not one globally. Delete
+-- policy exists for the forgot-password reset flow (there is no recovery
+-- path by design, so resetting is the only way out of a forgotten master
+-- password).
 create table vault_meta (
   id uuid primary key default gen_random_uuid(),
+  vault_id uuid not null references vaults (id) on delete cascade,
   salt text not null,
   canary_ciphertext text not null,
   canary_iv text not null,
   created_at timestamptz not null default now()
 );
 
--- Enforces "at most one row" at the database level. Without this, two
--- people opening the never-set-up vault at the same time and both
--- submitting "Set up vault" both succeed, leaving vault_meta with two
--- rows — the client's .maybeSingle() fetch then errors on ">1 row" and
--- the vault gets stuck on a permanent error screen with no way back in.
--- A constant expression in a unique index means every row collides with
--- every other row, so the second insert now fails cleanly instead.
-create unique index vault_meta_singleton on vault_meta ((true));
+-- Enforces "at most one row per vault" at the database level — the same
+-- race this index always guarded against (two people opening a
+-- never-set-up vault at once and both submitting "Set up vault"), just
+-- scoped per vault_id instead of globally now.
+create unique index vault_meta_vault_id_unique on vault_meta (vault_id);
 
 alter table vault_meta enable row level security;
 
 create policy "members can read vault meta"
   on vault_meta for select
-  using (is_member() and has_permission('vault'));
+  using (is_member() and has_vault_access(vault_id));
 
 create policy "members can insert vault meta"
   on vault_meta for insert
-  with check (is_member() and has_permission('vault'));
+  with check (is_member() and has_vault_access(vault_id));
 
 create policy "members can delete vault meta"
   on vault_meta for delete
-  using (is_member() and has_permission('vault'));
+  using (is_member() and has_vault_access(vault_id));
 
 -- One row per credential. `ciphertext` decrypts (with the vault key) to
 -- one JSON blob `{ label, username, loginMethod, password, url, notes }`
@@ -1347,33 +1410,67 @@ create policy "members can delete vault meta"
 -- of their own, e.g. "Sign in with Google") — the label is encrypted too,
 -- not just the password, since even knowing an entry called "Chase Bank"
 -- exists is sensitive metadata worth not leaking to anyone with database
--- access.
+-- access. `shared_with` only means anything when the owning vault has
+-- `private_entries` — see the policies below.
 create table vault_entries (
   id uuid primary key default gen_random_uuid(),
+  vault_id uuid not null references vaults (id) on delete cascade,
   ciphertext text not null,
   iv text not null,
+  shared_with uuid[] not null default '{}'::uuid[],
   created_by uuid not null references members (id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+-- Whether vault_id's own private_entries flag is set — wrapped the same
+-- way has_vault_access() wraps the vault_access lookup, purely for
+-- readability in the policies below (vaults has no RLS-recursion problem
+-- of its own here, this is just avoiding repeating the same subquery four
+-- times).
+create or replace function vault_has_private_entries(check_vault_id uuid)
+returns boolean as $$
+  select coalesce((select private_entries from vaults where id = check_vault_id), false);
+$$ language sql stable;
+
 alter table vault_entries enable row level security;
 
-create policy "members can read all vault entries"
+-- Every policy below shares the same "vault access, and (not a private
+-- vault, or you're the creator/a target)" shape. For the household vault
+-- (private_entries = false) the last clause is never evaluated — every
+-- accessible-vault member keeps seeing/editing every entry exactly as
+-- before this feature existed. For the healthcare vault
+-- (private_entries = true) it's genuinely creator-or-shared-with for
+-- reading, creator-only for writing — matching cork_notes' own "the
+-- other member can see it, not manage it" rule, since sharing a
+-- credential is meant to grant visibility, not co-ownership.
+create policy "members can read accessible vault entries"
   on vault_entries for select
-  using (is_member() and has_permission('vault'));
+  using (
+    is_member()
+    and has_vault_access(vault_id)
+    and (not vault_has_private_entries(vault_id) or created_by = auth.uid() or auth.uid() = any(shared_with))
+  );
 
 create policy "members can insert vault entries"
   on vault_entries for insert
-  with check (is_member() and has_permission('vault'));
+  with check (is_member() and has_vault_access(vault_id) and created_by = auth.uid());
 
 create policy "members can update vault entries"
   on vault_entries for update
-  using (is_member() and has_permission('vault'));
+  using (
+    is_member()
+    and has_vault_access(vault_id)
+    and (not vault_has_private_entries(vault_id) or created_by = auth.uid())
+  );
 
 create policy "members can delete vault entries"
   on vault_entries for delete
-  using (is_member() and has_permission('vault'));
+  using (
+    is_member()
+    and has_vault_access(vault_id)
+    and (not vault_has_private_entries(vault_id) or created_by = auth.uid())
+  );
 
 -- Cork Board: quick pins with no due date, no timeline — the opposite of
 -- a task, which is deliberately scheduled. This is the one place in the
@@ -3184,5 +3281,150 @@ end;
 $$;
 
 alter table cork_notes drop column if exists shared;
+
+commit;
+
+-- Second, healthcare-scoped vault (incremental migration) — splits the
+-- single global vault into per-vault rows (vaults/vault_access, new),
+-- adds vault_id to vault_meta/vault_entries, adds shared_with to
+-- vault_entries, and rewrites every vault_meta/vault_entries policy to
+-- key off vault_access instead of the old blanket has_permission('vault')
+-- check. See the base vault_meta/vault_entries/vaults/vault_access
+-- definitions above for the full reasoning — this block only exists to
+-- bring an already-live database in line with that end state without
+-- losing the existing household vault's data or access.
+begin;
+
+create table if not exists vaults (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  private_entries boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table vaults enable row level security;
+
+create table if not exists vault_access (
+  vault_id uuid not null references vaults (id) on delete cascade,
+  member_id uuid not null references members (id) on delete cascade,
+  primary key (vault_id, member_id)
+);
+alter table vault_access enable row level security;
+
+-- security definer so vault_access's own select policy (below) doesn't
+-- recurse into itself — same fix is_member() already applies to the
+-- equivalent members-table problem.
+create or replace function has_vault_access(check_vault_id uuid)
+returns boolean as $$
+  select exists (select 1 from vault_access where vault_id = check_vault_id and member_id = auth.uid());
+$$ language sql security definer stable;
+
+create or replace function vault_has_private_entries(check_vault_id uuid)
+returns boolean as $$
+  select coalesce((select private_entries from vaults where id = check_vault_id), false);
+$$ language sql stable;
+
+alter table vault_meta add column if not exists vault_id uuid references vaults (id) on delete cascade;
+alter table vault_entries add column if not exists vault_id uuid references vaults (id) on delete cascade;
+alter table vault_entries add column if not exists shared_with uuid[] not null default '{}'::uuid[];
+
+-- One-time: create the two real vaults, point every existing vault_meta/
+-- vault_entries row at the household one (there is at most one of each
+-- today, per the old vault_meta_singleton index), and seed vault_access
+-- for both — household from whichever members currently have
+-- permissions.vault (deny-list: absent/true = allowed, matching the old
+-- RLS check exactly, so this preserves today's real access rather than
+-- hardcoding specific member ids), healthcare from every current member
+-- (the whole point of this vault). A household vault that was never set
+-- up (no vault_meta row yet) still gets its vaults row and vault_access
+-- grants — there's simply nothing to backfill onto it.
+do $$
+declare
+  household_id uuid;
+  healthcare_id uuid;
+begin
+  select id into household_id from vaults where name = 'Household';
+  if household_id is null then
+    insert into vaults (name, private_entries) values ('Household', false) returning id into household_id;
+  end if;
+
+  select id into healthcare_id from vaults where name = 'Healthcare';
+  if healthcare_id is null then
+    insert into vaults (name, private_entries) values ('Healthcare', true) returning id into healthcare_id;
+  end if;
+
+  update vault_meta set vault_id = household_id where vault_id is null;
+  update vault_entries set vault_id = household_id where vault_id is null;
+
+  insert into vault_access (vault_id, member_id)
+  select household_id, id from members where coalesce((permissions ->> 'vault')::boolean, true)
+  on conflict do nothing;
+
+  insert into vault_access (vault_id, member_id)
+  select healthcare_id, id from members
+  on conflict do nothing;
+end $$;
+
+alter table vault_meta alter column vault_id set not null;
+alter table vault_entries alter column vault_id set not null;
+
+drop index if exists vault_meta_singleton;
+create unique index if not exists vault_meta_vault_id_unique on vault_meta (vault_id);
+
+drop policy if exists "members can read accessible vaults" on vaults;
+create policy "members can read accessible vaults"
+  on vaults for select
+  using (is_member() and has_vault_access(id));
+
+drop policy if exists "members can read their own vault access" on vault_access;
+drop policy if exists "members can read their vault's access roster" on vault_access;
+create policy "members can read their vault's access roster"
+  on vault_access for select
+  using (is_member() and has_vault_access(vault_id));
+
+drop policy if exists "members can read vault meta" on vault_meta;
+drop policy if exists "members can insert vault meta" on vault_meta;
+drop policy if exists "members can delete vault meta" on vault_meta;
+create policy "members can read vault meta"
+  on vault_meta for select
+  using (is_member() and has_vault_access(vault_id));
+create policy "members can insert vault meta"
+  on vault_meta for insert
+  with check (is_member() and has_vault_access(vault_id));
+create policy "members can delete vault meta"
+  on vault_meta for delete
+  using (is_member() and has_vault_access(vault_id));
+
+drop policy if exists "members can read all vault entries" on vault_entries;
+drop policy if exists "members can insert vault entries" on vault_entries;
+drop policy if exists "members can update vault entries" on vault_entries;
+drop policy if exists "members can delete vault entries" on vault_entries;
+create policy "members can read accessible vault entries"
+  on vault_entries for select
+  using (
+    is_member()
+    and has_vault_access(vault_id)
+    and (not vault_has_private_entries(vault_id) or created_by = auth.uid() or auth.uid() = any(shared_with))
+  );
+create policy "members can insert vault entries"
+  on vault_entries for insert
+  with check (is_member() and has_vault_access(vault_id) and created_by = auth.uid());
+create policy "members can update vault entries"
+  on vault_entries for update
+  using (
+    is_member()
+    and has_vault_access(vault_id)
+    and (not vault_has_private_entries(vault_id) or created_by = auth.uid())
+  );
+create policy "members can delete vault entries"
+  on vault_entries for delete
+  using (
+    is_member()
+    and has_vault_access(vault_id)
+    and (not vault_has_private_entries(vault_id) or created_by = auth.uid())
+  );
+
+-- permissions.vault is retired — vault_access now expresses "which
+-- vault(s)" a member can see, which a single blanket boolean never could.
+update members set permissions = permissions - 'vault';
 
 commit;
