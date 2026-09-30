@@ -100,8 +100,12 @@ export default function BoardView({
       </PeriodTabs>
 
       <div onTouchStart={handleSwipeStart} onTouchEnd={handleSwipeEnd}>
-        {section === 'pins' && <CorkBoardView me={me} memberName={memberName} tasks={tasks} focusPinRequest={focusPinRequest} />}
-        {section === 'projects' && <CorkBoardView me={me} memberName={memberName} tasks={tasks} mode="projects" />}
+        {section === 'pins' && (
+          <CorkBoardView me={me} memberName={memberName} members={members} tasks={tasks} focusPinRequest={focusPinRequest} />
+        )}
+        {section === 'projects' && (
+          <CorkBoardView me={me} memberName={memberName} members={members} tasks={tasks} mode="projects" />
+        )}
         {section === 'inbox' && (
           <InboxView
             tasks={tasks}

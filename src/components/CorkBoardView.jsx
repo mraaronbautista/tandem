@@ -12,6 +12,15 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
+// "Only you" / "Shared with Ada" / "Shared with Ada, Aaron" — always
+// names every target, same as assigneeBadge() (whoLabels.js) does for a
+// task's own assignee_ids rather than collapsing to a bare count once
+// there's more than one.
+function sharedLabel(sharedWith, memberName) {
+  if (!sharedWith?.length) return 'Only you'
+  return `Shared with ${sharedWith.map((id) => memberName(id)).join(', ')}`
+}
+
 // 'YYYY-MM-DD' for today in the browser's own local timezone — matches
 // what zonedTimeToUtcIso expects as its date argument (same helper as
 // PrioritiesForm.jsx's day-period logic, which this mirrors).
@@ -99,11 +108,14 @@ function reconcileRoadmapItems(oldItems, newItems) {
 
 // Persistent tab content, not a modal — see RentalsView.jsx for why.
 // Quick pins with no due date and no timeline, the opposite of a task,
-// which is deliberately scheduled. `shared` is the one place in the app
-// where visibility isn't automatically mutual (see the RLS comment on
-// cork_notes in schema.sql) — a pin defaults to private, and putting it
-// on the other person's board is an explicit opt-in toggle, not the
-// default a shared task board would otherwise suggest.
+// which is deliberately scheduled. `shared_with` is the one place in the
+// app where visibility isn't automatically mutual (see the RLS comment on
+// cork_notes in schema.sql) — a pin defaults to private, and sharing it
+// means picking specific members, not the default a shared task board
+// would otherwise suggest. Used to be a plain boolean ("share with
+// literally everyone") back when this was a 2-person app; an array now,
+// same reasoning task_access exists for tasks — with more than two
+// members, "shared" isn't a single yes/no any more.
 //
 // `mode` ('pins' | 'projects') is BoardView.jsx's own Pins/Projects/Inbox
 // split, not a second component — a roadmap pin (any pin with a non-empty
@@ -115,11 +127,21 @@ function reconcileRoadmapItems(oldItems, newItems) {
 // own Realtime channel, threaded down through BoardView.jsx exactly like
 // InboxView already receives it) is what makes a milestone step's "done"
 // state real rather than just "was it added" — see taskById below.
-export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mode = 'pins', tasks = [] }) {
+// `members` (also threaded down the same way) is what the sharing picker
+// below offers as targets.
+export default function CorkBoardView({ me, memberName, members = [], focusPinRequest = 0, mode = 'pins', tasks = [] }) {
   const [notes, setNotes] = useState(null)
   const [error, setError] = useState('')
   const [body, setBody] = useState('')
-  const [shared, setShared] = useState(false)
+  const [sharedWith, setSharedWith] = useState([])
+  // Which note's sharing picker is open right now (a single id, not a
+  // Set — only one is ever open at a time, same shape openAddKey below
+  // already uses for its own per-note popover) plus a draft selection for
+  // it, so toggling checkboxes doesn't write on every click the way
+  // handleArchive's own immediate toggle does — sharing is a Save-then-
+  // close action, not a one-tap flip, since it's now a real multi-select.
+  const [sharingId, setSharingId] = useState(null)
+  const [sharingDraft, setSharingDraft] = useState([])
   const [posting, setPosting] = useState(false)
   const [promotingId, setPromotingId] = useState(null)
   const [promoted, setPromoted] = useState(() => new Set())
@@ -202,9 +224,9 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
     if (!trimmed || !me) return
     setPosting(true)
     try {
-      await createCorkNote({ body: trimmed, shared, author_id: me.id, roadmap_items: parseRoadmapDraft(roadmapDraft) })
+      await createCorkNote({ body: trimmed, shared_with: sharedWith, author_id: me.id, roadmap_items: parseRoadmapDraft(roadmapDraft) })
       setBody('')
-      setShared(false)
+      setSharedWith([])
       setRoadmapDraft('')
       reload()
     } catch (err) {
@@ -214,9 +236,23 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
     }
   }
 
-  async function handleToggleShare(note) {
+  function toggleComposeShare(memberId) {
+    setSharedWith((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]))
+  }
+
+  function openSharing(note) {
+    setSharingId(note.id)
+    setSharingDraft(note.shared_with || [])
+  }
+
+  function toggleSharingDraft(memberId) {
+    setSharingDraft((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]))
+  }
+
+  async function saveSharing(note) {
     try {
-      await updateCorkNote(note.id, { shared: !note.shared })
+      await updateCorkNote(note.id, { shared_with: sharingDraft })
+      setSharingId(null)
       reload()
     } catch (err) {
       setError(err.message)
@@ -445,11 +481,25 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
           </label>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label className="flex cursor-pointer items-center gap-1.5 text-[13px] opacity-85">
-            <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
-            Share to both boards
-          </label>
+        {members.length > 1 && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] opacity-85">
+            <span className="opacity-65">Share with:</span>
+            {members
+              .filter((m) => m.id !== me?.id)
+              .map((m) => (
+                <label key={m.id} className="flex cursor-pointer items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={sharedWith.includes(m.id)}
+                    onChange={() => toggleComposeShare(m.id)}
+                  />
+                  {m.display_name}
+                </label>
+              ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="submit"
             className="cursor-pointer rounded-[8px] border-0 bg-accent px-4 py-2 font-semibold text-white disabled:cursor-default disabled:opacity-60"
@@ -604,8 +654,8 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
                     {memberName(note.author_id)} · {formatDate(note.created_at)}
                     {note.archived_task_id && ' · Archived task'}
                   </span>
-                  <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared ? 'border-accent text-accent' : 'border-border'}`}>
-                    {note.shared ? 'Shared' : 'Only you'}
+                  <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared_with?.length ? 'border-accent text-accent' : 'border-border'}`}>
+                    {sharedLabel(note.shared_with, memberName)}
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -676,9 +726,42 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
                           <button type="button" className={itemActionClasses} onClick={() => startEdit(note)}>
                             Edit
                           </button>
-                          <button type="button" className={itemActionClasses} onClick={() => handleToggleShare(note)}>
-                            {note.shared ? 'Make private' : 'Share'}
-                          </button>
+                          {members.length > 1 && (
+                            <div className="relative">
+                              <button type="button" className={itemActionClasses} onClick={() => openSharing(note)}>
+                                Share
+                              </button>
+                              {sharingId === note.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setSharingId(null)} />
+                                  <div className="absolute left-0 top-full z-20 mt-1 flex flex-col gap-1.5 rounded-md border border-border bg-card-bg p-2.5 shadow-raised">
+                                    {members
+                                      .filter((m) => m.id !== me?.id)
+                                      .map((m) => (
+                                        <label
+                                          key={m.id}
+                                          className="flex cursor-pointer items-center gap-1.5 text-[13px] whitespace-nowrap text-text-h"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={sharingDraft.includes(m.id)}
+                                            onChange={() => toggleSharingDraft(m.id)}
+                                          />
+                                          {m.display_name}
+                                        </label>
+                                      ))}
+                                    <button
+                                      type="button"
+                                      className={`${itemActionClasses} mt-1 border-accent font-semibold text-accent`}
+                                      onClick={() => saveSharing(note)}
+                                    >
+                                      Save
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                           <button
                             type="button"
                             className={itemActionClasses}
@@ -757,8 +840,8 @@ export default function CorkBoardView({ me, memberName, focusPinRequest = 0, mod
                       <span>
                         {memberName(note.author_id)} · {formatDate(note.created_at)}
                       </span>
-                      <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared ? 'border-accent text-accent' : 'border-border'}`}>
-                        {note.shared ? 'Shared' : 'Only you'}
+                      <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared_with?.length ? 'border-accent text-accent' : 'border-border'}`}>
+                        {sharedLabel(note.shared_with, memberName)}
                       </span>
                     </div>
                     {isOwn && (

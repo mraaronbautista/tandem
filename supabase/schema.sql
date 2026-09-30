@@ -1377,16 +1377,28 @@ create policy "members can delete vault entries"
 
 -- Cork Board: quick pins with no due date, no timeline — the opposite of
 -- a task, which is deliberately scheduled. This is the one place in the
--- app where visibility is NOT automatically mutual: `shared` decides
--- whether the other member can see a given pin at all, not just whether
+-- app where visibility is NOT automatically mutual: `shared_with` decides
+-- whether another member can see a given pin at all, not just whether
 -- they can edit it, so the select policy (not just insert/update/delete)
 -- checks it. Only the author can edit or delete their own pin, even once
--- shared — the other person can see it, not manage it.
+-- shared — a targeted member can see it, not manage it.
+--
+-- A per-member array, not a boolean — a plain `shared boolean` (this
+-- table's original shape, from the original 2-person app) meant "visible
+-- to literally every member," which stopped being the right default once
+-- task_access made targeted, asymmetric visibility a real concept
+-- elsewhere in this schema. Sharing a pin "with the team" now means
+-- picking who, same as everything else N-member-aware in this app —
+-- there's no "shared with everyone" sentinel; the compose form fills
+-- shared_with with every other member's id when that's genuinely what's
+-- wanted, so a pin's visibility is always an explicit, inspectable list
+-- rather than an implicit "current membership" lookup that would
+-- silently widen as new members join.
 create table cork_notes (
   id uuid primary key default gen_random_uuid(),
   author_id uuid not null references members (id),
   body text not null,
-  shared boolean not null default false,
+  shared_with uuid[] not null default '{}'::uuid[],
   created_at timestamptz not null default now(),
   -- Flat, append-only thread — { id, authorId, body, createdAt } — no
   -- reply-to-reply nesting, same "doesn't need a child table" reasoning
@@ -1412,7 +1424,7 @@ alter table cork_notes enable row level security;
 
 create policy "members can read own or shared cork notes"
   on cork_notes for select
-  using (is_member() and (shared or author_id = auth.uid()));
+  using (is_member() and (auth.uid() = any(shared_with) or author_id = auth.uid()));
 
 create policy "members can insert own cork notes"
   on cork_notes for insert
@@ -1430,8 +1442,8 @@ create policy "members can delete own cork notes"
 -- write to a row the caller doesn't own (the plain update RLS policy
 -- above is author-only, deliberately, so it can't be reused here) — the
 -- visibility check inline below re-implements the select policy's own
--- rule (own or shared) so a member still can't comment on a pin they
--- can't see. Only ever touches the comments column, never body/shared,
+-- rule (own or targeted) so a member still can't comment on a pin they
+-- can't see. Only ever touches the comments column, never body/shared_with,
 -- so this can't be used to work around the author-only edit restriction.
 create or replace function add_cork_note_comment(p_note_id uuid, p_body text)
 returns cork_notes
@@ -1454,7 +1466,7 @@ begin
     'createdAt', now()
   )
   where id = p_note_id
-    and (shared or author_id = auth.uid())
+    and (auth.uid() = any(shared_with) or author_id = auth.uid())
   returning * into result;
 
   if result.id is null then
@@ -3112,4 +3124,65 @@ using (
   )
 );
 update storage.buckets set public = false where id = 'task-attachments';
+commit;
+
+-- Targeted cork_notes sharing (incremental migration) — replaces the
+-- original boolean `shared` (visible to literally every member) with a
+-- per-member `shared_with uuid[]`, so sharing a pin means picking who,
+-- consistent with task_access being the app's other real example of
+-- non-mutual, per-member visibility. Existing shared pins are backfilled
+-- to every *other* member that existed at migration time (preserving
+-- exactly who could already see them), not to "everyone, present or
+-- future" — a member added later needs an explicit (re-)share, same as
+-- a brand-new member never inherits existing task_access grants either.
+begin;
+
+alter table cork_notes add column if not exists shared_with uuid[] not null default '{}'::uuid[];
+
+update cork_notes n
+set shared_with = coalesce(
+  (select array_agg(m.id) from members m where m.id != n.author_id),
+  '{}'::uuid[]
+)
+where shared and shared_with = '{}'::uuid[];
+
+drop policy if exists "members can read own or shared cork notes" on cork_notes;
+create policy "members can read own or shared cork notes"
+  on cork_notes for select
+  using (is_member() and (auth.uid() = any(shared_with) or author_id = auth.uid()));
+
+create or replace function add_cork_note_comment(p_note_id uuid, p_body text)
+returns cork_notes
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result cork_notes;
+begin
+  if not is_member() then
+    raise exception 'not a member';
+  end if;
+
+  update cork_notes
+  set comments = comments || jsonb_build_object(
+    'id', gen_random_uuid(),
+    'authorId', auth.uid(),
+    'body', p_body,
+    'createdAt', now()
+  )
+  where id = p_note_id
+    and (auth.uid() = any(shared_with) or author_id = auth.uid())
+  returning * into result;
+
+  if result.id is null then
+    raise exception 'note not found or not visible';
+  end if;
+
+  return result;
+end;
+$$;
+
+alter table cork_notes drop column if exists shared;
+
 commit;
