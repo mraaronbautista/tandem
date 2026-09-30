@@ -29,12 +29,21 @@ Deno.serve(async (req) => {
   // Most kinds below broadcast to "everyone but the caller" — with N
   // members that's not a single fixed target any more (see 'nudge' and
   // 'task_nudge' below for the two kinds that resolve a narrower target
-  // instead).
+  // instead). otherMemberIds is computed from allMembers regardless of
+  // whether the caller is actually in it, so a valid-but-non-member
+  // session (a staff account, for instance) would otherwise get
+  // "everyone but the caller" collapsing to "everyone" — every
+  // member-only kind (eod_report/nudge/clarification_asked/
+  // clarification_answered) explicitly checks `!caller` first and
+  // refuses rather than silently broadcasting on a non-member's behalf.
+  // time_entry_correction_request is the one kind a staff account is
+  // actually meant to call, so it deliberately has no such check.
   const otherMemberIds = allMembers.filter((m) => m.id !== user.id).map((m) => m.id)
 
   const payload = await req.json()
 
   if (payload.kind === 'eod_report') {
+    if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
     const body = String(payload.body || '').slice(0, 300)
     if (!body.trim()) return new Response('Missing report body', { status: 400, headers: corsHeaders })
     await Promise.all(
@@ -51,6 +60,7 @@ Deno.serve(async (req) => {
   // target — still verified as a real member (and not the caller) before
   // sending, rather than trusted outright.
   if (payload.kind === 'nudge') {
+    if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
     const targetId = String(payload.targetId || '')
     if (!targetId || targetId === user.id || !allMembers.some((m) => m.id === targetId)) {
       return new Response('Invalid target', { status: 400, headers: corsHeaders })
@@ -69,6 +79,7 @@ Deno.serve(async (req) => {
   }
 
   if (payload.kind === 'clarification_asked') {
+    if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
     const taskTitle = String(payload.taskTitle || '')
     const question = String(payload.question || '').slice(0, 300)
     if (!question.trim()) return new Response('Missing question', { status: 400, headers: corsHeaders })
@@ -100,6 +111,7 @@ Deno.serve(async (req) => {
   }
 
   if (payload.kind === 'clarification_answered') {
+    if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
     const taskTitle = String(payload.taskTitle || '')
     const answer = String(payload.answer || '').slice(0, 300)
     if (!answer.trim()) return new Response('Missing answer', { status: 400, headers: corsHeaders })
