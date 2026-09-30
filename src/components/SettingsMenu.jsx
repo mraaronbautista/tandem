@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bell, BellOff, Moon, Sun, Globe, HelpCircle, Lock, LogOut, ShieldCheck } from 'lucide-react'
+import { Bell, BellOff, Moon, Sun, Globe, HelpCircle, Lock, LogOut, ShieldCheck, UserCircle } from 'lucide-react'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone } from '../lib/timezone'
 import Modal from './Modal'
 import HowToGuide from './HowToGuide'
@@ -27,6 +27,7 @@ export default function SettingsMenu({
   onChangeDefaultTimezone,
   onOpenVault,
   onOpenManageAccess,
+  onOpenMyProfile,
 }) {
   const [guideOpen, setGuideOpen] = useState(false)
 
@@ -41,6 +42,15 @@ export default function SettingsMenu({
         {memberName && <p className="-mt-1.5 text-[13px] opacity-60">Signed in as {memberName}</p>}
 
         <div className="flex flex-col gap-2">
+          {onOpenMyProfile && (
+            <button type="button" className={settingsItemClasses} onClick={onOpenMyProfile}>
+              <span className="text-[17px]">
+                <UserCircle size={17} />
+              </span>
+              My profile
+            </button>
+          )}
+
           {showPush ? (
             <>
               <button type="button" className={settingsItemClasses} onClick={onTogglePush} disabled={pushBusy}>

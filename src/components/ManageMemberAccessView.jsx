@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AddMemberForm from './AddMemberForm'
 import MemberAccessForm from './MemberAccessForm'
+import MemberCredentialsForm from './MemberCredentialsForm'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -16,6 +17,7 @@ export default function ManageMemberAccessView({ members, me, onClose, onMembers
   const others = members.filter((m) => m.id !== me?.id)
   const [editing, setEditing] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [resettingLogin, setResettingLogin] = useState(null)
 
   // Chains straight from creation into editing that same member's task
   // visibility, rather than a combined "review and create" screen —
@@ -49,13 +51,22 @@ export default function ManageMemberAccessView({ members, me, onClose, onMembers
                 <span className="truncate">{m.display_name}</span>
                 {m.is_admin && <span className="flex-none text-xs opacity-60">Admin</span>}
               </span>
-              <button
-                type="button"
-                className="flex-none cursor-pointer rounded-sm border border-border bg-pill-bg px-3 py-1.5 text-sm text-text-h"
-                onClick={() => setEditing(m)}
-              >
-                Edit access
-              </button>
+              <span className="flex flex-none gap-2">
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-sm border border-border bg-pill-bg px-3 py-1.5 text-sm text-text-h"
+                  onClick={() => setResettingLogin(m)}
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-sm border border-border bg-pill-bg px-3 py-1.5 text-sm text-text-h"
+                  onClick={() => setEditing(m)}
+                >
+                  Edit access
+                </button>
+              </span>
             </div>
           ))}
           {others.length === 0 && <p className="text-sm opacity-65">No other members yet.</p>}
@@ -78,6 +89,10 @@ export default function ManageMemberAccessView({ members, me, onClose, onMembers
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
         />
+      )}
+
+      {resettingLogin && (
+        <MemberCredentialsForm member={resettingLogin} onClose={() => setResettingLogin(null)} />
       )}
     </Modal>
   )

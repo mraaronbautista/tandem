@@ -47,6 +47,7 @@ import EndOfDayReportForm from './EndOfDayReportForm'
 import EodReportsList from './EodReportsList'
 import SettingsMenu from './SettingsMenu'
 import ManageMemberAccessView from './ManageMemberAccessView'
+import MyProfileForm from './MyProfileForm'
 import RentalsView from './RentalsView'
 import VaultView from './VaultView'
 import BoardView from './BoardView'
@@ -170,6 +171,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [manageAccessOpen, setManageAccessOpen] = useState(false)
+  const [myProfileOpen, setMyProfileOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
   const quickAddHandlerRef = useRef(null)
   const registerQuickAdd = useCallback((handler) => {
@@ -1389,6 +1391,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
         />
       )}
 
+      {myProfileOpen && me && (
+        <MyProfileForm me={me} onClose={() => setMyProfileOpen(false)} onSaved={reloadMembers} />
+      )}
+
       {settingsOpen && (
         <SettingsMenu
           theme={theme}
@@ -1410,6 +1416,14 @@ export default function TaskBoard({ theme, toggleTheme }) {
             setSettingsOpen(false)
             setVaultOpen(true)
           }}
+          onOpenMyProfile={
+            me
+              ? () => {
+                  setSettingsOpen(false)
+                  setMyProfileOpen(true)
+                }
+              : undefined
+          }
           onOpenManageAccess={
             me?.is_admin
               ? () => {

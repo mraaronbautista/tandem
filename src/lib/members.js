@@ -46,3 +46,24 @@ export async function updateDefaultTimezone(memberId, timezone) {
   const { error } = await supabase.from('members').update({ default_timezone: timezone }).eq('id', memberId)
   if (error) throw error
 }
+
+// My Profile's own-field edits — display_name/color are unguarded by
+// guard_member_privilege_columns() (that trigger only blocks
+// permissions/is_admin, see schema.sql), so a plain .update() through the
+// existing "members can update own working status" row-scoped policy is
+// enough; no RPC needed, unlike setMemberPermissions()/upsertTaskAccess().
+export async function updateMemberProfile(memberId, { displayName, color }) {
+  const { error } = await supabase
+    .from('members')
+    .update({ display_name: displayName, color })
+    .eq('id', memberId)
+  if (error) throw error
+}
+
+// Own password change — same as staff.js's changeOwnPassword(): GoTrue
+// trusts the active session for auth.updateUser(), no current-password
+// re-entry or Edge Function needed.
+export async function changeOwnPassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) throw error
+}

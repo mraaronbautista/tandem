@@ -38,6 +38,20 @@ export async function createMemberAccount({ username, password, displayName, col
   return data
 }
 
+// Admin resetting another member's username/password — mirrors staff.js's
+// updateStaffCredentials() exactly, targeting members instead. Same
+// write-only reasoning: there's no way to read back a member's current
+// username (their auth.users row isn't queryable through the anon
+// client), so leaving a field blank is the only way to say "keep this
+// one unchanged."
+export async function updateMemberCredentials({ memberId, newUsername, newPassword }) {
+  const { data, error } = await supabase.functions.invoke('update-member-credentials', {
+    body: { memberId, newUsername, newPassword },
+  })
+  if (error) throw error
+  return data
+}
+
 // The only controlled write path for members.permissions (see
 // set_member_permissions() in schema.sql) — a guard trigger blocks a
 // plain .update() on this column outside this RPC.
