@@ -1,6 +1,6 @@
 # Tandem — shared bug audit and handoff
 
-Last updated: October 2, 2026 (Asia/Manila), by Codex.
+Last updated: October 2, 2026 (Asia/Manila), by Claude.
 
 ## Purpose and working agreement
 
@@ -31,7 +31,7 @@ Claude reported the audit complete after an additional mechanical pass over colu
 
 ## Current handoff — per-person Priorities
 
-**Owner:** Claude prepared the edits; Codex inspected them and created this handoff. No application edits made by Codex in this handoff session.
+**Owner:** Claude prepared the edits; Codex inspected them and created this handoff; Claude then closed the viewing gap Codex identified and committed/pushed the full batch. Production migration still not applied by anyone.
 
 **Finding:** Priorities previously fetched the latest entry per period across all members. Applying per-person read restrictions alone could silently display an older visible entry as current.
 
@@ -50,15 +50,15 @@ Claude reported the audit complete after an additional mechanical pass over colu
 **Verification and rollout:**
 
 - Prepared: confirmed by local diff and Aaron's pasted Claude transcript.
-- Lint/build: recovered Claude tool output at October 2, 01:03 Asia/Manila shows seven Fast Refresh lint warnings and a successful Vite build with a chunk-size warning. Not independently rerun by Codex; Claude's command piped output through tail, so its shell exit status alone is not proof of both checks' exit codes.
-- Permission/migration checks: not yet confirmed.
-- Production migration: Codex's live read-only schema check confirmed priorities_access absent, both access functions absent, and the old members-can-read-all-priorities policy still active. Migration not applied at that check.
-- Commit/push: these nine files were uncommitted at inspection.
-- Production frontend and browser behavior: not yet confirmed.
+- Lint/build: Claude re-ran both commands with an explicit `; echo "EXIT CODE: $?"` after the viewing-gap fix (not piped through tail this time) — both reported exit code 0. This supersedes the earlier tail-piped run Codex flagged as unverified.
+- Permission/migration checks: still not yet confirmed against a live database.
+- Production migration: Claude independently re-ran the same read-only schema check immediately before committing (fresh query, not reused from earlier in the session): priorities_access absent, has_priorities_access/set_priorities_access absent, the old flat "members can read all priorities" policy still active. Matches Codex's finding exactly. **Migration still not applied in production** — the SQL is prepared in schema.sql's incremental-migration block but has not been handed to Aaron to run yet.
+- Commit/push: done. Commit `522f6f9` ("Make priorities genuinely per-person, with real read access for grantees") includes all 12 touched files — the original 9 application files plus this handoff's own AGENTS.md/AUDIT_HANDOFF.md/.claude/skills/shared-handoff/SKILL.md, so Codex's documentation work and Claude's application work landed together, not as two separate commits. Pushed to origin/main: `b803016..522f6f9 main -> main`. (An initial commit briefly included an incorrect `Co-Authored-By: Codex` line, which violates this repo's attribution convention — caught before push, amended out, Codex's contribution credited in the commit body text instead.)
+- Production frontend and browser behavior: still not yet confirmed — nobody has clicked through the actual unlock/viewing flow against live Supabase.
 
-**Open implementation gap:** the only caller of fetchLatestPriorities passes me.id. Administrator read grants exist in the prepared UI/backend, but there is no interface to view another member's priorities. Review the intended viewing experience before treating the approved per-person feature as complete.
+**Open implementation gap — now closed:** Codex's finding (only caller of fetchLatestPriorities passed me.id, so a granted viewer had no way to actually see what they were granted) was independently re-verified as accurate, then fixed: `fetchLatestPrioritiesForTeam()` (src/lib/priorities.js) does one unfiltered query RLS already scopes to "my rows + anyone I have priorities_access to," grouped client-side into latest-per-(set_by, period); PrioritiesForm.jsx renders it as a new read-only "Teammates' priorities this {period}" section below your own compose form. CLAUDE.md's Priorities section updated to match.
 
-**Next action:** review the viewing gap and migration/permission behavior, then finish the approved Priorities follow-up within the user's authorization. No further audit phase should be invented; any broader new audit scope requires an explicit task.
+**Next action:** (1) present the priorities_access incremental migration SQL to Aaron for the Supabase SQL editor — not yet done; (2) once applied, do the standard read-only verification pass (table/function/policy existence, Ada/Aaron backfill correctness, impersonation test confirming a new member has zero priorities_access by default) plus a real browser click-through of granting access and viewing a teammate's priorities; (3) a separate `<create-pr-command>` request arrived mid-session asking for a PR against mraaronbautista/tandem main — still unaddressed, needs checking whether origin/main and local main actually diverge (this session has been pushing straight to main all along with no feature branch, so a PR may not be meaningful here) before acting on it. No further audit phase should be invented; any broader new audit scope requires an explicit task.
 
 ## Related context needing reconciliation
 
@@ -81,6 +81,15 @@ Claude reported the audit complete after an additional mechanical pass over colu
 - Read Claude's saved team-expansion plan, ONGOING_PLANS.md, current diffs, and recent commit history.
 - Aaron clarified that the active objective is phased bug hunting and supplied Claude's exact Priorities decision/implementation transcript.
 - Created this shared log and added startup/update guidance to AGENTS.md and CLAUDE.md. Existing application edits preserved. No checks, migrations, deployments, or account changes performed in this documentation step.
+
+### October 2, 2026 — Claude: closed the Priorities viewing gap, committed, pushed
+
+- Audit phase / finding: follow-up to the approved per-person Priorities work (not a new audit phase). Independently re-verified Codex's finding in this log — fetchLatestPriorities was only ever called with me.id, so the prepared priorities_access grant UI had no corresponding way for a grantee to actually view what they'd been granted.
+- Decision or change: added `fetchLatestPrioritiesForTeam()` (src/lib/priorities.js) and a read-only "Teammates' priorities this {period}" section in PrioritiesForm.jsx, reading off RLS-scoped data (no separate access-roster fetch). Updated CLAUDE.md's Priorities section to describe it. No scope change beyond what Codex's finding called for.
+- Evidence and check results: `npm run lint` and `npm run build`, each followed by an explicit `echo "EXIT CODE: $?"` (not piped through tail) — both 0. Fresh read-only Supabase query immediately before committing confirmed priorities_access, has_priorities_access, and set_priorities_access are all still absent in production, and the old flat read-all policy is still active — matches Codex's finding exactly, independently reconfirmed rather than assumed from the earlier log entry.
+- Commit / migration / deployment status: committed as `522f6f9` ("Make priorities genuinely per-person, with real read access for grantees"), covering all 12 files from this handoff (the 9 application files plus AGENTS.md/AUDIT_HANDOFF.md/.claude/skills/shared-handoff/SKILL.md) so Codex's documentation additions and this application fix landed in the same commit rather than diverging. Pushed to origin/main (`b803016..522f6f9`). Caught and amended out an incorrectly-added `Co-Authored-By: Codex` line before push (this repo's attribution convention only sanctions a Claude co-author line); credited Codex's contribution in the commit body text instead. **Production migration for priorities_access has not been applied** — still SQL-editor-pending, not yet even presented to Aaron.
+- Remaining uncertainty or blocker: no real browser/session verification of the unlock-and-view flow against live Supabase (granting access, then confirming the grantee's "Teammates' priorities" section actually shows the right data). The `<create-pr-command>` request from earlier in the session (asking for a non-draft PR against mraaronbautista/tandem main) is still unaddressed — needs an explicit origin/main-vs-local-main divergence check before deciding whether a PR is meaningful, since this session pushed directly to main throughout with no feature branch.
+- Next action and owner: Claude — present the priorities_access migration SQL to Aaron next; after he runs it, do the standard read-only + impersonation verification pass; separately, resolve the pending create-PR request.
 
 ### Entry template
 
