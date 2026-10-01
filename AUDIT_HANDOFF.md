@@ -1,6 +1,6 @@
 # Tandem — shared bug audit and handoff
 
-Last updated: October 2, 2026 (Asia/Manila), by Claude.
+Last updated: October 2, 2026 (Asia/Manila), by Claude. **Session paused here at Aaron's request** — see the bug audit's own status and the click-through list below for exactly where to resume.
 
 ## Purpose and working agreement
 
@@ -128,7 +128,7 @@ Aaron asked to go through the click-through list from `multi-member-permissions.
 - **Cork Board targeted pin sharing**: pinned a test note (private by default, "Only you" — confirmed), opened the Share popover (anchored, checkbox-per-member + Save, exactly as documented), checked RC Lina, saved — badge changed to "Shared with RC Lina" live. Verified the real `shared_with` write via a direct query (not impersonation — a plain read confirming the actual array). Archived the pin (confirmed the lighter-weight archived-pin UI — no comment thread/Focus Today/Edit, just Unarchive/Delete, matching CLAUDE.md). Could not click through final Delete — the app's native `confirm()` dialog appears to get auto-dismissed by browser automation, so deletion doesn't proceed from a scripted click. Cleaned up by deleting the one test row directly via SQL instead (`delete from cork_notes where id = '9b37316a-...' and body = '[audit test] sharing click-through'`, matched on both id and body to avoid any ambiguity).
 - **Attachment privacy**: opened a real completed task ("Shopify store," Aug 8) with a real completion attachment, clicked the submission-preview (eye) icon — the image rendered correctly inline via `PrivateAttachment.jsx`'s blob-URL download path. Independently confirmed `storage.buckets` still has `task-attachments` at `public: false` — the preview is genuinely going through the authenticated path, not a public URL, even for this task's legacy old-format public-URL-string attachment entry (confirming `attachmentPath()`'s migration shim still works correctly against real data).
 
-**Remaining two items need RC Lina's actual login** (Inbox scoping with the real VA account, and task-comment notification targeting/person-nudge from a non-admin perspective) — not yet done, continuing next.
+**Remaining two items need RC Lina's actual login** (Inbox scoping with the real VA account, and task-comment notification targeting/person-nudge from a non-admin perspective) — **Aaron asked to stop here for this session.** Not a blocker, not forgotten — pick up by asking him (or whoever resumes) to log in as RC Lina in the browser pane, same pattern used for Ada/Aaron above, then repeat the same click-through approach for those two items.
 
 **Note on scripted `confirm()` dialogs**: any future click-through involving a native browser confirm (task delete, pin delete, vault reset, etc.) should expect the same limitation — plan to verify via direct SQL instead of trying to drive the dialog.
 
