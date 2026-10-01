@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## Project journey — read this first if you're new to this repo
+
+`PROJECT_JOURNEY.md` is the single source of truth for this project's history and current state, written so any AI tool (not just Claude Code) can pick this project up cold — read it before this file. This file (CLAUDE.md) stays the deep technical reference underneath it; PROJECT_JOURNEY.md is the narrative spine, the current-state snapshot, and the exact resume point if a session ends mid-thread. Keep its "Current state" and "Active handoff" sections honestly up to date at meaningful checkpoints, the same discipline AUDIT_HANDOFF.md already requires below.
+
 ## Shared audit handoff
 
 Use the project skill `/shared-handoff` (`.claude/skills/shared-handoff/SKILL.md`) to reconcile the current checkpoint on resume and maintain the log at meaningful work checkpoints and session handoffs.

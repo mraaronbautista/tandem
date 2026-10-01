@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Project journey — read this first if you're new to this repo
+
+`PROJECT_JOURNEY.md` is the single source of truth for this project's history and current state, written so any AI tool — ChatGPT/Codex included — can pick this project up cold. Read it before anything else in this file. It's the narrative spine, the current-state snapshot, and the exact resume point if a session ended mid-thread; `CLAUDE.md` stays the deep technical reference underneath it. Keep its "Current state" and "Active handoff" sections honestly current at meaningful checkpoints, the same discipline AUDIT_HANDOFF.md already requires below.
+
 ## Shared audit handoff
 
 Read `AUDIT_HANDOFF.md` and inspect the working tree before starting or resuming work. Update that file after every meaningful audit finding, decision, fix, verification, migration, or deployment and before ending a session. Preserve other sessions' edits; distinguish local preparation from tested, committed, pushed, and confirmed-live work. Follow the actual agreed bug-audit phases recorded there; do not substitute feature delivery phases. For current multi-member architecture, consult `CLAUDE.md` and code: older two-person descriptions below may be stale.

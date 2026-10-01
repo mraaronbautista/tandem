@@ -1,0 +1,132 @@
+# Tandem — Project Journey (Single Source of Truth)
+
+Last updated: October 2, 2026, by Claude.
+
+## What this document is
+
+This is the one document meant to give any AI assistant — Claude, ChatGPT, Codex, whoever picks this up next — the full shape of this project cold: what Tandem is, how it got to its current state, what's true right now, and exactly where to pick up if a session ends mid-thread. It is the **narrative spine**; it deliberately does not duplicate the deep technical detail that already lives elsewhere. Read this first, then follow its pointers.
+
+**If you only read one section before doing anything, read "Active handoff — read this first" near the bottom.** That's the actual resume point.
+
+## How to use this if you're picking this up cold
+
+1. Read this whole document once, start to finish — it's written to be read in order, not skimmed.
+2. Read `CLAUDE.md` next for the real technical architecture (it's long — ~220KB — because it documents the *why* behind nearly every decision in the codebase, not just the *what*). Treat it as the authoritative technical reference.
+3. Check `AUDIT_HANDOFF.md` for the detailed, line-by-line operational log of the current collaborative effort between Claude and Codex sessions (if you are not Claude or Codex, read it anyway — it's the most current tactical state).
+4. Check `git log` and `git status` yourself before assuming anything — this document and the others are kept honestly updated, but always verify independently rather than trusting a stale claim. That norm (distinguish "prepared" from "tested" from "committed" from "pushed" from "confirmed live in production") is the single most important working convention on this project — see "Established conventions" below.
+5. If you're about to touch the database or deploy something, read the relevant parts of CLAUDE.md first — this schema has real production data (a real household's real task board, a real property-management business, a real household VA's onboarded account) and several past incidents in this project were caused by assuming committed code was actually deployed, or assuming a migration had actually been run. Don't repeat those.
+
+## The journey (chronological)
+
+### Chapter 1 — PsyberScribe becomes Tandem (July 23, 2026)
+
+The app started life as "PsyberScribe," then was renamed to **Tandem** and flattened from a nested project structure to the repo root. From the very first commits it was a two-person task board: **Ada** (the client) and **Aaron** (her virtual assistant and, eventually, the app's administrator). Early work established the core loop — task creation, due dates/times with overlap detection, a submission/completion flow, push notifications (Web Push/VAPID), pull-to-refresh, and login.
+
+### Chapter 2 — The first real feature set: Rentals, Vault, Priorities, Cork Board (Aug 4–13)
+
+This is where Tandem grew past "just a task list." In roughly ten days: End-of-day reports matured; a full **Rentals** module shipped (calendar, financials recognized by upfront charge cycle rather than calendar occupancy, savings goals, booking status); a **shared password vault**, encrypted client-side; **Priorities** became a checklist that spawns real tasks on save, not just a note; **task clarifications** (ask-a-question threads with push notifications) were added; and **Cork Board** (quick pins with no due date) appeared, along with a How-to guide and the first responsive Today/Rentals/Reports navigation.
+
+### Chapter 3 — UI/UX iteration and the "a2" redesign (Aug 17–31)
+
+A long stretch of pure interaction polish: modal focus trapping, accessibility labels, inline errors instead of `alert()`, a desktop 3-column Rentals dashboard, Month view with real task previews, a merged desktop header/nav. Then a deliberate redesign spike against a reference design ("a2"): a floating mobile nav capsule + FAB, Cork Board and Inbox merged into one Board destination, and the start of a **CSS-to-Tailwind migration** (component by component, tracked in `MIGRATION_PLAN.md`), which completed on Aug 31 as "a deliberate hybrid architecture" — Tailwind utilities for new/migrated components, the older hand-written `App.css`/`index.css` custom-property system still governing what hadn't been touched yet.
+
+### Chapter 4 — Property-manager Staff: a third kind of account (Aug 31 onward)
+
+Also landing Aug 31: a wholly new account type, **staff** (a house/property manager), deliberately *not* a `members` row — GPS-confirmed clock-in/out, geofencing against configured work sites, an admin dashboard for Ada/Aaron. This was the first time the app had to reason about more than two trust levels. Over the following two weeks this matured substantially: physical-location grouping (one location, many rental units, either company), address-based clock-in setup via OpenStreetMap geocoding, on-site GPS capture with member approval as a fallback, break/geofence-exit clock-out flow with shift reports, configurable payroll cadence, CSV export, and a member-side credential-reset flow for easy staff turnover.
+
+### Chapter 5 — The big day: task icons, timeline polish, recurrence unification (Sep 1–3)
+
+A single enormous push (54 commits on Sep 2 alone) that: added keyword-guessed task icons with manual override; reworked the Day timeline's clustering/stacking math multiple times to stop false "overlapping" flags; unified *every* recurrence type (daily through annual) onto one pre-materialize-ahead-of-time model, retiring the old one-step-at-a-time `spawn_next_recurrence()` approach (this retirement wasn't fully cleaned up — see Chapter 9); and shipped `FEATURES.md`, the first user-facing documentation of the whole app.
+
+### Chapter 6 — Staff feature maturation (Sep 3–13)
+
+Continued hardening of the property-manager feature: multiple tenants per rental booking, a genuine adversarial RLS pass that found and fixed a real staff-timekeeping security gap, live-Realtime-sync fixes for work-site capture/approval (caught via a real report: a capture succeeding on the property manager's phone wasn't showing as pending on the member's side), and markdown-rendered job descriptions.
+
+### Chapter 7 — The N-member pivot (Sep 29–30)
+
+The single biggest architectural turn in the project: **generalizing from a hardcoded two-person (Ada/Aaron) model to a real N-member model**, driven by the need to onboard a healthcare virtual assistant who needed the task board without Ada's Rentals/Vault/Staff data. `tasks.who` (a fixed Ada/Aaron/both enum) was replaced by `tasks.assignee_ids`, a real array; `task_access` (per-ordered-pair Hidden/View/Update + create/delete/reassign grants) replaced the old implicit "both members see everything"; `members.permissions` became a real deny-list jsonb blob; an admin UI (`ManageMemberAccessView.jsx`/`MemberAccessForm.jsx`) and an in-app **Add Member** flow shipped so a new hire needs no SQL/deployment; **My Profile** closed the self-service gap; task attachments moved from a public Storage bucket to a genuinely private one; Inbox was scoped to assignment rather than mere visibility; Cork Board pins moved from an all-or-nothing `shared` boolean to real per-member `shared_with` targeting; and a *second*, healthcare-scoped password vault was built with its own separate master password for real key separation.
+
+### Chapter 8 — The real VA, a vault reversal, and the first deployment-cohesion crack (Oct 1)
+
+**RC Lina**, the healthcare VA, became a real onboarded production account — no longer a test account. Almost immediately, real use surfaced two things:
+
+1. The two-vault design from Chapter 7, while architecturally sound, asked Ada to remember a *second* master password just for Lina's benefit — more cost than the actual requirement needed. Aaron: *"i think setting up a new master password for the vault for healthcare will be too much for ada to remember, i think we can just pick who we can share the passwords to inside vault right."* Correct — the real requirement (Lina sees only specific credentials) was already exactly what per-entry `shared_with` sharing does *within* one vault. The second vault was **collapsed back into one shared vault with per-entry privacy**, the same day it had shipped. The `vaults`/`vault_access` infrastructure stayed (a future vault that genuinely needs its own separate password is a one-row insert away) — there's just one vault in active use.
+2. Completing one's own task was incorrectly notifying the *other* member that "Ada finished that task," regardless of who actually completed it. Root cause: **Edge Function deployment drift** — `notify-task-events` and `notify-reminders` had been correctly rewritten for the N-member model since Sep 30, committed to the repo the whole time, but **never actually redeployed**. Production was silently still running the original hardcoded two-person version, reading a `task.who` column that no longer existed, which made every single completion hardcode to "Ada completed a task." This is the project's sharpest lesson so far: *Supabase Edge Functions deploy independently of the Netlify frontend build — a function can be correctly committed for a long time while production silently runs an old version, with no error, only wrong behavior.*
+
+That bug also triggered a direct product conversation about what completion notifications *should* do with more than two people in the mix, landing on: automatic completion pings go to admins only now, plus a new opt-in "Notify someone this is done?" prompt (eligible recipients computed from real task-visibility rules) for the rare case someone specific should know.
+
+### Chapter 9 — The full deployment-cohesion audit, and a new multi-agent collaboration pattern (Oct 1–2)
+
+The notification bug above prompted Aaron to ask for something broader: *"lets go over every single thing... I dont want to see anything arise like how my completion of a task notify me, aaron, and the notification state it as ada completed a task."* A 6-phase audit followed (deployment integrity, Realtime publication coverage, notification pathways, frontend data freshness, access-model cohesion, a scoped feature walkthrough), finding and fixing several more real, dormant issues: a **zombie recurrence trigger** (the old `spawn_next_recurrence()` model's trigger was still installed and still referencing dropped columns, silently doing the wrong thing if it had ever fired again), a missing rental-turnover-task trigger that had *never actually worked* despite being documented as live, an undocumented notification trigger, and a missing member-only guard on the task-nudge notification path.
+
+This stretch also introduced something new to the project: **a second AI agent (Codex/ChatGPT) working the same repository concurrently with Claude**, which required building an actual shared-handoff convention — `AUDIT_HANDOFF.md` plus `.claude/skills/shared-handoff/SKILL.md`, with explicit rules (distinguish prepared/tested/committed/pushed/confirmed-live; never overwrite another agent's entries or claim their work; re-read before resuming). Codex independently caught a real gap in Claude's in-flight work (a newly-added per-person Priorities access grant had no UI for the grantee to actually view what they'd been granted) — a genuine example of the cross-agent review paying off. **This document you're reading now is the next step in that same spirit: a source of truth written so that *any* AI tool, not just Claude or Codex, can pick this project up correctly.**
+
+The rest of Oct 1–2 was spent making Priorities genuinely per-person (it had been a global "most recent wins" view with no real per-setter concept, which would have silently shown stale data to a restricted viewer once read-restrictions were layered on) with its own `priorities_access` grant table mirroring the existing `report_access` pattern, then **systematically verifying everything that shipped** — not just reading the code, but actually running it: read-only schema checks, rolled-back impersonation transactions proving both the restriction and the grant work, a real production browser session (on Ada's own device) confirming the UI renders correctly, and a real admin-UI grant/revoke click-through confirmed against the live database on both the insert and delete path.
+
+### Chapter 10 — Where we are now (Oct 2, 2026)
+
+A deliberate pause, mid-way through a longer list of "shipped but never actually clicked through in a browser" items. Five of seven were verified this way (My Profile, the admin member-credentials form, Projects' quick-add/collapse/undo, Cork Board's targeted sharing, and attachment privacy); two remain, both needing the real VA's own login rather than Aaron's or Ada's — Inbox scoping and task-comment notification targeting. Rather than continue synchronously, Aaron asked for a plain-language checklist to hand to RC Lina directly so she can self-check both on her own device. See "Active handoff" below for the exact state.
+
+## Current state (as of this writing)
+
+A quick status map — for *how* each of these works, read the matching CLAUDE.md section, not this list.
+
+| Area | Status |
+| --- | --- |
+| Core task board (assignees, recurrence, timeline, overlap detection) | Live, mature, N-member since Sep 30 |
+| Members, permissions, task_access | Live; admin UI exists; `is_admin` promotion is still SQL-editor-only by design |
+| Rentals (Awa Rentalz / Azu Rentals) | Live, mature; short/midterm and long-term unit views |
+| Password vault | Live; one shared vault, per-entry privacy (see Chapter 8) |
+| Reports (EOD/EOW/EOM/biweekly) | Live; `report_access` per-member read grants shipped Oct 1 |
+| Priorities | Live, genuinely per-person as of Oct 1–2, fully verified (schema + impersonation + live browser + admin UI) |
+| Cork Board (pins + Projects/milestones) | Live; targeted per-member sharing; Projects has quick-add/collapse/undo |
+| Inbox | Live; scoped to actual assignment, not mere visibility |
+| Property-manager Staff (GPS clock-in/out, payroll) | Live, mature; a separate account type from `members` |
+| Push notifications | Live; completion pings now admin-only + explicit opt-in (see Chapter 8) |
+| Real accounts in production | Ada, Aaron (admin), RC Lina (healthcare VA, onboarded Oct 1) |
+| Deployment-cohesion bug audit | Complete — see Chapter 9, `AUDIT_HANDOFF.md` for the full phase-by-phase record |
+| Real-browser click-through verification pass | 5 of 7 done; 2 remain, delegated to RC Lina via a self-check checklist (see below) |
+
+## Where to look for what (document map)
+
+- **`CLAUDE.md`** — the real technical reference. Exhaustively documents *why* the code is the way it is, not just what it does. Start here for implementation work.
+- **`FEATURES.md`** — user-facing description of what the app does, written for a person (e.g. onboarding a new member), not a developer.
+- **`README.md`** — first-time setup: creating the Supabase project, inviting accounts, deploying.
+- **`AUDIT_HANDOFF.md`** — the live, detailed operational log for the current Claude/Codex collaborative effort. More granular and more current than this document for "what exactly happened in the last session." Has its own activity log with dated entries; read it before resuming any audit-adjacent work.
+- **`ONGOING_PLANS.md`** — narrow, specific in-flight feature plans (currently: Staff timekeeping/payroll redesign details, Rentals multi-tenant booking details). Not a general-purpose planning doc.
+- **`MIGRATION_PLAN.md`** — the (completed) CSS-to-Tailwind migration's technical plan. Historical reference now, not active.
+- **`.claude/skills/shared-handoff/SKILL.md`** — the actual rules the Claude/Codex handoff convention runs on. Read this if you are about to update `AUDIT_HANDOFF.md`.
+- **This document (`PROJECT_JOURNEY.md`)** — the narrative spine and the one place that should always accurately say where things stand right now, suitable for an AI tool with zero prior context on this project.
+
+**Keep this document and `AUDIT_HANDOFF.md` in their separate lanes.** This one is the whole project's history and current-state overview, meant to be read occasionally and kept broadly accurate. `AUDIT_HANDOFF.md` is the tactical, frequently-updated log for the specific ongoing audit/verification effort. When the audit effort eventually fully closes out, fold its lasting lessons into this document's "Established conventions" section below and let the detailed log become historical.
+
+## Established conventions and hard-won lessons
+
+These are real incidents or deliberate decisions from this project's history. Know them before you repeat a mistake this project already paid for once.
+
+- **Committed code is not deployed code.** Supabase Edge Functions (`supabase/functions/`) deploy independently of the Netlify frontend build — `supabase functions deploy <name>`. A function can be correctly rewritten and committed for days while production silently runs the old version, with no error, just wrong behavior (see Chapter 8's notification bug). The same risk applies to `schema.sql`: it's applied once to a fresh project, not tracked as ongoing migrations — an *existing* database needs its own incremental migration (either an appended block in `schema.sql` or a standalone file) run by hand in the Supabase SQL editor. Code existing in the repo is never, by itself, evidence that production reflects it.
+- **A table isn't live on Realtime just because a channel subscription exists for it in the frontend.** It must be explicitly added to the `supabase_realtime` publication (`alter publication supabase_realtime add table <name>;`). This has been missed more than once (`members`, `task_access`, `eod_reports`/`report_access`) with no error — just a feature that silently never pushes live updates. Confirm with `select tablename from pg_publication_tables where pubname = 'supabase_realtime';` rather than assuming.
+- **RLS impersonation testing must be one single-transaction batch**, not multiple separate tool calls — session-local settings (`set local role`, `set local request.jwt.claims`) don't persist across separate `supabase db query` invocations. The reliable pattern: `begin; set local role authenticated; set local request.jwt.claims = '{"sub":"<uuid>","role":"authenticated"}'; <the actual query>; rollback;` as one file/call.
+- **Schema/data-changing SQL goes through the human, not direct agent execution**, for anything that creates real rows or alters structure — present the SQL, have Aaron (or whoever's driving) run it in the Supabase SQL editor, then verify read-only afterward. This project's own tooling has in practice refused direct destructive/structural writes from an agent more than once; don't fight that, work with it.
+- **Native browser `confirm()` dialogs can't be driven by scripted automation clicks** in at least one browser-automation setup used on this project — a delete action gated behind `confirm()` will appear to do nothing when clicked via script. Verify the underlying effect via a direct, precisely-scoped SQL query/cleanup instead of assuming the UI click worked.
+- **Verification rigor**: when running `npm run lint`/`npm run build` as a check, capture the actual exit code explicitly (`; echo "EXIT CODE: $?"`, output to a file) rather than piping through `tail`, which obscures the real exit status.
+- **Attribution**: commits from Claude end with exactly `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>` and nothing else in that trailer — another agent's contribution (e.g. Codex) gets credited in the commit body's prose, never as a second `Co-Authored-By` line.
+- **Multi-agent handoff discipline**: when more than one AI session may be working this repo, always distinguish *prepared* (code written) from *tested* (checks run) from *committed* from *pushed* from *confirmed live in production* — never collapse these into a single "done." Re-read the shared handoff log before resuming, and never overwrite or silently reattribute another agent's logged work.
+- **Deny-list vs. presence-grant access models, used deliberately differently depending on intent.** `members.permissions` is a deny-list (`{}` means full access) specifically so an existing member needs zero data to keep working unchanged when a new feature gate is added. `task_access`/`report_access`/`priorities_access`/`vault_access` are the opposite — a *present* row is required for access, because those exist specifically to *restrict* something that used to be automatic. Don't confuse the two shapes when adding a new gated feature; pick deliberately based on whether you're adding a restriction or a preservable default.
+
+## Active handoff — read this first
+
+**As of this writing, the project is in a deliberate, clean pause — not an interruption.** Working tree is clean; everything is committed and pushed to `origin/main` (no feature branches; this whole project has been developed via direct commits to `main`).
+
+**What's fully done, verified, and not waiting on anything:**
+- The 6-phase deployment-cohesion bug audit (Chapter 9) — complete, see `AUDIT_HANDOFF.md`'s phase table.
+- Per-person Priorities — schema, impersonation (both directions), live production browser viewing, and admin grant/revoke UI, all independently verified.
+- The vault's per-entry-sharing migration — confirmed live in production (this corrected a stale "unconfirmed" flag that had been sitting in `AUDIT_HANDOFF.md`).
+- 5 of 7 "real browser click-through" verifications from the broader `multi-member-permissions.md` feature-delivery plan (an external, non-repo planning doc at `/Users/aaron/.claude/plans/multi-member-permissions.md` — not reliable as a shared handoff by itself, per `AUDIT_HANDOFF.md`'s own note, but useful background): My Profile, the admin member-credentials form, Projects quick-add/collapse/undo, Cork Board targeted sharing, and attachment privacy.
+
+**What's genuinely open right now:**
+- Two remaining click-throughs — **Inbox scoping** (does RC Lina's Inbox only show activity from tasks actually assigned to her?) and **task-comment notification targeting** (does the "Notify" picker on a task comment show up and default sensibly for her?) — both need RC Lina's own real login to test properly, not Aaron's or Ada's.
+- Rather than continue those synchronously, Aaron asked for (and received) a plain-language, non-technical checklist to hand directly to RC Lina so she can self-check both on her own device and report back. **That checklist was given to Aaron in-chat, not sent to Lina by any AI session — sending it is his to do.** If you're picking this up and don't know whether she's replied yet, ask Aaron rather than assuming either way.
+- Once her reply comes back (either "all good" or a specific flag), that closes out the click-through list entirely. If something's flagged, treat it as a new, real bug report — investigate it the way Chapter 8/9's bugs were investigated (read-only first, confirm root cause before changing anything, verify the fix the same rigorous way).
+
+**Nothing beyond the above is blocked, half-finished, or silently waiting.** If you arrive here and the state above doesn't match what you observe (e.g. `git log`/`git status` show more recent activity than this document reflects), trust what you observe over this document, and please update this document's "Chapter 10" / "Current state" / "Active handoff" sections to bring it back in sync — that upkeep is the whole point of this file existing.
