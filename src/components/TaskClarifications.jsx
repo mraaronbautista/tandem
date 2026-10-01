@@ -9,10 +9,17 @@ import AssigneePicker from './AssigneePicker'
 // while typing, same reasoning as ChecklistView's blocked-reason input —
 // only the final "Answer" click writes to Supabase, not every keystroke.
 // Defaults to notifying whoever the question was originally tagged for
-// (item.notifyIds — falls back to just the asker for a pre-tagging entry
-// that predates this field), minus whoever's replying — same reasoning
-// TaskClarifications' own ask-side default uses, just scoped to this one
-// entry's own thread instead of the task's current assignees.
+// (item.notifyIds), plus the asker explicitly, minus whoever's replying.
+// The explicit askedBy union matters: item.notifyIds is the *asker's own*
+// chosen audience, which by construction never includes the asker
+// themselves — so when the person replying is the only one who was
+// tagged, a plain `item.notifyIds.filter(id => id !== meId)` silently
+// drops to empty (or, if more than one person was tagged, ends up
+// notifying whoever else was tagged instead of the actual asker) rather
+// than falling back to the one person who's actually waiting on a
+// reply. Caught via real use, not review — RC's replies to Aaron and
+// Aaron's replies to RC were both landing on the wrong recipient (or no
+// one) because of this.
 function AnswerRow({ item, onChange, taskTitle, taskId, meId, otherMembers }) {
   const [answerDraft, setAnswerDraft] = useState('')
   const [answerAttachments, setAnswerAttachments] = useState([])
@@ -20,8 +27,9 @@ function AnswerRow({ item, onChange, taskTitle, taskId, meId, otherMembers }) {
   const [uploadError, setUploadError] = useState('')
   const [sending, setSending] = useState(false)
   const [notifyIds, setNotifyIds] = useState(() => {
-    const base = item.notifyIds?.length ? item.notifyIds : [item.askedBy]
-    return base.filter((id) => id !== meId)
+    const base = new Set([...(item.notifyIds || []), item.askedBy])
+    base.delete(meId)
+    return [...base]
   })
 
   async function handleAttachmentUpload(e) {

@@ -3489,3 +3489,36 @@ on conflict do nothing;
 delete from vaults where name = 'Healthcare';
 
 commit;
+
+-- Re-apply grant_admin_access_to_new_member() and its trigger
+-- (incremental migration) — discovered missing from production entirely
+-- (neither the function nor the trigger existed) while debugging why
+-- Aaron couldn't see RC Lina's tasks on the board after she was added
+-- as a real member. Both are already defined in the base schema above
+-- (see "Generalize from Ada/Aaron to N members" / task_access), so this
+-- block is purely re-applying what should have already been part of an
+-- earlier incremental migration and apparently never made it into the
+-- SQL actually run against this database. Aaron's own missing grant
+-- toward RC was backfilled by hand in production at the same time this
+-- was found; this block only re-establishes the trigger so the same gap
+-- can't happen again for the next member added.
+begin;
+
+create or replace function grant_admin_access_to_new_member()
+returns trigger as $$
+begin
+  insert into task_access (viewer_id, target_id, level)
+  select m.id, new.id, 'update'
+  from members m
+  where m.is_admin and m.id <> new.id
+  on conflict (viewer_id, target_id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists members_grant_admin_access_to_new_member on members;
+create trigger members_grant_admin_access_to_new_member
+after insert on members
+for each row execute function grant_admin_access_to_new_member();
+
+commit;
