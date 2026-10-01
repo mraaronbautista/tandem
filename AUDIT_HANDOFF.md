@@ -130,6 +130,10 @@ Aaron asked to go through the click-through list from `multi-member-permissions.
 
 **Remaining two items need RC Lina's actual login** (Inbox scoping with the real VA account, and task-comment notification targeting/person-nudge from a non-admin perspective) — **Aaron asked to stop here for this session.** Not a blocker, not forgotten — pick up by asking him (or whoever resumes) to log in as RC Lina in the browser pane, same pattern used for Ada/Aaron above, then repeat the same click-through approach for those two items.
 
+**Instead of continuing those two in-session, Aaron asked for a plain-language checklist to hand directly to RC Lina** so she can self-check both items on her own device/account rather than needing a shared screen session. Drafted and handed to Aaron (not sent to Lina by this session — that's his to send): two checks, written non-technically — (1) Board → Inbox should only ever show activity tied to tasks actually assigned to her, nothing from Ada/Aaron's own task conversations even on tasks she can merely view; (2) commenting on a task should show a "Notify" picker with sensible pre-selected recipients, adjustable before sending. Asked her to report back anything that looks off, or "all good."
+
+**This session is paused here** (Aaron: "lets deem this done for now put a pin on this"). Nothing is broken or blocking; this is a deliberate stop, not an interruption. Whoever resumes: wait for Lina's checklist reply (or re-run the same two click-throughs directly with her login) before considering the click-through list fully closed.
+
 **Note on scripted `confirm()` dialogs**: any future click-through involving a native browser confirm (task delete, pin delete, vault reset, etc.) should expect the same limitation — plan to verify via direct SQL instead of trying to drive the dialog.
 
 ### Entry template
