@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import {
   FEATURE_LABELS,
   PERMISSION_FEATURES,
+  fetchReportAccessFor,
   fetchTaskAccessFor,
   setMemberPermissions,
+  setReportAccess,
   upsertTaskAccess,
 } from '../lib/memberAccess'
 import Modal from './Modal'
@@ -114,19 +116,27 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
   )
   const [access, setAccess] = useState({})
   const initialAccessRef = useRef({})
+  // Which other members' reports `target` can read — a plain id Set,
+  // not a level like task access, since reading someone's reports has
+  // no finer-grained action to configure than "can" or "can't."
+  const [reportAccess, setReportAccessState] = useState(() => new Set())
+  const initialReportAccessRef = useRef(new Set())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
-    fetchTaskAccessFor(target.id)
-      .then((rows) => {
+    Promise.all([fetchTaskAccessFor(target.id), fetchReportAccessFor(target.id)])
+      .then(([taskRows, reportRows]) => {
         if (cancelled) return
-        const byTeammate = new Map(rows.map((r) => [r.target_id, r]))
+        const byTeammate = new Map(taskRows.map((r) => [r.target_id, r]))
         const initial = Object.fromEntries(teammates.map((t) => [t.id, accessFromRow(byTeammate.get(t.id))]))
         initialAccessRef.current = initial
         setAccess(initial)
+        const reportIds = new Set(reportRows.map((r) => r.target_id))
+        initialReportAccessRef.current = reportIds
+        setReportAccessState(reportIds)
         setLoading(false)
       })
       .catch((err) => !cancelled && setError(err.message))
@@ -135,6 +145,15 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target.id])
+
+  function toggleReportAccess(teammateId) {
+    setReportAccessState((prev) => {
+      const next = new Set(prev)
+      if (next.has(teammateId)) next.delete(teammateId)
+      else next.add(teammateId)
+      return next
+    })
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -157,6 +176,12 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
             canReassign: current.canReassign,
           }),
         )
+      }
+      for (const teammate of teammates) {
+        const canView = reportAccess.has(teammate.id)
+        const couldView = initialReportAccessRef.current.has(teammate.id)
+        if (canView === couldView) continue
+        writes.push(setReportAccess(target.id, teammate.id, canView))
       }
       await Promise.all(writes)
       onSaved()
@@ -204,6 +229,28 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
                   access={access[teammate.id] || EMPTY_ACCESS}
                   onChange={(next) => setAccess((prev) => ({ ...prev, [teammate.id]: next }))}
                 />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="submission-field">
+          <span className="submission-field-label">Report visibility</span>
+          {loading ? (
+            <p className="text-sm opacity-65">Loading…</p>
+          ) : teammates.length === 0 ? (
+            <p className="text-sm opacity-65">No other members yet.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5 text-sm">
+              {teammates.map((teammate) => (
+                <label key={teammate.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={reportAccess.has(teammate.id)}
+                    onChange={() => toggleReportAccess(teammate.id)}
+                  />
+                  Can read {teammate.display_name}'s reports
+                </label>
               ))}
             </div>
           )}

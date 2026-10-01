@@ -958,9 +958,85 @@ create table eod_reports (
 
 alter table eod_reports enable row level security;
 
-create policy "members can read all eod reports"
+-- report_access (viewer_id, target_id) is a plain presence grant — a row
+-- means viewer_id may read target_id's reports, same "exists = allowed"
+-- shape vault_access already established, not task_access's tiered
+-- level/create/delete/reassign model, since reading someone else's
+-- report has no finer-grained action to gate than read-or-not. Requested
+-- directly once the team grew past two people: a submitter's reports
+-- used to be unconditionally mutually visible to every member, which
+-- stopped being appropriate once reports could belong to people who
+-- aren't supposed to be reading each other's day-to-day work logs
+-- (two VAs, say). No auto-grant for admins the way task_access's
+-- grant_admin_access_to_new_member() gives — reports are explicitly the
+-- more private case here, so even the admin has to opt in to seeing a
+-- given member's reports rather than getting it for free.
+create table report_access (
+  viewer_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references members (id) on delete set null,
+  primary key (viewer_id, target_id),
+  constraint report_access_no_self_grant check (viewer_id <> target_id)
+);
+
+alter table report_access enable row level security;
+
+-- Reuses task_access's own generic meta-stamping trigger function — it
+-- only ever touches new.updated_at/new.updated_by, nothing table-shaped.
+create trigger report_access_stamp_meta
+before insert or update on report_access
+for each row execute function stamp_task_access_meta();
+
+create policy "members can read their own outgoing report access grants"
+  on report_access for select
+  using (is_member() and viewer_id = auth.uid());
+
+create policy "admins can read all report access grants"
+  on report_access for select
+  using (is_member() and is_admin_member());
+
+-- security definer so eod_reports' own SELECT policy below doesn't need
+-- a direct cross-table subquery — same has_vault_access()/is_member()
+-- reasoning used everywhere else in this schema.
+create or replace function has_report_access(check_target_id uuid)
+returns boolean as $$
+  select exists (select 1 from report_access where viewer_id = auth.uid() and target_id = check_target_id);
+$$ language sql security definer stable;
+
+-- The one write path for report_access — a plain presence table, so
+-- "granting" is an insert and "revoking" is a delete, not a level
+-- change. No direct INSERT/UPDATE/DELETE policy exists on the table
+-- itself, by design, same as task_access's own upsert_task_access().
+create or replace function set_report_access(p_viewer_id uuid, p_target_id uuid, p_can_view boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if p_viewer_id = p_target_id then
+    raise exception 'Cannot grant a member access to themselves';
+  end if;
+
+  if p_can_view then
+    insert into report_access (viewer_id, target_id, updated_by)
+    values (p_viewer_id, p_target_id, auth.uid())
+    on conflict (viewer_id, target_id) do nothing;
+  else
+    delete from report_access where viewer_id = p_viewer_id and target_id = p_target_id;
+  end if;
+end;
+$$;
+
+grant execute on function set_report_access(uuid, uuid, boolean) to authenticated;
+
+create policy "members can read accessible eod reports"
   on eod_reports for select
-  using (is_member());
+  using (is_member() and (submitted_by = auth.uid() or has_report_access(submitted_by)));
 
 create policy "members can insert own eod reports"
   on eod_reports for insert
@@ -3174,20 +3250,26 @@ as $$
         and case when writing then public.can_update_task(t.assignee_ids)
                  else public.can_view_task(t.assignee_ids) end
     )
-    -- eod_reports are mutually visible to every member regardless of
-    -- task_access ("members can read all eod reports" above is a plain
-    -- is_member() policy) — an attachment a submitter chose to include
-    -- in their report is exactly as disclosed as the report text sitting
-    -- next to it, so a reader who can open the report but has no
-    -- task_access grant on the source task must still be able to open
-    -- its attachment. Read-only: never applies while writing, since an
-    -- eod_report attachment is never re-uploaded/edited/deleted through
-    -- this path.
+    -- An attachment a submitter chose to include in their report is
+    -- exactly as disclosed as the report text sitting next to it — so a
+    -- reader who can open the report (own report, or a report_access
+    -- grant toward its submitter — see eod_reports' own SELECT policy)
+    -- but has no task_access grant on the source task must still be able
+    -- to open its attachment. Read-only: never applies while writing,
+    -- since an eod_report attachment is never re-uploaded/edited/deleted
+    -- through this path. This used to check only for the report's
+    -- existence, back when eod_reports was unconditionally mutually
+    -- visible (a plain is_member() policy) — now that report_access can
+    -- restrict who reads a given report, the same restriction has to
+    -- apply here too, or this carve-out would let someone open a
+    -- report's attachment despite not being allowed to read the report
+    -- itself.
     or (
       not writing
       and exists (
         select 1 from public.eod_reports r
         where r.attachments @> jsonb_build_array(jsonb_build_object('url', 'storage://task-attachments/' || object_name))
+          and (r.submitted_by = auth.uid() or public.has_report_access(r.submitted_by))
       )
     )
   );
@@ -3520,5 +3602,124 @@ drop trigger if exists members_grant_admin_access_to_new_member on members;
 create trigger members_grant_admin_access_to_new_member
 after insert on members
 for each row execute function grant_admin_access_to_new_member();
+
+commit;
+
+-- Per-member report visibility (incremental migration) — eod_reports
+-- used to be unconditionally mutually visible to every member
+-- (is_member() alone); report_access makes who can read whose reports
+-- an explicit, admin-managed grant instead, same "exists = allowed"
+-- shape vault_access already established. Requested directly: with more
+-- than two people submitting reports, a report is now as personal as a
+-- work log, not something every member should default into reading.
+-- See the base eod_reports/report_access definitions above for the full
+-- reasoning — this block brings an already-live database in line with
+-- that end state without losing anyone's current ability to read a
+-- report they can already read today.
+begin;
+
+create table if not exists report_access (
+  viewer_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references members (id) on delete set null,
+  primary key (viewer_id, target_id),
+  constraint report_access_no_self_grant check (viewer_id <> target_id)
+);
+alter table report_access enable row level security;
+
+drop trigger if exists report_access_stamp_meta on report_access;
+create trigger report_access_stamp_meta
+before insert or update on report_access
+for each row execute function stamp_task_access_meta();
+
+drop policy if exists "members can read their own outgoing report access grants" on report_access;
+create policy "members can read their own outgoing report access grants"
+  on report_access for select
+  using (is_member() and viewer_id = auth.uid());
+
+drop policy if exists "admins can read all report access grants" on report_access;
+create policy "admins can read all report access grants"
+  on report_access for select
+  using (is_member() and is_admin_member());
+
+create or replace function has_report_access(check_target_id uuid)
+returns boolean as $$
+  select exists (select 1 from report_access where viewer_id = auth.uid() and target_id = check_target_id);
+$$ language sql security definer stable;
+
+create or replace function set_report_access(p_viewer_id uuid, p_target_id uuid, p_can_view boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if p_viewer_id = p_target_id then
+    raise exception 'Cannot grant a member access to themselves';
+  end if;
+
+  if p_can_view then
+    insert into report_access (viewer_id, target_id, updated_by)
+    values (p_viewer_id, p_target_id, auth.uid())
+    on conflict (viewer_id, target_id) do nothing;
+  else
+    delete from report_access where viewer_id = p_viewer_id and target_id = p_target_id;
+  end if;
+end;
+$$;
+
+grant execute on function set_report_access(uuid, uuid, boolean) to authenticated;
+
+-- Backfill is deliberately NOT "every current member grants every other
+-- member" — unlike the vault/task_access backfills elsewhere in this
+-- schema, preserving today's literal access here would defeat the point:
+-- today's flat is_member() policy already lets everyone, including any
+-- VA, read everyone else's reports, and that unrestricted-by-default
+-- state is exactly what this feature exists to fix. Instead this seeds
+-- only the one relationship meant to carry forward unchanged — Ada and
+-- Aaron mutually reading each other's reports, the original two-person
+-- household relationship this app started from — matched by name since
+-- there's no "founding member" flag to key off instead. Any other
+-- member, present or future, starts unable to read anyone else's
+-- reports (and nobody can read theirs) until explicitly granted via
+-- Manage member access.
+insert into report_access (viewer_id, target_id)
+select m1.id, m2.id
+from members m1, members m2
+where m1.id <> m2.id
+  and m1.display_name in ('Ada', 'Aaron')
+  and m2.display_name in ('Ada', 'Aaron')
+on conflict do nothing;
+
+drop policy if exists "members can read all eod reports" on eod_reports;
+create policy "members can read accessible eod reports"
+  on eod_reports for select
+  using (is_member() and (submitted_by = auth.uid() or has_report_access(submitted_by)));
+
+create or replace function public.can_access_task_attachment(object_name text, writing boolean default false)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select public.is_member() and (
+    exists (
+      select 1 from public.tasks t
+      where t.id = public.safe_uuid(left(object_name, 36))
+        and substring(object_name from 37 for 1) = '-'
+        and case when writing then public.can_update_task(t.assignee_ids)
+                 else public.can_view_task(t.assignee_ids) end
+    )
+    or (
+      not writing
+      and exists (
+        select 1 from public.eod_reports r
+        where r.attachments @> jsonb_build_array(jsonb_build_object('url', 'storage://task-attachments/' || object_name))
+          and (r.submitted_by = auth.uid() or public.has_report_access(r.submitted_by))
+      )
+    )
+  );
+$$;
 
 commit;

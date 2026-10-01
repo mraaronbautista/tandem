@@ -2,12 +2,12 @@ import { supabase } from './supabaseClient'
 
 // Feature keys members.permissions can deny — mirrors has_permission()'s
 // feature-name comment in schema.sql. 'reports' gates *submitting* an
-// EOD/EOW/EOM report, not reading them (EodReportsList.jsx has no
-// permission gate — reports stay mutually visible). 'vault' used to be
-// here — a single blanket on/off flag, retired once a second vault
-// needed per-vault access (vault_access in schema.sql) rather than one
-// flag that couldn't express "trusted with the healthcare vault but not
-// the household one."
+// EOD/EOW/EOM report — who can *read* someone's reports is a separate
+// concern, report_access (see fetchReportAccessFor/setReportAccess
+// below), not this deny-list. 'vault' used to be here — a single blanket
+// on/off flag, retired once a second vault needed per-vault access
+// (vault_access in schema.sql) rather than one flag that couldn't
+// express "trusted with the healthcare vault but not the household one."
 export const PERMISSION_FEATURES = ['rentals', 'staff', 'reports', 'workingStatus']
 
 // Shared between MemberAccessForm.jsx (editing an existing member) and
@@ -16,8 +16,8 @@ export const PERMISSION_FEATURES = ['rentals', 'staff', 'reports', 'workingStatu
 export const FEATURE_LABELS = {
   rentals: 'Rentals',
   staff: 'Staff',
-  // Gates *submitting* a report, not reading one — EodReportsList.jsx has
-  // no permission gate, reports stay mutually visible to everyone.
+  // Gates *submitting* a report, not reading one — see report_access for
+  // who can read a member's already-submitted reports.
   reports: 'Submit EOD/EOW/EOM reports',
   workingStatus: 'Set own working status (online/busy/in a meeting)',
 }
@@ -91,4 +91,26 @@ export async function upsertTaskAccess(viewerId, targetId, { level, canCreate, c
   })
   if (error) throw error
   return data
+}
+
+// Every report_access row where `viewerId` is the one granted access —
+// i.e. whose reports viewerId may currently read. Same shape as
+// fetchTaskAccessFor, same admin-can-read-anyone's-outgoing-grants RLS
+// policy backing it.
+export async function fetchReportAccessFor(viewerId) {
+  const { data, error } = await supabase.from('report_access').select('*').eq('viewer_id', viewerId)
+  if (error) throw error
+  return data
+}
+
+// The only write path for report_access (see set_report_access() in
+// schema.sql) — a plain presence grant, so this is just "add or remove
+// the row," not a level change the way upsertTaskAccess has to express.
+export async function setReportAccess(viewerId, targetId, canView) {
+  const { error } = await supabase.rpc('set_report_access', {
+    p_viewer_id: viewerId,
+    p_target_id: targetId,
+    p_can_view: canView,
+  })
+  if (error) throw error
 }

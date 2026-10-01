@@ -21,19 +21,15 @@ Deno.serve(async (req) => {
   const allMembers = await fetchAllMembers()
   const caller = allMembers.find((m) => m.id === user.id)
   const senderName = caller?.display_name || 'A member'
-  // eod_report still broadcasts to "everyone but the caller" — a report
-  // genuinely is for the whole team. clarification_asked/
-  // clarification_answered used to as well, but no longer do by default
-  // (see resolveNotifyIds below) now that a comment often concerns one
-  // specific member, not everyone. otherMemberIds is computed from
-  // allMembers regardless of whether the caller is actually in it, so a
-  // valid-but-non-member session (a staff account, for instance) would
-  // otherwise get "everyone but the caller" collapsing to "everyone" —
-  // every member-only kind (eod_report/nudge/clarification_asked/
-  // clarification_answered) explicitly checks `!caller` first and
-  // refuses rather than silently broadcasting on a non-member's behalf.
-  // time_entry_correction_request is the one kind a staff account is
-  // actually meant to call, so it deliberately has no such check.
+  // otherMemberIds is computed from allMembers regardless of whether the
+  // caller is actually in it, so a valid-but-non-member session (a staff
+  // account, for instance) would otherwise get "everyone but the caller"
+  // collapsing to "everyone" — every member-only kind (eod_report/nudge/
+  // clarification_asked/clarification_answered) explicitly checks
+  // `!caller` first and refuses rather than silently broadcasting on a
+  // non-member's behalf. time_entry_correction_request is the one kind a
+  // staff account is actually meant to call, so it deliberately has no
+  // such check.
   const otherMemberIds = allMembers.filter((m) => m.id !== user.id).map((m) => m.id)
 
   const payload = await req.json()
@@ -55,8 +51,15 @@ Deno.serve(async (req) => {
     if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
     const body = String(payload.body || '').slice(0, 300)
     if (!body.trim()) return new Response('Missing report body', { status: 400, headers: corsHeaders })
+    // No longer "everyone but the caller" — report_access now restricts
+    // who can even read a member's reports (see schema.sql), so pinging
+    // someone with no access to open it would be a dead-end notification
+    // at best. viewer_id rows targeting the caller are exactly the set
+    // of members who currently have a report_access grant to read theirs.
+    const { data: granted } = await supabaseAdmin.from('report_access').select('viewer_id').eq('target_id', user.id)
+    const targets = (granted || []).map((row) => row.viewer_id as string)
     await Promise.all(
-      otherMemberIds.map((id) => notifyMember(id, { title: `${senderName}'s end-of-day report`, body, url: '/' })),
+      targets.map((id) => notifyMember(id, { title: `${senderName}'s end-of-day report`, body, url: '/' })),
     )
     return new Response('ok', { headers: corsHeaders })
   }

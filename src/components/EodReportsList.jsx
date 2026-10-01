@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchEodReports, updateEodReport } from '../lib/eodReports'
+import { supabase } from '../lib/supabaseClient'
 import AttachmentList from './AttachmentList'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -60,9 +61,36 @@ export default function EodReportsList({ memberName, meId }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetchEodReports()
-      .then(setReports)
-      .catch((err) => setError(err.message))
+    function reload() {
+      fetchEodReports()
+        .then(setReports)
+        .catch((err) => setError(err.message))
+    }
+    reload()
+
+    // Self-contained tab component, same "own data, own Realtime
+    // channel" shape RentalsView.jsx/CorkBoardView.jsx already use.
+    // Two tables, not one: eod_reports itself (a teammate submitting or
+    // editing a report), and report_access (an admin granting/revoking
+    // who can read whose reports — changes exactly what fetchEodReports
+    // above would return, same reasoning TaskBoard.jsx's own
+    // task-access-changes channel reuses tasksChannel's reload for).
+    // Both tables need `alter publication supabase_realtime add table
+    // eod_reports, report_access;` run once — see the Realtime note
+    // under Architecture in CLAUDE.md.
+    const reportsChannel = supabase
+      .channel('eod-reports-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eod_reports' }, reload)
+      .subscribe()
+    const reportAccessChannel = supabase
+      .channel('report-access-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'report_access' }, reload)
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(reportsChannel)
+      supabase.removeChannel(reportAccessChannel)
+    }
   }, [])
 
   // Fixing what's already there (a typo, a wrong total) — not the same
