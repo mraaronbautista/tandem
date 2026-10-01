@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { deleteVaultEntry } from '../lib/vault'
+import { deleteVaultEntry, updateVaultEntrySharing } from '../lib/vault'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import AssigneePicker from './AssigneePicker'
 
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
@@ -11,11 +12,13 @@ export default function VaultEntryDetail({
   entry,
   existingFolders = [],
   isPrivateVault = false,
+  otherVaultMembers = [],
   meId,
   memberName,
   onClose,
   onEdit,
   onDeleted,
+  onShareChanged,
   onMoveFolder,
 }) {
   // Matches schema.sql's own update/delete RLS exactly: a household-vault
@@ -34,6 +37,33 @@ export default function VaultEntryDetail({
   // registered.
   const [copiedField, setCopiedField] = useState('')
   const [moving, setMoving] = useState(false)
+  // Quick "who can see this" edit right here, same reasoning the Folder
+  // <select> above already established — adjusting sharing shouldn't
+  // require opening the full Edit form (which also means reviewing/
+  // re-saving the label, username, password, everything else) just to
+  // add or remove one person.
+  const [editingShare, setEditingShare] = useState(false)
+  const [shareDraft, setShareDraft] = useState(() => entry.sharedWith || [])
+  const [sharing, setSharing] = useState(false)
+
+  function startEditShare() {
+    setShareDraft(entry.sharedWith || [])
+    setEditingShare(true)
+  }
+
+  async function handleSaveShare() {
+    setSharing(true)
+    setError('')
+    try {
+      await updateVaultEntrySharing(entry.id, shareDraft)
+      onShareChanged(shareDraft)
+      setEditingShare(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSharing(false)
+    }
+  }
 
   async function handleFolderChange(e) {
     setMoving(true)
@@ -77,13 +107,38 @@ export default function VaultEntryDetail({
 
         {error && <p className="error">{error}</p>}
 
-        {isPrivateVault && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="w-[70px] flex-none text-[13px] opacity-60">Shared</span>
-            <span className="flex-1 text-text-h">
-              {entry.sharedWith?.length ? entry.sharedWith.map((id) => memberName(id)).join(', ') : 'Only you'}
-            </span>
+        {isPrivateVault && editingShare ? (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] opacity-60">Shared with</span>
+            <AssigneePicker members={otherVaultMembers} value={shareDraft} onChange={setShareDraft} />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="vault-copy"
+                onClick={() => setEditingShare(false)}
+                disabled={sharing}
+              >
+                Cancel
+              </button>
+              <button type="button" className="vault-copy" onClick={handleSaveShare} disabled={sharing}>
+                {sharing ? 'Saving…' : 'Save'}
+              </button>
+            </div>
           </div>
+        ) : (
+          isPrivateVault && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="w-[70px] flex-none text-[13px] opacity-60">Shared</span>
+              <span className="flex-1 text-text-h">
+                {entry.sharedWith?.length ? entry.sharedWith.map((id) => memberName(id)).join(', ') : 'Only you'}
+              </span>
+              {canManage && otherVaultMembers.length > 0 && (
+                <button type="button" className="vault-copy" onClick={startEditShare}>
+                  Edit
+                </button>
+              )}
+            </div>
+          )
         )}
 
         {onMoveFolder && canManage && (

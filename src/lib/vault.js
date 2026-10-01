@@ -201,3 +201,19 @@ export async function deleteVaultEntry(id) {
   const { error } = await supabase.from('vault_entries').delete().eq('id', id)
   if (error) throw error
 }
+
+// A focused sharing-only update, separate from updateVaultEntry — that
+// one re-encrypts the whole entry (ciphertext/iv) and treats shared_with
+// as an optional extra; this is the reverse case, changing *only* who
+// can see an already-saved entry with nothing else touched. shared_with
+// is a plain, unencrypted column (see VaultEntryDetail.jsx's own
+// "Shared" display), so no decrypt/re-encrypt round trip is needed just
+// to adjust it — a quick "Share" action can skip opening the full Edit
+// form entirely.
+export async function updateVaultEntrySharing(id, sharedWith) {
+  const { error } = await supabase
+    .from('vault_entries')
+    .update({ shared_with: sharedWith, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}

@@ -276,6 +276,16 @@ export default function VaultView({ me, members = [], onClose }) {
     }
   }
 
+  // shared_with is a plain column, not part of the encrypted payload, so
+  // unlike every other field here this just patches local state directly
+  // instead of re-decrypting the whole entry list via loadEntries() —
+  // updateVaultEntrySharing() has already done the real write by the
+  // time this runs (see VaultEntryDetail.jsx's handleSaveShare).
+  function handleShareChanged(entry, sharedWith) {
+    setEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, sharedWith } : e)))
+    setSelectedEntry((prev) => (prev && prev.id === entry.id ? { ...prev, sharedWith } : prev))
+  }
+
   // Folders aren't a stored entity (see distinctFolders above) — renaming
   // one means bulk-rewriting every entry currently tagged with the old
   // name. Renaming to a name that already matches another existing folder
@@ -621,6 +631,7 @@ export default function VaultView({ me, members = [], onClose }) {
             entry={selectedEntry}
             existingFolders={folderNames}
             isPrivateVault={isPrivateVault}
+            otherVaultMembers={otherVaultMembers}
             meId={me.id}
             memberName={(id) => members.find((m) => m.id === id)?.display_name || 'Someone'}
             onClose={() => setSelectedEntry(null)}
@@ -630,6 +641,7 @@ export default function VaultView({ me, members = [], onClose }) {
               setFormOpen(true)
             }}
             onDeleted={handleEntryChanged}
+            onShareChanged={(sharedWith) => handleShareChanged(selectedEntry, sharedWith)}
             onMoveFolder={(folder) => handleMoveFolder(selectedEntry, folder)}
           />
         )}
