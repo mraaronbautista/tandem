@@ -17,6 +17,12 @@ function formatMinutes(minutes) {
   return `${h}h ${m}m`
 }
 
+// Same quarter-hour options EndOfDayReportForm.jsx's own Total time
+// worked field uses — small enough to duplicate locally rather than
+// export/import, same "a handful of helper lines" precedent this
+// codebase already follows elsewhere (buildWeeks(), csvEscape).
+const MINUTE_OPTIONS = ['00', '15', '30', '45']
+
 // "2026-08" -> "August 2026" — grouping key doubles as a stable sort key
 // (string-sortable) and a display label once split back apart.
 function monthKey(dateStr) {
@@ -57,6 +63,7 @@ export default function EodReportsList({ memberName, meId }) {
   const [expanded, setExpanded] = useState(() => new Set())
   const [editingId, setEditingId] = useState(null)
   const [editBodyDraft, setEditBodyDraft] = useState('')
+  const [editHoursDraft, setEditHoursDraft] = useState('')
   const [editMinutesDraft, setEditMinutesDraft] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -101,12 +108,19 @@ export default function EodReportsList({ memberName, meId }) {
   function startEdit(report) {
     setEditingId(report.id)
     setEditBodyDraft(report.body)
-    setEditMinutesDraft(report.minutes_logged != null ? String(report.minutes_logged) : '')
+    if (report.minutes_logged != null) {
+      setEditHoursDraft(String(Math.floor(report.minutes_logged / 60)))
+      setEditMinutesDraft(String(report.minutes_logged % 60).padStart(2, '0'))
+    } else {
+      setEditHoursDraft('')
+      setEditMinutesDraft('')
+    }
   }
 
   function cancelEdit() {
     setEditingId(null)
     setEditBodyDraft('')
+    setEditHoursDraft('')
     setEditMinutesDraft('')
   }
 
@@ -116,7 +130,10 @@ export default function EodReportsList({ memberName, meId }) {
     setSaving(true)
     setError('')
     try {
-      const minutesLogged = editMinutesDraft.trim() === '' ? null : Number(editMinutesDraft)
+      const minutesLogged =
+        editHoursDraft.trim() === '' && editMinutesDraft.trim() === ''
+          ? null
+          : Number(editHoursDraft || 0) * 60 + Number(editMinutesDraft || 0)
       const updated = await updateEodReport(report.id, { body: trimmed, minutesLogged })
       setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
       setEditingId(null)
@@ -214,15 +231,31 @@ export default function EodReportsList({ memberName, meId }) {
                               value={editBodyDraft}
                               onChange={(e) => setEditBodyDraft(e.target.value)}
                             />
-                            <label className="flex items-center gap-2 text-[13px]">
-                              Minutes logged
-                              <input
-                                type="number"
-                                min="0"
-                                className="w-20"
-                                value={editMinutesDraft}
-                                onChange={(e) => setEditMinutesDraft(e.target.value)}
-                              />
+                            <label className="flex flex-col gap-1 text-[13px]">
+                              Time logged
+                              <div className="flex items-center gap-1.5 [&_input[type=number]]:w-16 [&_span]:text-[13px] [&_span]:opacity-70">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  value={editHoursDraft}
+                                  onChange={(e) => setEditHoursDraft(e.target.value)}
+                                />
+                                <span>hr</span>
+                                <select
+                                  className="w-16 rounded-[8px] border border-border bg-bg px-2 py-2.5 text-[15px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
+                                  value={editMinutesDraft}
+                                  onChange={(e) => setEditMinutesDraft(e.target.value)}
+                                >
+                                  <option value="">—</option>
+                                  {MINUTE_OPTIONS.map((m) => (
+                                    <option key={m} value={m}>
+                                      {m}
+                                    </option>
+                                  ))}
+                                </select>
+                                <span>min</span>
+                              </div>
                             </label>
                             <SubmissionActions>
                               <SubmissionButton onClick={cancelEdit} disabled={saving}>
