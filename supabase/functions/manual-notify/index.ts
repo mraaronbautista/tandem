@@ -129,6 +129,28 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // A deliberate, opt-in "hey, I just finished this" ping — distinct from
+  // notify-task-events' own automatic completion webhook, which now only
+  // ever notifies admins (see that function's own comment for why peer-
+  // to-peer completion pings stopped being automatic). This is the
+  // explicit escape hatch for the rare case someone specific genuinely
+  // should know, chosen from TaskRow.jsx's post-completion "Notify"
+  // picker — never falls back to a broadcast the way resolveNotifyIds
+  // does for the older clarification kinds, since an empty/missing list
+  // here just means "nobody was picked," not "an older frontend that
+  // predates this field."
+  if (payload.kind === 'task_completed') {
+    if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
+    const taskTitle = String(payload.taskTitle || '')
+    if (!taskTitle.trim()) return new Response('Missing taskTitle', { status: 400, headers: corsHeaders })
+    const raw = Array.isArray(payload.notifyIds) ? payload.notifyIds : []
+    const targets = raw.filter((id) => typeof id === 'string' && id !== user.id && allMembers.some((m) => m.id === id))
+    await Promise.all(
+      targets.map((id) => notifyMember(id, { title: `${senderName} finished a task`, body: taskTitle, url: '/' })),
+    )
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   if (payload.kind === 'clarification_answered') {
     if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
     const taskTitle = String(payload.taskTitle || '')

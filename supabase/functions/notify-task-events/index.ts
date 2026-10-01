@@ -6,13 +6,21 @@
 //   - New task assigned to someone by another member -> ping every
 //     assignee except whoever created it. Assigning a task to yourself
 //     doesn't ping you — you already know.
-//   - A task being completed -> ping everyone NOT assigned to it, so the
-//     rest of the team knows it got done. A single-assignee task still
-//     attributes it by name ("Ada completed a task"); a multi-assignee
-//     task can't cleanly say "X completed it" the way a single-owner task
-//     can (this webhook has no caller identity, only assignee_ids, and no
-//     one assignee "already knows" more than another for a shared task),
-//     so it uses generic wording instead.
+//   - A task being completed -> ping every ADMIN not assigned to it, not
+//     every member. This used to notify everyone not assigned — fine for
+//     two people, but once a third (non-admin) member joined, it meant
+//     two teammates getting pinged about each other's routine completions
+//     neither needed to know about. Admin oversight ("the person managing
+//     the team should see work get done") is still worth keeping
+//     automatic; peer-to-peer completion chatter isn't, by design —
+//     TaskRow.jsx's own post-completion "Notify" picker is the deliberate
+//     opt-in for the rare case someone specific genuinely should know
+//     (see manual-notify's task_completed kind). A single-assignee task
+//     still attributes it by name ("Ada completed a task"); a
+//     multi-assignee task can't cleanly say "X completed it" the way a
+//     single-owner task can (this webhook has no caller identity, only
+//     assignee_ids, and no one assignee "already knows" more than
+//     another for a shared task), so it uses generic wording instead.
 import { fetchAllMembers, notifyMember } from '../_shared/notify.ts'
 
 Deno.serve(async (req) => {
@@ -32,7 +40,7 @@ Deno.serve(async (req) => {
     const previous = payload.old_record
     if (previous.status !== 'done' && task.status === 'done') {
       const assigneeIds: string[] = task.assignee_ids || []
-      const others = allMembers.filter((m) => !assigneeIds.includes(m.id))
+      const others = allMembers.filter((m) => m.is_admin && !assigneeIds.includes(m.id))
       if (assigneeIds.length === 1) {
         const assigneeName = allMembers.find((m) => m.id === assigneeIds[0])?.display_name || 'Someone'
         await Promise.all(

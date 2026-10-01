@@ -1,11 +1,11 @@
 import PrivateAttachment from './PrivateAttachment'
-import { useRef, useState } from 'react'
-import { isOverdue, isAllDayTask, formatDuration } from '../lib/tasks'
+import { useEffect, useRef, useState } from 'react'
+import { isOverdue, isAllDayTask, formatDuration, fetchMembersWhoCanViewTask } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { assigneeBadge } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
-import { sendTaskNudge } from '../lib/manualNotify'
+import { sendTaskNudge, sendTaskCompletedNotify } from '../lib/manualNotify'
 import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, X, Pin } from 'lucide-react'
 import TaskForm, { recurrenceLabel as getRecurrenceLabel } from './TaskForm'
 import ChecklistView from './ChecklistView'
@@ -13,7 +13,13 @@ import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import TaskIcon from './TaskIcon'
+import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+
+// Auto-dismiss window for the post-completion Notify prompt — same 8s
+// Projects' own undo-on-remove banner uses, long enough to actually
+// register and act on, short enough not to linger once ignored.
+const COMPLETION_NOTIFY_TIMEOUT_MS = 8000
 
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
@@ -96,6 +102,14 @@ export default function TaskRow({
   const [nudgeSent, setNudgeSent] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
   const [deleteRecurringOpen, setDeleteRecurringOpen] = useState(false)
+  // Post-completion "Notify" prompt — null when not showing. `eligible`
+  // is pre-filtered to members who can actually view this task, aren't
+  // the assignee, aren't an admin (already covered by the automatic
+  // completion ping — see notify-task-events), and aren't the viewer
+  // themselves; `selected` defaults to the task's creator if they made
+  // the cut, since they're the one most likely waiting to hear back.
+  const [completionNotify, setCompletionNotify] = useState(null)
+  const [notifySending, setNotifySending] = useState(false)
   const swipeStartRef = useRef(null)
   const attachments = task.completion_attachments || []
   const hasSubmission = Boolean(task.completion_note || attachments.length)
@@ -182,8 +196,58 @@ export default function TaskRow({
     onStatusChange(task.id, next)
     // Marking done surfaces Edit/Delete/Submit right away, instead of
     // making you dig into the row separately.
-    if (next === 'done') setOpen(true)
+    if (next === 'done') {
+      setOpen(true)
+      loadCompletionNotify()
+    } else {
+      // Unchecking cancels an in-flight or showing prompt — it's no
+      // longer a completion worth flagging to anyone.
+      setCompletionNotify(null)
+    }
   }
+
+  // Fire-and-forget on purpose — a failed/slow lookup here should never
+  // block or visibly interrupt the actual completion, which already
+  // happened via onStatusChange above. Shows nothing if nobody besides
+  // the admin (already covered automatically) and the assignee(s) can
+  // even see this task.
+  async function loadCompletionNotify() {
+    try {
+      const viewerIds = await fetchMembersWhoCanViewTask(task.id)
+      const eligible = members.filter(
+        (m) => viewerIds.includes(m.id) && m.id !== meId && !task.assignee_ids?.includes(m.id) && !m.is_admin,
+      )
+      if (eligible.length === 0) return
+      const defaultSelected = eligible.some((m) => m.id === task.created_by) ? [task.created_by] : []
+      setCompletionNotify({ eligible, selected: defaultSelected })
+    } catch {
+      // Best-effort, same reasoning every other push in this app treats
+      // delivery as non-critical — the task is already marked done
+      // regardless of whether this lookup succeeds.
+    }
+  }
+
+  async function handleSendCompletionNotify() {
+    if (!completionNotify?.selected.length) return
+    setNotifySending(true)
+    try {
+      await sendTaskCompletedNotify(task.id, task.title, completionNotify.selected)
+    } catch {
+      // Best-effort, see loadCompletionNotify above.
+    } finally {
+      setNotifySending(false)
+      setCompletionNotify(null)
+    }
+  }
+
+  // Auto-dismiss if left untouched — same shape Projects' own
+  // undo-on-remove banner uses, so the prompt doesn't linger forever if
+  // nobody needed notifying this time.
+  useEffect(() => {
+    if (!completionNotify) return
+    const timer = window.setTimeout(() => setCompletionNotify(null), COMPLETION_NOTIFY_TIMEOUT_MS)
+    return () => window.clearTimeout(timer)
+  }, [completionNotify])
 
   function handleSwipeStart(e) {
     if (!open || e.touches.length !== 1) return
@@ -338,6 +402,34 @@ export default function TaskRow({
 
       {open && (
         <div className="mt-2.5 cursor-default border-t border-border pt-2.5 text-[13px] [&_p]:mb-1.5" onClick={(e) => e.stopPropagation()}>
+          {completionNotify && (
+            <div className="mb-2.5 flex flex-col gap-1.5 rounded-[8px] border border-border bg-pill-bg px-2.5 py-2">
+              <span className="text-[13px] opacity-80">Notify someone this is done?</span>
+              <AssigneePicker
+                members={completionNotify.eligible}
+                value={completionNotify.selected}
+                onChange={(next) => setCompletionNotify((prev) => (prev ? { ...prev, selected: next } : prev))}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="vault-copy"
+                  onClick={() => setCompletionNotify(null)}
+                  disabled={notifySending}
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  className="vault-copy"
+                  onClick={handleSendCompletionNotify}
+                  disabled={notifySending || completionNotify.selected.length === 0}
+                >
+                  {notifySending ? 'Sending…' : 'Send'}
+                </button>
+              </div>
+            </div>
+          )}
           {creatorName && (
             <p className="text-xs opacity-60">Added by {creatorName}</p>
           )}

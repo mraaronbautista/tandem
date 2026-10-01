@@ -28,6 +28,20 @@ export async function sendTaskNudge(taskId, taskTitle) {
   if (error) throw error
 }
 
+// The deliberate, opt-in "I just finished this" ping — TaskRow.jsx's
+// post-completion Notify picker, scoped to whoever's explicitly chosen
+// rather than everyone (notify-task-events' own automatic completion
+// webhook now only ever pings admins, see that function's comment).
+// Never falls back to a broadcast if notifyIds is empty, unlike
+// sendClarificationAsked/Answered — an empty selection here genuinely
+// means "nobody was picked," not an older frontend missing the field.
+export async function sendTaskCompletedNotify(taskId, taskTitle, notifyIds) {
+  const { error } = await supabase.functions.invoke('manual-notify', {
+    body: { kind: 'task_completed', taskId, taskTitle, notifyIds },
+  })
+  if (error) throw error
+}
+
 // notifyIds is who this specific question/reply is actually tagged for
 // (TaskClarifications.jsx's own "Notify" picker) — no longer resolved
 // server-side as "everyone but the caller", since a comment that

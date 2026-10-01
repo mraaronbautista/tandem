@@ -69,6 +69,19 @@ export async function deleteRecurringTask(id, deleteFuture) {
   if (error) throw error
 }
 
+// Who already has legitimate visibility into a task — backs TaskRow.jsx's
+// post-completion "Notify" picker, so its options can never include
+// someone who'd hit a dead end opening a task they can't actually see.
+// security definer RPC (members_who_can_view_task in schema.sql), not a
+// plain table read — a member can't otherwise see other members' own
+// task_access grants (RLS there only exposes your own outgoing ones,
+// or everything to an admin).
+export async function fetchMembersWhoCanViewTask(taskId) {
+  const { data, error } = await supabase.rpc('members_who_can_view_task', { check_task_id: taskId })
+  if (error) throw error
+  return (data || []).map((row) => row.member_id)
+}
+
 // Human label for a task's duration, e.g. 90 -> "1.5 hr", 45 -> "45 min",
 // 4320 -> "3 days". A day-plus span reads as days (+ a leftover hr/min
 // remainder, if any) rather than e.g. "72 hr" — clearer once durations

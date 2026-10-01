@@ -602,6 +602,35 @@ returns boolean as $$
     );
 $$ language sql security definer stable;
 
+-- Who already has legitimate visibility into a given task — assignees,
+-- plus anyone with a view/update task_access grant toward any of them.
+-- Backs TaskRow.jsx's post-completion "Notify" picker: the picker's own
+-- options are deliberately limited to this set, not every member, so it
+-- can never suggest notifying someone into a dead end (a push that
+-- opens to a task they can't actually see). can_view_task above answers
+-- "can *I* see this task"; this answers "who *besides me* can," which
+-- can_view_task alone can't express since it only ever checks auth.uid().
+create or replace function members_who_can_view_task(check_task_id uuid)
+returns table(member_id uuid)
+language sql
+security definer
+stable
+as $$
+  select m.id
+  from members m
+  join tasks t on t.id = check_task_id
+  where is_member()
+    and (
+      m.id = any(t.assignee_ids)
+      or exists (
+        select 1 from task_access ta
+        where ta.viewer_id = m.id and ta.target_id = any(t.assignee_ids) and ta.level in ('view', 'update')
+      )
+    );
+$$;
+
+grant execute on function members_who_can_view_task(uuid) to authenticated;
+
 -- "Every other assignee" shape, shared by can_delete_task/
 -- can_reassign_task/can_create_task_for — a task assigned solely to the
 -- caller has no "other assignee" to check, so unnest() over that empty
@@ -3721,5 +3750,35 @@ as $$
     )
   );
 $$;
+
+commit;
+
+-- members_who_can_view_task() (incremental migration) — backs the new
+-- post-completion "Notify" picker in TaskRow.jsx. See the base
+-- definition above (right after can_view_task/can_update_task) for the
+-- full reasoning; this is pure addition, no existing function/policy
+-- touched.
+begin;
+
+create or replace function members_who_can_view_task(check_task_id uuid)
+returns table(member_id uuid)
+language sql
+security definer
+stable
+as $$
+  select m.id
+  from members m
+  join tasks t on t.id = check_task_id
+  where is_member()
+    and (
+      m.id = any(t.assignee_ids)
+      or exists (
+        select 1 from task_access ta
+        where ta.viewer_id = m.id and ta.target_id = any(t.assignee_ids) and ta.level in ('view', 'update')
+      )
+    );
+$$;
+
+grant execute on function members_who_can_view_task(uuid) to authenticated;
 
 commit;

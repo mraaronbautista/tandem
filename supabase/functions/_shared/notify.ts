@@ -26,12 +26,14 @@ export { supabaseAdmin }
 // reminder) for a member who's been denied that feature — same
 // deny-list semantics has_permission() enforces in RLS, just read
 // directly here since this is a plain data fetch, not a query needing
-// row-level security of its own. Still worth throwing on a failed query
-// rather than returning an empty array silently: every downstream
-// notifyMember() call would otherwise just no-op with nothing in the
-// logs to explain why a notification never went out.
+// row-level security of its own. `is_admin` included so notify-task-events
+// can scope a completion ping to admins only, instead of every member
+// not assigned. Still worth throwing on a failed query rather than
+// returning an empty array silently: every downstream notifyMember()
+// call would otherwise just no-op with nothing in the logs to explain
+// why a notification never went out.
 export async function fetchAllMembers() {
-  const { data, error } = await supabaseAdmin.from('members').select('id, display_name, permissions')
+  const { data, error } = await supabaseAdmin.from('members').select('id, display_name, permissions, is_admin')
   if (error) throw new Error(`fetchAllMembers: failed to load members: ${error.message}`)
   return data || []
 }
