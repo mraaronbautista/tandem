@@ -361,11 +361,26 @@ export default function TaskBoard({ theme, toggleTheme }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'member_nudges' }, () => reloadMemberNudges())
       .subscribe()
 
+    // task_access itself was never on a Realtime channel — a grant
+    // change doesn't touch the tasks table at all, so tasksChannel above
+    // never fires for it, and a viewer whose access just got expanded
+    // (or narrowed) only found out on their next unrelated reload. Found
+    // for real: Aaron's admin grant toward a newly-added member's tasks
+    // got backfilled by hand in production, and his already-open session
+    // had no way to know to refetch. Reuses scheduleTaskReload (same
+    // debounce as tasksChannel) since this changes exactly what `reload`
+    // itself would return, nothing else.
+    const taskAccessChannel = supabase
+      .channel('task-access-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_access' }, scheduleTaskReload)
+      .subscribe()
+
     return () => {
       window.clearTimeout(taskReloadTimer)
       supabase.removeChannel(tasksChannel)
       supabase.removeChannel(membersChannel)
       supabase.removeChannel(memberNudgesChannel)
+      supabase.removeChannel(taskAccessChannel)
     }
   }, [])
 
