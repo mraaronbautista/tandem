@@ -25,11 +25,16 @@ Deno.serve(async (req) => {
   // caller is actually in it, so a valid-but-non-member session (a staff
   // account, for instance) would otherwise get "everyone but the caller"
   // collapsing to "everyone" — every member-only kind (eod_report/nudge/
-  // clarification_asked/clarification_answered) explicitly checks
-  // `!caller` first and refuses rather than silently broadcasting on a
-  // non-member's behalf. time_entry_correction_request is the one kind a
-  // staff account is actually meant to call, so it deliberately has no
-  // such check.
+  // clarification_asked/clarification_answered/task_nudge/task_completed)
+  // explicitly checks `!caller` first and refuses rather than silently
+  // broadcasting, or acting at all, on a non-member's behalf.
+  // time_entry_correction_request is the one kind a staff account is
+  // actually meant to call, so it deliberately has no such check.
+  // (task_nudge was found missing this guard during an Oct 2, 2026
+  // cohesion audit — a staff session could otherwise push an arbitrary
+  // "Still on your plate?" notification to real members about any task,
+  // and silently suppress that task's legitimate 3-day cron nudge by
+  // setting overdue_nudge_sent_at. Fixed.)
   const otherMemberIds = allMembers.filter((m) => m.id !== user.id).map((m) => m.id)
 
   const payload = await req.json()
@@ -119,6 +124,7 @@ Deno.serve(async (req) => {
   // overdue_nudge_sent_at so the automatic overdue-nudge cron pass
   // (notify-reminders) doesn't duplicate this shortly after.
   if (payload.kind === 'task_nudge') {
+    if (!caller) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
     const taskId = String(payload.taskId || '')
     const taskTitle = String(payload.taskTitle || '')
     if (!taskId || !taskTitle.trim()) return new Response('Missing taskId/taskTitle', { status: 400, headers: corsHeaders })
