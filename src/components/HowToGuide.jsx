@@ -13,7 +13,7 @@ const SECTIONS = [
     title: 'Getting around',
     items: [
       'Five tabs — Timeline, Rentals, Reports, Board, and Staff. On a phone they sit in a bar along the bottom; on a tablet or wider screen they fold into the top header next to Settings instead, since there\'s no separate sidebar.',
-      'The + button changes with the screen you are on: task tools on Today, add booking on Rentals, submit report on Reports (Aaron only), and add pin on Board. Staff has no + because it has no single obvious add action.',
+      'The + button changes with the screen you are on: task tools on Today, add booking on Rentals, submit report on Reports (only for members who have that turned on), and add pin on Board. Staff has no + because it has no single obvious add action.',
       'The ⚙️ icon opens Settings: who\'s signed in, notifications, theme, default timezone, Vault, and this guide.',
     ],
   },
@@ -24,7 +24,7 @@ const SECTIONS = [
       'Day view lays tasks out on a real time-scaled timeline: position and height reflect actual time and duration, and overlapping tasks stack with a clear conflict label.',
       'Tip: a big empty gap between tasks (say, one at 6am and the next at 9pm) automatically collapses into a small marker instead of stretching the whole day out, so a light day doesn\'t turn into endless scrolling.',
       'Tap the "Month Year" label up top to jump straight to any date via the calendar popover; the ‹ › arrows next to it step by week.',
-      'Switch whose tasks you\'re viewing with the All / Ada / Aaron picker.',
+      'Switch whose tasks you\'re viewing with the All / [member name] picker — it lists every teammate you have.',
       'Day / Week / Month tabs sit above the list. Week always snaps back to the current week when you tap it, even if you were browsing a different one in Day mode — Day and Month keep wherever you last left them. Month shows each day as a small grid cell with up to 3 task chips (plus a "N more" line); it hides the day-picker strip below the tabs since a day-by-day scroller doesn\'t make sense next to a full month grid.',
     ],
   },
@@ -42,9 +42,9 @@ const SECTIONS = [
     title: 'Task details',
     items: [
       'Checklist: break a task into subtasks. Mark an item "blocked" (with an optional reason) instead of done, for something that turned out impossible rather than just unfinished.',
-      'Comments: ask a question or leave a note on any task — either of you can comment regardless of who created or is assigned it, and files (PDFs, docs, photos, anything) can go on the message itself.',
-      'Marking a task done lets you attach a completion note and files as proof of what was actually delivered.',
-      'Tip: an "⚠ Overlap" badge means two of your own timed tasks collide — Ada and Aaron having things at the same time isn\'t flagged, since that\'s not a real conflict.',
+      'Comments: ask a question or leave a note on any task — anyone can comment regardless of who created or is assigned it, and files (PDFs, docs, photos, anything) can go on the message itself. A "Notify" picker next to Send lets you choose who actually gets pinged about it, instead of alerting everyone.',
+      'Marking a task done lets you attach a completion note and files as proof of what was actually delivered. Right after checking a task off, an optional "Notify someone?" prompt briefly appears if anyone specific might want to know — ignore it and nothing extra happens.',
+      'Tip: an "⚠ Overlap" badge means two of your own timed tasks collide — two different people having things at the same time isn\'t flagged, since that\'s not a real conflict.',
       'A 💬 badge on a task\'s collapsed row means there\'s a question or comment waiting on your reply — open the task to answer it, or check Board → Inbox to see every open one across all tasks in one place.',
     ],
   },
@@ -68,9 +68,9 @@ const SECTIONS = [
     items: [
       'Pin a task or note with no deadline, so a stray idea doesn\'t get lost.',
       'Tap + while on Board to switch to Pins and focus the new-pin box.',
-      'Private by default — toggle "Share to both boards" to let the other person see it too.',
+      'Private by default — tap the share icon to pick exactly who else can see it, not an all-or-nothing toggle.',
       'Tip: "Focus today" turns any pin (yours, or shared with you) into a real task due today — so a good idea from last week can actually become something you do.',
-      'Only the original author can edit or unpin a pin, even once shared — the other person can see and comment on it, not manage it.',
+      'Only the original author can edit or unpin a pin, even once shared — anyone it\'s shared with can see and comment on it, not manage it.',
     ],
   },
   {
@@ -87,8 +87,8 @@ const SECTIONS = [
   {
     title: 'Reports',
     items: [
-      'Aaron submits end-of-day/week/month reports; Ada can read them all, grouped by month.',
-      'For Aaron, + on the Reports screen opens Submit report directly.',
+      'Members with reporting turned on submit end-of-day/week/month reports from here. Who can read a given person\'s reports is set individually by an admin — it\'s no longer automatic between everyone, so ask if you expect to see someone\'s reports and don\'t.',
+      'If you submit reports, + on the Reports screen opens Submit report directly.',
       'The auto-filled draft only lists what you completed since your last submission for that bucket, not the whole day again, so reopening it doesn\'t duplicate old entries.',
       'Tip: minutes logged is overwritten each time, not added up — match it to your actual time tracker\'s running total rather than trying to sum sessions yourself.',
       'Any files attached as proof of a completed task carry through into the report automatically.',
@@ -97,11 +97,11 @@ const SECTIONS = [
   {
     title: 'Staff hours',
     items: [
-      'The Staff tab is Aaron and Ada\'s payroll and attendance view. The property manager has a separate phone-first clock-in screen and cannot see Tandem\'s tasks, rentals, reports, Board, vault, or this settings guide.',
+      'The Staff tab is where members with Staff access review payroll and attendance. The property manager has a separate phone-first clock-in screen and cannot see Tandem\'s tasks, rentals, reports, Board, vault, or this settings guide.',
       'Clock-in choices are physical locations such as Rachel or Parkside, not individual rental units and not companies. One location can contain several Awa or Azu units, and a future acquisition can become another location later.',
       'Open Locations, then Add physical location. Give it a simple place name and select every rental unit physically located there. Rachel, for example, can hold Healthcare Haven, Laminate Loft, Main Floor Manor, and Peaceful Cottage under one clock-in choice.',
       'Enter the physical location’s full street address and tap Find clock-in point, then choose the correct match. Tandem fills the map point for you; latitude and longitude stay under Advanced details.',
-      'A location can still be saved before its clock-in point is configured. It shows “Needs setup” to Aaron/Ada and stays hidden from the property manager until it has coordinates and is ready.',
+      'A location can still be saved before its clock-in point is configured. It shows “Needs setup” to members with Staff access and stays hidden from the property manager until it has coordinates and is ready.',
       'Tip: the clock-in point and radius belong to the physical location only—you never configure GPS separately for every unit. The default allowed radius is 150 meters, and an outside-radius clock-in is recorded but flagged for review rather than blocked.',
       'Pending shifts can be approved after reviewing the location, duration, rate, pay, and any outside-geofence warning. Export CSV downloads the shifts currently shown by the active filter.',
       'Use Edit in the Property manager card to change the display name or standard/emergency rates. A rate change only affects future clock-ins; previous shifts keep the rate captured when they started.',
@@ -113,12 +113,12 @@ const SECTIONS = [
     items: [
       'On Today, + opens Task Tools with New task / Bulk / Priorities tabs. Every fresh open starts on New task.',
       'Priorities: shared planning goals for the day/week/month — each bullet also creates a real task, so setting a priority isn\'t just a note that gets forgotten. Day priorities are due today; week/month ones are All Day and stick around until done.',
-      'Bulk add/edit tasks: paste in a whole schedule at once on the Add tab instead of one task at a time. One line per task — "date – description" (e.g. "Aug 30 – Renew the lease"), with an optional time or time range right before the dash for anything that needs one ("Aug 28 8am-9am – Plumber at 1072 Rachel"). The Edit tab picks from your existing tasks — filterable to just Ada\'s, just Aaron\'s, or all — to retitle, reassign, re-timezone, reschedule, or delete a batch together.',
+      'Bulk add/edit tasks: paste in a whole schedule at once on the Add tab instead of one task at a time. One line per task — "date – description" (e.g. "Aug 30 – Renew the lease"), with an optional time or time range right before the dash for anything that needs one ("Aug 28 8am-9am – Plumber at 1072 Rachel"). The Edit tab picks from your existing tasks — filterable to one person\'s or all of them — to retitle, reassign, re-timezone, reschedule, or delete a batch together.',
       'Tip: the Edit tab\'s Date/Time field has two modes — "Shift by" moves each selected task from its own current date/time by an amount you set (e.g. -1 day for a batch that all needs to move a day earlier), while "Set to" pins every selected task to one exact date and time, dateless ones included.',
       'Tip: "Export tasks" (top-right of that same Bulk add/edit screen) dumps every task\'s title, date, time, and timezone as plain text — filterable, and with a toggle for completed tasks — so you can copy or download it to double-check the whole schedule somewhere else at a glance.',
       'Vault is in Settings rather than under + because it is something you open and browse, not something you add.',
       'Tip: there\'s no password reset for the vault — if the master password is forgotten, "Reset vault" wipes everything, so keep it somewhere safe.',
-      'Submit report is the contextual + action on Reports for Aaron. Nudge stays as Ada\'s hand icon in the header.',
+      'Submit report is the contextual + action on Reports, for whoever has that turned on. The hand icon in the header is Nudge — tap it to pick anyone on your team to ping.',
     ],
   },
   {
@@ -126,37 +126,41 @@ const SECTIONS = [
     items: [
       'Toggle push notifications from this settings menu.',
       'Tip: on iPhone, push only works after adding this app to your Home Screen — a regular Safari tab can\'t receive push at all, no matter what\'s toggled here.',
-      'Assignment pings are symmetric: whoever gets assigned a task by the other person is notified right away, either direction — assigning yourself a task doesn\'t ping you, since you already know. Completion pings go both ways too.',
-      'The green/gray badge next to Settings shows whether Aaron\'s currently working — Aaron can toggle it himself; Ada\'s version is read-only since it\'s self-reported.',
+      'Assignment pings are symmetric: whoever gets assigned a task by someone else is notified right away, either direction — assigning yourself a task doesn\'t ping you, since you already know.',
+      'Completion pings now go only to the team\'s admin by default, not to everyone — so finishing routine work doesn\'t ping teammates who have nothing to do with it. Right after checking a task off, you can optionally choose someone specific to notify too, via the brief "Notify someone?" prompt.',
+      'The green/gray badge next to Settings reflects working status for members who have that turned on — they can toggle it themselves; everyone else sees a read-only summary pill instead.',
     ],
   },
 ]
 
 // Real questions grounded in the app's actual (sometimes asymmetric or
-// non-obvious) behavior — written from Ada's side, since she's the one
-// without an edit/write toggle on several of these (working status,
-// reports) and the one running Rentals day to day. Answers call out a
-// mobile/desktop split only where the UI actually differs (mainly nav
-// placement and the Rentals layout) — most behavior here is identical on
-// both, so most answers don't need it.
+// non-obvious) behavior — originally written from Ada's side, back when
+// working status/reports were hardcoded Aaron-only rather than permission-
+// gated per member (see schema.sql's permissions.workingStatus/reports).
+// Kept generic ("a teammate," "an admin") rather than naming anyone
+// specifically, now that the answer genuinely depends on each reader's own
+// permissions rather than which of exactly two people they are. Answers
+// call out a mobile/desktop split only where the UI actually differs
+// (mainly nav placement and the Rentals layout) — most behavior here is
+// identical on both, so most answers don't need it.
 const FAQS = [
   {
     title: "Why can't I toggle my own \"working\" status?",
     items: [
-      'That toggle is Aaron-only, on purpose — "working" is inherently self-reported, so there\'s nothing meaningful for Ada to toggle about her own status. Your side of it is the read-only green/gray badge next to Settings showing whether Aaron\'s currently on.',
+      'An admin turns that on per person — "working" is inherently self-reported, so it\'s only offered to members whose role actually calls for it. If yours isn\'t on, your side of it is a read-only summary pill showing who\'s currently working instead.',
     ],
   },
   {
     title: "Why don't I have a \"Submit report\" option?",
     items: [
-      'End-of-day/week/month reports are Aaron\'s log of what he worked on — you can read every one of them, grouped by month, from the Reports tab. There\'s nothing for you to submit there.',
-      'Tip: if you want to flag something to Aaron rather than read a past report, use the hand-shaped Nudge button in the header — that one\'s Ada-only.',
+      'Reporting is turned on per person by an admin. If you don\'t have it, you can still read any reports you\'ve specifically been given access to from the Reports tab — but there\'s nothing for you to submit there yourself.',
+      'Tip: if you want to flag something to a teammate rather than read a past report, use the hand-shaped Nudge button in the header and pick who to send it to.',
     ],
   },
   {
-    title: 'How do I remind Aaron about something?',
+    title: 'How do I remind someone about something?',
     items: [
-      'Tap the hand-shaped Nudge button in the header — it sends Aaron a push notification directly.',
+      'Tap the hand-shaped Nudge button in the header, pick who it\'s for, and it sends them a push notification directly.',
     ],
   },
   {
@@ -173,9 +177,9 @@ const FAQS = [
     ],
   },
   {
-    title: "How do I see just my tasks, or just Aaron's?",
+    title: "How do I see just my tasks, or just a teammate's?",
     items: [
-      'The All / Ada / Aaron picker on the Today tab, next to the Day/Week/Month tabs. Bulk edit\'s own task picker has the same three-way filter, separately, for narrowing down which tasks you\'re selecting to edit or delete.',
+      'The All / [member name] picker on the Today tab, next to the Day/Week/Month tabs. Bulk edit\'s own task picker has the same filter, separately, for narrowing down which tasks you\'re selecting to edit or delete.',
     ],
   },
   {
@@ -199,7 +203,7 @@ const FAQS = [
   {
     title: 'Can I edit or delete several tasks at once?',
     items: [
-      'Yes — on Today, tap + → Bulk → Edit. Filter the list to Ada\'s, Aaron\'s, or all of them, select the ones you want, then apply a change or delete the selected batch.',
+      'Yes — on Today, tap + → Bulk → Edit. Filter the list to one person\'s or all of them, select the ones you want, then apply a change or delete the selected batch.',
     ],
   },
   {
@@ -215,9 +219,9 @@ const FAQS = [
     ],
   },
   {
-    title: "I pinned something under Board — can Aaron see it?",
+    title: "I pinned something under Board — can anyone else see it?",
     items: [
-      'Not unless you share it. New pins are private by default; toggle "Share to both boards" to let Aaron see it too. Even shared, only you can edit or unpin it — he can view and comment, not manage it.',
+      'Not unless you share it. New pins are private by default; tap the share icon to pick exactly which teammates can see it — there\'s no single "share with everyone" toggle, since who should see a given pin varies. Even shared, only you can edit or unpin it — the people it\'s shared with can view and comment, not manage it.',
     ],
   },
   {
@@ -248,7 +252,7 @@ const FAQS = [
     title: "I'm not getting push notifications on my phone — why?",
     items: [
       'On iPhone, push only works from this app after it\'s added to your Home Screen (iOS 16.4+) — a regular Safari tab can\'t receive push at all, no matter what\'s toggled in Settings. Confirm it\'s installed that way first, then check the notification toggle in Settings.',
-      'Tip: if you and Aaron ever share a device, check "Signed in as {name}" at the top of Settings before flipping the toggle — it\'s easy to accidentally change the other person\'s notification setting.',
+      'Tip: if you ever share a device with a teammate, check "Signed in as {name}" at the top of Settings before flipping the toggle — it\'s easy to accidentally change someone else\'s notification setting.',
     ],
   },
   {
@@ -302,15 +306,15 @@ const FAQS = [
     ],
   },
   {
-    title: "What does the ⚠ Overlap badge mean, and why doesn't it show when Aaron and I both have something scheduled at the same time?",
+    title: "What does the ⚠ Overlap badge mean, and why doesn't it show when a teammate and I both have something scheduled at the same time?",
     items: [
-      'It only flags two of your own timed tasks colliding with each other. You and Aaron having separate tasks at the same time isn\'t treated as a real conflict, so that combination is never flagged.',
+      'It only flags two of your own timed tasks colliding with each other. You and someone else having separate tasks at the same time isn\'t treated as a real conflict, so that combination is never flagged.',
     ],
   },
   {
     title: 'How do I change which timezone new tasks default to?',
     items: [
-      'Settings (⚙️) → Default timezone. It controls how task times and calendar dates are displayed as well as the timezone used for new tasks, priorities, and Board pins. Aaron bulk-adding your schedule for you still uses your saved zone rather than his device\'s.',
+      'Settings (⚙️) → Default timezone. It controls how task times and calendar dates are displayed as well as the timezone used for new tasks, priorities, and Board pins. A teammate bulk-adding your schedule for you still uses your saved zone rather than their own device\'s.',
     ],
   },
 ]
