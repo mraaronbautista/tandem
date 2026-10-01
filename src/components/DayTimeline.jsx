@@ -555,7 +555,7 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
                         {blockDateLabel(start)}
                       </span>
                       <span className="day-timeline-block-time-row">
-                        <span>{blockTimeLabel(task, start, end, displayTimezone)}</span>
+                        <span className="day-timeline-block-time-label">{blockTimeLabel(task, start, end, displayTimezone)}</span>
                         {!isAllDayTask(task) && (
                           <span className="task-zone-badge" title={`Displayed in ${zoneLabel(displayTimezone)}`}>
                             {zoneAbbreviation(displayTimezone)}

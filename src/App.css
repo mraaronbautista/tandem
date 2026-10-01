@@ -919,7 +919,17 @@ select:focus-visible {
 
 .day-timeline-block-main {
   flex: 1;
-  min-width: 0;
+  /* A floor, not 0 — .day-timeline-block-time's own text is never allowed
+     to shrink below what IT needs (see its own comment), which meant an
+     unusually wide time string (a cross-midnight range plus a zone
+     badge, e.g. "10:00 PM–12:00 AM+1 PHT") could claim the row's entire
+     width and crush the title down to nothing, not just "tighter" —
+     found live on a narrow phone width, where a real task's title
+     rendered as a single near-invisible sliver. This floor is what
+     .day-timeline-block-time's own new max-width (below) is sized
+     against, so the two together guarantee both sides stay legible
+     instead of one winning outright. */
+  min-width: 100px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -947,12 +957,28 @@ select:focus-visible {
    below, same as everywhere else it appears). */
 .day-timeline-block-time {
   flex: none;
+  /* Caps how much of the row this column can claim, so an unusually wide
+     time string can't crush .day-timeline-block-main's title down to
+     nothing (see that rule's own comment). Normal-length times ("9:00
+     PM PHT") sit nowhere near this cap and are unaffected; a long
+     cross-midnight range is what actually hits it, at which point
+     .day-timeline-block-time-row's own wrap (below) lets the zone badge
+     drop to a second line rather than overflowing past the cap. */
+  max-width: 45%;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
   font-size: 11px;
   opacity: 0.7;
+}
+
+/* Scoped to just the time-range text, not the whole column — the range
+   itself ("10:00 PM–12:00 AM+1") must never break mid-phrase, but the
+   zone badge next to it is a separate, shorter chip that's fine
+   dropping to its own line (see .day-timeline-block-time-row) once the
+   new max-width above actually gets hit. */
+.day-timeline-block-time-label {
   white-space: nowrap;
 }
 
@@ -964,6 +990,8 @@ select:focus-visible {
 .day-timeline-block-time-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 5px;
 }
 
