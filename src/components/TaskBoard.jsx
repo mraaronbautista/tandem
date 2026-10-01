@@ -1012,7 +1012,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
         {activeTab === 'rentals' && hasPermission('rentals') && (
           <RentalsView me={me} company={rentalsCompany} registerQuickAdd={registerQuickAdd} />
         )}
-        {activeTab === 'reports' && <EodReportsList memberName={memberName} />}
+        {activeTab === 'reports' && <EodReportsList memberName={memberName} meId={me?.id} />}
         {activeTab === 'board' && (
           <BoardView
             me={me}

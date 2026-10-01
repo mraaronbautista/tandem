@@ -43,3 +43,21 @@ export async function fetchEodReports() {
   if (error) throw error
   return data
 }
+
+// A plain overwrite, not upsert_eod_report's append-a-chunk RPC — that
+// one exists specifically for a later session adding to a bucket that
+// may not exist yet; this is fixing what's already there (a typo, a
+// wrong number), on a row that definitely exists. RLS alone already
+// scopes this to the caller's own report ("members can update own eod
+// reports", submitted_by = auth.uid()) — no RPC needed just to enforce
+// that, the same reasoning cork_notes' own author-only edit uses.
+export async function updateEodReport(id, { body, minutesLogged }) {
+  const { data, error } = await supabase
+    .from('eod_reports')
+    .update({ body, minutes_logged: minutesLogged, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select(REPORT_COLUMNS)
+    .single()
+  if (error) throw error
+  return data
+}

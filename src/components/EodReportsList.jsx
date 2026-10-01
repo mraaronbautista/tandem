@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { fetchEodReports } from '../lib/eodReports'
+import { fetchEodReports, updateEodReport } from '../lib/eodReports'
 import AttachmentList from './AttachmentList'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -48,17 +49,55 @@ const PERIOD_TABS = [
 // weekly summaries actually say" meant scrolling past every daily entry
 // in between them.
 // Persistent tab content, not a modal — see RentalsView.jsx for why.
-export default function EodReportsList({ memberName }) {
+export default function EodReportsList({ memberName, meId }) {
   const [reports, setReports] = useState(null)
   const [error, setError] = useState('')
   const [period, setPeriod] = useState('all')
   const [expanded, setExpanded] = useState(() => new Set())
+  const [editingId, setEditingId] = useState(null)
+  const [editBodyDraft, setEditBodyDraft] = useState('')
+  const [editMinutesDraft, setEditMinutesDraft] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     fetchEodReports()
       .then(setReports)
       .catch((err) => setError(err.message))
   }, [])
+
+  // Fixing what's already there (a typo, a wrong total) — not the same
+  // action as the report form's own "add to this" append, which is for a
+  // later work session adding new content. RLS already scopes this to the
+  // caller's own report (see updateEodReport), so the Edit button itself
+  // is the only gate needed client-side.
+  function startEdit(report) {
+    setEditingId(report.id)
+    setEditBodyDraft(report.body)
+    setEditMinutesDraft(report.minutes_logged != null ? String(report.minutes_logged) : '')
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditBodyDraft('')
+    setEditMinutesDraft('')
+  }
+
+  async function handleSaveEdit(report) {
+    const trimmed = editBodyDraft.trim()
+    if (!trimmed) return
+    setSaving(true)
+    setError('')
+    try {
+      const minutesLogged = editMinutesDraft.trim() === '' ? null : Number(editMinutesDraft)
+      const updated = await updateEodReport(report.id, { body: trimmed, minutesLogged })
+      setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+      setEditingId(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   function toggleMonth(key) {
     setExpanded((prev) => {
@@ -129,19 +168,67 @@ export default function EodReportsList({ memberName }) {
 
               {expanded.has(group.key) && (
                 <div className="flex flex-col gap-3.5 px-1 pt-2.5">
-                  {group.items.map((r) => (
-                    <div className="border-b border-border pb-3 last:border-b-0 last:pb-0" key={r.id}>
-                      <p className="mb-1 text-xs opacity-60">
-                        <strong>{memberName(r.submitted_by)}</strong> — {r.period} — updated{' '}
-                        {formatDate(r.updated_at)}
-                        {r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}
-                      </p>
-                      <p className="task-submission-note-text">{r.body}</p>
-                      <AttachmentList
-                        attachments={r.attachments?.map((a) => ({ url: a.url, name: `${a.taskTitle}: ${a.name}` }))}
-                      />
-                    </div>
-                  ))}
+                  {group.items.map((r) => {
+                    const isEditing = editingId === r.id
+                    const isOwn = r.submitted_by === meId
+                    return (
+                      <div className="border-b border-border pb-3 last:border-b-0 last:pb-0" key={r.id}>
+                        <p className="mb-1 text-xs opacity-60">
+                          <strong>{memberName(r.submitted_by)}</strong> — {r.period} — updated{' '}
+                          {formatDate(r.updated_at)}
+                          {!isEditing && r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}
+                        </p>
+                        {isEditing ? (
+                          <div className="flex flex-col gap-2">
+                            <textarea
+                              className="w-full resize-y rounded-[6px] border border-border bg-bg px-2 py-[7px] text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
+                              rows={5}
+                              value={editBodyDraft}
+                              onChange={(e) => setEditBodyDraft(e.target.value)}
+                            />
+                            <label className="flex items-center gap-2 text-[13px]">
+                              Minutes logged
+                              <input
+                                type="number"
+                                min="0"
+                                className="w-20"
+                                value={editMinutesDraft}
+                                onChange={(e) => setEditMinutesDraft(e.target.value)}
+                              />
+                            </label>
+                            <SubmissionActions>
+                              <SubmissionButton onClick={cancelEdit} disabled={saving}>
+                                Cancel
+                              </SubmissionButton>
+                              <SubmissionButton
+                                variant="primary"
+                                onClick={() => handleSaveEdit(r)}
+                                disabled={saving || !editBodyDraft.trim()}
+                              >
+                                {saving ? 'Saving…' : 'Save'}
+                              </SubmissionButton>
+                            </SubmissionActions>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="task-submission-note-text">{r.body}</p>
+                            <AttachmentList
+                              attachments={r.attachments?.map((a) => ({ url: a.url, name: `${a.taskTitle}: ${a.name}` }))}
+                            />
+                            {isOwn && (
+                              <button
+                                type="button"
+                                className="mt-1.5 cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-accent underline"
+                                onClick={() => startEdit(r)}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
