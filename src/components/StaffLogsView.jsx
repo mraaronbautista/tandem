@@ -120,22 +120,36 @@ export default function StaffLogsView({ me }) {
     }
   }
 
-  async function reloadAll() {
+  // Its own function for the same reason reloadSites/reloadRequests
+  // are — the rental_properties Realtime channel below needs to
+  // re-fetch just this (unit names/location links used in the roster
+  // and the Locations manager), not the whole page. Found missing
+  // during an Oct 2, 2026 cohesion audit — rental_properties was
+  // fetched here but never subscribed to, so an edit made elsewhere
+  // (e.g. renaming a unit from the Rentals tab) stayed stale here until
+  // a manual reload.
+  async function reloadProperties() {
     try {
-      const [rosterData, sitesData, awaProperties, azuProperties] = await Promise.all([
-        fetchStaffRoster(),
-        fetchWorkSites(),
+      const [awaProperties, azuProperties] = await Promise.all([
         fetchRentalProperties('awa'),
         fetchRentalProperties('azu'),
       ])
-      setRoster(rosterData)
-      setSites(sitesData)
       setRentalProperties(
         [...awaProperties, ...azuProperties].sort((a, b) =>
           `${a.company}-${a.unit_name}`.localeCompare(`${b.company}-${b.unit_name}`),
         ),
       )
-      await Promise.all([reloadEntries(), reloadRequests()])
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function reloadAll() {
+    try {
+      const [rosterData, sitesData] = await Promise.all([fetchStaffRoster(), fetchWorkSites()])
+      setRoster(rosterData)
+      setSites(sitesData)
+      await Promise.all([reloadProperties(), reloadEntries(), reloadRequests()])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -174,15 +188,20 @@ export default function StaffLogsView({ me }) {
   useEffect(() => {
     const channel = supabase
       .channel('staff-work-sites-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_sites' }, (payload) => {
-        // TEMPORARY diagnostic — remove once the reported live-update gap
-        // on this channel is confirmed fixed.
-        console.log('[work_sites realtime] event received:', payload)
-        reloadSites()
-      })
-      .subscribe((status, err) => {
-        console.log('[work_sites realtime] subscribe status:', status, err || '')
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_sites' }, reloadSites)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [])
+
+  // Requires `alter publication supabase_realtime add table
+  // rental_properties;` — already run for RentalsView.jsx's own channel,
+  // so no new publication step needed here, just the subscription
+  // itself. No filter dependencies, same reasoning as work_sites above.
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-rental-properties-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_properties' }, reloadProperties)
+      .subscribe()
     return () => supabase.removeChannel(channel)
   }, [])
 
