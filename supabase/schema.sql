@@ -702,6 +702,44 @@ create trigger tasks_enforce_reassignment_access
 before update of assignee_ids on tasks
 for each row execute function enforce_task_reassignment_access();
 
+-- The actual mechanism behind "notify-task-events — Database Webhook on
+-- tasks INSERT/UPDATE" (see that function's own header comment): not a
+-- Dashboard-configured Database Webhook, a plain pg_net-based trigger
+-- calling the deployed Edge Function's URL directly. Found missing from
+-- this file entirely on Oct 2, 2026 during a full deployment-cohesion
+-- audit — it was real, correct, working production infrastructure
+-- (confirmed via pg_get_functiondef against the live database) that had
+-- simply never been captured here, so a from-scratch rebuild of this
+-- project would have silently lost task assignment/completion
+-- notifications with no error anywhere pointing at why. The project URL
+-- below is this specific Supabase project's own — a different project
+-- needs its own URL substituted in by hand, same as every other
+-- project-specific value (VAPID keys, etc.) this app's setup already
+-- requires.
+create extension if not exists pg_net;
+
+create or replace function notify_task_event()
+returns trigger as $$
+begin
+  perform net.http_post(
+    url := 'https://qizvsymlntbukuhypkxh.supabase.co/functions/v1/notify-task-events',
+    headers := '{"Content-Type": "application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'type', tg_op,
+      'table', 'tasks',
+      'record', to_jsonb(new),
+      'old_record', case when tg_op = 'UPDATE' then to_jsonb(old) else null end
+    )
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists tasks_notify_events on tasks;
+create trigger tasks_notify_events
+after insert or update on tasks
+for each row execute function notify_task_event();
+
 -- Both members can see each other's display name — needed for the greeting
 -- and task attribution features.
 create policy "members can read all members"
