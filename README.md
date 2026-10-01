@@ -25,10 +25,13 @@ Shared task board for Ada's team — one place to drop requests, see status, and
      ('00000000-0000-0000-0000-000000000002', 'Ada', '#a8567e', false);
 
    -- A restricted member (e.g. a healthcare VA who shouldn't see Ada's
-   -- rental business or the shared vault) instead sets permissions:
+   -- rental business) instead sets permissions:
    -- insert into members (id, display_name, color, permissions) values
    --   ('00000000-0000-0000-0000-000000000003', 'New hire', '#7d6ab8',
-   --    '{"rentals": false, "vault": false, "staff": false}'::jsonb);
+   --    '{"rentals": false, "staff": false}'::jsonb);
+   -- Vault access is separate — it's not a permissions key at all, but its
+   -- own vault_access table (so a member can be trusted with one vault but
+   -- not another). See CLAUDE.md's "Password vault" section.
    ```
 
 7. A new member starts with **no visibility into anyone else's tasks, and no one has visibility into hers** — except every existing `is_admin` account automatically gets view & update access to her tasks the moment her row is inserted (no extra step). To grant visibility in the other direction (e.g. let her see an existing member's tasks too), insert a row into `task_access` by hand:
@@ -66,6 +69,6 @@ Once deployed, open the Netlify URL in Safari (iOS) → Share → **Add to Home 
 
 ## Notes on scope
 
-- **Attachments:** no file upload — tasks carry an optional "sent via Teams/Email" tag plus a free-text note (filename, message context) so you know where to look.
-- **Recurrence:** the next occurrence of a repeating task is only created once the current one is marked Done (not pre-generated ahead of time). Recurrence can use a fixed interval or selected weekdays such as Tuesday and Thursday.
+- **Attachments:** completion proof (a note and/or files, any type) can be attached when marking a task done — private, access-gated the same way the task itself is, not a public link. Tasks also still carry an optional "sent via Teams/Email" tag plus a free-text note for anything that arrived through those channels.
+- **Recurrence:** every upcoming occurrence of a repeating task is generated ahead of time for the current and viewed months, not spawned one at a time on completion. Recurrence can use a fixed interval or selected weekdays such as Tuesday and Thursday.
 - **Calendar:** intentionally out of scope for now — coordinate scheduling manually via Teams.

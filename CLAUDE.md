@@ -14,7 +14,7 @@ npm run lint        # oxlint (react + oxc rule sets, config in .oxlintrc.json)
 
 There is no test suite in this repo.
 
-Local dev needs `.env` (copy from `.env.example`) with `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_VAPID_PUBLIC_KEY` pointing at a Supabase project that has `supabase/schema.sql` applied — see README.md for the full first-time setup (creating the project, inviting each account, seeding `members`, deploying to Netlify) — note README.md still documents the original two-account (Ada/Aaron) setup and hasn't yet been updated for the `color`/`permissions`/`is_admin` columns a new member's row now also needs (see Members, permissions, and task access below).
+Local dev needs `.env` (copy from `.env.example`) with `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_VAPID_PUBLIC_KEY` pointing at a Supabase project that has `supabase/schema.sql` applied — see README.md for the full first-time setup (creating the project, inviting each account, seeding `members`, deploying to Netlify) — updated Sept 30, 2026 for the N-member model (`color`/`permissions`/`is_admin`, `task_access`, the in-app Add Member flow for every account after the first) — see Members, permissions, and task access below for the full model it links to.
 
 Supabase Edge Functions (`supabase/functions/`) are deployed independently of the frontend — `supabase functions deploy <name>` — and are **not** part of the Vite build or a Netlify deploy. All four are deployed with `--no-verify-jwt` (see Push notifications below for why `manual-notify` needs it too, despite being one of the two functions that actually care who's calling — `create-staff-account`, see Property manager below, is the other).
 
