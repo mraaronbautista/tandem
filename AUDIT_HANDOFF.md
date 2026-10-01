@@ -118,6 +118,20 @@ Claude reported the audit complete after an additional mechanical pass over colu
 - Remaining uncertainty or blocker: none. Both the grant and revoke paths of the admin UI are now confirmed working against the real table, on top of the already-confirmed impersonation and live-viewing checks.
 - Next action and owner: none. Per-person Priorities — schema, impersonation (both directions), production browser viewing, and now admin grant/revoke UI — is fully verified end to end.
 
+### October 2, 2026 — Claude: working through the "real browser click-through not yet done" list
+
+Aaron asked to go through the click-through list from `multi-member-permissions.md`'s status table one at a time, the same way Priorities just got verified. Logged in as Aaron (local dev server, Aaron driving his own login). Five of seven items closed this pass:
+
+- **My Profile**: form renders correctly (display name/color/password fields). Did a real reversible write — changed badge color, saved ("Saved." confirmation, every "Aaron" badge in the UI updated live via Realtime), then changed it back. Did not test the password field (Aaron's real login).
+- **Admin member credentials** (`MemberCredentialsForm.jsx`, "Login" button on a roster row): opened "Update RC Lina's login," confirmed username/password fields and the "At least 8 characters" hint render; clicked Generate, confirmed it populates a real strong-password string client-side. Did not submit — that would actually change RC Lina's real login without her present, out of scope for this pass.
+- **Projects quick-add/collapse/undo**: on the real "Jack & Jill door knob store" project — expanded/collapsed the "Completed · 1" group correctly; clicked "+ Add subtask," typed a step, it persisted immediately (milestone count went 1-of-2 → 1-of-3) and the input stayed open for rapid entry; removed it, got the "Removed "..."" banner with Undo; let the 8s window lapse naturally rather than clicking Undo, confirmed it forfeited cleanly with no leftover data.
+- **Cork Board targeted pin sharing**: pinned a test note (private by default, "Only you" — confirmed), opened the Share popover (anchored, checkbox-per-member + Save, exactly as documented), checked RC Lina, saved — badge changed to "Shared with RC Lina" live. Verified the real `shared_with` write via a direct query (not impersonation — a plain read confirming the actual array). Archived the pin (confirmed the lighter-weight archived-pin UI — no comment thread/Focus Today/Edit, just Unarchive/Delete, matching CLAUDE.md). Could not click through final Delete — the app's native `confirm()` dialog appears to get auto-dismissed by browser automation, so deletion doesn't proceed from a scripted click. Cleaned up by deleting the one test row directly via SQL instead (`delete from cork_notes where id = '9b37316a-...' and body = '[audit test] sharing click-through'`, matched on both id and body to avoid any ambiguity).
+- **Attachment privacy**: opened a real completed task ("Shopify store," Aug 8) with a real completion attachment, clicked the submission-preview (eye) icon — the image rendered correctly inline via `PrivateAttachment.jsx`'s blob-URL download path. Independently confirmed `storage.buckets` still has `task-attachments` at `public: false` — the preview is genuinely going through the authenticated path, not a public URL, even for this task's legacy old-format public-URL-string attachment entry (confirming `attachmentPath()`'s migration shim still works correctly against real data).
+
+**Remaining two items need RC Lina's actual login** (Inbox scoping with the real VA account, and task-comment notification targeting/person-nudge from a non-admin perspective) — not yet done, continuing next.
+
+**Note on scripted `confirm()` dialogs**: any future click-through involving a native browser confirm (task delete, pin delete, vault reset, etc.) should expect the same limitation — plan to verify via direct SQL instead of trying to drive the dialog.
+
 ### Entry template
 
 - Date/time and agent:
