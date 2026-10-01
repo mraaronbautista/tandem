@@ -1436,14 +1436,18 @@ $$ language sql stable;
 alter table vault_entries enable row level security;
 
 -- Every policy below shares the same "vault access, and (not a private
--- vault, or you're the creator/a target)" shape. For the household vault
--- (private_entries = false) the last clause is never evaluated — every
--- accessible-vault member keeps seeing/editing every entry exactly as
--- before this feature existed. For the healthcare vault
--- (private_entries = true) it's genuinely creator-or-shared-with for
--- reading, creator-only for writing — matching cork_notes' own "the
--- other member can see it, not manage it" rule, since sharing a
--- credential is meant to grant visibility, not co-ownership.
+-- vault, or you're the creator/a target)" shape. A vault with
+-- private_entries = false (none, currently — every vault in this app is
+-- private_entries = true as of the "Collapse healthcare vault back into
+-- one shared vault" incremental migration below) would never evaluate
+-- the last clause, leaving every accessible-vault member seeing/editing
+-- every entry; private_entries = true instead makes it genuinely
+-- creator-or-shared-with for reading, creator-only for writing —
+-- matching cork_notes' own "the other member can see it, not manage it"
+-- rule, since sharing a credential is meant to grant visibility, not
+-- co-ownership. Kept as a per-vault flag, not hardcoded true, since a
+-- future vault with a reason to default back to fully-mutual (no
+-- sharing step at all) is still a one-row change away.
 create policy "members can read accessible vault entries"
   on vault_entries for select
   using (
@@ -3434,5 +3438,54 @@ create policy "members can delete vault entries"
 select set_config('app.member_privilege_write', '1', true);
 update members set permissions = permissions - 'vault';
 select set_config('app.member_privilege_write', '0', true);
+
+commit;
+
+-- Collapse the healthcare vault back into one shared vault (incremental
+-- migration) — a second vault meant a second master password, and that
+-- turned out to be more to remember than it was worth once the actual
+-- goal (letting a new member see only specific credentials, not
+-- everything) was already exactly what private_entries/shared_with
+-- already does *within* one vault. No table/column/RLS change needed —
+-- that mechanism was already built generically, per-vault, not
+-- specifically for a second vault — this block is pure data: flip the
+-- flag, backfill today's access so nothing silently disappears, move
+-- the new member's grant over, and drop the now-unused second vault.
+begin;
+
+-- Household goes from fully-mutual to the same private-by-default,
+-- share-per-entry model the (now-removed) healthcare vault had. Every
+-- *new* entry from here on defaults to visible only to its creator —
+-- that's the real behavior change for Ada and Aaron, not just for the
+-- new member; an explicit "Share with" click is now required to keep an
+-- entry visible to each other, same as it would be for anyone else with
+-- vault access.
+update vaults set private_entries = true where name = 'Household';
+
+-- Preserve today's full mutual access as the floor so flipping the flag
+-- above doesn't silently hide anyone's own entries from the other
+-- person: every existing Household entry gets explicitly shared with
+-- every *other* member who has vault_access to it right now (computed
+-- before the new member's own grant below, so she isn't retroactively
+-- added to entries that predate her).
+update vault_entries ve
+set shared_with = (
+  select coalesce(array_agg(va.member_id), '{}'::uuid[])
+  from vault_access va
+  where va.vault_id = ve.vault_id and va.member_id <> ve.created_by
+)
+where ve.vault_id = (select id from vaults where name = 'Household');
+
+-- The new member gets access to the one shared vault instead of her own
+-- separate one — she'll only actually see whatever gets explicitly
+-- shared with her going forward, same mechanism everyone else now uses.
+insert into vault_access (vault_id, member_id)
+select (select id from vaults where name = 'Household'), id from members where display_name = 'RC Lina'
+on conflict do nothing;
+
+-- The healthcare vault was never actually set up (no vault_meta row, no
+-- entries) — safe to drop outright; cascades to its own now-pointless
+-- vault_access rows.
+delete from vaults where name = 'Healthcare';
 
 commit;
