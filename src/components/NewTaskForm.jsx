@@ -32,7 +32,6 @@ export default function NewTaskForm({
   members,
   tasks,
   onTasksChanged,
-  memberName,
   variant = 'desktop',
 }) {
   const [open, setOpen] = useState(false)
@@ -94,7 +93,7 @@ export default function NewTaskForm({
             />
           )}
           {mode === 'priorities' && (
-            <PrioritiesForm embedded header={tabs} me={me} memberName={memberName} members={members} onClose={close} />
+            <PrioritiesForm embedded header={tabs} me={me} members={members} onClose={close} />
           )}
         </Modal>
       )}

@@ -115,7 +115,7 @@ Each report auto-suggests a draft based on what's actually been completed since 
 
 ## Priorities
 
-A simple shared planning note — "what matters this day/week/month" — that any member can set. Saving priorities also creates a real task for each item, so priorities don't just sit as a note that gets forgotten; day-scoped items get today's due date (so they can go overdue like anything else), while week/month items become All Day tasks that stick around until done. Priorities stay team-wide and mutually visible, unlike reports.
+A simple planning note — "what matters this day/week/month" — that any member can set for themselves. Saving priorities also creates a real task for each item, so priorities don't just sit as a note that gets forgotten; day-scoped items get today's due date (so they can go overdue like anything else), while week/month items become All Day tasks that stick around until done. Who can read a given person's priorities is set individually by an admin, the same as reports — it's no longer automatically shared with the whole team.
 
 ## Rentals (Awa Rentalz & Azu Rentals)
 

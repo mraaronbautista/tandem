@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import {
   FEATURE_LABELS,
   PERMISSION_FEATURES,
+  fetchPrioritiesAccessFor,
   fetchReportAccessFor,
   fetchTaskAccessFor,
   setMemberPermissions,
+  setPrioritiesAccess,
   setReportAccess,
   upsertTaskAccess,
 } from '../lib/memberAccess'
@@ -116,19 +118,22 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
   )
   const [access, setAccess] = useState({})
   const initialAccessRef = useRef({})
-  // Which other members' reports `target` can read — a plain id Set,
-  // not a level like task access, since reading someone's reports has
-  // no finer-grained action to configure than "can" or "can't."
+  // Which other members' reports/priorities `target` can read — plain id
+  // Sets, not a level like task access, since reading someone's reports
+  // or priorities has no finer-grained action to configure than "can" or
+  // "can't."
   const [reportAccess, setReportAccessState] = useState(() => new Set())
   const initialReportAccessRef = useRef(new Set())
+  const [prioritiesAccess, setPrioritiesAccessState] = useState(() => new Set())
+  const initialPrioritiesAccessRef = useRef(new Set())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([fetchTaskAccessFor(target.id), fetchReportAccessFor(target.id)])
-      .then(([taskRows, reportRows]) => {
+    Promise.all([fetchTaskAccessFor(target.id), fetchReportAccessFor(target.id), fetchPrioritiesAccessFor(target.id)])
+      .then(([taskRows, reportRows, prioritiesRows]) => {
         if (cancelled) return
         const byTeammate = new Map(taskRows.map((r) => [r.target_id, r]))
         const initial = Object.fromEntries(teammates.map((t) => [t.id, accessFromRow(byTeammate.get(t.id))]))
@@ -137,6 +142,9 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
         const reportIds = new Set(reportRows.map((r) => r.target_id))
         initialReportAccessRef.current = reportIds
         setReportAccessState(reportIds)
+        const prioritiesIds = new Set(prioritiesRows.map((r) => r.target_id))
+        initialPrioritiesAccessRef.current = prioritiesIds
+        setPrioritiesAccessState(prioritiesIds)
         setLoading(false)
       })
       .catch((err) => !cancelled && setError(err.message))
@@ -148,6 +156,15 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
   function toggleReportAccess(teammateId) {
     setReportAccessState((prev) => {
+      const next = new Set(prev)
+      if (next.has(teammateId)) next.delete(teammateId)
+      else next.add(teammateId)
+      return next
+    })
+  }
+
+  function togglePrioritiesAccess(teammateId) {
+    setPrioritiesAccessState((prev) => {
       const next = new Set(prev)
       if (next.has(teammateId)) next.delete(teammateId)
       else next.add(teammateId)
@@ -182,6 +199,12 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
         const couldView = initialReportAccessRef.current.has(teammate.id)
         if (canView === couldView) continue
         writes.push(setReportAccess(target.id, teammate.id, canView))
+      }
+      for (const teammate of teammates) {
+        const canView = prioritiesAccess.has(teammate.id)
+        const couldView = initialPrioritiesAccessRef.current.has(teammate.id)
+        if (canView === couldView) continue
+        writes.push(setPrioritiesAccess(target.id, teammate.id, canView))
       }
       await Promise.all(writes)
       onSaved()
@@ -250,6 +273,28 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
                     onChange={() => toggleReportAccess(teammate.id)}
                   />
                   Can read {teammate.display_name}'s reports
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="submission-field">
+          <span className="submission-field-label">Priorities visibility</span>
+          {loading ? (
+            <p className="text-sm opacity-65">Loading…</p>
+          ) : teammates.length === 0 ? (
+            <p className="text-sm opacity-65">No other members yet.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5 text-sm">
+              {teammates.map((teammate) => (
+                <label key={teammate.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={prioritiesAccess.has(teammate.id)}
+                    onChange={() => togglePrioritiesAccess(teammate.id)}
+                  />
+                  Can read {teammate.display_name}'s priorities
                 </label>
               ))}
             </div>

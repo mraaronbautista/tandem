@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+## Shared audit handoff
+
+Use the project skill `/shared-handoff` (`.claude/skills/shared-handoff/SKILL.md`) to reconcile the current checkpoint on resume and maintain the log at meaningful work checkpoints and session handoffs.
+
+Read `AUDIT_HANDOFF.md` and inspect the working tree before starting or resuming work. Update that file after every meaningful audit finding, decision, fix, verification, migration, or deployment and before ending a session. Preserve other sessions' edits; distinguish local preparation from tested, committed, pushed, and confirmed-live work. Follow the actual agreed bug-audit phases recorded there; do not substitute feature delivery phases. Re-read the handoff before editing when another agent may have updated it.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
@@ -203,9 +209,13 @@ Managed from `MemberAccessForm.jsx`'s new "Report visibility" section, right bel
 
 ## Priorities
 
-`priorities` table — a shared planning note, unlike `eod_reports`: any member can set it (no `permissions` key gates it), since it's household/team planning rather than a personal log. Append-only: every save is a new row scoped to a `period` ('day'/'week'/'month'); "current" priorities for a period is just the most recent row for it (`fetchLatestPriorities()` in `src/lib/priorities.js`).
+`priorities` table — any member can set their own (no `permissions` key gates it, unlike `eod_reports`' submit-side gate). Append-only: every save is a new row scoped to a `period` ('day'/'week'/'month'); "current" priorities for a period is the most recent row **for that specific person**, not the most recent row team-wide — `fetchLatestPriorities(setBy)` in `src/lib/priorities.js` always filters to one `set_by`.
 
-Saving also creates a real task per bullet item (`PrioritiesForm.jsx` → `createTask()`), not just the note — the point is that priorities stop being easy to set and forget. Day-period items get `due_date` set to today (so an unfinished one can go overdue like any other task); week/month items become All Day tasks (`due_date: null`), sticking around until done. The previous save's items are shown read-only and are never pre-filled into the editable list you're about to submit — otherwise reopening the form and saving again would recreate a task for every old item, not just anything new.
+**Genuinely per-person now, not one shared note.** Priorities originally worked the same way `eod_reports` used to: "current" was literally whoever saved most recently, visible to everyone, with no concept of "whose" priorities a given entry was. That broke the moment per-person privacy became a real need (the same VA-privacy concern that drove `report_access`) — a global "most recent wins" view can't coexist with restricting who sees whose, because a restricted viewer would've had RLS silently skip past the real most-recent entry to an older one they *could* see, surfacing as "current" with nothing indicating it was stale. `priorities_access` (`viewer_id`, `target_id`) is the exact same presence-grant shape `report_access` already established — `has_priorities_access()`/`set_priorities_access()` mirror `has_report_access()`/`set_report_access()` precisely, including the "admin opts in explicitly, no auto-grant" rule and the Ada/Aaron-only migration backfill. Managed from the same `MemberAccessForm.jsx` as Report visibility, right below it.
+
+**Granting access needs somewhere to actually use it** — `eod_reports` already has one (`EodReportsList.jsx`'s whole tab); priorities didn't, since the only place priorities ever surfaced was the compose form's own "what did I last write" reference. `fetchLatestPrioritiesForTeam()` (`priorities.js`) is the other half: one unfiltered query — RLS alone already scopes the result to "my own rows, plus anyone's I have `priorities_access` to," no separate access-roster fetch needed first — grouped client-side into the latest row per `(set_by, period)`. `PrioritiesForm.jsx` renders a second read-only "Teammates' priorities this {period}" section from it, listing only teammates it actually found an entry for (RLS already dropped anyone with no grant, and there's no way or need to tell "no access" apart from "hasn't set any" — both mean nothing to show).
+
+Saving also creates a real task per bullet item (`PrioritiesForm.jsx` → `createTask()`), not just the note — the point is that priorities stop being easy to set and forget. Day-period items get `due_date` set to today (so an unfinished one can go overdue like any other task); week/month items become All Day tasks (`due_date: null`), sticking around until done. The previous save's items are shown read-only (as "You last set this," always your own — `memberName` is no longer threaded into this form at all, now that the reference can never be anyone but the viewer) and are never pre-filled into the editable list you're about to submit — otherwise reopening the form and saving again would recreate a task for every old item, not just anything new.
 
 ## Rentals (Awa Rentalz / Azu Rentals)
 

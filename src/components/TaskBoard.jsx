@@ -868,7 +868,6 @@ export default function TaskBoard({ theme, toggleTheme }) {
           members={members}
           tasks={tasks}
           onTasksChanged={reload}
-          memberName={memberName}
         />
       )
     }

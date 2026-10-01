@@ -114,3 +114,24 @@ export async function setReportAccess(viewerId, targetId, canView) {
   })
   if (error) throw error
 }
+
+// Every priorities_access row where `viewerId` is the one granted
+// access — same shape as fetchReportAccessFor, now that priorities are
+// genuinely per-person (see priorities_access in schema.sql) rather
+// than one shared note.
+export async function fetchPrioritiesAccessFor(viewerId) {
+  const { data, error } = await supabase.from('priorities_access').select('*').eq('viewer_id', viewerId)
+  if (error) throw error
+  return data
+}
+
+// The only write path for priorities_access (see set_priorities_access()
+// in schema.sql) — same plain presence-grant shape as setReportAccess.
+export async function setPrioritiesAccess(viewerId, targetId, canView) {
+  const { error } = await supabase.rpc('set_priorities_access', {
+    p_viewer_id: viewerId,
+    p_target_id: targetId,
+    p_can_view: canView,
+  })
+  if (error) throw error
+}

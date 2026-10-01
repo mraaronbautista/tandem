@@ -1153,11 +1153,17 @@ $$;
 
 grant execute on function upsert_eod_report(report_period, date, text, integer, jsonb) to authenticated;
 
--- Priorities for the upcoming day/week/month — a shared planning note,
--- not a personal log like eod_reports, so both members can set it (unlike
--- eod_reports which is Aaron's own work log). Append-only: each save is a
--- new row, most recent per period is "current"; querying history is free
--- rather than needing its own table later.
+-- Priorities for the upcoming day/week/month — any member can set their
+-- own. Append-only: each save is a new row, most recent per (set_by,
+-- period) is "current" for that person; querying history is free rather
+-- than needing its own table later. Originally a single shared note
+-- (whoever saved most recently "won" as the one current entry for
+-- everyone, regardless of who actually wrote it) — genuinely per-person
+-- now, same "exists = allowed" priorities_access model eod_reports'
+-- report_access already established, once it became clear a global
+-- "most recent wins" view couldn't coexist with per-person privacy: an
+-- admin-restricted viewer would've silently seen a stale older entry
+-- standing in for "current" with no indication it wasn't.
 create table priorities (
   id uuid primary key default gen_random_uuid(),
   set_by uuid not null references members (id),
@@ -1168,9 +1174,63 @@ create table priorities (
 
 alter table priorities enable row level security;
 
-create policy "members can read all priorities"
+create table priorities_access (
+  viewer_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references members (id) on delete set null,
+  primary key (viewer_id, target_id),
+  constraint priorities_access_no_self_grant check (viewer_id <> target_id)
+);
+
+alter table priorities_access enable row level security;
+
+create trigger priorities_access_stamp_meta
+before insert or update on priorities_access
+for each row execute function stamp_task_access_meta();
+
+create policy "members can read their own outgoing priorities access grants"
+  on priorities_access for select
+  using (is_member() and viewer_id = auth.uid());
+
+create policy "admins can read all priorities access grants"
+  on priorities_access for select
+  using (is_member() and is_admin_member());
+
+create or replace function has_priorities_access(check_target_id uuid)
+returns boolean as $$
+  select exists (select 1 from priorities_access where viewer_id = auth.uid() and target_id = check_target_id);
+$$ language sql security definer stable;
+
+create or replace function set_priorities_access(p_viewer_id uuid, p_target_id uuid, p_can_view boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if p_viewer_id = p_target_id then
+    raise exception 'Cannot grant a member access to themselves';
+  end if;
+
+  if p_can_view then
+    insert into priorities_access (viewer_id, target_id, updated_by)
+    values (p_viewer_id, p_target_id, auth.uid())
+    on conflict (viewer_id, target_id) do nothing;
+  else
+    delete from priorities_access where viewer_id = p_viewer_id and target_id = p_target_id;
+  end if;
+end;
+$$;
+
+grant execute on function set_priorities_access(uuid, uuid, boolean) to authenticated;
+
+create policy "members can read accessible priorities"
   on priorities for select
-  using (is_member());
+  using (is_member() and (set_by = auth.uid() or has_priorities_access(set_by)));
 
 create policy "members can insert priorities"
   on priorities for insert
@@ -3818,5 +3878,91 @@ as $$
 $$;
 
 grant execute on function members_who_can_view_task(uuid) to authenticated;
+
+commit;
+
+-- Per-member priorities visibility (incremental migration) — priorities
+-- used to be a single shared note (is_member() alone, and the frontend
+-- showed whoever saved most recently as "current" regardless of who
+-- that was). Made genuinely per-person, same priorities_access model
+-- report_access already established for eod_reports. See the base
+-- priorities/priorities_access definitions above for the full
+-- reasoning — this block brings an already-live database in line with
+-- that end state.
+begin;
+
+create table if not exists priorities_access (
+  viewer_id uuid not null references members (id) on delete cascade,
+  target_id uuid not null references members (id) on delete cascade,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references members (id) on delete set null,
+  primary key (viewer_id, target_id),
+  constraint priorities_access_no_self_grant check (viewer_id <> target_id)
+);
+alter table priorities_access enable row level security;
+
+drop trigger if exists priorities_access_stamp_meta on priorities_access;
+create trigger priorities_access_stamp_meta
+before insert or update on priorities_access
+for each row execute function stamp_task_access_meta();
+
+drop policy if exists "members can read their own outgoing priorities access grants" on priorities_access;
+create policy "members can read their own outgoing priorities access grants"
+  on priorities_access for select
+  using (is_member() and viewer_id = auth.uid());
+
+drop policy if exists "admins can read all priorities access grants" on priorities_access;
+create policy "admins can read all priorities access grants"
+  on priorities_access for select
+  using (is_member() and is_admin_member());
+
+create or replace function has_priorities_access(check_target_id uuid)
+returns boolean as $$
+  select exists (select 1 from priorities_access where viewer_id = auth.uid() and target_id = check_target_id);
+$$ language sql security definer stable;
+
+create or replace function set_priorities_access(p_viewer_id uuid, p_target_id uuid, p_can_view boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin_member() then
+    raise exception 'Not authorized';
+  end if;
+  if p_viewer_id = p_target_id then
+    raise exception 'Cannot grant a member access to themselves';
+  end if;
+
+  if p_can_view then
+    insert into priorities_access (viewer_id, target_id, updated_by)
+    values (p_viewer_id, p_target_id, auth.uid())
+    on conflict (viewer_id, target_id) do nothing;
+  else
+    delete from priorities_access where viewer_id = p_viewer_id and target_id = p_target_id;
+  end if;
+end;
+$$;
+
+grant execute on function set_priorities_access(uuid, uuid, boolean) to authenticated;
+
+-- Backfill, same reasoning report_access's own migration already used:
+-- only Ada and Aaron's existing mutual visibility carries forward
+-- unchanged. Any other member, present or future, starts unable to
+-- read anyone else's priorities (and nobody can read theirs) until
+-- explicitly granted via Manage member access.
+insert into priorities_access (viewer_id, target_id)
+select m1.id, m2.id
+from members m1, members m2
+where m1.id <> m2.id
+  and m1.display_name in ('Ada', 'Aaron')
+  and m2.display_name in ('Ada', 'Aaron')
+on conflict do nothing;
+
+drop policy if exists "members can read all priorities" on priorities;
+create policy "members can read accessible priorities"
+  on priorities for select
+  using (is_member() and (set_by = auth.uid() or has_priorities_access(set_by)));
 
 commit;

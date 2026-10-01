@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Shared audit handoff
+
+Read `AUDIT_HANDOFF.md` and inspect the working tree before starting or resuming work. Update that file after every meaningful audit finding, decision, fix, verification, migration, or deployment and before ending a session. Preserve other sessions' edits; distinguish local preparation from tested, committed, pushed, and confirmed-live work. Follow the actual agreed bug-audit phases recorded there; do not substitute feature delivery phases. For current multi-member architecture, consult `CLAUDE.md` and code: older two-person descriptions below may be stale.
+
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Commands

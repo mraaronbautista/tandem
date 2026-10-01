@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createPriorities, fetchLatestPriorities } from '../lib/priorities'
+import { createPriorities, fetchLatestPriorities, fetchLatestPrioritiesForTeam } from '../lib/priorities'
 import { createTask } from '../lib/tasks'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
@@ -26,15 +26,27 @@ function todayDateString() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-// Shared planning note, not a personal log — either of you can set
-// priorities for the upcoming day/week/month, and each one becomes a real
-// task on save (not just a line of text that's easy to forget about).
-// "Last set" below is read-only reference only, never pre-filled into the
+// Any member can set their own priorities for the upcoming day/week/
+// month, and each one becomes a real task on save (not just a line of
+// text that's easy to forget about). Genuinely per-person now, not one
+// shared note — "Last set" below always shows your own most recent save
+// for the period, read-only reference only, never pre-filled into the
 // editable list — otherwise reopening this and hitting Save would
-// recreate a task for every old item, not just anything new.
-export default function PrioritiesForm({ me, memberName, members = [], onClose, embedded = false, header = null }) {
+// recreate a task for every old item, not just anything new. A second
+// read-only section below it shows any teammates' priorities you've
+// been granted access to (see priorities_access in schema.sql) — the
+// admin-side "Priorities visibility" grant would be pointless without
+// somewhere to actually use it.
+export default function PrioritiesForm({ me, members = [], onClose, embedded = false, header = null }) {
   const [period, setPeriod] = useState('day')
   const [latest, setLatest] = useState(null)
+  // Every accessible person's latest row per (set_by, period) — your own
+  // plus anyone you've been granted priorities_access to, read-only.
+  // RLS already does the real access filtering (see fetchLatestPriorities
+  // ForTeam's own comment); granting access with nowhere to actually view
+  // it would make the admin-side "Priorities visibility" control
+  // pointless, so this is the other half of that feature, not optional.
+  const [teamLatest, setTeamLatest] = useState({})
   // Keyed per period so switching the Day/Week/Month tab never discards
   // what you'd already typed under a different one — each tab keeps its
   // own draft until you actually save.
@@ -50,9 +62,13 @@ export default function PrioritiesForm({ me, memberName, members = [], onClose, 
   const defaultAssigneeIds = [me.id]
 
   useEffect(() => {
-    fetchLatestPriorities()
+    fetchLatestPriorities(me.id)
       .then(setLatest)
       .catch((err) => setError(err.message))
+    fetchLatestPrioritiesForTeam()
+      .then(setTeamLatest)
+      .catch((err) => setError(err.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSubmit(e) {
@@ -96,6 +112,15 @@ export default function PrioritiesForm({ me, memberName, members = [], onClose, 
   const current = latest?.[period]
   const lastLines = current?.body ? current.body.split('\n').filter((line) => line.trim()) : []
 
+  // Only teammates teamLatest actually has an entry for at this period —
+  // RLS already dropped anyone you don't have priorities_access to, so
+  // there's nothing to distinguish "no access" from "hasn't set any" and
+  // no need to: either way, there's nothing to show for them right now.
+  const teammateEntries = members
+    .filter((m) => m.id !== me.id)
+    .map((m) => ({ member: m, row: teamLatest[`${m.id}:${period}`] }))
+    .filter((entry) => entry.row)
+
   const content = (
       <ModalCard as="form" onSubmit={handleSubmit}>
         {header}
@@ -114,7 +139,7 @@ export default function PrioritiesForm({ me, memberName, members = [], onClose, 
         {current && (
           <div>
             <p className="mb-1 text-xs opacity-60">
-              Last set by <strong>{memberName(current.set_by)}</strong> — {formatDate(current.created_at)}
+              You last set this — {formatDate(current.created_at)}
             </p>
             {lastLines.length > 0 && (
               <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-70">
@@ -123,6 +148,31 @@ export default function PrioritiesForm({ me, memberName, members = [], onClose, 
                 ))}
               </ul>
             )}
+          </div>
+        )}
+
+        {teammateEntries.length > 0 && (
+          <div className="submission-field">
+            <span className="submission-field-label">Teammates' priorities this {period}</span>
+            <div className="flex flex-col gap-2">
+              {teammateEntries.map(({ member, row }) => {
+                const lines = row.body.split('\n').filter((line) => line.trim())
+                return (
+                  <div key={member.id}>
+                    <p className="mb-1 text-xs opacity-60">
+                      <strong>{member.display_name}</strong> — {formatDate(row.created_at)}
+                    </p>
+                    {lines.length > 0 && (
+                      <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-70">
+                        {lines.map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
