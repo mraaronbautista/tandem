@@ -481,16 +481,29 @@ export default function TaskRow({
             taskTitle={task.title}
             taskId={task.id}
             extraActions={
-              <div className="flex gap-2 [&_button]:cursor-pointer [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
+              // Icon + visible text on every button, not icon-only with a
+              // title tooltip — a tooltip only ever shows on hover, which
+              // mobile (this app's primary surface) structurally never
+              // gets, so a first-time user previously saw meaningless bare
+              // icons until they actually tapped one. Matches the pattern
+              // StaffClockView.jsx already established correctly (Play +
+              // "Start", Square + "Stop", etc.) — copied here, not a new
+              // convention. flex-wrap since up to 6 of these can show at
+              // once (a done task with a submission); wrapping to a second
+              // line reads fine, an overflowing or clipped row doesn't.
+              <div className="flex flex-wrap gap-2 [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button]:gap-1.5 [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
                 <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
                   <Pencil width={15} height={15} />
+                  Edit
                 </button>
                 <button onClick={handleDuplicate} title="Duplicate" aria-label="Duplicate">
                   <Copy width={15} height={15} />
+                  Duplicate
                 </button>
                 {onArchiveToBoard && (
                   <button onClick={handleArchiveToBoard} title="Send to board" aria-label="Send to board">
                     <Pin width={15} height={15} />
+                    Send to board
                   </button>
                 )}
                 {canNudge && (
@@ -501,11 +514,13 @@ export default function TaskRow({
                     aria-label={nudgeSent ? 'Nudge sent' : 'Nudge — still on your plate?'}
                   >
                     <Bell width={15} height={15} />
+                    {nudgeSent ? 'Nudge sent' : 'Nudge'}
                   </button>
                 )}
                 {task.status === 'done' && hasSubmission && (
                   <button onClick={() => setViewSubmissionOpen(true)} title="View submission" aria-label="View submission">
                     <Eye width={15} height={15} />
+                    View submission
                   </button>
                 )}
                 {task.status === 'done' && (
@@ -515,10 +530,12 @@ export default function TaskRow({
                     aria-label={hasSubmission ? 'Edit submission' : 'Submit'}
                   >
                     {hasSubmission ? <Pencil width={15} height={15} /> : <Check width={15} height={15} />}
+                    {hasSubmission ? 'Edit submission' : 'Submit'}
                   </button>
                 )}
                 <button className="!text-overdue" onClick={handleDelete} title="Delete" aria-label="Delete">
                   <Trash2 width={15} height={15} />
+                  Delete
                 </button>
               </div>
             }

@@ -32,6 +32,7 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
 import { useAuth } from '../lib/AuthContext'
+import WelcomePrimer from './WelcomePrimer'
 import TaskRow from './TaskRow'
 import TimelineRow from './TimelineRow'
 import DayTimeline from './DayTimeline'
@@ -1448,6 +1449,8 @@ export default function TaskBoard({ theme, toggleTheme }) {
           }
         />
       )}
+
+      <WelcomePrimer me={me} />
     </div>
   )
 }
