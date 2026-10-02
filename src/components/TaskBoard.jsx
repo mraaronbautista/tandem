@@ -47,6 +47,7 @@ import WorkingStatusToggle from './WorkingStatusToggle'
 import EndOfDayReportForm from './EndOfDayReportForm'
 import EodReportsList from './EodReportsList'
 import SettingsMenu from './SettingsMenu'
+import HelpHint from './HelpHint'
 import ManageMemberAccessView from './ManageMemberAccessView'
 import MyProfileForm from './MyProfileForm'
 import RentalsView from './RentalsView'
@@ -1264,6 +1265,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
         <Modal onClose={() => setCompletedTodayOpen(false)}>
           <ModalCard>
             <h2>Completed today</h2>
+            <HelpHint label="Why are some dated earlier?">
+              Every task stays on the day it was scheduled. This list gathers everything you finished today, even
+              tasks that were due on an earlier day, so you can see what you got done.
+            </HelpHint>
             <div className="flex flex-col">
               {completedToday.map((task, i) => (
                 <TimelineRow
@@ -1329,6 +1334,10 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 )}
               </div>
             </div>
+            <HelpHint label="What happens when I check one off?">
+              A checked-off task leaves this list but is not deleted. It stays on the day it was scheduled, and you
+              will find it under "Completed today".
+            </HelpHint>
 
             {overdueSelectMode && (
               <div className="flex items-center justify-between gap-2 border-b border-border pb-2 text-xs">

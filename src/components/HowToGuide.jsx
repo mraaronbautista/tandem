@@ -299,10 +299,10 @@ const FAQS = [
     ],
   },
   {
-    title: "Why hasn't next week's copy of a recurring task shown up yet?",
+    title: "How do repeating tasks show up on the calendar?",
     items: [
-      'The next occurrence is only created once you mark the current one done — it\'s not generated ahead of time, so you won\'t see it sitting there early.',
-      'For a task that repeats on selected weekdays, Tandem advances to the next selected day. For example, completing Tuesday in a Tuesday/Thursday schedule creates Thursday; completing Thursday creates the following Tuesday.',
+      'As soon as you choose any Repeats option, that task\'s upcoming copies appear on the calendar — you do not have to finish the current one first. Scroll or step into a later month and its copies are created for that month automatically.',
+      'Tip: if you delete one copy of a repeating task, Tandem asks whether you mean just that one or this and every future one.',
     ],
   },
   {

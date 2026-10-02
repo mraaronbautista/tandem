@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Target, Undo2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import HelpHint from './HelpHint'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
@@ -671,6 +672,12 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                 </label>
               ))}
           </div>
+        )}
+        {members.length > 1 && (
+          <HelpHint label="Who can see this?">
+            {isProjects ? 'A project' : 'A pin'} is private to you until you tick someone above. Only you can edit it;
+            the people you share it with can read it and add comments.
+          </HelpHint>
         )}
 
         <div className="flex flex-wrap items-center justify-end gap-2">

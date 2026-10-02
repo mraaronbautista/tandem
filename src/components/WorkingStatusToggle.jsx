@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronDown, Circle } from 'lucide-react'
 import { setAvailability, updateWorkingStatus } from '../lib/members'
 import IconButton from './IconButton'
+import HelpHint from './HelpHint'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 
 // fill="currentColor" + strokeWidth={0}: a solid dot that just inherits
@@ -205,6 +206,12 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
                   <p className="mt-1.5 text-xs opacity-65">Clears at {formatTime(me.working_status_until)}</p>
                 )}
               </div>
+            )}
+            {!canSetStatus && (
+              <HelpHint label="Why can't I set my own?" className="mb-2 border-b border-border px-2 pb-2">
+                An admin turns on status-setting for each person. For you this is a read-only list of who is online
+                right now.
+              </HelpHint>
             )}
             {others.length === 0 ? (
               <p className="px-2.5 py-1.5 text-[13px] opacity-65">No other members yet.</p>
