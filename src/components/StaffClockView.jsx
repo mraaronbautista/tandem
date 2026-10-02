@@ -26,6 +26,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 // How long to wait after first noticing the property manager is outside
 // the active shift's geofence before actually prompting them — a single
@@ -547,7 +548,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
     }
   }
 
-  if (loading) return <p className="loading p-6 text-center">Loading…</p>
+  if (loading) return <LoadingText className="p-6" />
 
   const todayPay = history
     .filter((e) => new Date(e.clock_in_at) >= startOfToday())
@@ -682,7 +683,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
           {!activeEntry && starting && (
             <div className="flex flex-col gap-3 rounded-[8px] border border-border bg-card-bg p-4">
-              {locating && <p className="loading">Finding your location…</p>}
+              {locating && <LoadingText>Finding your location…</LoadingText>}
               {locationError && <p className="error">{locationError}</p>}
               {locationError && !locating && (
                 <button

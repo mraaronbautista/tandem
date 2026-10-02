@@ -42,7 +42,7 @@ export default function PrivateAttachment({ url, image = false, children, ...pro
     // below already do.
     return (
       <span role="status" {...props}>
-        {failed ? 'Attachment unavailable or access denied' : 'Loading attachment…'}
+        {failed ? "This attachment couldn't be opened. It may have been removed, or you may not have access to it." : 'Loading attachment…'}
       </span>
     )
   }

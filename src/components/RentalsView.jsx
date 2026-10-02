@@ -21,6 +21,7 @@ import RentalOverview from './RentalOverview'
 import RentalLongTermView from './RentalLongTermView'
 import RentalPropertyForm from './RentalPropertyForm'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
@@ -263,7 +264,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   if (!properties) {
     return (
       <div className="tab-panel">
-        <p className="loading">Loading…</p>
+        <LoadingText />
       </div>
     )
   }

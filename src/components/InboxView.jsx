@@ -39,9 +39,9 @@ const TABS = [
 
 const TAB_EMPTY_LABEL = {
   question: 'Nothing needs a reply right now.',
-  resolved: 'Nothing resolved yet.',
-  submission: 'No submissions yet.',
-  nudge: 'No nudges sent yet.',
+  resolved: 'Nothing resolved yet. Questions you ask that get answered or closed will show up here.',
+  submission: 'No submissions yet. Tasks finished with a note or file attached will show up here.',
+  nudge: 'No nudges yet. Reminders sent to you, or by you, will show up here.',
 }
 
 function formatWhen(iso) {
@@ -295,7 +295,7 @@ export default function InboxView({
 
   return (
     <div className="tab-panel">
-      {totalCount === 0 && <p className="task-notes-empty">Nothing waiting on you.</p>}
+      {totalCount === 0 && <p className="task-notes-empty">You're all caught up — nothing needs your attention.</p>}
 
       {totalCount > 0 && (
         <PeriodTabs>

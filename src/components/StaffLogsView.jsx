@@ -28,6 +28,7 @@ import StaffCredentialsForm from './StaffCredentialsForm'
 import StaffLocationsManager from './StaffLocationsManager'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 const STATUS_TABS = [
   { key: 'all', label: 'All' },
@@ -348,7 +349,7 @@ export default function StaffLogsView({ me }) {
   const readySites = sites.filter((site) => workSiteStatus(site) === 'ready')
   const openRequests = requests.filter((r) => r.status === 'open')
 
-  if (loading) return <p className="loading">Loading…</p>
+  if (loading) return <LoadingText />
 
   return (
     <div className="flex flex-col gap-4">

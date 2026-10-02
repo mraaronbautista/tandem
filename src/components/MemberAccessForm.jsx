@@ -14,6 +14,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 const LEVEL_OPTIONS = [
   { value: '', label: "Can't see them" },
@@ -246,7 +247,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
             apply once they can see the tasks.
           </p>
           {loading ? (
-            <p className="text-sm opacity-80">Loading…</p>
+            <LoadingText className="!py-2 text-sm" />
           ) : teammates.length === 0 ? (
             <p className="text-sm opacity-80">No other members yet.</p>
           ) : (
@@ -267,7 +268,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
           <span className="submission-field-label">Report visibility</span>
           <p className="mb-1.5 text-xs opacity-80">Whose submitted reports {target.display_name} can read.</p>
           {loading ? (
-            <p className="text-sm opacity-80">Loading…</p>
+            <LoadingText className="!py-2 text-sm" />
           ) : teammates.length === 0 ? (
             <p className="text-sm opacity-80">No other members yet.</p>
           ) : (
@@ -290,7 +291,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
           <span className="submission-field-label">Priorities visibility</span>
           <p className="mb-1.5 text-xs opacity-80">Whose priorities {target.display_name} can read.</p>
           {loading ? (
-            <p className="text-sm opacity-80">Loading…</p>
+            <LoadingText className="!py-2 text-sm" />
           ) : teammates.length === 0 ? (
             <p className="text-sm opacity-80">No other members yet.</p>
           ) : (

@@ -61,6 +61,7 @@ import NavItem from './NavItem'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 const VIEW_MODES = [
   { key: 'day', label: 'Day' },
@@ -512,6 +513,15 @@ export default function TaskBoard({ theme, toggleTheme }) {
     () => daysToShow.map((date) => ({ date, tasks: getTasksForDay(whoFiltered, date, displayTimezone) })),
     [daysToShow, whoFiltered, displayTimezone],
   )
+
+  // What an empty Today screen says. A bare "Nothing here." leaves a first-
+  // time user wondering whether something is broken; this names what is
+  // empty (the period, and whose tasks if the person filter is on) and says
+  // how to fill it. The + button is always on screen, so pointing at it is
+  // safe on both phone and desktop. UI/UX overhaul Phase 5.
+  const emptyPeriod = viewMode === 'week' ? 'this week' : isToday ? 'today' : 'this day'
+  const emptyWho = whoTab !== 'all' ? ` for ${whoTab === me?.id ? 'you' : memberName(whoTab) || 'them'}` : ''
+  const emptyDayText = `Nothing scheduled ${emptyPeriod}${emptyWho}. Tap + to add a task.`
 
   // Grouped once for the whole visible month rather than calling
   // getTasksForDay per day inside MonthView's render loop.
@@ -1143,7 +1153,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
             {error && <p className="error">{error}</p>}
             {loading ? (
-              <p className="loading">Loading…</p>
+              <LoadingText />
             ) : viewMode === 'month' ? (
               <div onTouchStart={handleMonthSwipeStart} onTouchEnd={handleMonthSwipeEnd}>
                 <MonthView
@@ -1206,7 +1216,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 )}
 
                 {!allDay.length && !daySections.some((s) => s.tasks.length) && (
-                  <p className="empty">Nothing here.</p>
+                  <p className="empty">{emptyDayText}</p>
                 )}
               </div>
             )}

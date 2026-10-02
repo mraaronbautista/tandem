@@ -69,7 +69,7 @@ export default function ManageMemberAccessView({ members, me, onClose, onMembers
               </span>
             </div>
           ))}
-          {others.length === 0 && <p className="text-sm opacity-80">No other members yet.</p>}
+          {others.length === 0 && <p className="text-sm opacity-80">No other members yet. Tap "+ Add member" to add one.</p>}
         </div>
 
         <SubmissionActions>

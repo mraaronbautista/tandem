@@ -29,7 +29,7 @@ export default function RentalOverview({
   onToggleNegotiating,
 }) {
   if (properties.length === 0) {
-    return <p className="task-notes-empty">No units yet.</p>
+    return <p className="task-notes-empty">No units yet. Tap "+ Add unit" to add your first rental.</p>
   }
 
   return (

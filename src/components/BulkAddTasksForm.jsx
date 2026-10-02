@@ -686,7 +686,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
         ) : (
           <>
             {editableTasks.length === 0 ? (
-              <p className="task-notes-empty">No active tasks to edit.</p>
+              <p className="task-notes-empty">No open tasks to edit yet. Use the Add tab to create some.</p>
             ) : (
               <>
                 <PeriodTabs>
@@ -715,7 +715,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                 </div>
 
                 {visibleEditableTasks.length === 0 ? (
-                  <p className="task-notes-empty">No active tasks for this filter.</p>
+                  <p className="task-notes-empty">No open tasks for this filter. Try choosing All.</p>
                 ) : (
                 <ul className="bulk-edit-task-list">
                   {visibleEditableTasks.map((task) => {

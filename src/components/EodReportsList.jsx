@@ -5,6 +5,7 @@ import AttachmentList from './AttachmentList'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -180,8 +181,8 @@ export default function EodReportsList({ memberName, meId }) {
   return (
     <div className="tab-panel">
       {error && <p className="error">{error}</p>}
-      {!error && !reports && <p className="loading">Loading…</p>}
-      {reports && !reports.length && <p className="task-notes-empty">No reports yet.</p>}
+      {!error && !reports && <LoadingText />}
+      {reports && !reports.length && <p className="task-notes-empty">No reports yet. Reports you submit, or have been given access to, will show up here.</p>}
 
       {reports?.length > 0 && (
         <PeriodTabs>
@@ -194,7 +195,7 @@ export default function EodReportsList({ memberName, meId }) {
       )}
 
       {reports?.length > 0 && groups.length === 0 && (
-        <p className="task-notes-empty">No {period} reports yet.</p>
+        <p className="task-notes-empty">No {period} reports yet. Try another tab.</p>
       )}
 
       {groups.length > 0 && (

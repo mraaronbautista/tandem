@@ -22,6 +22,7 @@ import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 const RESET_CONFIRM_WORD = 'RESET'
 
@@ -364,11 +365,11 @@ export default function VaultView({ me, members = [], onClose }) {
 
         {error && <p className="error">{error}</p>}
 
-        {vaults === null && <p className="loading">Loading…</p>}
+        {vaults === null && <LoadingText />}
 
         {vaults?.length === 0 && <p className="task-notes-empty">You don't have access to any vault.</p>}
 
-        {vaults && vaults.length > 0 && meta === undefined && <p className="loading">Loading…</p>}
+        {vaults && vaults.length > 0 && meta === undefined && <LoadingText />}
 
         {meta === null && (
           <form onSubmit={handleSetup}>
@@ -490,7 +491,7 @@ export default function VaultView({ me, members = [], onClose }) {
               )}
             </div>
 
-            {entries.length === 0 && <p className="task-notes-empty">No entries yet.</p>}
+            {entries.length === 0 && <p className="task-notes-empty">No saved passwords yet. Tap "+ Add entry" to save the first one.</p>}
 
             {/* Nobody's used folders yet (or everything happens to land in
                 General) — the plain flat list from before, no group header

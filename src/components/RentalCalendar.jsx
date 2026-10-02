@@ -115,7 +115,13 @@ const RentalCalendar = forwardRef(function RentalCalendar(
   const todayStr = toDateStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())
 
   if (properties.length === 0) {
-    return <p className="task-notes-empty">No units yet.</p>
+    // On a phone the Overview list sits right above this calendar and
+    // already says this (the calendar there has no unit tabs and no
+    // replacement), so a second copy would just repeat it. The desktop
+    // dashboard renders its Overview *inside* this component, which this
+    // early return skips, so the message has to stay here for that layout.
+    if (!showUnitTabs && !unitTabsReplacement) return null
+    return <p className="task-notes-empty">No units yet. Tap "+ Add unit" to add your first rental.</p>
   }
 
   return (

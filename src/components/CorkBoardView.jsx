@@ -7,6 +7,7 @@ import { createTask } from '../lib/tasks'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
+import LoadingText from './LoadingText'
 
 const composeClasses = 'flex flex-col gap-2 [&_textarea]:min-h-[70px] [&_textarea]:resize-y [&_textarea]:rounded-[8px] [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-card-bg [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-[15px] [&_textarea]:text-text-h [&_textarea]:[font-family:inherit] [&_textarea]:[font-style:inherit] [&_textarea]:[font-variant:inherit] [&_textarea]:[font-weight:inherit] [&_textarea]:[line-height:inherit]'
 const itemActionClasses = 'cursor-pointer rounded-[6px] border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h'
@@ -700,9 +701,11 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       </form>
 
       {error && <p className="error">{error}</p>}
-      {!error && !notes && <p className="loading">Loading…</p>}
+      {!error && !notes && <LoadingText />}
       {notes && !modeNotes.length && (
-        <p className="task-notes-empty">{isProjects ? 'No active projects yet.' : 'Nothing pinned yet.'}</p>
+        <p className="task-notes-empty">{isProjects
+            ? 'No active projects yet. Name a project above, list its steps, and tap "Create project".'
+            : 'Nothing pinned yet. Type a note above and tap "Pin it" — it stays private until you share it.'}</p>
       )}
 
       {modeNotes.length > 0 && !activeNotes.length && archivedNotes.length > 0 && (
