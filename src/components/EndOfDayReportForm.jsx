@@ -224,7 +224,7 @@ export default function EndOfDayReportForm({ tasks, me, members = [], onClose })
 
         <label className="submission-field">
           Total time worked this {PERIOD_NOUN[period]}
-          <div className="flex items-center gap-1.5 [&_input[type=number]]:w-16 [&_span]:text-[13px] [&_span]:opacity-70">
+          <div className="flex items-center gap-1.5 [&_input[type=number]]:w-16 [&_span]:text-[13px] [&_span]:opacity-80">
             <input
               type="number"
               min="0"

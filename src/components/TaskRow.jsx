@@ -16,6 +16,7 @@ import TaskIcon from './TaskIcon'
 import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
+import { readableTextColor } from '../lib/colorContrast'
 
 // Auto-dismiss window for the post-completion Notify prompt — same 8s
 // Projects' own undo-on-remove banner uses, long enough to actually
@@ -356,12 +357,12 @@ export default function TaskRow({
             so swapping the dot out for an icon here doesn't leave
             priority with no visual signal at all. */}
         {!hidePriorityDot && <TaskIcon task={task} title={PRIORITY_LABEL[task.priority]} />}
-        <span className="task-who-badge" style={{ background: badge.color }}>
+        <span className="task-who-badge" style={{ background: badge.color, color: readableTextColor(badge.color) }}>
           {badge.label}
         </span>
-        <span className={`min-w-0 flex-[1_1_140px] text-sm font-medium text-text-h ${task.status === 'done' ? 'line-through opacity-55' : ''}`}>{task.title}</span>
+        <span className={`min-w-0 flex-[1_1_140px] text-sm font-medium text-text-h ${task.status === 'done' ? 'line-through opacity-75' : ''}`}>{task.title}</span>
         {overlapping && (
-          <span className="flex flex-none items-center gap-0.5 text-[11px] font-semibold whitespace-nowrap text-notice" title="Overlaps another task's time">
+          <span className="flex flex-none items-center gap-0.5 text-[11px] font-semibold whitespace-nowrap text-notice-text" title="Overlaps another task's time">
             <AlertTriangle size={12} /> Overlap
           </span>
         )}
@@ -390,7 +391,7 @@ export default function TaskRow({
           </span>
         )}
         {task.due_date && (
-          <span className={`text-xs whitespace-nowrap ${overdue ? 'font-semibold text-overdue opacity-100' : 'opacity-70'}`}>{dueLabel(task, displayTimezone)}</span>
+          <span className={`text-xs whitespace-nowrap ${overdue ? 'font-semibold text-overdue-text opacity-100' : 'opacity-80'}`}>{dueLabel(task, displayTimezone)}</span>
         )}
         {/* Names the zone dueLabel above is already showing the time in
             (see localLabel) — the two have to agree, since a badge next
@@ -405,7 +406,7 @@ export default function TaskRow({
           </span>
         )}
         {task.status === 'done' && task.completed_at && (
-          <span className="text-[11px] whitespace-nowrap opacity-50">Completed {localLabel(task.completed_at)}</span>
+          <span className="text-[11px] whitespace-nowrap opacity-80">Completed {localLabel(task.completed_at)}</span>
         )}
         {/* Moved from leading to trailing (ml-auto pins it to the row's
             right edge, same "checkbox on the right" placement Structured
@@ -450,7 +451,7 @@ export default function TaskRow({
             </div>
           )}
           {creatorName && (
-            <p className="text-xs opacity-60">Added by {creatorName}</p>
+            <p className="text-xs opacity-80">Added by {creatorName}</p>
           )}
           {sourceLabel && (
             <p>
@@ -472,7 +473,7 @@ export default function TaskRow({
               {hasLongNotes && (
                 <button
                   type="button"
-                  className="mt-1 flex cursor-pointer items-center gap-1 rounded-full border-0 bg-transparent px-0 py-1 text-xs font-medium text-accent"
+                  className="mt-1 flex cursor-pointer items-center gap-1 rounded-full border-0 bg-transparent px-0 py-1 text-xs font-medium text-accent-text"
                   onClick={() => setNotesExpanded((value) => !value)}
                   aria-expanded={notesExpanded}
                 >
@@ -553,7 +554,7 @@ export default function TaskRow({
                     {hasSubmission ? 'Edit submission' : 'Submit'}
                   </button>
                 )}
-                <button className="!text-overdue" onClick={handleDelete} title="Delete" aria-label="Delete">
+                <button className="!text-overdue-text" onClick={handleDelete} title="Delete" aria-label="Delete">
                   <Trash2 width={15} height={15} />
                   Delete
                 </button>

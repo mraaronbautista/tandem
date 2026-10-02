@@ -1,4 +1,5 @@
 import { memberColor } from '../lib/whoLabels'
+import { readableTextColor } from '../lib/colorContrast'
 
 // A multi-select over the live members list, replacing the old single-
 // value who <select>/cycle-toggle everywhere a task's assignees are
@@ -25,7 +26,7 @@ export default function AssigneePicker({ members, value, onChange }) {
             className="cursor-pointer rounded-full border px-2.5 py-1 text-[13px] font-semibold transition-colors [font-family:inherit]"
             style={
               selected
-                ? { background: color, borderColor: color, color: '#fff' }
+                ? { background: color, borderColor: color, color: readableTextColor(color) }
                 : { background: 'transparent', borderColor: 'var(--border)', color: 'var(--text-h)' }
             }
           >

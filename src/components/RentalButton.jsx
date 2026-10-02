@@ -18,7 +18,7 @@
 // plain .rental-add-booking look every other action here uses.
 const VARIANT = {
   secondary: 'border-border bg-pill-bg text-text-h',
-  primary: 'border-accent bg-accent font-semibold text-white',
+  primary: 'border-accent bg-accent font-semibold text-on-accent',
 }
 
 export default function RentalButton({ variant = 'secondary', className = '', ...props }) {

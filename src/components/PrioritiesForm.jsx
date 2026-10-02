@@ -138,11 +138,11 @@ export default function PrioritiesForm({ me, members = [], onClose, embedded = f
 
         {current && (
           <div>
-            <p className="mb-1 text-xs opacity-60">
+            <p className="mb-1 text-xs opacity-80">
               You last set this — {formatDate(current.created_at)}
             </p>
             {lastLines.length > 0 && (
-              <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-70">
+              <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-80">
                 {lastLines.map((line, i) => (
                   <li key={i}>{line}</li>
                 ))}
@@ -159,11 +159,11 @@ export default function PrioritiesForm({ me, members = [], onClose, embedded = f
                 const lines = row.body.split('\n').filter((line) => line.trim())
                 return (
                   <div key={member.id}>
-                    <p className="mb-1 text-xs opacity-60">
+                    <p className="mb-1 text-xs opacity-80">
                       <strong>{member.display_name}</strong> — {formatDate(row.created_at)}
                     </p>
                     {lines.length > 0 && (
-                      <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-70">
+                      <ul className="m-0 mb-1 flex flex-col gap-0.5 pl-5 text-[13px] opacity-80">
                         {lines.map((line, i) => (
                           <li key={i}>{line}</li>
                         ))}

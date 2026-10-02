@@ -6,6 +6,7 @@ import { assigneeBadge } from '../lib/whoLabels'
 import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 import TaskIcon from './TaskIcon'
+import { readableTextColor } from '../lib/colorContrast'
 
 // 2.5 (150px/hour), not the original 1.2 (72px/hour) — too cramped to
 // read comfortably on a phone, and worse, it made MIN_BLOCK_HEIGHT's
@@ -517,7 +518,7 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
                     <span className="day-timeline-block-main">
                       <span className="day-timeline-block-top">
                         <TaskIcon task={task} size={13} className="mt-[3px]" title={PRIORITY_LABEL[task.priority]} />
-                        <span className="task-who-badge" style={{ background: badge.color }}>
+                        <span className="task-who-badge" style={{ background: badge.color, color: readableTextColor(badge.color) }}>
                           {badge.label}
                         </span>
                         <span className="day-timeline-block-title">{task.title}</span>

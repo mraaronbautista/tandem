@@ -131,13 +131,13 @@ export default function StaffTimeEntryForm({ entry, staffRoster = [], workSites 
               </select>
             </label>
             {workSites.length === 0 && (
-              <p className="text-xs opacity-65">No ready clock-in locations yet — set one up first.</p>
+              <p className="text-xs opacity-80">No ready clock-in locations yet — set one up first.</p>
             )}
 
             <div className={`grid gap-2 ${selectedStaff?.emergency_rate != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <button
                 type="button"
-                className={`rounded-sm border px-3 py-2 text-sm ${rateType === 'standard' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'}`}
+                className={`rounded-sm border px-3 py-2 text-sm ${rateType === 'standard' ? 'border-accent bg-accent text-on-accent' : 'border-border bg-bg text-text'}`}
                 onClick={() => setRateType('standard')}
               >
                 Standard{selectedStaff ? ` ($${selectedStaff.hourly_rate}/hr)` : ''}
@@ -150,7 +150,7 @@ export default function StaffTimeEntryForm({ entry, staffRoster = [], workSites 
               {selectedStaff?.emergency_rate != null && (
                 <button
                   type="button"
-                  className={`rounded-sm border px-3 py-2 text-sm ${rateType === 'emergency' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'}`}
+                  className={`rounded-sm border px-3 py-2 text-sm ${rateType === 'emergency' ? 'border-accent bg-accent text-on-accent' : 'border-border bg-bg text-text'}`}
                   onClick={() => setRateType('emergency')}
                 >
                   Emergency (${selectedStaff.emergency_rate}/hr)

@@ -939,7 +939,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
               >
                 <span className="hidden max-[480px]:inline">{monthLabelShort}</span>
                 <span className="max-[480px]:hidden">{monthLabel}</span>{' '}
-                <span className="inline-flex opacity-60">
+                <span className="inline-flex opacity-80">
                   {datePickerOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </span>
               </MonthNavLabel>
@@ -972,7 +972,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-0 inline-flex opacity-60">
+              <span className="pointer-events-none absolute right-0 inline-flex opacity-80">
                 <ChevronDown size={20} />
               </span>
             </div>
@@ -1067,7 +1067,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 <button
                   type="button"
                   onClick={resetToToday}
-                  className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-transparent px-2 py-[5px] text-xs font-semibold text-text [font-family:inherit] [line-height:inherit] transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent active:scale-[0.96]"
+                  className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-transparent px-2 py-[5px] text-xs font-semibold text-text [font-family:inherit] [line-height:inherit] transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent-text active:scale-[0.96]"
                 >
                   Today
                 </button>
@@ -1121,9 +1121,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   <button
                     type="button"
                     onClick={() => setOverdueModalOpen(true)}
-                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-overdue hover:text-overdue active:scale-[0.97]"
+                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-overdue hover:text-overdue-text active:scale-[0.97]"
                   >
-                    <AlertTriangle size={13} className="text-overdue" />
+                    <AlertTriangle size={13} className="text-overdue-text" />
                     {overdue.length} overdue
                   </button>
                 )}
@@ -1131,9 +1131,9 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   <button
                     type="button"
                     onClick={() => setCompletedTodayOpen(true)}
-                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent active:scale-[0.97]"
+                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent-text active:scale-[0.97]"
                   >
-                    <CheckCircle2 size={13} className="text-accent" />
+                    <CheckCircle2 size={13} className="text-accent-text" />
                     {completedToday.length} completed today
                   </button>
                 )}
@@ -1343,12 +1343,12 @@ export default function TaskBoard({ theme, toggleTheme }) {
               <div className="flex items-center justify-between gap-2 border-b border-border pb-2 text-xs">
                 <button
                   type="button"
-                  className="cursor-pointer text-accent-h underline"
+                  className="cursor-pointer text-accent-text underline"
                   onClick={handleToggleSelectAllOverdue}
                 >
                   {selectedOverdueIds.size === overdue.length ? 'Deselect all' : 'Select all'}
                 </button>
-                <span className="opacity-60">{selectedOverdueIds.size} selected</span>
+                <span className="opacity-80">{selectedOverdueIds.size} selected</span>
               </div>
             )}
 
@@ -1374,7 +1374,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
               <div className="flex flex-wrap gap-2 border-t border-border pt-2">
                 <button
                   type="button"
-                  className="cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={handleCompleteSelectedOverdue}
                   disabled={completingOverdue}
                 >

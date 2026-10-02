@@ -452,10 +452,10 @@ export default function StaffLogsView({ me }) {
 
       {entries.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-[12px] border border-dashed border-border bg-card-bg px-5 py-8 text-center">
-          <Clock3 size={26} className="text-accent opacity-90" />
+          <Clock3 size={26} className="text-accent-text opacity-90" />
           <div>
             <h2 className="text-base font-semibold text-text-h">No shifts recorded yet</h2>
-            <p className="mt-1 text-sm opacity-65">
+            <p className="mt-1 text-sm opacity-80">
               {readyLocationCount > 0
                 ? 'Clock-in is ready. Shifts will appear here after the property manager starts tracking time.'
                 : 'Configure at least one property for clock-in, then the property manager can begin tracking time.'}
@@ -463,7 +463,7 @@ export default function StaffLogsView({ me }) {
           </div>
           <button
             type="button"
-            className="cursor-pointer rounded-sm border border-accent bg-accent px-3.5 py-2 text-sm font-semibold text-white"
+            className="cursor-pointer rounded-sm border border-accent bg-accent px-3.5 py-2 text-sm font-semibold text-on-accent"
             onClick={() => setLocationsOpen(true)}
           >
             {readyLocationCount > 0 ? 'Manage clock-in locations' : 'Set up clock-in locations'}
@@ -475,13 +475,13 @@ export default function StaffLogsView({ me }) {
             <div key={e.id} className="flex min-w-0 flex-col gap-1 rounded-[8px] border border-border px-3 py-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-text-h">{e.staff?.display_name}</span>
-                <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>
+                <span className={e.status === 'approved' ? 'text-online' : 'opacity-80'}>{e.status}</span>
               </div>
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 opacity-80">
                 <span className="min-w-0">
                   {e.work_sites?.name} — {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                   {e.flagged && (
-                    <span className="text-overdue">
+                    <span className="text-overdue-text">
                       {' '}
                       <AlertTriangle size={12} className="inline align-[-1px]" /> outside geofence
                     </span>
@@ -490,7 +490,7 @@ export default function StaffLogsView({ me }) {
                 <span>{formatDuration(e)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs opacity-60">
+                <span className="text-xs opacity-80">
                   {e.rate_type} — ${e.rate_amount}/hr
                 </span>
                 {/* flex-wrap — this row can now hold up to five pieces
@@ -509,7 +509,7 @@ export default function StaffLogsView({ me }) {
                   <button
                     type="button"
                     title="Delete this shift"
-                    className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-overdue disabled:cursor-not-allowed disabled:opacity-50"
+                    className="cursor-pointer rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-overdue-text disabled:cursor-not-allowed disabled:opacity-50"
                     onClick={() => handleDeleteEntry(e)}
                     disabled={deletingId === e.id}
                   >
@@ -528,7 +528,7 @@ export default function StaffLogsView({ me }) {
                   {e.status === 'pending' && e.clock_out_at && (
                     <button
                       type="button"
-                      className="cursor-pointer rounded-sm border-0 bg-accent px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                      className="cursor-pointer rounded-sm border-0 bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent disabled:opacity-50"
                       onClick={() => handleApprove(e.id)}
                       disabled={approvingId === e.id}
                     >
@@ -542,7 +542,7 @@ export default function StaffLogsView({ me }) {
                   count of open items, so "no report yet" is itself useful
                   information here rather than noise. */}
               <div className="flex items-center justify-between gap-2 border-t border-border pt-1.5">
-                <span className="min-w-0 truncate text-xs opacity-70">
+                <span className="min-w-0 truncate text-xs opacity-80">
                   {e.notes
                     ? e.notes
                     : e.report_requested_at
@@ -552,7 +552,7 @@ export default function StaffLogsView({ me }) {
                 {!e.report_requested_at && (
                   <button
                     type="button"
-                    className="flex-none cursor-pointer text-xs text-accent-h underline"
+                    className="flex-none cursor-pointer text-xs text-accent-text underline"
                     onClick={() => handleAskForReport(e)}
                   >
                     Ask for report
@@ -572,7 +572,7 @@ export default function StaffLogsView({ me }) {
           just no browsing UI for them yet (not asked for, so not built). */}
       {openRequests.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-[13px] opacity-60">Correction requests</h3>
+          <h3 className="text-[13px] opacity-80">Correction requests</h3>
           {openRequests.map((r) => (
             <div
               key={r.id}
@@ -580,7 +580,7 @@ export default function StaffLogsView({ me }) {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-text-h">{r.staff?.display_name || 'Property manager'}</span>
-                <span className="text-xs opacity-60">
+                <span className="text-xs opacity-80">
                   {new Date(r.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </span>
               </div>
@@ -589,7 +589,7 @@ export default function StaffLogsView({ me }) {
                   never logged at all has nothing to join to here, which is
                   the normal case for that kind of request, not a broken
                   join. */}
-              <p className="text-xs opacity-60">
+              <p className="text-xs opacity-80">
                 {r.time_entries
                   ? `About: ${r.time_entries.work_sites?.name || 'a shift'} — ${new Date(r.time_entries.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
                   : 'About a shift that was never logged — add it with "Add shift" above, or ask them for more detail'}
@@ -609,7 +609,7 @@ export default function StaffLogsView({ me }) {
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-[13px] opacity-60">Staff roster</h3>
+          <h3 className="text-[13px] opacity-80">Staff roster</h3>
           <button
             type="button"
             className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
@@ -622,7 +622,7 @@ export default function StaffLogsView({ me }) {
           <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-sm border border-border px-3 py-2 text-sm">
             <span className="min-w-0">
               <strong className="block truncate font-semibold text-text-h">{s.display_name}</strong>
-              <span className="text-xs opacity-65">
+              <span className="text-xs opacity-80">
                 ${s.hourly_rate}/hr{s.emergency_rate != null ? ` · $${s.emergency_rate}/hr emergency` : ''}
               </span>
             </span>
@@ -656,7 +656,7 @@ export default function StaffLogsView({ me }) {
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[8px] border border-border px-3 py-3 text-sm">
         <div className="min-w-0">
           <h3 className="font-semibold text-text-h">Clock-in locations</h3>
-          <p className="mt-0.5 text-xs opacity-65">
+          <p className="mt-0.5 text-xs opacity-80">
             {readyLocationCount} ready
             {pendingApprovalCount > 0 ? ` · ${pendingApprovalCount} awaiting approval` : ''}
             {locationNeedsSetupCount > 0 ? ` · ${locationNeedsSetupCount} ${locationNeedsSetupCount === 1 ? 'location needs' : 'locations need'} setup` : ''}

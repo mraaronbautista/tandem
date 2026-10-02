@@ -39,7 +39,7 @@ export default function SettingsMenu({
         {/* Both accounts share the same device/browser sometimes — a quick
             "which of us is actually signed in right now" check before
             anyone assumes the wrong person's notifications toggle. */}
-        {memberName && <p className="-mt-1.5 text-[13px] opacity-60">Signed in as {memberName}</p>}
+        {memberName && <p className="-mt-1.5 text-[13px] opacity-80">Signed in as {memberName}</p>}
 
         <div className="flex flex-col gap-2">
           {onOpenMyProfile && (
@@ -64,13 +64,13 @@ export default function SettingsMenu({
             // not getting notified" with nothing to find — most commonly
             // hit on iOS Safari outside a Home Screen install, which can't
             // receive push at all (a platform limit, not fixable here).
-            <div className={`${settingsItemClasses} cursor-default opacity-60`}>
+            <div className={`${settingsItemClasses} cursor-default opacity-80`}>
               <span className="text-[17px]">
                 <BellOff size={17} />
               </span>
               <span className="flex flex-1 flex-col">
                 Notifications not supported
-                <span className="text-xs font-normal opacity-60">
+                <span className="text-xs font-normal opacity-80">
                   On iPhone, add this app to your Home Screen first.
                 </span>
               </span>
@@ -89,7 +89,7 @@ export default function SettingsMenu({
               </span>
               <span className="flex flex-1 flex-col">
                 Default timezone
-                <span className="text-xs font-normal opacity-60">Used when creating and viewing tasks.</span>
+                <span className="text-xs font-normal opacity-80">Used when creating and viewing tasks.</span>
               </span>
               <select
                 className="flex-none cursor-pointer rounded-[6px] border border-border bg-card-bg px-2 py-1 text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
@@ -130,7 +130,7 @@ export default function SettingsMenu({
             How to use this app
           </button>
 
-          <button type="button" className={`${settingsItemClasses} text-overdue`} onClick={onSignOut}>
+          <button type="button" className={`${settingsItemClasses} text-overdue-text`} onClick={onSignOut}>
             <span className="text-[17px]">
               <LogOut size={17} />
             </span>

@@ -211,7 +211,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
         {hasPendingCapture && (
           <div className="flex flex-col gap-2 rounded-[8px] border border-accent bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-3 py-2.5">
             <p className="text-sm font-medium text-text-h">On-site capture awaiting approval</p>
-            <p className="text-xs opacity-70">
+            <p className="text-xs opacity-80">
               Captured by {site.staff?.display_name || 'a staff member'} on{' '}
               {new Date(site.pending_captured_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               {site.pending_accuracy_m != null ? `, accuracy ~${Math.round(site.pending_accuracy_m)}m` : ''}.
@@ -226,7 +226,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
                 approve against, hence the map link — reuses the same OpenStreetMap
                 service (no API key, no new dependency) this form already
                 attributes for address search. */}
-            <p className="text-xs opacity-70">
+            <p className="text-xs opacity-80">
               {site.pending_latitude.toFixed(6)}, {site.pending_longitude.toFixed(6)} · geofence radius{' '}
               {radiusInUnit(site.geofence_radius_m, radiusUnit)}
               {radiusUnit} ·{' '}
@@ -242,7 +242,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
             <div className="flex gap-2">
               <button
                 type="button"
-                className="cursor-pointer rounded-sm border-0 bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-sm border-0 bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleApproveCapture}
                 disabled={reviewing}
               >
@@ -286,7 +286,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               button below reads "Find clock-in point," which on its own
               reads as if this step IS setting the location, when it's really
               just one of three ways to populate the same coordinates. */}
-          <p className="text-xs opacity-65">Looks up coordinates to fill in under Clock-in point below.</p>
+          <p className="text-xs opacity-80">Looks up coordinates to fill in under Clock-in point below.</p>
           <button
             type="button"
             className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h"
@@ -315,7 +315,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               <Check size={13} className="mt-0.5 flex-none" /> Clock-in point ready for this address.
             </p>
           )}
-          <p className="text-[11px] opacity-50">
+          <p className="text-[11px] opacity-80">
             Address search by{' '}
             <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline">
               OpenStreetMap
@@ -342,7 +342,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
                   <input type="checkbox" className="mt-0.5" checked={propertyIds.includes(property.id)} onChange={() => toggleProperty(property.id)} />
                   <span className="min-w-0">
                     <span className="block truncate text-text-h">{property.unit_name}</span>
-                    <span className="block text-xs opacity-60">
+                    <span className="block text-xs opacity-80">
                       {property.company === 'azu' ? 'Azu' : 'Awa'}{assignedElsewhere ? ' · currently linked elsewhere' : ''}
                     </span>
                   </span>
@@ -350,7 +350,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               )
             })}
           </div>
-          {rentalProperties.length === 0 && <p className="py-2 text-sm opacity-60">No active rental units yet.</p>}
+          {rentalProperties.length === 0 && <p className="py-2 text-sm opacity-80">No active rental units yet.</p>}
         </details>
 
         <details className="rounded-[8px] border border-border px-3 py-2">
@@ -366,7 +366,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
               undersells what it actually is. */}
           <summary className="cursor-pointer text-sm font-medium text-text-h">Clock-in point (exact coordinates)</summary>
           <div className="mt-3 flex flex-col gap-3">
-            <p className="text-xs opacity-65">
+            <p className="text-xs opacity-80">
               This is the exact point staff clock in against — whatever's set here is what actually gets saved, whether it came from the address search above, an on-site capture, or entered directly. You can save this group before it's configured; it will show Needs setup and stay hidden from staff until then.
             </p>
             <button type="button" className="cursor-pointer self-start rounded-sm border border-border bg-pill-bg px-3 py-2 text-sm text-text-h" onClick={handleUseCurrentLocation} disabled={locating}>

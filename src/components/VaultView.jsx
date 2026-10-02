@@ -27,7 +27,7 @@ const RESET_CONFIRM_WORD = 'RESET'
 const vaultEntryRowClasses =
   'flex cursor-pointer items-center justify-between rounded-md border border-border bg-card-bg px-3 py-2.5 text-left text-text-h shadow-resting [font:inherit] transition-all duration-[180ms] ease-tactile hover:-translate-y-px hover:shadow-raised active:translate-y-0 active:shadow-press'
 const vaultFolderActionClasses =
-  'flex-none cursor-pointer border-0 bg-transparent px-1.5 py-1 text-sm text-text opacity-60 transition-opacity duration-[180ms] ease-tactile hover:opacity-100 disabled:cursor-default disabled:opacity-35'
+  'flex-none cursor-pointer border-0 bg-transparent px-1.5 py-1 text-sm text-text opacity-80 transition-opacity duration-[180ms] ease-tactile hover:opacity-100 disabled:cursor-default disabled:opacity-35'
 const vaultFolderRenameActionClasses = `${vaultFolderActionClasses} rounded-sm border border-border px-2.5 py-1.5 opacity-100`
 
 // Folders aren't their own stored entity — there's no folder table/row,
@@ -434,7 +434,7 @@ export default function VaultView({ me, members = [], onClose }) {
             </SubmissionActions>
             <button
               type="button"
-              className="mt-2 self-center cursor-pointer border-0 bg-transparent text-[13px] text-accent underline"
+              className="mt-2 self-center cursor-pointer border-0 bg-transparent text-[13px] text-accent-text underline"
               onClick={() => setShowReset(true)}
             >
               Forgot master password?
@@ -504,7 +504,7 @@ export default function VaultView({ me, members = [], onClose }) {
                     onClick={() => setSelectedEntry(entry)}
                   >
                     <span className="font-semibold">{entry.label}</span>
-                    {entry.username && <span className="text-[13px] opacity-70">{entry.username}</span>}
+                    {entry.username && <span className="text-[13px] opacity-80">{entry.username}</span>}
                   </button>
                 ))}
               </div>
@@ -554,7 +554,7 @@ export default function VaultView({ me, members = [], onClose }) {
                           onClick={() => toggleFolder(group.name)}
                         >
                           <span>{group.name}</span>
-                          <span className="text-[13px] font-normal opacity-60">
+                          <span className="text-[13px] font-normal opacity-80">
                             {group.items.length} {expandedFolders.has(group.name) ? '▾' : '▸'}
                           </span>
                         </button>
@@ -599,7 +599,7 @@ export default function VaultView({ me, members = [], onClose }) {
                             onClick={() => setSelectedEntry(entry)}
                           >
                             <span className="font-semibold">{entry.label}</span>
-                            {entry.username && <span className="text-[13px] opacity-70">{entry.username}</span>}
+                            {entry.username && <span className="text-[13px] opacity-80">{entry.username}</span>}
                           </button>
                         ))}
                       </div>

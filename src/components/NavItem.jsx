@@ -38,10 +38,10 @@ const ICON_SIZE = {
 function stateClasses(size, active) {
   if (size === 'desktop') {
     return active
-      ? 'border-border bg-pill-bg text-accent font-semibold'
+      ? 'border-border bg-pill-bg text-accent-text font-semibold'
       : 'border-transparent bg-transparent text-text'
   }
-  return active ? 'bg-transparent text-accent font-semibold' : 'bg-transparent text-text'
+  return active ? 'bg-transparent text-accent-text font-semibold' : 'bg-transparent text-text'
 }
 
 export default function NavItem({ size = 'mobile', active = false, icon: Icon, label, badge = false, className = '', ...props }) {

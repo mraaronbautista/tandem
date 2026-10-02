@@ -339,7 +339,7 @@ function AccordionList({ sections, openTitle, onToggle }) {
               {section.items.map((item, i) => {
                 const isTip = item.startsWith('Tip: ')
                 return (
-                  <li key={i} className={isTip ? "text-accent [list-style:'💡_']" : undefined}>
+                  <li key={i} className={isTip ? "text-accent-text [list-style:'💡_']" : undefined}>
                     {isTip ? item.slice('Tip: '.length) : item}
                   </li>
                 )

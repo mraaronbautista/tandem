@@ -52,7 +52,7 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
               {unit.monthly_rent != null && (
                 <div className="flex-none text-[20px] font-bold text-text-h">
                   ${Number(unit.monthly_rent).toLocaleString()}
-                  <span className="text-xs font-medium text-text opacity-70">/mo</span>
+                  <span className="text-xs font-medium text-text opacity-80">/mo</span>
                 </div>
               )}
             </div>
@@ -61,7 +61,7 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
               <>
                 <div className="mt-1 text-[13px] text-text">{bookingGuestLabel(current)}</div>
                 <div className="mt-3.5">
-                  <div className="mb-1 flex justify-between text-[11px] text-text opacity-70">
+                  <div className="mb-1 flex justify-between text-[11px] text-text opacity-80">
                     <span>{formatDateStr(current.check_in)}</span>
                     <span>{formatDateStr(current.check_out)}</span>
                   </div>
@@ -85,7 +85,7 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
                 </div>
               </>
             ) : (
-              <div className="mt-2 text-[13px] text-text opacity-70">Vacant</div>
+              <div className="mt-2 text-[13px] text-text opacity-80">Vacant</div>
             )}
           </div>
         )
@@ -94,7 +94,7 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
       <button
         type="button"
         onClick={onAddUnit}
-        className="flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border-[1.5px] border-dashed border-border py-5 text-text opacity-60 hover:opacity-90"
+        className="flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border-[1.5px] border-dashed border-border py-5 text-text opacity-80 hover:opacity-90"
       >
         <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border-[1.5px] border-dashed border-border">
           <Plus size={15} />

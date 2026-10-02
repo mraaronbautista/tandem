@@ -86,7 +86,7 @@ function AnswerRow({ item, onChange, taskTitle, taskId, meId, otherMembers }) {
       {uploadError && <p className="error">{uploadError}</p>}
       {(answerDraft.trim() || answerAttachments.length > 0) && otherMembers.length > 0 && (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wide opacity-60">Notify</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide opacity-80">Notify</span>
           <AssigneePicker members={otherMembers} value={notifyIds} onChange={setNotifyIds} />
         </div>
       )}
@@ -98,7 +98,7 @@ function AnswerRow({ item, onChange, taskTitle, taskId, meId, otherMembers }) {
         {(answerDraft.trim() || answerAttachments.length > 0) && (
           <button
             type="button"
-            className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-white disabled:cursor-default disabled:opacity-60"
+            className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-on-accent disabled:cursor-default disabled:opacity-60"
             onClick={handleAnswer}
             disabled={sending || uploading}
           >
@@ -256,13 +256,13 @@ export default function TaskClarifications({
                   <AttachmentList attachments={item.answerAttachments} />
                 </>
               ) : item.resolved ? (
-                <p className="flex items-center gap-1 text-[13px] opacity-70">
+                <p className="flex items-center gap-1 text-[13px] opacity-80">
                   <Check size={13} /> {memberName(item.resolvedBy)} marked this finished — no reply needed
                 </p>
               ) : item.answerAttachments?.length > 0 ? (
                 <AttachmentList attachments={item.answerAttachments} />
               ) : item.askedBy === meId ? (
-                <p className="text-[13px] italic opacity-60">Waiting for a reply…</p>
+                <p className="text-[13px] italic opacity-80">Waiting for a reply…</p>
               ) : (
                 <>
                   <AnswerRow
@@ -323,7 +323,7 @@ export default function TaskClarifications({
             separate checkbox list. */}
         {(questionDraft.trim() || questionAttachments.length > 0) && otherMembers.length > 0 && (
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wide opacity-60">Notify</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide opacity-80">Notify</span>
             <AssigneePicker members={otherMembers} value={notifyIds} onChange={setNotifyIds} />
           </div>
         )}
@@ -340,7 +340,7 @@ export default function TaskClarifications({
               Delete/Duplicate row (extraActions, to its left) was an easy
               misclick target when reaching for one of those instead. */}
           {(questionDraft.trim() || questionAttachments.length > 0) && (
-            <button type="button" className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-white disabled:cursor-default disabled:opacity-60" onClick={handleAsk} disabled={asking || uploading}>
+            <button type="button" className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-on-accent disabled:cursor-default disabled:opacity-60" onClick={handleAsk} disabled={asking || uploading}>
               {asking ? 'Sending…' : 'Send'}
             </button>
           )}

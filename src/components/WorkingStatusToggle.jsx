@@ -55,11 +55,11 @@ function TeammateStatusRow({ member, status, now }) {
       : ''
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] whitespace-nowrap text-text-h">
-      <span className={status ? 'text-[var(--color-online)]' : 'text-text opacity-50'}>
+      <span className={status ? 'text-[var(--color-online)]' : 'text-text opacity-80'}>
         <StatusDot />
       </span>
       <span className="font-medium">{member.display_name}</span>
-      <span className="opacity-70">
+      <span className="opacity-80">
         — {label}
         {since}
         {until}
@@ -160,7 +160,7 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
         <button
           type="button"
           className={`cursor-pointer whitespace-nowrap rounded-full border border-border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] max-[480px]:px-1.5 max-[480px]:text-xs ${
-            othersWorking.length ? 'text-[var(--color-online)]' : 'text-text opacity-70'
+            othersWorking.length ? 'text-[var(--color-online)]' : 'text-text opacity-80'
           }`}
           onClick={() => setSheetOpen((v) => !v)}
         >
@@ -203,7 +203,7 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
                   </div>
                 )}
                 {myStatus !== 'available' && me.working_status_until && (
-                  <p className="mt-1.5 text-xs opacity-65">Clears at {formatTime(me.working_status_until)}</p>
+                  <p className="mt-1.5 text-xs opacity-80">Clears at {formatTime(me.working_status_until)}</p>
                 )}
               </div>
             )}
@@ -214,7 +214,7 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
               </HelpHint>
             )}
             {others.length === 0 ? (
-              <p className="px-2.5 py-1.5 text-[13px] opacity-65">No other members yet.</p>
+              <p className="px-2.5 py-1.5 text-[13px] opacity-80">No other members yet.</p>
             ) : (
               <div className="flex flex-col">
                 {others.map((m) => (

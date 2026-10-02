@@ -141,10 +141,10 @@ function RoadmapItemRow({
   const key = `${note.id}:${item.id}`
   return (
     <li className="flex items-center justify-between gap-2 rounded-[6px] border border-border bg-bg px-2.5 py-1.5 text-[13px]">
-      <span className={`break-words whitespace-pre-wrap ${done ? 'text-text line-through opacity-55' : ''}`}>{item.text}</span>
+      <span className={`break-words whitespace-pre-wrap ${done ? 'text-text line-through opacity-75' : ''}`}>{item.text}</span>
       <span className="flex flex-none items-center gap-1.5">
         {done ? (
-          <span className="text-xs text-accent">
+          <span className="text-xs text-accent-text">
             <Check size={13} className="inline align-[-2px]" /> Done
           </span>
         ) : item.taskId ? (
@@ -153,7 +153,7 @@ function RoadmapItemRow({
           // shows up in taskById, see TaskBoard.jsx's own unfiltered
           // `tasks` state) — falls back to a bare "Added" rather than a
           // due date that doesn't exist any more.
-          <span className="text-xs opacity-70">{linkedTask ? `Due ${formatDate(linkedTask.due_date)}` : 'Added'}</span>
+          <span className="text-xs opacity-80">{linkedTask ? `Due ${formatDate(linkedTask.due_date)}` : 'Added'}</span>
         ) : openAddKey === key ? (
           <span className="flex items-center gap-1.5">
             <input
@@ -164,7 +164,7 @@ function RoadmapItemRow({
             />
             <button
               type="button"
-              className="cursor-pointer rounded-[6px] border-0 bg-accent px-2 py-1 text-xs font-semibold text-white disabled:cursor-default disabled:opacity-60"
+              className="cursor-pointer rounded-[6px] border-0 bg-accent px-2 py-1 text-xs font-semibold text-on-accent disabled:cursor-default disabled:opacity-60"
               onClick={() => onAddRoadmapItem(note, item, addDateDrafts[key])}
               disabled={addingItemKey === key}
             >
@@ -174,7 +174,7 @@ function RoadmapItemRow({
         ) : (
           <button
             type="button"
-            className="cursor-pointer rounded-[6px] border border-accent bg-transparent px-2 py-1 text-xs font-semibold text-accent"
+            className="cursor-pointer rounded-[6px] border border-accent bg-transparent px-2 py-1 text-xs font-semibold text-accent-text"
             onClick={() => onOpenAddRow(note, item)}
           >
             Add to timeline
@@ -189,7 +189,7 @@ function RoadmapItemRow({
           <button
             type="button"
             aria-label={`Remove "${item.text}"`}
-            className="cursor-pointer rounded-[6px] border border-border bg-transparent p-1 text-text opacity-60 hover:opacity-100"
+            className="cursor-pointer rounded-[6px] border border-border bg-transparent p-1 text-text opacity-80 hover:opacity-100"
             onClick={() => onRemoveItem(note, item)}
           >
             <X size={13} />
@@ -635,7 +635,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
 
   return (
     <div className="tab-panel">
-      <p className="text-[13px] opacity-65">
+      <p className="text-[13px] opacity-80">
         {isProjects
           ? 'Break a project into milestones, then pull steps onto the real timeline when you\'re ready for them.'
           : 'Pin something with no deadline, so it doesn\'t get lost.'}
@@ -665,7 +665,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
 
         {members.length > 1 && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] opacity-85">
-            <span className="opacity-65">Share with:</span>
+            <span className="opacity-80">Share with:</span>
             {members
               .filter((m) => m.id !== me?.id)
               .map((m) => (
@@ -690,7 +690,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="submit"
-            className="cursor-pointer rounded-[8px] border-0 bg-accent px-4 py-2 font-semibold text-white disabled:cursor-default disabled:opacity-60"
+            className="cursor-pointer rounded-[8px] border-0 bg-accent px-4 py-2 font-semibold text-on-accent disabled:cursor-default disabled:opacity-60"
             disabled={posting || !body.trim() || (isProjects && !roadmapDraft.trim()) || !me}
           >
             {posting ? (isProjects ? 'Creating…' : 'Pinning…') : isProjects ? 'Create project' : 'Pin it'}
@@ -778,7 +778,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                             <>
                               <div className="mb-1.5 flex items-baseline justify-between gap-2">
                                 <span className="text-[13px] font-bold text-text-h">{group.milestone}</span>
-                                <span className="flex-none text-[11.5px] font-semibold opacity-70">
+                                <span className="flex-none text-[11.5px] font-semibold opacity-80">
                                   {doneItems.length} of {total} done
                                 </span>
                               </div>
@@ -800,7 +800,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                               <button
                                 type="button"
                                 onClick={() => toggleCompletedGroup(completedKey)}
-                                className="flex cursor-pointer items-center gap-1 text-xs font-semibold text-text opacity-65"
+                                className="flex cursor-pointer items-center gap-1 text-xs font-semibold text-text opacity-80"
                               >
                                 Completed · {doneItems.length}
                                 {completedOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -866,7 +866,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                     ) : (
                       <button
                         type="button"
-                        className="flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-accent"
+                        className="flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-accent-text"
                         onClick={() => setAddSubtaskId(note.id)}
                       >
                         <Plus size={14} className="inline align-[-2px]" /> Add subtask
@@ -880,7 +880,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                     <span>Removed "{removedItem.item.text}"</span>
                     <button
                       type="button"
-                      className="cursor-pointer font-semibold text-accent"
+                      className="cursor-pointer font-semibold text-accent-text"
                       onClick={handleUndoRemove}
                     >
                       Undo
@@ -888,12 +888,12 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs opacity-65">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs opacity-80">
                   <span>
                     {memberName(note.author_id)} · {formatDate(note.created_at)}
                     {note.archived_task_id && ' · Archived task'}
                   </span>
-                  <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared_with?.length ? 'border-accent text-accent' : 'border-border'}`}>
+                  <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared_with?.length ? 'border-accent text-accent-text' : 'border-border'}`}>
                     {sharedLabel(note.shared_with, memberName)}
                   </span>
                 </div>
@@ -902,7 +902,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                     <>
                       <button
                         type="button"
-                        className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
+                        className={`${itemActionClasses} border-accent font-semibold text-accent-text disabled:cursor-default disabled:opacity-60`}
                         onClick={() => handleSaveEdit(note)}
                         disabled={saving || !editDraft.trim() || (isRoadmapPin(note) && !editRoadmapDraft.trim())}
                       >
@@ -928,7 +928,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                       {note.archived_task_id ? (
                         <button
                           type="button"
-                          className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
+                          className={`${itemActionClasses} border-accent font-semibold text-accent-text disabled:cursor-default disabled:opacity-60`}
                           onClick={() => handleRestoreToToday(note)}
                           disabled={restoringId === note.id}
                         >
@@ -943,7 +943,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                       ) : note.roadmap_items?.length > 0 ? null : (
                         <button
                           type="button"
-                          className={`${itemActionClasses} border-accent font-semibold text-accent disabled:cursor-default disabled:opacity-60`}
+                          className={`${itemActionClasses} border-accent font-semibold text-accent-text disabled:cursor-default disabled:opacity-60`}
                           onClick={() => handleFocusToday(note)}
                           disabled={promotingId === note.id || promoted.has(note.id)}
                         >
@@ -991,7 +991,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                                       ))}
                                     <button
                                       type="button"
-                                      className={`${itemActionClasses} mt-1 border-accent font-semibold text-accent`}
+                                      className={`${itemActionClasses} mt-1 border-accent font-semibold text-accent-text`}
                                       onClick={() => saveSharing(note)}
                                     >
                                       Save
@@ -1073,13 +1073,13 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
               {archivedNotes.map((note) => {
                 const isOwn = note.author_id === me?.id
                 return (
-                  <li key={note.id} className="rounded-md border border-border bg-card-bg px-3.5 py-2.5 opacity-70">
+                  <li key={note.id} className="rounded-md border border-border bg-card-bg px-3.5 py-2.5 opacity-80">
                     <p className="mb-1.5 break-words whitespace-pre-wrap">{note.body}</p>
-                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs opacity-65">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs opacity-80">
                       <span>
                         {memberName(note.author_id)} · {formatDate(note.created_at)}
                       </span>
-                      <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared_with?.length ? 'border-accent text-accent' : 'border-border'}`}>
+                      <span className={`rounded-full border px-2 py-0.5 whitespace-nowrap ${note.shared_with?.length ? 'border-accent text-accent-text' : 'border-border'}`}>
                         {sharedLabel(note.shared_with, memberName)}
                       </span>
                     </div>

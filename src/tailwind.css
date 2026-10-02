@@ -24,7 +24,11 @@
   --color-accent: var(--accent);
   --color-accent-h: var(--accent-h);
   --color-overdue: var(--overdue);
+  --color-overdue-text: var(--overdue-text);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
   --color-notice: #e0a83e;
+  --color-notice-text: var(--notice-text);
   --color-pill-bg: var(--pill-bg);
 
   /* Override Tailwind's own default radius scale with Tandem's actual

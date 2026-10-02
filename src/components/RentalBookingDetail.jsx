@@ -94,7 +94,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
         {error && <p className="error">{error}</p>}
 
         {isPending && (
-          <span className="inline-block self-start rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
+          <span className="inline-block self-start rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-on-accent">
             Pending request
           </span>
         )}
@@ -103,10 +103,10 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
           {formatDateStr(booking.check_in)} – {formatDateStr(booking.check_out)}
         </p>
         {nextUnpaidCharge && (
-          <p className="text-[13px] opacity-65">Next charge: {formatDateStr(nextUnpaidCharge)}</p>
+          <p className="text-[13px] opacity-80">Next charge: {formatDateStr(nextUnpaidCharge)}</p>
         )}
         {booking.source && (
-          <p className="text-[13px] opacity-65">
+          <p className="text-[13px] opacity-80">
             Source: {BOOKING_SOURCE_LABEL[booking.source]}
             {booking.source === 'other' && booking.source_note ? ` — ${booking.source_note}` : ''}
           </p>

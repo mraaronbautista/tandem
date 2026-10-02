@@ -106,7 +106,7 @@ export default function AddMemberForm({ members, onClose, onCreated }) {
               Generate
             </button>
           </div>
-          <span className="mt-1 block text-xs opacity-65">
+          <span className="mt-1 block text-xs opacity-80">
             Share this with them directly — there's no email to send it to. At least 8 characters.
           </span>
         </label>
@@ -156,7 +156,7 @@ export default function AddMemberForm({ members, onClose, onCreated }) {
               </label>
             ))}
           </div>
-          <p className="mt-1.5 text-xs opacity-65">
+          <p className="mt-1.5 text-xs opacity-80">
             Task visibility toward each existing member is set next, right after the account is created.
           </p>
         </div>

@@ -69,7 +69,7 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
 
         <div className="grid grid-cols-7 gap-1">
           {WEEKDAY_LABELS.map((wd) => (
-            <div key={wd} className="pb-1 text-center text-[11px] font-semibold opacity-55">
+            <div key={wd} className="pb-1 text-center text-[11px] font-semibold opacity-80">
               {wd}
             </div>
           ))}
@@ -78,11 +78,11 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
             week.map((day, col) => {
               if (day === null) return <div key={`${weekIndex}-${col}`} className="invisible flex aspect-square items-center justify-center rounded-[8px] border-0 bg-transparent text-text-h [font:inherit]" />
               const date = new Date(year, month, day)
-              // bg-accent/bg-transparent (and text-white/text-text-h) must
+              // bg-accent/bg-transparent (and text-on-accent/text-text-h) must
               // never both land in the same class string — two utilities
               // targeting the same CSS property resolve by Tailwind's
               // generated stylesheet order, not by position here, so
-              // "selected" previously appended bg-accent text-white on top
+              // "selected" previously appended bg-accent text-on-accent on top
               // of the base's own bg-transparent text-text-h and lost the
               // background (transparent won) while winning the text color
               // (white won) — invisible white text on no fill. Same class
@@ -90,7 +90,7 @@ export default function DatePickerModal({ selectedDate, onSelect, onClose }) {
               // avoids; kept mutually exclusive here the same way.
               const classes = [
                 'flex aspect-square cursor-pointer items-center justify-center rounded-[8px] border-0 [font:inherit]',
-                isSameDay(date, selectedDate) ? 'bg-accent text-white' : 'bg-transparent text-text-h',
+                isSameDay(date, selectedDate) ? 'bg-accent text-on-accent' : 'bg-transparent text-text-h',
               ]
               if (isSameDay(date, today)) classes.push('font-bold shadow-[inset_0_0_0_1px_var(--accent)]')
               return (

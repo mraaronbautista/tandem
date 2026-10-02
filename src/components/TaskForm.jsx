@@ -466,7 +466,7 @@ export default function TaskForm({
               className="flex min-h-10 min-w-[220px] flex-[2_1_260px] cursor-pointer items-center gap-2 rounded-[8px] border border-border bg-bg px-3 py-2 text-left text-sm leading-tight text-text-h transition-colors hover:border-accent focus-visible:border-accent focus-visible:outline-none"
               title="Edit date and time"
             >
-              <CalendarClock size={16} className="flex-none text-accent" aria-hidden="true" />
+              <CalendarClock size={16} className="flex-none text-accent-text" aria-hidden="true" />
               <span className="min-w-0 flex-1">{dueSummaryLabel(form)}</span>
               <ChevronRight size={15} className="flex-none opacity-45" aria-hidden="true" />
             </button>
@@ -597,7 +597,7 @@ export default function TaskForm({
         >
           {moreOpen ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
           {moreOpen ? 'Fewer options' : 'More options'}
-          {!moreOpen && moreSummary && <span className="font-normal opacity-65">· {moreSummary}</span>}
+          {!moreOpen && moreSummary && <span className="font-normal opacity-80">· {moreSummary}</span>}
         </button>
       )}
 
@@ -630,7 +630,7 @@ export default function TaskForm({
                   }}
                   className={`h-9 w-9 cursor-pointer rounded-full border text-xs font-semibold transition-colors ${
                     selected
-                      ? 'border-accent bg-accent text-white'
+                      ? 'border-accent bg-accent text-on-accent'
                       : 'border-border bg-bg text-text-h hover:border-accent'
                   }`}
                 >

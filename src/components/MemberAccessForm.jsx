@@ -223,7 +223,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Feature access</span>
-          <p className="mb-1.5 text-xs opacity-65">Untick anything {target.display_name} should not be able to use.</p>
+          <p className="mb-1.5 text-xs opacity-80">Untick anything {target.display_name} should not be able to use.</p>
           <div className="flex flex-col gap-1.5 text-sm">
             {PERMISSION_FEATURES.map((f) => (
               <label key={f} className="flex items-center gap-2">
@@ -240,14 +240,14 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Task visibility</span>
-          <p className="mb-1.5 text-xs opacity-65">
+          <p className="mb-1.5 text-xs opacity-80">
             What {target.display_name} can do with each teammate's tasks. The add, delete and reassign options only
             apply once they can see the tasks.
           </p>
           {loading ? (
-            <p className="text-sm opacity-65">Loading…</p>
+            <p className="text-sm opacity-80">Loading…</p>
           ) : teammates.length === 0 ? (
-            <p className="text-sm opacity-65">No other members yet.</p>
+            <p className="text-sm opacity-80">No other members yet.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {teammates.map((teammate) => (
@@ -264,11 +264,11 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Report visibility</span>
-          <p className="mb-1.5 text-xs opacity-65">Whose submitted reports {target.display_name} can read.</p>
+          <p className="mb-1.5 text-xs opacity-80">Whose submitted reports {target.display_name} can read.</p>
           {loading ? (
-            <p className="text-sm opacity-65">Loading…</p>
+            <p className="text-sm opacity-80">Loading…</p>
           ) : teammates.length === 0 ? (
-            <p className="text-sm opacity-65">No other members yet.</p>
+            <p className="text-sm opacity-80">No other members yet.</p>
           ) : (
             <div className="flex flex-col gap-1.5 text-sm">
               {teammates.map((teammate) => (
@@ -287,11 +287,11 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Priorities visibility</span>
-          <p className="mb-1.5 text-xs opacity-65">Whose priorities {target.display_name} can read.</p>
+          <p className="mb-1.5 text-xs opacity-80">Whose priorities {target.display_name} can read.</p>
           {loading ? (
-            <p className="text-sm opacity-65">Loading…</p>
+            <p className="text-sm opacity-80">Loading…</p>
           ) : teammates.length === 0 ? (
-            <p className="text-sm opacity-65">No other members yet.</p>
+            <p className="text-sm opacity-80">No other members yet.</p>
           ) : (
             <div className="flex flex-col gap-1.5 text-sm">
               {teammates.map((teammate) => (

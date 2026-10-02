@@ -23,7 +23,7 @@ export default function HelpHint({ label = "What's this?", children, className =
         onClick={() => setOpen((v) => !v)}
         className="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 py-1 text-xs font-semibold text-text-h underline decoration-accent decoration-2 underline-offset-2 [font-family:inherit]"
       >
-        <CircleHelp size={13} className="text-accent-h" aria-hidden="true" />
+        <CircleHelp size={13} className="text-accent-text" aria-hidden="true" />
         {open ? 'Hide' : label}
       </button>
       {open && (

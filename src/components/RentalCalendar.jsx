@@ -3,6 +3,7 @@ import RentalBookingForm from './RentalBookingForm'
 import RentalBookingDetail from './RentalBookingDetail'
 import RentalButton from './RentalButton'
 import { bookingGuestLabel } from '../lib/rentals'
+import { readableTextColor } from '../lib/colorContrast'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -213,6 +214,11 @@ const RentalCalendar = forwardRef(function RentalCalendar(
                   // fill — still visible as "held" but distinct from a
                   // confirmed guest at a glance.
                   background: fill,
+                  // A solid fill uses whichever of white/dark ink reads on
+                  // that unit's colour (the colour is a free picker choice).
+                  // A pending stripe is half page background, so it takes
+                  // the theme's own heading colour instead.
+                  color: isPending ? 'var(--text-h)' : readableTextColor(unit.color),
                   // Paints over the grid's gap on the connecting side(s) with
                   // the same fill — a pure paint effect (box-shadow doesn't
                   // affect layout or text position), so it can't shift the

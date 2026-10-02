@@ -32,7 +32,7 @@ export default function ScrollSelect({ value, onChange, options, visibleCount = 
                   type="button"
                   key={o.value}
                   ref={o.value === value ? selectedRef : null}
-                  className={`block w-full flex-none cursor-pointer border-0 px-3 py-2.5 text-left text-sm [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit] hover:bg-bg ${o.value === value ? 'bg-accent text-white' : 'bg-transparent text-text-h'}`}
+                  className={`block w-full flex-none cursor-pointer border-0 px-3 py-2.5 text-left text-sm [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit] hover:bg-bg ${o.value === value ? 'bg-accent text-on-accent' : 'bg-transparent text-text-h'}`}
                   onClick={() => {
                     onChange(o.value)
                     setOpen(false)

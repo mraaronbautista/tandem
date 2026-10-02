@@ -567,7 +567,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
             {profile?.active === false ? 'Account deactivated' : `Hi, ${profile?.display_name || ''}`}
           </h1>
           {profile?.active === false && (
-            <p className="text-sm opacity-70">Check with Ada or Aaron — your access has been paused.</p>
+            <p className="text-sm opacity-80">Check with Ada or Aaron — your access has been paused.</p>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -604,7 +604,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
           onClick={() => setRoleOpen(true)}
         >
           <Info size={13} /> Your role
-          <ChevronRight size={13} className="opacity-60" />
+          <ChevronRight size={13} className="opacity-80" />
         </button>
       )}
 
@@ -626,14 +626,14 @@ export default function StaffClockView({ theme, toggleTheme }) {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                className="cursor-pointer rounded-[16px] border-0 bg-accent px-4 py-8 text-2xl font-bold text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-[16px] border-0 bg-accent px-4 py-8 text-2xl font-bold text-on-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleStartTap}
                 disabled={sites.length === 0}
               >
                 <Play size={22} className="mr-1.5 inline align-[-3px]" fill="currentColor" /> Start
               </button>
               {sites.length === 0 && (
-                <p className="text-center text-sm opacity-70">
+                <p className="text-center text-sm opacity-80">
                   {captureSites.length === 0
                     ? 'No active work sites are available. Ask Ada or Aaron to add one.'
                     : "No work sites are ready to clock in at yet — capture your location below for the one you're at."}
@@ -649,7 +649,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
               so this never bypasses member review of a new clock-in point. */}
           {!activeEntry && !starting && captureSites.length > 0 && (
             <div className="flex flex-col gap-2 rounded-[8px] border border-border bg-card-bg p-4">
-              <h2 className="text-[13px] opacity-60">Set up a location</h2>
+              <h2 className="text-[13px] opacity-80">Set up a location</h2>
               <HelpHint label="What does this do?">
                 Ada and Aaron haven't confirmed where this place is yet. Stand at the property and tap Capture
                 location. They'll approve it, and after that you can clock in here.
@@ -662,7 +662,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                   <div key={site.id} className="flex items-center justify-between gap-2 rounded-sm border border-border px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-text-h">{site.name}</p>
-                      {hasPending && <p className="text-xs opacity-65">Submitted — waiting for approval</p>}
+                      {hasPending && <p className="text-xs opacity-80">Submitted — waiting for approval</p>}
                     </div>
                     <button
                       type="button"
@@ -719,7 +719,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 <button
                   type="button"
                   className={`flex-1 cursor-pointer rounded-sm border px-3 py-2 text-sm ${
-                    rateType === 'standard' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'
+                    rateType === 'standard' ? 'border-accent bg-accent text-on-accent' : 'border-border bg-bg text-text'
                   }`}
                   onClick={() => setRateType('standard')}
                 >
@@ -733,7 +733,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                   <button
                     type="button"
                     className={`flex-1 cursor-pointer rounded-sm border px-3 py-2 text-sm ${
-                      rateType === 'emergency' ? 'border-accent bg-accent text-white' : 'border-border bg-bg text-text'
+                      rateType === 'emergency' ? 'border-accent bg-accent text-on-accent' : 'border-border bg-bg text-text'
                     }`}
                     onClick={() => setRateType('emergency')}
                   >
@@ -770,7 +770,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 </button>
                 <button
                   type="button"
-                  className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
                   onClick={handleConfirmStart}
                   disabled={submitting || locating || !selectedSiteId || !detectedSite}
                 >
@@ -782,13 +782,13 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
           {activeEntry && (
             <div className="flex flex-col items-center gap-3 rounded-[16px] border border-border bg-card-bg p-6">
-              <div className="text-center text-sm opacity-70">
+              <div className="text-center text-sm opacity-80">
                 <p>Clocked in at {sites.find((site) => site.id === activeEntry.work_site_id)?.name || 'work site'}</p>
                 <p className="mt-0.5 capitalize">{activeEntry.rate_type} rate</p>
               </div>
               <p className="text-4xl font-bold text-text-h tabular-nums">{formatElapsed(elapsedMs)}</p>
               {activeEntry.flagged && (
-                <p className="flex items-center gap-1 text-xs text-overdue">
+                <p className="flex items-center gap-1 text-xs text-overdue-text">
                   <AlertTriangle size={13} /> Heads up: you clocked in far from the work site. Ada and Aaron will see this on the shift.
                 </p>
               )}
@@ -814,7 +814,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
               {stopError && <p className="error">{stopError}</p>}
               {stopFlow.step === 'choose' && (
                 <>
-                  <h2 className="text-[13px] opacity-60">
+                  <h2 className="text-[13px] opacity-80">
                     {stopFlow.reason === 'geofence' ? "Looks like you've left the site" : 'Stopping the clock'}
                   </h2>
                   <div className="flex flex-col gap-2">
@@ -835,7 +835,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                     >
                       {stopSubmitting ? 'Clocking out…' : 'Taking a break'}
                       {!stopSubmitting && (
-                        <span className="mt-0.5 block text-xs font-normal opacity-70">
+                        <span className="mt-0.5 block text-xs font-normal opacity-80">
                           Stops the clock. Start again when you're back.
                         </span>
                       )}
@@ -856,7 +856,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
               )}
               {stopFlow.step === 'report' && (
                 <>
-                  <h2 className="text-[13px] opacity-60">What did you work on? (optional)</h2>
+                  <h2 className="text-[13px] opacity-80">What did you work on? (optional)</h2>
                   <textarea
                     autoFocus
                     className="rounded-sm border border-border bg-bg p-2 text-sm text-text-h [font-family:inherit]"
@@ -894,14 +894,14 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 <span>Today</span>
                 <span>
                   <span className="font-semibold">{money(todayPay)}</span>
-                  <span className="ml-1.5 opacity-60">({todayHours.toFixed(2)}h)</span>
+                  <span className="ml-1.5 opacity-80">({todayHours.toFixed(2)}h)</span>
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>This week</span>
                 <span>
                   <span className="font-semibold">{money(weekPay)}</span>
-                  <span className="ml-1.5 opacity-60">({weekHours.toFixed(2)}h)</span>
+                  <span className="ml-1.5 opacity-80">({weekHours.toFixed(2)}h)</span>
                 </span>
               </div>
             </div>
@@ -909,7 +909,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
           {!activeEntry && history.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h2 className="text-[13px] opacity-60">Recent shifts</h2>
+              <h2 className="text-[13px] opacity-80">Recent shifts</h2>
               {history.map((e) => {
                 const hasOpenRequest = requests.some((r) => r.time_entry_id === e.id && r.status === 'open')
                 return (
@@ -917,13 +917,13 @@ export default function StaffClockView({ theme, toggleTheme }) {
                     <span className="min-w-0 truncate font-medium text-text-h">
                       {sites.find((site) => site.id === e.work_site_id)?.name || 'Work site'}
                     </span>
-                    <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>
+                    <span className={e.status === 'approved' ? 'text-online' : 'opacity-80'}>
                       {e.status === 'approved' ? 'Approved' : e.status === 'pending' ? 'Waiting for approval' : e.status}
                     </span>
-                    <span className="text-xs opacity-65">
+                    <span className="text-xs opacity-80">
                       {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                       {e.flagged && (
-                        <span className="ml-1.5 text-overdue" title="You clocked in far from the work site">
+                        <span className="ml-1.5 text-overdue-text" title="You clocked in far from the work site">
                           <AlertTriangle size={12} className="mr-0.5 inline align-[-1px]" />
                           Far from site
                         </span>
@@ -944,7 +944,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                       {e.report_requested_at && (
                         <p className="text-xs font-medium text-text-h">Ada/Aaron asked what you worked on</p>
                       )}
-                      {e.notes && <p className="whitespace-pre-wrap text-xs opacity-70">{e.notes}</p>}
+                      {e.notes && <p className="whitespace-pre-wrap text-xs opacity-80">{e.notes}</p>}
                       {reportComposeId === e.id ? (
                         <div className="flex flex-col gap-1.5">
                           {reportSubmitError && <p className="error">{reportSubmitError}</p>}
@@ -967,7 +967,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                             </button>
                             <button
                               type="button"
-                              className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                              className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-2 py-1 text-xs font-semibold text-on-accent disabled:opacity-50"
                               onClick={() => handleSubmitShiftReport(e.id)}
                               disabled={submittingReport || !reportDraft.trim()}
                             >
@@ -978,7 +978,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                       ) : (
                         <button
                           type="button"
-                          className="cursor-pointer self-start text-xs text-accent-h underline"
+                          className="cursor-pointer self-start text-xs text-accent-text underline"
                           onClick={() => {
                             setReportComposeId(e.id)
                             setReportDraft('')
@@ -995,13 +995,13 @@ export default function StaffClockView({ theme, toggleTheme }) {
                         third value alongside site/status or date/pay. */}
                     <div className="col-span-2">
                       {hasOpenRequest ? (
-                        <span className="text-xs opacity-60">
+                        <span className="text-xs opacity-80">
                           <Flag size={11} className="mr-1 inline align-[-1px]" /> Fix requested — waiting on Ada/Aaron
                         </span>
                       ) : (
                         <button
                           type="button"
-                          className="cursor-pointer text-xs text-accent-h underline"
+                          className="cursor-pointer text-xs text-accent-text underline"
                           onClick={() => {
                             setRequestTarget({ entryId: e.id })
                             setRequestNote('')
@@ -1025,7 +1025,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
               whether one happens to be running right now. */}
           <button
             type="button"
-            className="cursor-pointer self-start text-xs text-accent-h underline"
+            className="cursor-pointer self-start text-xs text-accent-text underline"
             onClick={() => {
               setRequestTarget({ entryId: null })
               setRequestNote('')
@@ -1037,7 +1037,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
           {requestTarget && (
             <div className="flex flex-col gap-2 rounded-[8px] border border-border bg-card-bg p-4">
-              <h2 className="text-[13px] opacity-60">
+              <h2 className="text-[13px] opacity-80">
                 {requestTarget.entryId ? 'What needs fixing?' : 'Describe the missed shift'}
               </h2>
               {requestError && <p className="error">{requestError}</p>}
@@ -1064,7 +1064,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 </button>
                 <button
                   type="button"
-                  className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="flex-1 cursor-pointer rounded-sm border-0 bg-accent px-3 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
                   onClick={handleSubmitRequest}
                   disabled={submittingRequest || !requestNote.trim()}
                 >
@@ -1076,14 +1076,14 @@ export default function StaffClockView({ theme, toggleTheme }) {
 
           {requests.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h2 className="text-[13px] opacity-60">Your requests</h2>
+              <h2 className="text-[13px] opacity-80">Your requests</h2>
               {requests.map((r) => (
                 <div key={r.id} className="flex flex-col gap-1 rounded-sm border border-border px-3 py-2 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <span className={r.status === 'open' ? 'text-accent-h' : 'opacity-60'}>
+                    <span className={r.status === 'open' ? 'text-accent-text' : 'opacity-80'}>
                       {r.status === 'open' ? 'Waiting on Ada/Aaron' : 'Resolved'}
                     </span>
-                    <span className="text-xs opacity-60">
+                    <span className="text-xs opacity-80">
                       {new Date(r.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                     </span>
                   </div>

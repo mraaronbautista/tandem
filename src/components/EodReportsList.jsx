@@ -206,7 +206,7 @@ export default function EodReportsList({ memberName, meId }) {
                 onClick={() => toggleMonth(group.key)}
               >
                 <span>{monthLabel(group.key)}</span>
-                <span className="text-[13px] font-normal opacity-60">
+                <span className="text-[13px] font-normal opacity-80">
                   {group.items.length} {expanded.has(group.key) ? '▾' : '▸'}
                 </span>
               </button>
@@ -218,7 +218,7 @@ export default function EodReportsList({ memberName, meId }) {
                     const isOwn = r.submitted_by === meId
                     return (
                       <div className="border-b border-border pb-3 last:border-b-0 last:pb-0" key={r.id}>
-                        <p className="mb-1 text-xs opacity-60">
+                        <p className="mb-1 text-xs opacity-80">
                           <strong>{memberName(r.submitted_by)}</strong> — {r.period} — updated{' '}
                           {formatDate(r.updated_at)}
                           {!isEditing && r.minutes_logged != null && ` — ${formatMinutes(r.minutes_logged)}`}
@@ -233,7 +233,7 @@ export default function EodReportsList({ memberName, meId }) {
                             />
                             <label className="flex flex-col gap-1 text-[13px]">
                               Time logged
-                              <div className="flex items-center gap-1.5 [&_input[type=number]]:w-16 [&_span]:text-[13px] [&_span]:opacity-70">
+                              <div className="flex items-center gap-1.5 [&_input[type=number]]:w-16 [&_span]:text-[13px] [&_span]:opacity-80">
                                 <input
                                   type="number"
                                   min="0"
@@ -279,7 +279,7 @@ export default function EodReportsList({ memberName, meId }) {
                             {isOwn && (
                               <button
                                 type="button"
-                                className="mt-1.5 cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-accent underline"
+                                className="mt-1.5 cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-accent-text underline"
                                 onClick={() => startEdit(r)}
                               >
                                 Edit

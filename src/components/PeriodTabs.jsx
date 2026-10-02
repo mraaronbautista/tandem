@@ -30,7 +30,7 @@ export function PeriodTab({ active = false, size = 'base', className = '', ...pr
   // since two utilities targeting the same longhand resolve by Tailwind's
   // generated-stylesheet order, not by position in this string (the same
   // class of bug caught and avoided in TimelineRow.jsx's dot margins).
-  const activeClasses = active ? 'bg-[var(--period-tab-active-bg)] font-semibold text-accent-h' : 'bg-transparent text-text'
+  const activeClasses = active ? 'bg-[var(--period-tab-active-bg)] font-semibold text-accent-text' : 'bg-transparent text-text'
   return (
     <button
       type="button"

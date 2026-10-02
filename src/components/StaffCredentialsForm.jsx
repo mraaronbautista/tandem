@@ -78,7 +78,7 @@ export default function StaffCredentialsForm({ staffMember, onClose }) {
                 </p>
               </label>
             )}
-            <p className="text-xs opacity-65">Share this with them directly — there's no email to send it to.</p>
+            <p className="text-xs opacity-80">Share this with them directly — there's no email to send it to.</p>
           </>
         ) : (
           <>
@@ -94,7 +94,7 @@ export default function StaffCredentialsForm({ staffMember, onClose }) {
                 spellCheck="false"
                 className={FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs opacity-65">
+              <span className="mt-1 block text-xs opacity-80">
                 Useful for handing this role off to a new employee — their rates, job description, and shift history
                 stay attached to this account.
               </span>
@@ -117,7 +117,7 @@ export default function StaffCredentialsForm({ staffMember, onClose }) {
                   Generate
                 </button>
               </div>
-              <span className="mt-1 block text-xs opacity-65">At least 8 characters.</span>
+              <span className="mt-1 block text-xs opacity-80">At least 8 characters.</span>
             </label>
           </>
         )}

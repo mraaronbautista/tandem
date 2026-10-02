@@ -45,13 +45,13 @@ export default function TaskIconPicker({ value, onChange, onClose }) {
               aria-label={name}
               onClick={() => pick(name)}
               className={`flex aspect-square cursor-pointer items-center justify-center rounded-[8px] border ${
-                value === name ? 'border-accent bg-accent text-white' : 'border-border bg-pill-bg text-text-h'
+                value === name ? 'border-accent bg-accent text-on-accent' : 'border-border bg-pill-bg text-text-h'
               }`}
             >
               <Icon size={18} />
             </button>
           ))}
-          {filtered.length === 0 && <p className="col-span-5 py-4 text-center text-sm opacity-60">No icons match "{query}".</p>}
+          {filtered.length === 0 && <p className="col-span-5 py-4 text-center text-sm opacity-80">No icons match "{query}".</p>}
         </div>
 
         <SubmissionActions>

@@ -110,7 +110,7 @@ select:focus-visible {
   border-radius: 8px;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   cursor: pointer;
 }
@@ -120,7 +120,7 @@ select:focus-visible {
 }
 
 .login-error {
-  color: var(--overdue);
+  color: var(--overdue-text);
   font-size: 14px;
 }
 
@@ -132,7 +132,7 @@ select:focus-visible {
 }
 
 .login-tagline {
-  opacity: 0.65;
+  opacity: 0.8;
   font-size: 14px;
 }
 
@@ -141,7 +141,7 @@ select:focus-visible {
   margin: 14px auto 0;
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
@@ -235,7 +235,7 @@ select:focus-visible {
 }
 
 .task-board-nav-item-active {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -377,7 +377,7 @@ select:focus-visible {
 
 .pull-to-refresh-content.pull-to-refresh-ready {
   opacity: 1;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .pull-to-refresh-spinner {
@@ -454,7 +454,7 @@ select:focus-visible {
 .working-badge {
   font-size: 13px;
   color: var(--text);
-  opacity: 0.6;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
@@ -509,13 +509,13 @@ select:focus-visible {
 /* INTENTIONALLY RETAINED shared semantic/status primitives — used across
    many unrelated components; one centralized rule is the better abstraction. */
 .error {
-  color: var(--overdue);
+  color: var(--overdue-text);
 }
 
 .empty,
 .loading {
   color: var(--text);
-  opacity: 0.7;
+  opacity: 0.8;
   padding: 24px 0;
   text-align: center;
 }
@@ -524,12 +524,12 @@ select:focus-visible {
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  opacity: 0.6;
+  opacity: 0.8;
   margin: 0 0 8px;
 }
 
 .task-section-heading-overdue {
-  color: var(--overdue);
+  color: var(--overdue-text);
   opacity: 1;
 }
 
@@ -626,7 +626,7 @@ select:focus-visible {
   padding-top: 13px;
   text-align: right;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.8;
   white-space: nowrap;
   /* Column now, not a single line — a task with a real duration shows an
      end time below the start time (see .timeline-time-end), matching
@@ -737,7 +737,7 @@ select:focus-visible {
 .day-timeline-task-end-label {
   margin-top: 2px;
   font-size: 0.9em;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .day-timeline-hour-label {
@@ -747,7 +747,7 @@ select:focus-visible {
   text-align: right;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  opacity: 0.6;
+  opacity: 0.8;
   white-space: nowrap;
   transform: translateY(-6px);
 }
@@ -826,7 +826,7 @@ select:focus-visible {
 .day-timeline-gap-label {
   flex: none;
   font-size: 11px;
-  opacity: 0.55;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
@@ -880,7 +880,7 @@ select:focus-visible {
   justify-content: center;
   font-size: 11px;
   font-weight: 600;
-  color: #e0a83e;
+  color: var(--notice-text);
 }
 
 .day-timeline-block .task-done-checkbox {
@@ -970,7 +970,7 @@ select:focus-visible {
   align-items: flex-end;
   gap: 1px;
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 /* Scoped to just the time-range text, not the whole column — the range
@@ -984,7 +984,12 @@ select:focus-visible {
 
 .day-timeline-block-date {
   font-size: 10px;
-  opacity: 0.8;
+}
+
+/* The time column is already dimmed as a whole; dimming its date and zone
+   badge again compounded to ~0.64 opacity. */
+.day-timeline-block-time .task-zone-badge {
+  opacity: 1;
 }
 
 .day-timeline-block-time-row {
@@ -1043,7 +1048,7 @@ select:focus-visible {
   gap: 6px;
   flex-wrap: wrap;
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
@@ -1052,8 +1057,12 @@ select:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(224, 168, 62, 0.4);
 }
 
-.day-timeline-block-done {
-  opacity: 0.55;
+/* Dims only the title (which also strikes through), not the whole block:
+   dimming the block as a whole multiplied with every already-muted child
+   (time, date, zone badge, meta) and pushed the 10-11px text down to
+   ~2.4-3:1. Done is still obvious from the strikethrough and checkbox. */
+.day-timeline-block-done .day-timeline-block-title {
+  opacity: 0.75;
 }
 
 /* A task whose real duration is compressed into the agenda's fixed card
@@ -1136,7 +1145,7 @@ select:focus-visible {
    badge/checkbox abstractions remain intentionally CSS. */
 .task-row-done .task-title {
   text-decoration: line-through;
-  opacity: 0.55;
+  opacity: 0.75;
 }
 
 .task-row-overlapping {
@@ -1145,7 +1154,7 @@ select:focus-visible {
 
 .task-overlap-badge {
   flex: none;
-  color: #e0a83e;
+  color: var(--notice-text);
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -1189,18 +1198,18 @@ select:focus-visible {
 
 .task-checklist-badge {
   font-size: 12px;
-  opacity: 0.75;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
 .task-due {
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
 .task-due-overdue {
-  color: var(--overdue);
+  color: var(--overdue-text);
   opacity: 1;
   font-weight: 600;
 }
@@ -1217,13 +1226,13 @@ select:focus-visible {
   border-radius: 4px;
   border: 1px solid var(--border);
   color: var(--text);
-  opacity: 0.7;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
 .task-completed-at {
   font-size: 11px;
-  opacity: 0.5;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
@@ -1275,7 +1284,7 @@ select:focus-visible {
 .date-strip-weekday {
   font-size: 11px;
   text-transform: uppercase;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .date-strip-number {
@@ -1296,7 +1305,7 @@ select:focus-visible {
 
 .date-strip-day-selected .date-strip-number {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-color: transparent;
 }
 
@@ -1332,7 +1341,7 @@ select:focus-visible {
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  opacity: 0.55;
+  opacity: 0.8;
   padding: 8px 0;
   background: var(--pill-bg);
 }
@@ -1428,13 +1437,13 @@ select:focus-visible {
 .month-view-task-time {
   flex: none;
   font-size: 10px;
-  opacity: 0.6;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
 .month-view-day-more {
   font-size: 11px;
-  opacity: 0.55;
+  opacity: 0.8;
   padding: 0 5px;
 }
 
@@ -1445,7 +1454,7 @@ select:focus-visible {
   align-self: flex-start;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   padding: 1px 5px;
   border-radius: 999px;
   background: var(--pill-bg);
@@ -1474,7 +1483,7 @@ select:focus-visible {
 }
 
 .task-notes-empty {
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .task-notes-text {
@@ -1483,7 +1492,7 @@ select:focus-visible {
 }
 
 .task-meta {
-  opacity: 0.6;
+  opacity: 0.8;
   font-size: 13px;
 }
 
@@ -1510,7 +1519,6 @@ select:focus-visible {
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
-  opacity: 0.85;
 }
 
 /* Plain <label>Text<input/></label> pairs inside a .submission-modal form
@@ -1522,7 +1530,6 @@ select:focus-visible {
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
-  opacity: 0.85;
 }
 
 .submission-field-label {
@@ -1632,7 +1639,7 @@ select:focus-visible {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.8;
   margin: -4px 0 0;
 }
 
@@ -1705,13 +1712,13 @@ select:focus-visible {
   flex-direction: column;
   gap: 1px;
   padding-left: 80px;
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 .bulk-add-preview-date {
   flex: none;
   width: 72px;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .bulk-add-preview-title {
@@ -1726,16 +1733,16 @@ select:focus-visible {
 
 .bulk-add-preview-time {
   flex: none;
-  opacity: 0.7;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
 .bulk-add-error-label {
-  color: var(--overdue);
+  color: var(--overdue-text);
 }
 
 .bulk-add-error-list li {
-  color: var(--overdue);
+  color: var(--overdue-text);
   word-break: break-word;
 }
 
@@ -1824,7 +1831,7 @@ select:focus-visible {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 .bulk-edit-fields {
@@ -1977,7 +1984,7 @@ select:focus-visible {
 
 .hours-minutes-row span {
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .task-submission-note-text {
@@ -2027,7 +2034,7 @@ select:focus-visible {
 
 .eod-report-month-count {
   font-weight: 400;
-  opacity: 0.6;
+  opacity: 0.8;
   font-size: 13px;
 }
 
@@ -2050,7 +2057,7 @@ select:focus-visible {
 
 .eod-report-meta {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.8;
   margin-bottom: 4px;
 }
 
@@ -2059,7 +2066,7 @@ select:focus-visible {
   margin: 0 0 4px;
   padding-left: 20px;
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.8;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2158,7 +2165,7 @@ a.task-submission-file-link:hover {
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--card-bg);
-  color: var(--overdue);
+  color: var(--overdue-text);
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
@@ -2287,7 +2294,7 @@ a.task-submission-file-link:hover {
    than standing alone as its own bordered button. */
 .period-tab-active {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent-h);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -2314,7 +2321,7 @@ a.task-submission-file-link:hover {
 .settings-menu-account {
   margin-top: -6px;
   font-size: 13px;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .settings-menu-items {
@@ -2361,7 +2368,7 @@ a.task-submission-file-link:hover {
 .settings-menu-item-caption {
   font-size: 12px;
   font-weight: 400;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .settings-menu-item-disabled {
@@ -2382,7 +2389,7 @@ a.task-submission-file-link:hover {
 }
 
 .settings-menu-item-danger {
-  color: var(--overdue);
+  color: var(--overdue-text);
 }
 
 /* No max-height/overflow of its own — .submission-modal is already the
@@ -2437,7 +2444,7 @@ a.task-submission-file-link:hover {
    nav caret) rather than introducing a new meaning for it here. */
 .how-to-guide-tip {
   list-style: '💡 ';
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .submission-actions {
@@ -2465,7 +2472,7 @@ a.task-submission-file-link:hover {
 .submission-actions button.submission-save {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   box-shadow: var(--shadow-resting);
 }
@@ -2511,7 +2518,7 @@ a.task-submission-file-link:hover {
 }
 
 .task-delete {
-  color: var(--overdue);
+  color: var(--overdue-text);
 }
 
 .task-row-editing {
@@ -2593,7 +2600,7 @@ a.task-submission-file-link:hover {
   border-radius: 50%;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 34px;
   font-weight: 500;
   line-height: 1;
@@ -2868,7 +2875,6 @@ a.task-submission-file-link:hover {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  opacity: 0.75;
   flex: 1 1 100px;
 }
 
@@ -2938,7 +2944,6 @@ a.task-submission-file-link:hover {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  opacity: 0.75;
 }
 
 .datetime-picker-grid .datetime-time-field,
@@ -3016,7 +3021,6 @@ a.task-submission-file-link:hover {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  opacity: 0.75;
 }
 
 label.new-task-checkbox-label {
@@ -3084,7 +3088,7 @@ label.new-task-checkbox-label {
 
 .scroll-select-option-selected {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .new-task-actions {
@@ -3246,12 +3250,12 @@ label.new-task-checkbox-label {
 
 .checklist-view-done {
   text-decoration: line-through;
-  opacity: 0.55;
+  opacity: 0.75;
 }
 
 .checklist-view-blocked {
   text-decoration: line-through;
-  color: var(--overdue);
+  color: var(--overdue-text);
   opacity: 0.8;
 }
 
@@ -3267,7 +3271,7 @@ label.new-task-checkbox-label {
 .new-task-actions button[type='submit'] {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -3352,7 +3356,7 @@ label.new-task-checkbox-label {
 
 .month-nav-today-button:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .month-nav-today-button:active {
@@ -3395,7 +3399,7 @@ label.new-task-checkbox-label {
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  opacity: 0.55;
+  opacity: 0.8;
   padding-bottom: 4px;
 }
 
@@ -3425,7 +3429,7 @@ label.new-task-checkbox-label {
 
 .date-picker-day-selected {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* INTENTIONALLY RETAINED cross-component Rentals toolbar/overview contract.
@@ -3495,7 +3499,7 @@ label.new-task-checkbox-label {
 .rental-unit-tab-active {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* UNUSED — see .rental-unit-tabs above.
@@ -3568,7 +3572,7 @@ label.new-task-checkbox-label {
 .rental-add-booking-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -3618,7 +3622,7 @@ label.new-task-checkbox-label {
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  opacity: 0.55;
+  opacity: 0.8;
   padding-bottom: 4px;
 }
 
@@ -3947,7 +3951,7 @@ label.new-task-checkbox-label {
 .rental-negotiating-toggle-on {
   border-color: #e0a83e;
   background: #e0a83e;
-  color: #fff;
+  color: var(--on-accent);
   padding: 0 10px;
   opacity: 1;
 }
@@ -3961,12 +3965,12 @@ label.new-task-checkbox-label {
 }
 
 .rental-overview-price {
-  opacity: 0.6;
+  opacity: 0.8;
   font-size: 12px;
 }
 
 .rental-overview-status {
-  opacity: 0.75;
+  opacity: 0.8;
   font-size: 13px;
 }
 
@@ -4053,7 +4057,7 @@ label.new-task-checkbox-label {
 }
 
 .rental-overview-status-vacant {
-  opacity: 0.5;
+  opacity: 0.8;
 }
 
 /* UNUSED as of the RentalFinancials.jsx Tailwind conversion — its root
@@ -4103,7 +4107,7 @@ label.new-task-checkbox-label {
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -4174,7 +4178,7 @@ label.new-task-checkbox-label {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 600;
 }
@@ -4188,19 +4192,19 @@ label.new-task-checkbox-label {
 
 /* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-dates {
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-source {
   font-size: 13px;
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 /* UNUSED — see .rental-pending-badge above. */
 .rental-booking-detail-charge {
   font-size: 13px;
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 /* UNUSED — see .rental-pending-badge above. */
@@ -4233,7 +4237,7 @@ label.new-task-checkbox-label {
    text-[13px], confirmed via computed-style diff. */
 .rental-financials-subheading {
   font-size: 13px;
-  opacity: 0.6;
+  opacity: 0.8;
   margin: 4px 0 -4px;
 }
 
@@ -4266,7 +4270,7 @@ label.new-task-checkbox-label {
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
-  color: var(--accent);
+  color: var(--accent-text);
   opacity: 1;
 }
 
@@ -4314,7 +4318,7 @@ label.new-task-checkbox-label {
   gap: 8px;
   padding-left: 15px;
   font-size: 12px;
-  opacity: 0.55;
+  opacity: 0.8;
 }
 
 .rental-mark-paid {
@@ -4378,16 +4382,16 @@ label.new-task-checkbox-label {
 }
 
 .rental-unit-badge-vacant {
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 .rental-unit-badge-nocharge {
-  opacity: 0.6;
+  opacity: 0.8;
   font-style: italic;
 }
 
 .rental-unit-badge-request {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .rental-fill-next-badge {
@@ -4395,7 +4399,7 @@ label.new-task-checkbox-label {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 600;
 }
@@ -4421,7 +4425,7 @@ label.new-task-checkbox-label {
   margin-top: 8px;
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
@@ -4492,7 +4496,7 @@ label.new-task-checkbox-label {
 
 .vault-folder-count {
   font-weight: 400;
-  opacity: 0.6;
+  opacity: 0.8;
   font-size: 13px;
 }
 
@@ -4502,7 +4506,7 @@ label.new-task-checkbox-label {
   border: none;
   padding: 4px 6px;
   color: var(--text);
-  opacity: 0.6;
+  opacity: 0.8;
   font-size: 14px;
   cursor: pointer;
   transition: opacity var(--dur-base) var(--ease-tactile);
@@ -4579,7 +4583,7 @@ label.new-task-checkbox-label {
 
 .vault-entry-username {
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 /* UNUSED as of the VaultEntryDetail.jsx Tailwind conversion — through
@@ -4595,7 +4599,7 @@ label.new-task-checkbox-label {
 .vault-field-label {
   flex: none;
   width: 70px;
-  opacity: 0.6;
+  opacity: 0.8;
   font-size: 13px;
 }
 
@@ -4684,13 +4688,13 @@ label.new-task-checkbox-label {
 
 .clarification-waiting {
   font-size: 13px;
-  opacity: 0.6;
+  opacity: 0.8;
   font-style: italic;
 }
 
 .clarification-finished {
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .clarification-resolve-check {
@@ -4754,7 +4758,7 @@ label.new-task-checkbox-label {
   border-radius: 6px;
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -4775,7 +4779,7 @@ label.new-task-checkbox-label {
 /* UNUSED as of the CorkBoardView.jsx Tailwind conversion — this complete
    feature family through the comment-form disabled rule migrated together. */
 .cork-board-subtitle {
-  opacity: 0.65;
+  opacity: 0.8;
   font-size: 13px;
 }
 
@@ -4819,7 +4823,7 @@ label.new-task-checkbox-label {
   border-radius: 8px;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   cursor: pointer;
 }
@@ -4860,7 +4864,7 @@ label.new-task-checkbox-label {
   flex-wrap: wrap;
   gap: 6px;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 .cork-board-badge {
@@ -4872,7 +4876,7 @@ label.new-task-checkbox-label {
 
 .cork-board-badge-shared {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .cork-board-item-actions {
@@ -4895,7 +4899,7 @@ label.new-task-checkbox-label {
 .cork-board-item-actions button.cork-board-focus-today,
 .cork-board-item-actions button.cork-board-save-edit {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -4933,7 +4937,7 @@ label.new-task-checkbox-label {
 .cork-board-comment-author {
   flex: none;
   font-weight: 600;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 .cork-board-comment-body {
@@ -4977,7 +4981,7 @@ label.new-task-checkbox-label {
 /* UNUSED as of the InboxView.jsx Tailwind conversion — this complete family
    through the footer checkbox rule below migrated as one feature slice. */
 .inbox-section-heading-question {
-  color: var(--overdue);
+  color: var(--overdue-text);
   opacity: 1;
 }
 
@@ -4996,7 +5000,7 @@ label.new-task-checkbox-label {
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent-h);
+  color: var(--accent-text);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -5042,11 +5046,11 @@ label.new-task-checkbox-label {
 }
 
 .inbox-item-answer.inbox-item-read {
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 .inbox-item-finished {
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 /* Same green as .working-badge-online — "done" reads as a positive,
@@ -5064,14 +5068,14 @@ label.new-task-checkbox-label {
 }
 
 .inbox-item-text-muted {
-  opacity: 0.6;
+  opacity: 0.8;
   font-style: italic;
 }
 
 .inbox-item-attachment-count {
   flex: none;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.8;
   white-space: nowrap;
 }
 
@@ -5090,7 +5094,7 @@ label.new-task-checkbox-label {
 .inbox-item-when {
   flex: none;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.8;
   white-space: nowrap;
 }
 

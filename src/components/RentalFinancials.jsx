@@ -220,11 +220,11 @@ export default function RentalFinancials({
         <>
           <button
             type="button"
-            className="mt-1 -mb-1 flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent px-1.5 py-1 -ml-1.5 opacity-60 [font-family:inherit] [font-size:inherit] [line-height:inherit] hover:bg-pill-bg"
+            className="mt-1 -mb-1 flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent px-1.5 py-1 -ml-1.5 opacity-80 [font-family:inherit] [font-size:inherit] [line-height:inherit] hover:bg-pill-bg"
             onClick={() => setSourceOpen((v) => !v)}
           >
             Bookings by source
-            <span className="text-[18px] font-bold leading-none text-accent opacity-100">
+            <span className="text-[18px] font-bold leading-none text-accent-text opacity-100">
               {sourceOpen ? '▾' : '▸'}
             </span>
           </button>
@@ -242,11 +242,11 @@ export default function RentalFinancials({
 
       <button
         type="button"
-        className="mt-1 -mb-1 flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent px-1.5 py-1 -ml-1.5 opacity-60 [font-family:inherit] [font-size:inherit] [line-height:inherit] hover:bg-pill-bg"
+        className="mt-1 -mb-1 flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent px-1.5 py-1 -ml-1.5 opacity-80 [font-family:inherit] [font-size:inherit] [line-height:inherit] hover:bg-pill-bg"
         onClick={() => setOverheadOpen((v) => !v)}
       >
         Overhead breakdown
-        <span className="text-[18px] font-bold leading-none text-accent opacity-100">
+        <span className="text-[18px] font-bold leading-none text-accent-text opacity-100">
           {overheadOpen ? '▾' : '▸'}
         </span>
       </button>
@@ -283,7 +283,7 @@ export default function RentalFinancials({
         />
       )}
 
-      <h3 className="mt-1 -mb-1 text-[13px] opacity-60">Units</h3>
+      <h3 className="mt-1 -mb-1 text-[13px] opacity-80">Units</h3>
       {billed.map((p) => {
         const { count, bookingIds } = chargesByProperty.get(p.id)
         const tenantCount = bookingIds.size
@@ -299,7 +299,7 @@ export default function RentalFinancials({
                 {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(Number(p.monthly_rent) * count)}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
+            <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-80">
               {unitSubLine(nextAvailability(allBookings, p.id))}
             </div>
           </div>
@@ -318,13 +318,13 @@ export default function RentalFinancials({
                   — the tenant name on the line below already confirms
                   it's occupied, so spelling that out twice just made this
                   the longest badge in the list for no extra information. */}
-              <span className="text-[13px] italic opacity-60">
+              <span className="text-[13px] italic opacity-80">
                 {upcoming
                   ? `Occupied — ${money(p.monthly_rent)} due ${formatDateStr(upcoming.date)}`
                   : 'Occupied — no charge this month'}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
+            <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-80">
               <span>{unitSubLine(nextAvailability(allBookings, p.id))}</span>
               {/* Advance/early payment — the normal date-driven revenue
                   calc otherwise never counts this charge until its due
@@ -352,9 +352,9 @@ export default function RentalFinancials({
               <span className="rental-unit-dot" style={{ background: p.color }} />
               {p.unit_name}
             </span>
-            <span className="text-[13px] text-accent">Pending — {money(p.monthly_rent)} if accepted</span>
+            <span className="text-[13px] text-accent-text">Pending — {money(p.monthly_rent)} if accepted</span>
           </div>
-          <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
+          <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-80">
             {unitSubLine(nextAvailability(allBookings, p.id))}
           </div>
         </div>
@@ -369,13 +369,13 @@ export default function RentalFinancials({
             <span className="text-[13px] opacity-75">
               Vacant — {money(p.monthly_rent)}
               {i === 0 && (
-                <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
+                <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-on-accent">
                   Fill next
                 </span>
               )}
             </span>
           </div>
-          <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-55">
+          <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-80">
             {unitSubLine(nextAvailability(allBookings, p.id))}
           </div>
         </div>

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import ThemeToggle from './ThemeToggle'
 
 const loginFormClasses =
-  'flex flex-col gap-2.5 [&_button]:cursor-pointer [&_button]:rounded-[8px] [&_button]:border-0 [&_button]:bg-accent [&_button]:px-3 [&_button]:py-2.5 [&_button]:font-semibold [&_button]:text-white [&_button:hover]:bg-accent-h [&_input]:rounded-sm [&_input]:border [&_input]:border-border [&_input]:bg-card-bg [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-[15px] [&_input]:text-text-h'
+  'flex flex-col gap-2.5 [&_button]:cursor-pointer [&_button]:rounded-[8px] [&_button]:border-0 [&_button]:bg-accent [&_button]:px-3 [&_button]:py-2.5 [&_button]:font-semibold [&_button]:text-on-accent [&_button:hover]:bg-accent-h [&_input]:rounded-sm [&_input]:border [&_input]:border-border [&_input]:bg-card-bg [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-[15px] [&_input]:text-text-h'
 
 // Every real account (Ada, Aaron, and any staff account) logs in with a
 // short username ("aaron", not an email) rather than a real address —
@@ -63,7 +63,7 @@ export default function Login({ theme, toggleTheme }) {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
       <h1 className="mb-2 text-[28px]">Tandem</h1>
-      <p className="mb-5 text-sm opacity-65">A web app built for Ada's team</p>
+      <p className="mb-5 text-sm opacity-80">A web app built for Ada's team</p>
 
       <form onSubmit={handlePasswordSubmit} className={loginFormClasses}>
         <label className="visually-hidden" htmlFor="login-username">
@@ -96,7 +96,7 @@ export default function Login({ theme, toggleTheme }) {
         <button type="submit" disabled={status === 'sending'}>
           {status === 'sending' ? 'Signing in…' : 'Sign in'}
         </button>
-        {status === 'error' && <p className="mb-5 text-sm text-overdue">{error}</p>}
+        {status === 'error' && <p className="mb-5 text-sm text-overdue-text">{error}</p>}
       </form>
     </div>
   )

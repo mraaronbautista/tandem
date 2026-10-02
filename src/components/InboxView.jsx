@@ -4,6 +4,7 @@ import { getInboxItems, getCompletedSubmissions, getNudgedTasks } from '../lib/t
 import { assigneeBadge, memberColor } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { useConfirm } from '../lib/confirmContext'
+import { readableTextColor } from '../lib/colorContrast'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
 const inboxItemBaseClasses =
@@ -11,7 +12,7 @@ const inboxItemBaseClasses =
 const inboxItemKindClasses = {
   question: 'border-l-overdue',
   answer: 'border-l-accent',
-  finished: 'opacity-70',
+  finished: 'opacity-80',
   submission: 'border-l-online',
   nudge: 'border-l-notice',
 }
@@ -52,16 +53,16 @@ function InboxItem({ item, kind, task, memberName, members, unread, onSelectTask
   const color = memberColor(members, item.otherPersonId)
   return (
     <li
-      className={`${inboxItemBaseClasses} ${inboxItemKindClasses[kind]} ${kind === 'answer' && !unread ? 'opacity-65' : ''}`}
+      className={`${inboxItemBaseClasses} ${inboxItemKindClasses[kind]} ${kind === 'answer' && !unread ? 'opacity-80' : ''}`}
       onClick={() => task && onSelectTask(task)}
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-semibold text-text-h">{item.taskTitle}</span>
-        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(item.at)}</span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-80">{formatWhen(item.at)}</span>
       </div>
       <p className="my-0.5 mb-2 overflow-hidden text-ellipsis [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">{item.text}</p>
       <div className="flex items-center justify-between gap-2">
-        <span className="task-who-badge" style={{ background: color }}>
+        <span className="task-who-badge" style={{ background: color, color: readableTextColor(color) }}>
           {name} {KIND_LABEL[kind]}
         </span>
         {onResolve && (
@@ -95,19 +96,19 @@ function SubmissionItem({ task, members, onSelectTask }) {
     <li className={`${inboxItemBaseClasses} ${inboxItemKindClasses.submission}`} onClick={() => onSelectTask(task)}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-semibold text-text-h">{task.title}</span>
-        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(task.completed_at)}</span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-80">{formatWhen(task.completed_at)}</span>
       </div>
       {task.completion_note ? (
         <p className="my-0.5 mb-2 overflow-hidden text-ellipsis [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">{task.completion_note}</p>
       ) : (
-        <p className="my-0.5 mb-2 overflow-hidden text-ellipsis italic opacity-60 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">No note — attachments only.</p>
+        <p className="my-0.5 mb-2 overflow-hidden text-ellipsis italic opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">No note — attachments only.</p>
       )}
       <div className="flex items-center justify-between gap-2">
-        <span className="task-who-badge" style={{ background: badge.color }}>
+        <span className="task-who-badge" style={{ background: badge.color, color: readableTextColor(badge.color) }}>
           {badge.label}
         </span>
         {attachmentCount > 0 && (
-          <span className="flex flex-none items-center gap-1 text-xs whitespace-nowrap opacity-70">
+          <span className="flex flex-none items-center gap-1 text-xs whitespace-nowrap opacity-80">
             <Paperclip size={12} /> {attachmentCount} file{attachmentCount > 1 ? 's' : ''}
           </span>
         )}
@@ -127,13 +128,13 @@ function NudgeItem({ task, members, onSelectTask }) {
     <li className={`${inboxItemBaseClasses} ${inboxItemKindClasses.nudge}`} onClick={() => onSelectTask(task)}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-semibold text-text-h">{task.title}</span>
-        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(task.overdue_nudge_sent_at)}</span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-80">{formatWhen(task.overdue_nudge_sent_at)}</span>
       </div>
-      <p className="my-0.5 mb-2 flex items-center gap-1 overflow-hidden text-ellipsis italic opacity-60 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">
+      <p className="my-0.5 mb-2 flex items-center gap-1 overflow-hidden text-ellipsis italic opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]">
         <Bell size={13} /> Still on your plate?
       </p>
       <div className="flex items-center justify-between gap-2">
-        <span className="task-who-badge" style={{ background: badge.color }}>
+        <span className="task-who-badge" style={{ background: badge.color, color: readableTextColor(badge.color) }}>
           {badge.label}
         </span>
       </div>
@@ -152,9 +153,9 @@ function PersonNudgeItem({ nudge, memberName }) {
         <span className="font-semibold text-text-h">
           {memberName(nudge.sender_id)} nudged {memberName(nudge.target_id)}
         </span>
-        <span className="flex-none text-xs whitespace-nowrap opacity-60">{formatWhen(nudge.created_at)}</span>
+        <span className="flex-none text-xs whitespace-nowrap opacity-80">{formatWhen(nudge.created_at)}</span>
       </div>
-      <p className="my-0.5 flex items-center gap-1 italic opacity-60">
+      <p className="my-0.5 flex items-center gap-1 italic opacity-80">
         <Hand size={13} /> Something urgent — check the board.
       </p>
     </li>
@@ -317,8 +318,8 @@ export default function InboxView({
       {showQuestions && (
         <section>
           <div className="flex items-center justify-between gap-2">
-            <h3 className="task-section-heading m-0 text-overdue opacity-100">New</h3>
-            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h" onClick={handleMarkAllRead}>
+            <h3 className="task-section-heading m-0 text-overdue-text opacity-100">New</h3>
+            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-text" onClick={handleMarkAllRead}>
               Mark all as read
             </button>
           </div>

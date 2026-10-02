@@ -112,7 +112,7 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
                   Generate
                 </button>
               </div>
-              <span className="mt-1 block text-xs opacity-65">
+              <span className="mt-1 block text-xs opacity-80">
                 Share this with them directly — there's no email to send it to. At least 8 characters.
               </span>
             </label>
@@ -168,7 +168,7 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
         )}
 
         {!isCreate && (
-          <p className="text-xs opacity-65">Rate changes apply only to future clock-ins. Past shifts keep their original rate.</p>
+          <p className="text-xs opacity-80">Rate changes apply only to future clock-ins. Past shifts keep their original rate.</p>
         )}
 
         <label>
@@ -180,7 +180,7 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
             onChange={(event) => setJobDescription(event.target.value)}
             className={`${FIELD_CLASS} [resize:vertical]`}
           />
-          <span className="mt-1 block text-xs opacity-65">
+          <span className="mt-1 block text-xs opacity-80">
             Shown to them on their clock-in screen. You can format it: ## for a heading, * for bullets, **bold**.
           </span>
         </label>

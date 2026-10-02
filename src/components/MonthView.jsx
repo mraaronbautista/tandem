@@ -120,7 +120,7 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
                             already accounts for every sibling taking its
                             own width regardless of how many there are. */}
                         {task.recurrence && task.recurrence !== 'none' && (
-                          <Repeat2 size={10} className="flex-none opacity-70" aria-label="Recurring task" />
+                          <Repeat2 size={10} className="flex-none opacity-80" aria-label="Recurring task" />
                         )}
                         <span className="month-view-task-time">{timeLabel(task, displayTimezone)}</span>
                       </span>

@@ -1,5 +1,6 @@
 import { PRIORITY_COLOR } from '../lib/priorityColors'
 import { assigneeBadge } from '../lib/whoLabels'
+import { readableTextColor } from '../lib/colorContrast'
 
 // .allday-row/-chip/-chip-body/-chip-dot/-chip-title (App.css) had exactly
 // one consumer — this component. .task-done-checkbox and .task-who-badge
@@ -26,7 +27,7 @@ export default function AllDayRow({ tasks, members = [], onSelect, onStatusChang
               onClick={() => onSelect(task)}
             >
               <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIORITY_COLOR[task.priority] }} />
-              <span className="task-who-badge" style={{ background: badge.color }}>
+              <span className="task-who-badge" style={{ background: badge.color, color: readableTextColor(badge.color) }}>
                 {badge.label}
               </span>
               <span className="truncate">{task.title}</span>

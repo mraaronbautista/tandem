@@ -49,7 +49,7 @@ export default function ManageMemberAccessView({ members, me, onClose, onMembers
                   aria-hidden="true"
                 />
                 <span className="truncate">{m.display_name}</span>
-                {m.is_admin && <span className="flex-none text-xs opacity-60">Admin</span>}
+                {m.is_admin && <span className="flex-none text-xs opacity-80">Admin</span>}
               </span>
               <span className="flex flex-none gap-2">
                 <button
@@ -69,7 +69,7 @@ export default function ManageMemberAccessView({ members, me, onClose, onMembers
               </span>
             </div>
           ))}
-          {others.length === 0 && <p className="text-sm opacity-65">No other members yet.</p>}
+          {others.length === 0 && <p className="text-sm opacity-80">No other members yet.</p>}
         </div>
 
         <SubmissionActions>

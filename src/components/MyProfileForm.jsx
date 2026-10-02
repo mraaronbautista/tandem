@@ -112,7 +112,7 @@ export default function MyProfileForm({ me, onClose, onSaved }) {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   className={FIELD_CLASS}
                 />
-                <span className="mt-1 block text-xs opacity-65">At least 8 characters.</span>
+                <span className="mt-1 block text-xs opacity-80">At least 8 characters.</span>
               </label>
             )}
           </>

@@ -22,6 +22,7 @@ import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
 import { useConfirm } from '../lib/confirmContext'
+import { readableTextColor } from '../lib/colorContrast'
 
 const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 
@@ -463,7 +464,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
         {header}
         <div className="bulk-add-header-row">
           <h2>Bulk {view === 'add' ? 'add' : 'edit'} tasks</h2>
-          <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h" onClick={() => setExportOpen(true)}>
+          <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-text" onClick={() => setExportOpen(true)}>
             Export tasks
           </button>
         </div>
@@ -576,7 +577,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                         Remove
                       </button>
                     </div>
-                    {!row.date && <p className="m-0 text-xs opacity-70">No date — this task will have no due date.</p>}
+                    {!row.date && <p className="m-0 text-xs opacity-80">No date — this task will have no due date.</p>}
                   </div>
                 ))}
                 <button
@@ -705,7 +706,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                   </span>
                   <button
                     type="button"
-                    className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-h"
+                    className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-accent-text"
                     onClick={toggleSelectAll}
                     disabled={visibleEditableTasks.length === 0}
                   >
@@ -727,7 +728,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                           <span className="bulk-edit-task-info">
                             <span className="bulk-edit-task-title">{task.title}</span>
                             <span className="bulk-edit-task-meta">
-                              <span className="task-who-badge" style={{ background: badge.color }}>
+                              <span className="task-who-badge" style={{ background: badge.color, color: readableTextColor(badge.color) }}>
                                 {badge.label}
                               </span>
                               <span>{formatTaskDue(task)}</span>

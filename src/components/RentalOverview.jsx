@@ -53,7 +53,7 @@ export default function RentalOverview({
               <span className="rental-overview-unit-name font-semibold text-text-h" title={p.unit_name}>
                 {p.unit_name}
               </span>
-              <span className="rental-overview-rate text-xs opacity-60">
+              <span className="rental-overview-rate text-xs opacity-80">
                 ${Number(p.monthly_rent).toLocaleString()}/mo
               </span>
             </span>
@@ -67,7 +67,7 @@ export default function RentalOverview({
                 {status.next.guest}
               </span>
             ) : (
-              <span className="rental-overview-status-line text-[13px] opacity-50">Vacant</span>
+              <span className="rental-overview-status-line text-[13px] opacity-80">Vacant</span>
             )}
           </>
         )
@@ -94,7 +94,7 @@ export default function RentalOverview({
         // one element).
         const negotiatingToggleClasses = `absolute right-3 bottom-2.5 flex h-6 min-w-6 cursor-pointer items-center justify-center gap-1 rounded-full border py-0 text-[11px] font-semibold leading-none whitespace-nowrap transition-all duration-[120ms] ease-tactile active:scale-90 ${
           p.in_negotiation
-            ? 'border-[#e0a83e] bg-[#e0a83e] px-2.5 text-white opacity-100'
+            ? 'border-[#e0a83e] bg-[#e0a83e] px-2.5 text-on-accent opacity-100'
             : 'border-border bg-card-bg px-[5px] text-text-h opacity-45'
         }`
 
@@ -160,7 +160,7 @@ export default function RentalOverview({
             {onEditUnit && (
               <button
                 type="button"
-                className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-accent"
+                className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-accent-text"
                 onClick={() => onEditUnit(p)}
               >
                 Edit

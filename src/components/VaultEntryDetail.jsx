@@ -116,7 +116,7 @@ export default function VaultEntryDetail({
 
         {isPrivateVault && editingShare ? (
           <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] opacity-60">Shared with</span>
+            <span className="text-[13px] opacity-80">Shared with</span>
             <AssigneePicker members={otherVaultMembers} value={shareDraft} onChange={setShareDraft} />
             <div className="flex gap-2">
               <button
@@ -135,7 +135,7 @@ export default function VaultEntryDetail({
         ) : (
           isPrivateVault && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="w-[70px] flex-none text-[13px] opacity-60">Shared</span>
+              <span className="w-[70px] flex-none text-[13px] opacity-80">Shared</span>
               <span className="flex-1 text-text-h">
                 {entry.sharedWith?.length ? entry.sharedWith.map((id) => memberName(id)).join(', ') : 'Only you'}
               </span>
@@ -150,7 +150,7 @@ export default function VaultEntryDetail({
 
         {onMoveFolder && canManage && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="w-[70px] flex-none text-[13px] opacity-60">Folder</span>
+            <span className="w-[70px] flex-none text-[13px] opacity-80">Folder</span>
             <select value={entry.folder || ''} onChange={handleFolderChange} disabled={moving}>
               <option value="">General</option>
               {existingFolders.map((name) => (
@@ -164,7 +164,7 @@ export default function VaultEntryDetail({
 
         {entry.username && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="w-[70px] flex-none text-[13px] opacity-60">Username</span>
+            <span className="w-[70px] flex-none text-[13px] opacity-80">Username</span>
             <span className="flex-1 break-all text-text-h">{entry.username}</span>
             <button type="button" className="vault-copy" onClick={() => handleCopy('username', entry.username)}>
               {copiedField === 'username' ? 'Copied' : 'Copy'}
@@ -174,12 +174,12 @@ export default function VaultEntryDetail({
 
         {entry.loginMethod ? (
           <div className="flex items-center gap-2 text-sm">
-            <span className="w-[70px] flex-none text-[13px] opacity-60">Sign in</span>
+            <span className="w-[70px] flex-none text-[13px] opacity-80">Sign in</span>
             <span className="flex-1 break-all text-text-h">via {entry.loginMethod}</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm">
-            <span className="w-[70px] flex-none text-[13px] opacity-60">Password</span>
+            <span className="w-[70px] flex-none text-[13px] opacity-80">Password</span>
             <span className="flex-1 break-all font-mono text-text-h">{revealed ? entry.password : '••••••••••'}</span>
             <button type="button" className="vault-copy" onClick={() => setRevealed((v) => !v)}>
               {revealed ? 'Hide' : 'Reveal'}
@@ -192,7 +192,7 @@ export default function VaultEntryDetail({
 
         {entry.url && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="w-[70px] flex-none text-[13px] opacity-60">URL</span>
+            <span className="w-[70px] flex-none text-[13px] opacity-80">URL</span>
             <a href={entry.url} target="_blank" rel="noreferrer" className="flex-1 break-all text-text-h">
               {entry.url}
             </a>

@@ -45,7 +45,7 @@ const VARIANT = {
   // characteristic, not something to "fix" here).
   secondary: `${BASE} border-border bg-pill-bg active:scale-[0.97]`,
   // Matches .submission-actions button.submission-save.
-  primary: `${BASE} border-accent bg-accent font-semibold text-white shadow-resting hover:-translate-y-px hover:shadow-raised active:translate-y-0 active:scale-[0.98] active:shadow-press`,
+  primary: `${BASE} border-accent bg-accent font-semibold text-on-accent shadow-resting hover:-translate-y-px hover:shadow-raised active:translate-y-0 active:scale-[0.98] active:shadow-press`,
   // Matches .submission-actions button.rental-delete-booking /
   // .submission-delete — CSS-identical for both legacy class names,
   // unified under one variant. No dedicated :active rule existed for

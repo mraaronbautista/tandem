@@ -73,7 +73,7 @@ export default function MemberCredentialsForm({ member, onClose }) {
                 </p>
               </label>
             )}
-            <p className="text-xs opacity-65">Share this with them directly — there's no email to send it to.</p>
+            <p className="text-xs opacity-80">Share this with them directly — there's no email to send it to.</p>
           </>
         ) : (
           <>
@@ -108,7 +108,7 @@ export default function MemberCredentialsForm({ member, onClose }) {
                   Generate
                 </button>
               </div>
-              <span className="mt-1 block text-xs opacity-65">At least 8 characters.</span>
+              <span className="mt-1 block text-xs opacity-80">At least 8 characters.</span>
             </label>
           </>
         )}
