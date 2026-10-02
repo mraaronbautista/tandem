@@ -66,6 +66,7 @@ export default function NewTaskForm({
               header={tabs}
               submitLabel="Save task"
               members={members}
+              collapseAdvanced
               initialValues={{
                 assignee_ids: defaultAssigneeIds,
                 ...(selectedDate ? { due_date: dateStr(selectedDate) } : null),

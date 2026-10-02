@@ -182,6 +182,13 @@ export default function TaskRow({
     }
   }
 
+  // Appends new steps to the end of the existing checklist, in the same
+  // { id, text, done, blocked, blockedReason } shape ChecklistEditor builds.
+  function handleAddChecklistItems(texts) {
+    const added = texts.map((text) => ({ id: crypto.randomUUID(), text, done: false, blocked: false, blockedReason: '' }))
+    onUpdate(task.id, { checklist: [...checklist, ...added] })
+  }
+
   function handleChecklistItemChange(itemId, patch) {
     const updated = checklist.map((item) => (item.id === itemId ? { ...item, ...patch } : item))
     onUpdate(task.id, { checklist: updated })
@@ -480,6 +487,7 @@ export default function TaskRow({
             assigneeIds={task.assignee_ids}
             taskTitle={task.title}
             taskId={task.id}
+            onAddChecklistItems={handleAddChecklistItems}
             extraActions={
               // Icon + visible text on every button, not icon-only with a
               // title tooltip — a tooltip only ever shows on hover, which

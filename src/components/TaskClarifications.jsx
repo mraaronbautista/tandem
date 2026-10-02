@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Paperclip, Check } from 'lucide-react'
+import { Paperclip, Check, ListChecks } from 'lucide-react'
 import { sendClarificationAsked, sendClarificationAnswered } from '../lib/manualNotify'
 import { uploadCompletionAttachment } from '../lib/attachments'
 import AttachmentList from './AttachmentList'
 import AssigneePicker from './AssigneePicker'
+import { extractSteps } from '../lib/steps'
 
 // Its own component so the answer textarea can keep local draft state
 // while typing, same reasoning as ChecklistView's blocked-reason input —
@@ -129,6 +130,7 @@ export default function TaskClarifications({
   taskTitle,
   taskId,
   extraActions,
+  onAddChecklistItems,
 }) {
   const otherMembers = members.filter((m) => m.id !== meId)
   // Defaults to the task's own other assignees — the people it already
@@ -199,6 +201,18 @@ export default function TaskClarifications({
       setAsking(false)
       setNotifyIds(defaultNotifyIds())
     }
+  }
+
+  // Offered only while the draft reads like sequential steps (see
+  // lib/steps.js). Moving them onto the task's checklist clears the draft
+  // so they are not also sent as a comment; an attachment already queued
+  // stays and can still be sent on its own.
+  const draftSteps = onAddChecklistItems ? extractSteps(questionDraft) : null
+
+  function handleTurnIntoChecklist() {
+    if (!draftSteps) return
+    onAddChecklistItems(draftSteps)
+    setQuestionDraft('')
   }
 
   async function handleEntryAnswered(updatedEntry) {
@@ -286,6 +300,21 @@ export default function TaskClarifications({
           onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
         />
         {uploadError && <p className="error">{uploadError}</p>}
+        {draftSteps && (
+          <div role="note" className="flex flex-col gap-1.5 rounded-md bg-pill-bg px-2.5 py-2 text-xs leading-snug">
+            <span>
+              This looks like {draftSteps.length} steps. Add them to this task's checklist so each one can be ticked off?
+            </span>
+            <button
+              type="button"
+              className="flex w-fit cursor-pointer items-center gap-1.5 rounded-[6px] border border-border bg-bg px-2.5 py-1.5 text-xs font-semibold text-text-h [font-family:inherit]"
+              onClick={handleTurnIntoChecklist}
+            >
+              <ListChecks size={14} aria-hidden="true" />
+              Add as checklist
+            </button>
+          </div>
+        )}
         {/* Same visibility condition as the Send button below — only
             worth showing once there's actually a message to send, so an
             idle compose box stays exactly as uncluttered as before this

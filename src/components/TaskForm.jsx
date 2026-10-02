@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { CalendarClock, ChevronRight } from 'lucide-react'
+import { CalendarClock, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso, zoneAbbreviation } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
 import { PRIORITY_SHORT_LABEL } from '../lib/priorityColors'
@@ -224,7 +224,21 @@ function dueSummaryLabel(form) {
   return `${dateLabel} · ${timeLabel}${endLabel ? `–${endLabel}` : ''} · ${zoneLabel}`
 }
 
-export default function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, autoFocus = true, header = null, members = [] }) {
+// collapseAdvanced hides everything beyond what a brand-new task needs
+// (title, who, when) behind one "More options" tap — UI/UX overhaul
+// Phase 2, progressive disclosure for a true first use. Off by default so
+// editing an existing task, where the person already understands the
+// fields, still shows everything open exactly as before.
+export default function TaskForm({
+  initialValues,
+  submitLabel,
+  onSubmit,
+  onCancel,
+  autoFocus = true,
+  header = null,
+  members = [],
+  collapseAdvanced = false,
+}) {
   // Multiple TaskForm instances can be mounted at once (each TaskRow
   // owns its own `editing` state independently), so the title/notes
   // label ids below need to be unique per instance, not a fixed string.
@@ -251,6 +265,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
     }
   })
   const [saving, setSaving] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(!collapseAdvanced)
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
   const [timePickerOpen, setTimePickerOpen] = useState(false)
   // Distinct from "the date field happens to be blank" — that ambiguity
@@ -333,6 +348,19 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
     }
   }
 
+  // What is tucked inside a closed "More options", so a value set there is
+  // never invisible: someone who sets Repeats and folds the section away
+  // still sees that it is set.
+  const moreSummary = [
+    form.priority !== emptyTaskForm.priority && 'priority',
+    form.recurrence !== 'none' && 'repeats',
+    form.source !== 'none' && 'attachment',
+    form.notes.trim() && 'notes',
+    form.checklist.some((item) => item.text.trim()) && 'checklist',
+  ]
+    .filter(Boolean)
+    .join(', ')
+
   return (
     <form className="new-task-form" onSubmit={handleSubmit}>
       {header}
@@ -378,16 +406,18 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           <AssigneePicker members={members} value={form.assignee_ids} onChange={(ids) => set('assignee_ids', ids)} />
         </label>
 
-        <label>
-          Priority
-          <select value={form.priority} onChange={(e) => set('priority', e.target.value)}>
-            {Object.entries(PRIORITY_SHORT_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {moreOpen && (
+          <label>
+            Priority
+            <select value={form.priority} onChange={(e) => set('priority', e.target.value)}>
+              {Object.entries(PRIORITY_SHORT_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="new-task-checkbox-label">
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
@@ -526,6 +556,7 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
           </>
         )}
 
+        {moreOpen && (
         <label className="max-w-[180px]">
           Repeats
           <select
@@ -554,13 +585,30 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
             ))}
           </select>
         </label>
+        )}
       </div>
 
+      {collapseAdvanced && (
+        <button
+          type="button"
+          aria-expanded={moreOpen}
+          onClick={() => setMoreOpen((v) => !v)}
+          className="flex w-fit cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 py-1 text-[13px] font-semibold text-text-h [font-family:inherit]"
+        >
+          {moreOpen ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
+          {moreOpen ? 'Fewer options' : 'More options'}
+          {!moreOpen && moreSummary && <span className="font-normal opacity-65">· {moreSummary}</span>}
+        </button>
+      )}
+
+      {moreOpen && (
+      <>
+      {form.recurrence === 'selected_weekdays' && (
       <fieldset className="m-0 rounded-lg border border-border px-3 py-2">
         <legend className="px-1 text-xs font-medium text-text-muted">This task repeats every</legend>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Repeat on weekdays">
             {WEEKDAY_OPTIONS.map((day) => {
-              const selected = form.recurrence === 'selected_weekdays' && form.recurrence_days.includes(day.value)
+              const selected = form.recurrence_days.includes(day.value)
               return (
                 <button
                   key={day.label}
@@ -570,15 +618,14 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
                   title={day.label}
                   onClick={() => {
                     setForm((current) => {
-                      const activeDays = current.recurrence === 'selected_weekdays' ? current.recurrence_days : []
-                      const nextDays = activeDays.includes(day.value)
-                        ? activeDays.filter((value) => value !== day.value)
-                        : [...activeDays, day.value]
-                      return {
-                        ...current,
-                        recurrence: nextDays.length ? 'selected_weekdays' : 'none',
-                        recurrence_days: nextDays,
-                      }
+                      const nextDays = current.recurrence_days.includes(day.value)
+                        ? current.recurrence_days.filter((value) => value !== day.value)
+                        : [...current.recurrence_days, day.value]
+                      // Stays on "Selected weekdays" even with none ticked —
+                      // flipping back to Never here would make this picker
+                      // vanish under the person's finger. Saving is blocked
+                      // (and explained below) until a day is picked.
+                      return { ...current, recurrence_days: nextDays }
                     })
                   }}
                   className={`h-9 w-9 cursor-pointer rounded-full border text-xs font-semibold transition-colors ${
@@ -592,7 +639,13 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
               )
             })}
         </div>
+        {!form.recurrence_days.length && (
+          <p className="error mt-1.5 mb-0 text-xs" role="alert">
+            Pick at least one day.
+          </p>
+        )}
       </fieldset>
+      )}
 
       <div className="new-task-row">
         <label>
@@ -625,12 +678,14 @@ export default function TaskForm({ initialValues, submitLabel, onSubmit, onCance
       />
 
       <ChecklistEditor items={form.checklist} onChange={(checklist) => set('checklist', checklist)} />
+      </>
+      )}
 
       <div className="new-task-actions">
         <button type="button" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" disabled={saving || form.assignee_ids.length === 0}>
+        <button type="submit" disabled={saving || form.assignee_ids.length === 0 || (form.recurrence === 'selected_weekdays' && !form.recurrence_days.length)}>
           {saving ? 'Saving…' : submitLabel}
         </button>
       </div>
