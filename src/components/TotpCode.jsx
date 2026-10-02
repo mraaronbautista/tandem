@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatTotpCode, generateTotp } from '../lib/totp'
+import { CLOCK_WARN_MS, describeClockSkew, useClockSkewMs } from '../lib/clockCheck'
 
 // A live one-time code with a countdown, like the one in an authenticator
 // app. Recomputes only when the 30-second window rolls over; the ticking
@@ -9,6 +10,7 @@ export default function TotpCode({ totp, onCopy, copied = false }) {
   const period = totp.period || 30
   const [now, setNow] = useState(() => Date.now())
   const [result, setResult] = useState(null)
+  const skewMs = useClockSkewMs()
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500)
@@ -59,6 +61,15 @@ export default function TotpCode({ totp, onCopy, copied = false }) {
           New code in {secondsLeft}s
         </span>
       </div>
+      {/* Codes come from this device's clock, so a clock that is off makes
+          them wrong without any other sign. Time zone does not matter —
+          only the real time being accurate does. */}
+      {skewMs != null && Math.abs(skewMs) >= CLOCK_WARN_MS && (
+        <p role="alert" className="m-0 text-xs text-overdue-text">
+          This device's clock is about {describeClockSkew(skewMs)} the real time, so this code may be rejected. Turn on
+          automatic date &amp; time in this device's settings. Your time zone doesn't matter, only the clock.
+        </p>
+      )}
     </div>
   )
 }

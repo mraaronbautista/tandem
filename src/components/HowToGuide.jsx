@@ -241,7 +241,7 @@ const FAQS = [
     title: 'Can the Vault give me one-time codes, like Google Authenticator?',
     items: [
       'Yes. When you add or edit an entry, paste the setup key a site shows you into "Authenticator key". The entry then shows the same changing 6-digit code an authenticator app would, with a countdown and a Copy button. Check the preview in the form: it should match the code the site asks for.',
-      'Tip: codes depend on your phone\'s clock being right, and everyone an entry is shared with can make its codes. For your most sensitive accounts, keep the key in your own authenticator app instead of the shared Vault.',
+      'Tip: time zones do not matter (codes use universal time), but the device\'s clock must be accurate. Set date and time to automatic. If a device\'s clock is off by 10 seconds or more, the code shows a warning. Everyone an entry is shared with can make its codes, so for your most sensitive accounts keep the key in your own authenticator app instead of the shared Vault.',
     ],
   },
   {

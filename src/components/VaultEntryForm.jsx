@@ -228,8 +228,9 @@ export default function VaultEntryForm({
           <HelpHint label="Where do I find this key?">
             When a site offers an authenticator app, choose "can't scan the code" or "enter a key instead" and copy
             the key it shows. Once it is saved here, this entry shows the same changing 6-digit code an authenticator
-            app would. Codes depend on your phone's clock being right. Everyone this entry is shared with can make
-            codes, so keep your most sensitive accounts in your own authenticator app instead.
+            app would. Your time zone doesn't matter, but your device's date and time must be accurate (set to
+            automatic), and Tandem warns you if it is off. Everyone this entry is shared with can make codes, so keep
+            your most sensitive accounts in your own authenticator app instead.
           </HelpHint>
         </div>
 
