@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { parseBulkTasks } from '../lib/bulkTasks'
 import { createTask, updateTask, deleteTask, isAllDayTask } from '../lib/tasks'
 import {
@@ -23,6 +24,54 @@ import TaskExportForm from './TaskExportForm'
 import { useConfirm } from '../lib/confirmContext'
 
 const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
+
+// Guided entry (UI/UX overhaul Phase 3): the paste format below is a real
+// recall burden — a dash, a time, a zone abbreviation, a !priority marker —
+// fine for someone who already knows it, a wall for someone who has never
+// seen it. Guided mode is plain fields (title, date, time, priority) that
+// are turned into the SAME paste text, so the preview, the parser and the
+// save path are all unchanged, and switching to "Paste a list" shows what
+// the fields produced. The chosen mode is remembered per device.
+const INPUT_MODE_KEY = 'tandem-bulk-add-input-mode'
+
+function readSavedInputMode() {
+  try {
+    return localStorage.getItem(INPUT_MODE_KEY) === 'paste' ? 'paste' : 'guided'
+  } catch {
+    return 'guided'
+  }
+}
+
+function localDateString() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function newGuidedRow() {
+  return { id: crypto.randomUUID(), title: '', date: localDateString(), time: '', priority: 'med' }
+}
+
+// '14:30' -> '2:30pm', the clock style the paste format already teaches.
+function formatGuidedTime(time) {
+  const [h, m] = time.split(':').map(Number)
+  if (Number.isNaN(h) || Number.isNaN(m)) return ''
+  const suffix = h >= 12 ? 'pm' : 'am'
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')}${suffix}`
+}
+
+// One paste-format line per row that has a title; rows left blank are
+// ignored. No date becomes "ASAP", the format's own "no date at all".
+function guidedRowsToText(rows) {
+  return rows
+    .filter((row) => row.title.trim())
+    .map((row) => {
+      const when = row.date ? [row.date, row.time ? formatGuidedTime(row.time) : ''].filter(Boolean).join(' ') : 'ASAP'
+      const marker = row.priority && row.priority !== 'med' ? ` !${row.priority}` : ''
+      return `${when}${marker} – ${row.title.trim()}`
+    })
+    .join('\n')
+}
 
 const PLACEHOLDER = `Aug 28 8am-9am CT !high – Plumber at 1072 Rachel
   - Confirm parts on hand
@@ -114,6 +163,38 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
   const [exportOpen, setExportOpen] = useState(false)
 
   const [text, setText] = useState('')
+  const [inputMode, setInputMode] = useState(readSavedInputMode)
+  const [guidedRows, setGuidedRows] = useState(() => [newGuidedRow()])
+  const guidedText = useMemo(() => guidedRowsToText(guidedRows), [guidedRows])
+  // Everything downstream (the live preview, the parser, saving) reads
+  // this one string, whichever way it was entered.
+  const activeText = inputMode === 'guided' ? guidedText : text
+
+  function changeInputMode(next) {
+    if (next === inputMode) return
+    // Show the person the syntax their fields just produced rather than
+    // dropping them into an empty box — it is the shortcut, taught by
+    // example. Only seeds an empty box; never overwrites what was pasted.
+    if (next === 'paste' && !text.trim() && guidedText) setText(guidedText)
+    setInputMode(next)
+    try {
+      localStorage.setItem(INPUT_MODE_KEY, next)
+    } catch {
+      // Not remembering the choice is harmless — it just defaults again.
+    }
+  }
+
+  function updateGuidedRow(id, patch) {
+    setGuidedRows((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+  }
+
+  function addGuidedRow() {
+    setGuidedRows((rows) => [...rows, newGuidedRow()])
+  }
+
+  function removeGuidedRow(id) {
+    setGuidedRows((rows) => (rows.length === 1 ? [newGuidedRow()] : rows.filter((row) => row.id !== id)))
+  }
   const [assigneeIds, setAssigneeIds] = useState(defaultAssigneeIds || (me ? [me.id] : []))
 
   // A bulk paste is often one person entering someone ELSE's schedule
@@ -146,7 +227,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
     setZone(zoneForAssignees(nextIds))
   }
 
-  const { tasks: parsedTasks, errors } = useMemo(() => parseBulkTasks(text), [text])
+  const { tasks: parsedTasks, errors } = useMemo(() => parseBulkTasks(activeText), [activeText])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -398,6 +479,16 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
 
         {view === 'add' ? (
           <>
+            <PeriodTabs>
+              <PeriodTab active={inputMode === 'guided'} onClick={() => changeInputMode('guided')}>
+                Guided
+              </PeriodTab>
+              <PeriodTab active={inputMode === 'paste'} onClick={() => changeInputMode('paste')}>
+                Paste a list
+              </PeriodTab>
+            </PeriodTabs>
+
+            {inputMode === 'paste' && (
             <div className="bulk-add-hint">
               <p>
                 One line per task: <code>&lt;date&gt; [time] [zone] [!priority] – description</code>
@@ -413,6 +504,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                 <li>Indent a line underneath → adds it as a checklist item on the task above</li>
               </ul>
             </div>
+            )}
 
             <label className="flex flex-col gap-1.5">
               Who
@@ -430,12 +522,75 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
               </select>
             </label>
 
-            <label>
-              Tasks
-              <textarea rows={6} placeholder={PLACEHOLDER} value={text} onChange={(e) => setText(e.target.value)} />
-            </label>
+            {inputMode === 'paste' ? (
+              <label>
+                Tasks
+                <textarea rows={6} placeholder={PLACEHOLDER} value={text} onChange={(e) => setText(e.target.value)} />
+              </label>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {guidedRows.map((row, index) => (
+                  <div key={row.id} className="flex flex-col gap-2 rounded-lg border border-border bg-pill-bg p-2.5">
+                    <input
+                      aria-label={`Task ${index + 1} title`}
+                      placeholder="What needs to happen?"
+                      value={row.title}
+                      onChange={(e) => updateGuidedRow(row.id, { title: e.target.value })}
+                      onKeyDown={(e) => {
+                        // Enter would submit the whole form (and create
+                        // every task) — here it should just mean "next".
+                        if (e.key !== 'Enter') return
+                        e.preventDefault()
+                        if (row.title.trim() && index === guidedRows.length - 1) addGuidedRow()
+                      }}
+                      className="w-full rounded-[8px] border border-border bg-bg px-[10px] py-[9px] text-text-h [font:inherit]"
+                      autoFocus={index === guidedRows.length - 1 && index > 0}
+                    />
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="flex min-w-[130px] flex-1 flex-col gap-1 text-xs">
+                        Date
+                        <input type="date" value={row.date} onChange={(e) => updateGuidedRow(row.id, { date: e.target.value })} />
+                      </label>
+                      <label className="flex min-w-[100px] flex-1 flex-col gap-1 text-xs">
+                        Time (optional)
+                        <input
+                          type="time"
+                          value={row.time}
+                          disabled={!row.date}
+                          onChange={(e) => updateGuidedRow(row.id, { time: e.target.value })}
+                        />
+                      </label>
+                      <label className="flex min-w-[90px] flex-1 flex-col gap-1 text-xs">
+                        Priority
+                        <select value={row.priority} onChange={(e) => updateGuidedRow(row.id, { priority: e.target.value })}>
+                          <option value="high">High</option>
+                          <option value="med">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeGuidedRow(row.id)}
+                        className="cursor-pointer rounded-[8px] border border-border bg-bg px-2.5 py-2 text-xs text-text-h [font-family:inherit]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {!row.date && <p className="m-0 text-xs opacity-70">No date — this task will have no due date.</p>}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addGuidedRow}
+                  className="flex w-fit cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 py-1 text-[13px] font-semibold text-text-h [font-family:inherit]"
+                >
+                  <Plus size={15} aria-hidden="true" />
+                  Add another task
+                </button>
+              </div>
+            )}
 
-            {text.trim() && (
+            {activeText.trim() && (
               <div className="bulk-add-preview">
                 {parsedTasks.length > 0 && (
                   <>
