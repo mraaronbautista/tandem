@@ -181,12 +181,12 @@ export default function StaffProfileForm({ staffMember, onClose, onSaved }) {
             className={`${FIELD_CLASS} [resize:vertical]`}
           />
           <span className="mt-1 block text-xs opacity-65">
-            Shown to them on their clock-in screen. Markdown supported — ## headings, * bullets, **bold**.
+            Shown to them on their clock-in screen. You can format it: ## for a heading, * for bullets, **bold**.
           </span>
         </label>
 
         <label>
-          Payroll cadence
+          How often they're paid
           <select
             value={payrollCadence}
             onChange={(event) => setPayrollCadence(event.target.value)}

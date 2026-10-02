@@ -15,9 +15,9 @@ import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const LEVEL_OPTIONS = [
-  { value: '', label: 'Hidden' },
-  { value: 'view', label: 'View only' },
-  { value: 'update', label: 'View & update' },
+  { value: '', label: "Can't see them" },
+  { value: 'view', label: 'Can see them' },
+  { value: 'update', label: 'Can see and edit them' },
 ]
 
 const EMPTY_ACCESS = { level: '', canCreate: false, canDelete: false, canReassign: false }
@@ -55,7 +55,7 @@ function TeammateAccessRow({ teammate, access, onChange }) {
 
   return (
     <div className="rounded-sm border border-border p-3">
-      <p className="mb-2 text-sm font-semibold text-text-h">{teammate.display_name}</p>
+      <p className="mb-2 text-sm font-semibold text-text-h">{teammate.display_name}'s tasks</p>
 
       <div className="mb-2 flex flex-wrap gap-3 text-sm">
         {LEVEL_OPTIONS.map((opt) => (
@@ -79,7 +79,7 @@ function TeammateAccessRow({ teammate, access, onChange }) {
             checked={access.canCreate}
             onChange={(e) => setFlag('canCreate', e.target.checked)}
           />
-          Create & assign tasks
+          Can add tasks for {teammate.display_name}
         </label>
         <label className="flex items-center gap-1.5">
           <input
@@ -88,7 +88,7 @@ function TeammateAccessRow({ teammate, access, onChange }) {
             checked={access.canDelete}
             onChange={(e) => setFlag('canDelete', e.target.checked)}
           />
-          Delete tasks
+          Can delete them
         </label>
         <label className="flex items-center gap-1.5">
           <input
@@ -97,7 +97,7 @@ function TeammateAccessRow({ teammate, access, onChange }) {
             checked={access.canReassign}
             onChange={(e) => setFlag('canReassign', e.target.checked)}
           />
-          Reassign tasks
+          Can reassign them
         </label>
       </div>
     </div>
@@ -223,6 +223,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Feature access</span>
+          <p className="mb-1.5 text-xs opacity-65">Untick anything {target.display_name} should not be able to use.</p>
           <div className="flex flex-col gap-1.5 text-sm">
             {PERMISSION_FEATURES.map((f) => (
               <label key={f} className="flex items-center gap-2">
@@ -239,6 +240,10 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Task visibility</span>
+          <p className="mb-1.5 text-xs opacity-65">
+            What {target.display_name} can do with each teammate's tasks. The add, delete and reassign options only
+            apply once they can see the tasks.
+          </p>
           {loading ? (
             <p className="text-sm opacity-65">Loading…</p>
           ) : teammates.length === 0 ? (
@@ -259,6 +264,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Report visibility</span>
+          <p className="mb-1.5 text-xs opacity-65">Whose submitted reports {target.display_name} can read.</p>
           {loading ? (
             <p className="text-sm opacity-65">Loading…</p>
           ) : teammates.length === 0 ? (
@@ -281,6 +287,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
 
         <div className="submission-field">
           <span className="submission-field-label">Priorities visibility</span>
+          <p className="mb-1.5 text-xs opacity-65">Whose priorities {target.display_name} can read.</p>
           {loading ? (
             <p className="text-sm opacity-65">Loading…</p>
           ) : teammates.length === 0 ? (

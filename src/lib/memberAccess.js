@@ -15,11 +15,11 @@ export const PERMISSION_FEATURES = ['rentals', 'staff', 'reports', 'workingStatu
 // can't drift into describing the same permission key differently.
 export const FEATURE_LABELS = {
   rentals: 'Rentals',
-  staff: 'Staff',
+  staff: 'Staff time tracking (property-manager hours)',
   // Gates *submitting* a report, not reading one — see report_access for
   // who can read a member's already-submitted reports.
-  reports: 'Submit EOD/EOW/EOM reports',
-  workingStatus: 'Set own working status (online/busy/in a meeting)',
+  reports: 'Submit end-of-day, week and month reports',
+  workingStatus: 'Set their own status (online, busy, in a meeting)',
 }
 
 // Ada/Aaron's existing colors plus a few unused suggestions, same list
