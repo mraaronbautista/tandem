@@ -356,38 +356,41 @@ export default function StaffLogsView({ me }) {
       {error && <p className="error">{error}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* flex-1: PeriodTabs has no width of its own to fill (unlike
-            TaskBoard.jsx's view-mode-row usage, this row's other sibling
-            is a fixed-width button group, not another flex-1 element) —
-            without it, each PeriodTab (px-0 by design, sized purely by
-            flex-1 within PeriodTabs' own intrinsic content width) had
-            almost no room to breathe, reading as "AllPendingApproved"
-            packed together. */}
-        <PeriodTabs className="min-w-0 flex-1">
+        {/* PeriodTabs has no width of its own to fill (unlike TaskBoard.jsx's
+            view-mode-row usage, this row's other sibling is a fixed-width
+            button group, not another flex-1 element), so each PeriodTab
+            (px-0 by design) is sized purely by the room the group gets.
+            Wide screens: the group takes the leftover width (flex-1) beside
+            the buttons. Phones: the three buttons below take most of the
+            row, which squeezed the tabs into a sliver that read as
+            "AllPendingApproved". There the tabs get a full-width row of
+            their own (w-full, no flex-1 so nothing competes with it) and
+            the buttons wrap onto the next row, sharing it equally. */}
+        <PeriodTabs className="w-full min-w-0 min-[640px]:w-auto min-[640px]:flex-1">
           {STATUS_TABS.map((t) => (
             <PeriodTab key={t.key} active={statusFilter === t.key} onClick={() => setStatusFilter(t.key)}>
               {t.label}
             </PeriodTab>
           ))}
         </PeriodTabs>
-        <div className="flex flex-none flex-wrap justify-end gap-1.5">
+        <div className="flex flex-none flex-wrap justify-end gap-1.5 max-[640px]:w-full">
           <button
             type="button"
-            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
+            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h max-[640px]:min-h-10 max-[640px]:flex-1 pointer-coarse:min-h-10"
             onClick={() => setLocationsOpen(true)}
           >
             <MapPin size={12} className="mr-1 inline align-[-2px]" /> Locations
           </button>
           <button
             type="button"
-            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
+            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h max-[640px]:min-h-10 max-[640px]:flex-1 pointer-coarse:min-h-10"
             onClick={() => setAddingEntry(true)}
           >
             <Plus size={12} className="mr-1 inline align-[-2px]" /> Add shift
           </button>
           <button
             type="button"
-            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h"
+            className="cursor-pointer whitespace-nowrap rounded-sm border border-border bg-pill-bg px-2 py-1 text-xs text-text-h max-[640px]:min-h-10 max-[640px]:flex-1 pointer-coarse:min-h-10"
             onClick={() => setExportOpen(true)}
           >
             Export CSV
