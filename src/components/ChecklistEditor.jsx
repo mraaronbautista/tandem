@@ -42,7 +42,7 @@ export default function ChecklistEditor({ items, onChange }) {
         <div className="mb-2 flex flex-col gap-1.5">
           {items.map((item) => (
             <div key={item.id} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 [&_input[type=checkbox]]:h-4 [&_input[type=checkbox]]:w-4 [&_input[type=checkbox]]:flex-none [&_input[type=text]]:flex-1 [&_input[type=text]]:rounded-[6px] [&_input[type=text]]:border [&_input[type=text]]:border-border [&_input[type=text]]:bg-bg [&_input[type=text]]:px-2 [&_input[type=text]]:py-[7px] [&_input[type=text]]:text-text-h [&_input[type=text]]:[font:inherit]">
+              <div className="flex items-center gap-2 [&_input[type=checkbox]]:h-6 [&_input[type=checkbox]]:w-6 [&_input[type=checkbox]]:flex-none [&_input[type=text]]:flex-1 [&_input[type=text]]:rounded-[6px] [&_input[type=text]]:border [&_input[type=text]]:border-border [&_input[type=text]]:bg-bg [&_input[type=text]]:px-2 [&_input[type=text]]:py-[7px] [&_input[type=text]]:text-text-h [&_input[type=text]]:[font:inherit]">
                 <input
                   type="checkbox"
                   checked={item.done}
@@ -57,7 +57,7 @@ export default function ChecklistEditor({ items, onChange }) {
                 />
                 <button
                   type="button"
-                  className={`flex h-[26px] w-[26px] flex-none cursor-pointer items-center justify-center rounded-full border bg-pill-bg leading-none ${item.blocked ? 'border-overdue opacity-100' : 'border-border opacity-50'}`}
+                  className={`relative flex h-[26px] w-[26px] flex-none cursor-pointer items-center justify-center rounded-full border bg-pill-bg leading-none after:absolute after:-inset-2 after:content-[''] ${item.blocked ? 'border-overdue opacity-100' : 'border-border opacity-80'}`}
                   onClick={() => toggleBlocked(item)}
                   title={item.blocked ? 'Unblock' : "Mark as blocked / can't be done"}
                 >
@@ -65,8 +65,10 @@ export default function ChecklistEditor({ items, onChange }) {
                 </button>
                 <button
                   type="button"
-                  className="flex h-[26px] w-[26px] flex-none cursor-pointer items-center justify-center rounded-full border border-border bg-pill-bg text-text"
+                  className="relative flex h-[26px] w-[26px] flex-none cursor-pointer items-center justify-center rounded-full border border-border bg-pill-bg text-text after:absolute after:-inset-2 after:content-['']"
                   onClick={() => removeItem(item.id)}
+                  title="Remove subtask"
+                  aria-label="Remove subtask"
                 >
                   <X size={14} />
                 </button>
@@ -116,10 +118,10 @@ export default function ChecklistEditor({ items, onChange }) {
         </div>
       ) : (
         <div className="flex gap-2">
-          <button type="button" className="cursor-pointer rounded-[6px] border border-dashed border-border bg-transparent px-2.5 py-1.5 text-[13px] text-text" onClick={() => onChange([...items, newItem()])}>
+          <button type="button" className="cursor-pointer rounded-[6px] border border-dashed border-border bg-transparent px-2.5 py-1.5 text-[13px] text-text pointer-coarse:min-h-10 max-[480px]:min-h-10" onClick={() => onChange([...items, newItem()])}>
             + Add subtask
           </button>
-          <button type="button" className="cursor-pointer rounded-[6px] border border-dashed border-border bg-transparent px-2.5 py-1.5 text-[13px] text-text" onClick={() => setBulkOpen(true)}>
+          <button type="button" className="cursor-pointer rounded-[6px] border border-dashed border-border bg-transparent px-2.5 py-1.5 text-[13px] text-text pointer-coarse:min-h-10 max-[480px]:min-h-10" onClick={() => setBulkOpen(true)}>
             + Add multiple
           </button>
         </div>

@@ -19,8 +19,11 @@ const TAB_SIZE = {
   // in the original) — without it, the browser's own default <button>
   // horizontal padding (6px in Chrome) leaks through unset, since neither
   // Tailwind nor this app's Preflight-less setup resets it.
-  base: 'py-[7px] px-0 text-[13px]',
-  compact: 'py-1.5 px-0 text-xs',
+  // Taller on touch screens / phones (min-h-10 = 40px, compact 36px): the
+  // 30px desktop height is under what a thumb reliably hits. UI/UX
+  // overhaul Phase 4.
+  base: 'py-[7px] px-0 text-[13px] pointer-coarse:min-h-10 max-[480px]:min-h-10',
+  compact: 'py-1.5 px-0 text-xs pointer-coarse:min-h-9 max-[480px]:min-h-9',
 }
 
 export function PeriodTab({ active = false, size = 'base', className = '', ...props }) {

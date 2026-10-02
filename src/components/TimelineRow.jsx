@@ -1,5 +1,5 @@
 import { isAllDayTask } from '../lib/tasks'
-import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
+import { PRIORITY_LABEL, priorityDotStyle } from '../lib/priorityColors'
 import { DEFAULT_TIMEZONE, splitDueDateInZone } from '../lib/timezone'
 import TaskRow from './TaskRow'
 
@@ -28,7 +28,7 @@ export default function TimelineRow({ task, time, isLast, displayTimezone = DEFA
   // `time` as a single completed_at instant regardless of any duration
   // the task has, and an All Day task has no duration by definition (see
   // isAllDayTask), so neither case has a real span to show.
-  const dotColor = PRIORITY_COLOR[task.priority]
+  const dotStyle = priorityDotStyle(task.priority)
   const dotTitle = PRIORITY_LABEL[task.priority]
   const hasSpan = !isDone && !isAllDay && task.duration_minutes
   // A duration long enough to land on a different calendar day than the
@@ -67,7 +67,7 @@ export default function TimelineRow({ task, time, isLast, displayTimezone = DEFA
         {hasSpan && <span className="mt-7">{endLabel}</span>}
       </div>
       <div className="flex w-2.5 flex-none flex-col items-center">
-        <span className="mt-[15px] h-2 w-2 flex-none rounded-full" style={{ background: dotColor }} title={dotTitle} />
+        <span className="mt-[15px] h-2 w-2 flex-none rounded-full" style={dotStyle} title={dotTitle} />
         {hasSpan && (
           <>
             <span className="mt-[3px] h-7 w-0.5 flex-none bg-border" />
@@ -78,7 +78,7 @@ export default function TimelineRow({ task, time, isLast, displayTimezone = DEFA
                 separate branch (not the same element with a conditional
                 class) so the two mt-[…] values never compete on the same
                 element. */}
-            <span className="h-2 w-2 flex-none rounded-full" style={{ background: dotColor }} title={dotTitle} />
+            <span className="h-2 w-2 flex-none rounded-full" style={dotStyle} title={dotTitle} />
           </>
         )}
         {!isLast && <span className="mt-1 min-h-2 w-0.5 flex-1 bg-border" />}

@@ -1,6 +1,5 @@
 import { Repeat2 } from 'lucide-react'
 import { isAllDayTask } from '../lib/tasks'
-import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { DEFAULT_TIMEZONE, splitDueDateInZone } from '../lib/timezone'
 import PriorityDot from './PriorityDot'
@@ -109,8 +108,7 @@ export default function MonthView({ monthDate, tasksByDay, selectedDate, onSelec
                       <span key={task.id} className="month-view-task-chip">
                         <PriorityDot
                           size="compact"
-                          color={PRIORITY_COLOR[task.priority]}
-                          title={PRIORITY_LABEL[task.priority]}
+                          priority={task.priority}
                         />
                         <span className="month-view-task-title">{task.title}</span>
                         {/* flex-none, same as the time label right after it

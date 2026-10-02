@@ -22,7 +22,7 @@ function ChecklistItemRow({ item, onItemChange }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="flex cursor-pointer items-center gap-2 [&_input[type=checkbox]]:h-[15px] [&_input[type=checkbox]]:w-[15px]">
+      <label className="flex min-h-[26px] cursor-pointer items-center gap-2 pointer-coarse:min-h-10 max-[480px]:min-h-10 [&_input[type=checkbox]]:h-[18px] [&_input[type=checkbox]]:w-[18px]">
         <input
           type="checkbox"
           checked={item.done}
@@ -38,7 +38,7 @@ function ChecklistItemRow({ item, onItemChange }) {
         </span>
         <button
           type="button"
-          className={`h-[26px] w-[26px] flex-none cursor-pointer rounded-full border bg-pill-bg text-[13px] leading-none ${item.blocked ? 'border-overdue opacity-100' : 'border-border opacity-50'}`}
+          className={`relative h-[26px] w-[26px] flex-none cursor-pointer rounded-full border bg-pill-bg text-[13px] leading-none after:absolute after:-inset-2 after:content-[''] ${item.blocked ? 'border-overdue opacity-100' : 'border-border opacity-80'}`}
           onClick={(e) => {
             e.preventDefault()
             toggleBlocked(item, onItemChange)

@@ -17,7 +17,6 @@ import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import PriorityDot from './PriorityDot'
 import AssigneePicker from './AssigneePicker'
-import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
@@ -608,7 +607,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                                 at the ordinary 'med' default silently, so
                                 a dot on every row would just be noise. */}
                             {t.priority && (
-                              <PriorityDot color={PRIORITY_COLOR[t.priority]} title={PRIORITY_LABEL[t.priority]} />
+                              <PriorityDot priority={t.priority} />
                             )}
                             <span className="bulk-add-preview-title">{t.title}</span>
                             {t.due_time && (

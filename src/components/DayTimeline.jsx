@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { CheckSquare, StickyNote, MessageCircle, Repeat2 } from 'lucide-react'
 import { isAllDayTask, formatDuration, assigneeIdsOverlap } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
+import PriorityBadge from './PriorityBadge'
 import { assigneeBadge } from '../lib/whoLabels'
 import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
@@ -523,8 +524,9 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
                         </span>
                         <span className="day-timeline-block-title">{task.title}</span>
                       </span>
-                      {(checklist.length > 0 || hasNotes || hasQuestionForMe || isRecurring) && (
+                      {(checklist.length > 0 || hasNotes || hasQuestionForMe || isRecurring || task.priority !== 'med') && (
                         <span className="day-timeline-block-meta">
+                          <PriorityBadge priority={task.priority} size={11} />
                           {checklist.length > 0 && (
                             <span className="day-timeline-block-checklist inline-flex items-center gap-0.5" title="Subtasks">
                               <CheckSquare size={12} /> {checklistDone}/{checklist.length}

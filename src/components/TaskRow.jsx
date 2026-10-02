@@ -13,6 +13,7 @@ import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import TaskIcon from './TaskIcon'
+import PriorityBadge from './PriorityBadge'
 import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
@@ -366,6 +367,7 @@ export default function TaskRow({
             <AlertTriangle size={12} /> Overlap
           </span>
         )}
+        <PriorityBadge priority={task.priority} />
         {hasNotes && (
           <span className="opacity-80" title="Has notes">
             <StickyNote size={13} />
@@ -512,7 +514,7 @@ export default function TaskRow({
               // convention. flex-wrap since up to 6 of these can show at
               // once (a done task with a submission); wrapping to a second
               // line reads fine, an overflowing or clipped row doesn't.
-              <div className="flex flex-wrap gap-2 [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button]:gap-1.5 [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
+              <div className="flex flex-wrap gap-2 pointer-coarse:[&_button]:min-h-10 max-[480px]:[&_button]:min-h-10 [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button]:gap-1.5 [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-pill-bg [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:text-text-h [&_button]:transition-all [&_button]:duration-[120ms] [&_button]:ease-tactile [&_button:active]:scale-[0.96] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
                 <button onClick={() => setEditing(true)} title="Edit" aria-label="Edit">
                   <Pencil width={15} height={15} />
                   Edit

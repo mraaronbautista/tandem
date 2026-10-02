@@ -1,8 +1,14 @@
+import { PRIORITY_LABEL, priorityDotStyle } from '../lib/priorityColors'
+
 // Pure chrome for the shared "small circle indicating task priority"
 // pattern — replaces .task-priority-dot (App.css, 9px) and
-// .month-view-task-dot (App.css, 6px), both left in place, unused. Color
-// is always passed as a style prop (PRIORITY_COLOR[task.priority]), never
-// in CSS — same as both original classes.
+// .month-view-task-dot (App.css, 6px), both left in place, unused.
+//
+// Pass `priority` ('low' | 'med' | 'high'): the dot then takes its colour
+// AND its form (hollow ring / solid / solid with halo — see
+// priorityDotStyle) and announces itself to assistive tech, so priority is
+// never carried by colour alone. `color` alone is still accepted for any
+// caller that only has a raw colour; it gets no form or label.
 //
 // size="base" (default): 9px, matches .task-priority-dot (TaskRow.jsx's
 //   collapsed row, BulkAddTasksForm.jsx's preview list).
@@ -18,6 +24,8 @@ const SIZE = {
   compact: 'h-[6px] w-[6px]',
 }
 
-export default function PriorityDot({ color, size = 'base', className = '', ...props }) {
-  return <span className={`flex-none rounded-full ${SIZE[size]} ${className}`} style={{ background: color }} {...props} />
+export default function PriorityDot({ priority, color, size = 'base', className = '', style, ...props }) {
+  const look = priority ? priorityDotStyle(priority) : { background: color }
+  const a11y = priority ? { role: 'img', 'aria-label': PRIORITY_LABEL[priority], title: PRIORITY_LABEL[priority] } : {}
+  return <span className={`flex-none rounded-full ${SIZE[size]} ${className}`} style={{ ...look, ...style }} {...a11y} {...props} />
 }

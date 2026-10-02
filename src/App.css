@@ -885,7 +885,8 @@ select:focus-visible {
 
 .day-timeline-block .task-done-checkbox {
   flex: none;
-  margin-top: 2px;
+  /* -9px (the shared negative margin) + the 2px this used to add. */
+  margin-top: -7px;
 }
 
 /* A row, not a column — .day-timeline-block-main (who badge + title +
@@ -1236,12 +1237,44 @@ select:focus-visible {
   white-space: nowrap;
 }
 
+/* The tick box for finishing a task — the most-used control in the app —
+   was a native 18x18 checkbox: under WCAG's 24px minimum and far under the
+   ~44px a thumb needs, and a stray tap on the neighbouring Send button
+   once caused a real "can't mark a task done" report. Redrawn here as a
+   22px box inside a 40px tappable area: the transparent 9px border is part
+   of the hit box but is not painted, and the matching negative margin
+   keeps the layout footprint at the 22px that is drawn. The box outline
+   uses --control-border (3:1 against the surface) and the tick is the
+   dark on-accent ink on the gold fill. */
 .task-done-checkbox {
   flex: none;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  margin: -9px;
+  border: 9px solid transparent;
+  border-radius: 15px;
+  background-color: var(--card-bg);
+  background-clip: padding-box;
+  background-origin: padding-box;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+  box-shadow: inset 0 0 0 2px var(--control-border);
   cursor: pointer;
+}
+
+.task-done-checkbox:checked {
+  background-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.2 8.6l3.1 3.1 6.5-7.2' fill='none' stroke='%232a1c0a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.task-done-checkbox:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -7px;
 }
 
 /* Date strip — horizontal day picker, Structured-style */

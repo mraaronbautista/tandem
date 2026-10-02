@@ -19,6 +19,16 @@
 //   does. Wide screens: icon and text side by side in a pill. Phones:
 //   icon stacked over a small text label, the same shape the bottom nav
 //   already uses, and at least a 44px touch target.
+// The 32px base and 26px weekNav circles are visually fine but too small to
+// tap reliably (WCAG's floor is 24px, a thumb wants ~44). A transparent
+// ::after grows the tappable area past the painted circle without moving
+// anything in the layout (base reaches 48px, weekNav 38px — kept tighter
+// because the week arrows sit right beside the Today button).
+const HIT_AREA = {
+  base: "relative after:absolute after:-inset-2 after:content-['']",
+  weekNav: "relative after:absolute after:-inset-1.5 after:content-['']",
+}
+
 const SIZE_CLASSES = {
   base: 'h-8 w-8 text-[15px]',
   header: 'h-8 w-8 text-[15px] max-[480px]:h-10 max-[480px]:w-10',
@@ -31,7 +41,7 @@ export default function IconButton({ size = 'base', className = '', label, child
   return (
     <button
       type="button"
-      className={`flex flex-none cursor-pointer items-center justify-center rounded-full border border-border bg-card-bg leading-none transition-all duration-[120ms] ease-tactile active:scale-[0.92] disabled:cursor-default disabled:opacity-50 ${SIZE_CLASSES[size]} ${className}`}
+      className={`flex flex-none cursor-pointer items-center justify-center rounded-full border border-border bg-card-bg leading-none transition-all duration-[120ms] ease-tactile active:scale-[0.92] disabled:cursor-default disabled:opacity-50 ${SIZE_CLASSES[size]} ${HIT_AREA[size] || ''} ${className}`}
       {...props}
     >
       {children}

@@ -1,5 +1,4 @@
 import { resolveTaskIcon } from '../lib/taskIcons'
-import { PRIORITY_COLOR } from '../lib/priorityColors'
 import PriorityDot from './PriorityDot'
 
 // Replaces the plain priority-color dot next to a task's WHO badge —
@@ -16,7 +15,7 @@ import PriorityDot from './PriorityDot'
 export default function TaskIcon({ task, size = 14, className = '', ...props }) {
   const Icon = resolveTaskIcon(task)
   if (!Icon) {
-    return <PriorityDot color={PRIORITY_COLOR[task.priority]} className={className} {...props} />
+    return <PriorityDot priority={task.priority} className={className} {...props} />
   }
   return <Icon size={size} className={`flex-none ${className}`} {...props} />
 }
