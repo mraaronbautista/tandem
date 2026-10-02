@@ -5,6 +5,7 @@ import HelpHint from './HelpHint'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
+import { useConfirm } from '../lib/confirmContext'
 
 const composeClasses = 'flex flex-col gap-2 [&_textarea]:min-h-[70px] [&_textarea]:resize-y [&_textarea]:rounded-[8px] [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-card-bg [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-[15px] [&_textarea]:text-text-h [&_textarea]:[font-family:inherit] [&_textarea]:[font-style:inherit] [&_textarea]:[font-variant:inherit] [&_textarea]:[font-weight:inherit] [&_textarea]:[line-height:inherit]'
 const itemActionClasses = 'cursor-pointer rounded-[6px] border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h'
@@ -223,6 +224,7 @@ function RoadmapItemRow({
 // `members` (also threaded down the same way) is what the sharing picker
 // below offers as targets.
 export default function CorkBoardView({ me, memberName, members = [], focusPinRequest = 0, mode = 'pins', tasks = [] }) {
+  const confirm = useConfirm()
   const [notes, setNotes] = useState(null)
   const [error, setError] = useState('')
   const [body, setBody] = useState('')
@@ -405,7 +407,12 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
   }
 
   async function handleDelete(note) {
-    if (!window.confirm('Delete this pin permanently? This can\'t be undone.')) return
+    const ok = await confirm({
+      title: 'Delete this pin?',
+      message: "It will be permanently removed, along with its comments. This can't be undone.",
+      confirmLabel: 'Delete pin',
+    })
+    if (!ok) return
     try {
       await deleteCorkNote(note.id)
       reload()

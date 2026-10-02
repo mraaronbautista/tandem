@@ -11,6 +11,7 @@ import {
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { useConfirm } from '../lib/confirmContext'
 
 function formatDateStr(dateStr) {
   // Parsed as local, not UTC — a bare 'YYYY-MM-DD' parsed via `new Date()`
@@ -23,6 +24,7 @@ function formatDateStr(dateStr) {
 // tapping a highlighted calendar day used to prompt for deletion
 // immediately, which was too easy to trigger by an exploratory tap.
 export default function RentalBookingDetail({ booking, onClose, onDeleted, onConfirmed, onEdit }) {
+  const confirm = useConfirm()
   const [deleting, setDeleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [markingPaid, setMarkingPaid] = useState(false)
@@ -55,7 +57,12 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
 
   async function handleDelete() {
     const verb = isPending ? 'Decline' : 'Delete'
-    if (!window.confirm(`${verb} booking for ${bookingGuestLabel(booking)}? This can't be undone.`)) return
+    const ok = await confirm({
+      title: `${verb} booking for ${bookingGuestLabel(booking)}?`,
+      message: "This can't be undone.",
+      confirmLabel: `${verb} booking`,
+    })
+    if (!ok) return
     setDeleting(true)
     setError('')
     try {

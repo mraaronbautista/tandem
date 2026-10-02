@@ -20,6 +20,7 @@ import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import VaultEntryForm from './VaultEntryForm'
 import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
+import { useConfirm } from '../lib/confirmContext'
 
 const RESET_CONFIRM_WORD = 'RESET'
 
@@ -58,6 +59,7 @@ function groupByFolder(entries, folderNames) {
 // so it's re-derived from the master password every time the vault is
 // reopened, even within the same browser session.
 export default function VaultView({ me, members = [], onClose }) {
+  const confirm = useConfirm()
   // Which vaults this member has access to, and which one's currently
   // open. A member with access to exactly one (the common case — Ada/
   // Aaron on the household vault, or a healthcare-only member) never
@@ -320,9 +322,13 @@ export default function VaultView({ me, members = [], onClose }) {
   // never had a folder set.
   async function handleDeleteFolder(name) {
     const affected = entries.filter((e) => e.folder === name && (!isPrivateVault || e.createdBy === me?.id))
-    if (!window.confirm(`Remove the "${name}" folder? Its ${affected.length} ${affected.length === 1 ? 'entry moves' : 'entries move'} back to General — nothing gets deleted.`)) {
-      return
-    }
+    const ok = await confirm({
+      title: `Remove the "${name}" folder?`,
+      message: `Its ${affected.length} ${affected.length === 1 ? 'entry moves' : 'entries move'} back to General — nothing gets deleted.`,
+      confirmLabel: 'Remove folder',
+      tone: 'neutral',
+    })
+    if (!ok) return
     setFolderBusy(true)
     try {
       await Promise.all(affected.map((entry) => saveEntryFolder(entry, '')))

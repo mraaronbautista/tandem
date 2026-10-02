@@ -3,6 +3,7 @@ import { createRentalExpense, updateRentalExpense, deleteRentalExpense } from '.
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { useConfirm } from '../lib/confirmContext'
 
 // Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
 // — same fix as RentalSavingsGoalForm.jsx: this form's fields were bare
@@ -14,6 +15,7 @@ const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
 
 export default function RentalExpenseForm({ company, expense, onClose, onSaved, onDeleted }) {
+  const confirm = useConfirm()
   const [label, setLabel] = useState(expense?.label || '')
   const [amount, setAmount] = useState(expense?.amount ?? '')
   const [saving, setSaving] = useState(false)
@@ -39,7 +41,12 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Delete the "${expense.label}" overhead item? This can't be undone.`)) return
+    const ok = await confirm({
+      title: `Delete the "${expense.label}" overhead item?`,
+      message: "This can't be undone.",
+      confirmLabel: 'Delete item',
+    })
+    if (!ok) return
     setDeleting(true)
     setError('')
     try {

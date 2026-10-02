@@ -3,6 +3,7 @@ import { createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '../lib/
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { useConfirm } from '../lib/confirmContext'
 
 // Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
 // — this form's fields were bare <label><input/></label> pairs with
@@ -19,6 +20,7 @@ const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
 
 export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved, onDeleted }) {
+  const confirm = useConfirm()
   const [label, setLabel] = useState(goal?.label || '')
   const [targetAmount, setTargetAmount] = useState(goal?.target_amount ?? '')
   const [savedAmount, setSavedAmount] = useState(goal?.saved_amount ?? 0)
@@ -47,7 +49,12 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Delete the "${goal.label}" goal? This can't be undone.`)) return
+    const ok = await confirm({
+      title: `Delete the "${goal.label}" goal?`,
+      message: "This can't be undone.",
+      confirmLabel: 'Delete goal',
+    })
+    if (!ok) return
     setDeleting(true)
     setError('')
     try {

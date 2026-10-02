@@ -4,6 +4,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import AssigneePicker from './AssigneePicker'
+import { useConfirm } from '../lib/confirmContext'
 
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
@@ -21,6 +22,7 @@ export default function VaultEntryDetail({
   onShareChanged,
   onMoveFolder,
 }) {
+  const confirm = useConfirm()
   // Matches schema.sql's own update/delete RLS exactly: a household-vault
   // entry stays editable/deletable by any vault member; a healthcare-
   // vault entry only by whoever created it — sharing grants visibility,
@@ -88,7 +90,12 @@ export default function VaultEntryDetail({
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Delete "${entry.label}"? This can't be undone.`)) return
+    const ok = await confirm({
+      title: `Delete "${entry.label}"?`,
+      message: "This can't be undone.",
+      confirmLabel: 'Delete entry',
+    })
+    if (!ok) return
     setDeleting(true)
     setError('')
     try {

@@ -3,6 +3,7 @@ import { encryptJSON, generateStrongPassword, createVaultEntry, updateVaultEntry
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { useConfirm } from '../lib/confirmContext'
 
 export default function VaultEntryForm({
   vaultId,
@@ -15,6 +16,7 @@ export default function VaultEntryForm({
   onClose,
   onSaved,
 }) {
+  const confirm = useConfirm()
   const [label, setLabel] = useState(entry?.label || '')
   const [username, setUsername] = useState(entry?.username || '')
   const [loginMethod, setLoginMethod] = useState(entry?.loginMethod || '')
@@ -57,8 +59,16 @@ export default function VaultEntryForm({
     )
   }
 
-  function handleClose() {
-    if (hasUnsavedChanges() && !window.confirm('Discard unsaved changes to this entry?')) return
+  async function handleClose() {
+    if (hasUnsavedChanges()) {
+      const ok = await confirm({
+        title: 'Discard your changes?',
+        message: 'Your unsaved changes to this entry will be lost.',
+        confirmLabel: 'Discard changes',
+        cancelLabel: 'Keep editing',
+      })
+      if (!ok) return
+    }
     onClose()
   }
 

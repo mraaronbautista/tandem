@@ -13,6 +13,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import { useConfirm } from '../lib/confirmContext'
 
 const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
@@ -28,6 +29,7 @@ function radiusInUnit(meters, unit) {
 }
 
 export default function StaffWorkSitesForm({ site, rentalProperties, onClose, onSaved, onArchived }) {
+  const confirm = useConfirm()
   const [name, setName] = useState(site?.name || '')
   const [address, setAddress] = useState(site?.address || '')
   const [latitude, setLatitude] = useState(site?.latitude ?? '')
@@ -182,7 +184,13 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
   }
 
   async function handleArchive() {
-    if (!window.confirm(`Deactivate "${site.name}" as a clock-in location? Past shifts and linked units are kept.`)) return
+    const ok = await confirm({
+      title: `Deactivate "${site.name}" as a clock-in location?`,
+      message: 'Past shifts and linked units are kept.',
+      confirmLabel: 'Deactivate',
+      tone: 'neutral',
+    })
+    if (!ok) return
     setArchiving(true)
     setError('')
     try {

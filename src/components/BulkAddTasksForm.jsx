@@ -20,6 +20,7 @@ import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { TIME_OPTIONS } from './TaskForm'
 import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
+import { useConfirm } from '../lib/confirmContext'
 
 const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 
@@ -103,6 +104,7 @@ function formatTaskDue(task) {
 // with Add rather than a separate one since they're both "bulk task
 // operations" opened from the same quick action.
 export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeIds, onClose, onCreated, embedded = false, header = null }) {
+  const confirm = useConfirm()
   const [view, setView] = useState('add')
   // Stacked on top via Modal's own portal (same as ScrollSelect nested
   // inside a task form, or HowToGuide inside SettingsMenu) rather than a
@@ -350,11 +352,17 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
   // between Apply and Delete means a submit-triggered delete would run
   // whatever apply-field checkboxes happen to be checked too, so this
   // stays a separate type="button" handler like every other destructive
-  // action in the app (see window.confirm usages elsewhere).
+  // action in the app (see the shared confirm dialog's usages elsewhere).
   async function handleDelete() {
     if (!selectedIds.size || applying || deleting) return
     const count = selectedIds.size
-    if (!window.confirm(`Delete ${count} task${count === 1 ? '' : 's'}? This can't be undone.`)) return
+    const noun = `${count} task${count === 1 ? '' : 's'}`
+    const ok = await confirm({
+      title: `Delete ${noun}?`,
+      message: "This can't be undone.",
+      confirmLabel: `Delete ${noun}`,
+    })
+    if (!ok) return
     setDeleting(true)
     setDeleteError('')
     try {

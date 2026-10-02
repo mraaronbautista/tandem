@@ -4,11 +4,14 @@ import './tailwind.css'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './lib/AuthContext.jsx'
+import ConfirmProvider from './components/ConfirmProvider.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <App />
+      <ConfirmProvider>
+        <App />
+      </ConfirmProvider>
     </AuthProvider>
   </StrictMode>,
 )

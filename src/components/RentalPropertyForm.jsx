@@ -3,6 +3,7 @@ import { createRentalProperty, updateRentalProperty, archiveRentalProperty } fro
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { useConfirm } from '../lib/confirmContext'
 
 const DEFAULT_COLOR = '#3b82f6'
 
@@ -25,6 +26,7 @@ const FIELD_INPUT_CLASS =
 // whichever company tab you're on, rather than making term a choice with
 // no sensible default.
 export default function RentalPropertyForm({ company, property, defaultTerm, onClose, onSaved, onArchived }) {
+  const confirm = useConfirm()
   const [unitName, setUnitName] = useState(property?.unit_name || '')
   const [address, setAddress] = useState(property?.address || '')
   const [monthlyRent, setMonthlyRent] = useState(property?.monthly_rent ?? '')
@@ -59,8 +61,13 @@ export default function RentalPropertyForm({ company, property, defaultTerm, onC
   }
 
   async function handleArchive() {
-    if (!window.confirm(`Remove "${property.unit_name}" from the active unit list? Its booking history is kept.`))
-      return
+    const ok = await confirm({
+      title: `Remove "${property.unit_name}" from the active unit list?`,
+      message: 'Its booking history is kept.',
+      confirmLabel: 'Remove unit',
+      tone: 'neutral',
+    })
+    if (!ok) return
     setArchiving(true)
     setError('')
     try {

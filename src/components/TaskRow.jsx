@@ -15,6 +15,7 @@ import ModalCard from './ModalCard'
 import TaskIcon from './TaskIcon'
 import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { useConfirm } from '../lib/confirmContext'
 
 // Auto-dismiss window for the post-completion Notify prompt — same 8s
 // Projects' own undo-on-remove banner uses, long enough to actually
@@ -91,6 +92,7 @@ export default function TaskRow({
   hidePriorityDot = false,
   displayTimezone = DEFAULT_TIMEZONE,
 }) {
+  const confirm = useConfirm()
   const [open, setOpen] = useState(defaultOpen)
   const [editing, setEditing] = useState(false)
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -139,13 +141,18 @@ export default function TaskRow({
   // flag this badge forever, since `answer` never gets set for them.
   const hasQuestionForMe = clarifications.some((c) => !c.answer && !c.resolved && c.askedBy !== meId)
 
-  function handleDelete(e) {
+  async function handleDelete(e) {
     e.stopPropagation()
     if (recurrence !== 'none') {
       setDeleteRecurringOpen(true)
-    } else if (window.confirm(`Delete "${task.title}"? This can't be undone.`)) {
-      onDelete(task.id)
+      return
     }
+    const ok = await confirm({
+      title: `Delete "${task.title}"?`,
+      message: "This can't be undone. To keep a record of it instead, use Send to board.",
+      confirmLabel: 'Delete task',
+    })
+    if (ok) onDelete(task.id)
   }
 
   function handleDuplicate(e) {
@@ -302,9 +309,14 @@ export default function TaskRow({
     }
   }
 
-  function handleRemoveAttachment(e, index) {
+  async function handleRemoveAttachment(e, index) {
     e.stopPropagation()
-    if (!window.confirm('Remove this attachment?')) return
+    const ok = await confirm({
+      title: 'Remove this attachment?',
+      message: 'It will be taken off this submission.',
+      confirmLabel: 'Remove attachment',
+    })
+    if (!ok) return
     onUpdate(task.id, { completion_attachments: attachments.filter((_, i) => i !== index) })
   }
 

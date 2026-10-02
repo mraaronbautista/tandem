@@ -26,6 +26,7 @@ import StaffPayrollExport from './StaffPayrollExport'
 import StaffProfileForm from './StaffProfileForm'
 import StaffCredentialsForm from './StaffCredentialsForm'
 import StaffLocationsManager from './StaffLocationsManager'
+import { useConfirm } from '../lib/confirmContext'
 
 const STATUS_TABS = [
   { key: 'all', label: 'All' },
@@ -51,6 +52,7 @@ function formatDuration(entry) {
 // own data, just `me` as a prop) rather than wired through TaskBoard's
 // shared tasks-changes/members-changes channels.
 export default function StaffLogsView({ me }) {
+  const confirm = useConfirm()
   const [roster, setRoster] = useState([])
   const [sites, setSites] = useState([])
   const [rentalProperties, setRentalProperties] = useState([])
@@ -239,12 +241,12 @@ export default function StaffLogsView({ me }) {
   // actions elsewhere in this app (e.g. StaffWorkSitesForm's own
   // Deactivate) already gate behind a native confirm().
   async function handleForceClockOut(entry) {
-    if (
-      !window.confirm(
-        `Close out ${entry.staff?.display_name || 'this'}'s shift now? This sets the clock-out time to right now — only use this if they can't clock out themselves.`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: `Close out ${entry.staff?.display_name || 'this'}'s shift now?`,
+      message: "This sets the clock-out time to right now. Only use it if they can't clock out themselves.",
+      confirmLabel: 'Clock them out',
+    })
+    if (!ok) return
     setClosingId(entry.id)
     try {
       await forceClockOutEntry(entry.id)
@@ -261,12 +263,12 @@ export default function StaffLogsView({ me }) {
   // already uses, since this is the same class of "directly affects pay/
   // history, can't be undone from here" action.
   async function handleDeleteEntry(entry) {
-    if (
-      !window.confirm(
-        `Delete ${entry.staff?.display_name || 'this'}'s shift at ${entry.work_sites?.name || 'this location'}? This can't be undone.`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: `Delete ${entry.staff?.display_name || 'this'}'s shift at ${entry.work_sites?.name || 'this location'}?`,
+      message: "This can't be undone.",
+      confirmLabel: 'Delete shift',
+    })
+    if (!ok) return
     setDeletingId(entry.id)
     try {
       await deleteTimeEntry(entry.id)

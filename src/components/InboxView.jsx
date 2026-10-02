@@ -3,6 +3,7 @@ import { Paperclip, Bell, Hand } from 'lucide-react'
 import { getInboxItems, getCompletedSubmissions, getNudgedTasks } from '../lib/tasks'
 import { assigneeBadge, memberColor } from '../lib/whoLabels'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
+import { useConfirm } from '../lib/confirmContext'
 
 const KIND_LABEL = { question: 'asked', answer: 'answered', finished: 'marked finished' }
 const inboxItemBaseClasses =
@@ -183,6 +184,7 @@ export default function InboxView({
   onUpdate,
   lastViewedAt,
 }) {
+  const confirm = useConfirm()
   const [frozenLastViewedAt] = useState(() => lastViewedAt)
   const [view, setView] = useState('all')
 
@@ -245,7 +247,13 @@ export default function InboxView({
     // with no undo — worth a confirm, same reasoning as other
     // consequential batch/destructive actions in this app.
     const count = questions.length
-    if (!window.confirm(`Mark all ${count} item${count === 1 ? '' : 's'} as no reply needed?`)) return
+    const ok = await confirm({
+      title: `Mark all ${count} item${count === 1 ? '' : 's'} as no reply needed?`,
+      message: 'This closes them without sending a reply.',
+      confirmLabel: 'Mark all',
+      tone: 'neutral',
+    })
+    if (!ok) return
 
     const idsByTask = new Map()
     for (const item of questions) {
