@@ -18,6 +18,7 @@ import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
 import { readableTextColor } from '../lib/colorContrast'
+import { friendlyError } from '../lib/friendlyError'
 
 // Auto-dismiss window for the post-completion Notify prompt — same 8s
 // Projects' own undo-on-remove banner uses, long enough to actually
@@ -304,7 +305,7 @@ export default function TaskRow({
       )
       await onUpdate(task.id, { completion_attachments: [...attachments, ...uploaded] })
     } catch (err) {
-      setUploadError(err.message)
+      setUploadError(friendlyError(err))
     } finally {
       setUploading(false)
       e.target.value = ''

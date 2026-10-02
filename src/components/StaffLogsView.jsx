@@ -27,6 +27,7 @@ import StaffProfileForm from './StaffProfileForm'
 import StaffCredentialsForm from './StaffCredentialsForm'
 import StaffLocationsManager from './StaffLocationsManager'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 const STATUS_TABS = [
   { key: 'all', label: 'All' },
@@ -95,7 +96,7 @@ export default function StaffLogsView({ me }) {
         await fetchAllTimeEntries({ status: statusFilter === 'all' ? undefined : statusFilter, ...range }),
       )
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -107,7 +108,7 @@ export default function StaffLogsView({ me }) {
     try {
       setSites(await fetchWorkSites())
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -118,7 +119,7 @@ export default function StaffLogsView({ me }) {
     try {
       setRequests(await fetchTimeEntryRequests())
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -142,7 +143,7 @@ export default function StaffLogsView({ me }) {
         ),
       )
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -153,7 +154,7 @@ export default function StaffLogsView({ me }) {
       setSites(sitesData)
       await Promise.all([reloadProperties(), reloadEntries(), reloadRequests()])
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setLoading(false)
     }
@@ -226,7 +227,7 @@ export default function StaffLogsView({ me }) {
       await approveTimeEntry(entryId, me.id)
       await reloadEntries()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setApprovingId(null)
     }
@@ -252,7 +253,7 @@ export default function StaffLogsView({ me }) {
       await forceClockOutEntry(entry.id)
       await reloadEntries()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setClosingId(null)
     }
@@ -274,7 +275,7 @@ export default function StaffLogsView({ me }) {
       await deleteTimeEntry(entry.id)
       await reloadEntries()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setDeletingId(null)
     }
@@ -291,7 +292,7 @@ export default function StaffLogsView({ me }) {
       await requestShiftReport(entry.id, me.id)
       await reloadEntries()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -303,7 +304,7 @@ export default function StaffLogsView({ me }) {
       await resolveTimeEntryRequest(id, me.id)
       await reloadRequests()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setResolvingRequestId(null)
     }
@@ -314,7 +315,7 @@ export default function StaffLogsView({ me }) {
       await setStaffActive(staffMember.id, !staffMember.active)
       setRoster(await fetchStaffRoster())
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 

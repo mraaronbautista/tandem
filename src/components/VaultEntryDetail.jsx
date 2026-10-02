@@ -5,6 +5,7 @@ import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import AssigneePicker from './AssigneePicker'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
@@ -61,7 +62,7 @@ export default function VaultEntryDetail({
       onShareChanged(shareDraft)
       setEditingShare(false)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSharing(false)
     }
@@ -73,7 +74,7 @@ export default function VaultEntryDetail({
     try {
       await onMoveFolder(e.target.value)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setMoving(false)
     }
@@ -102,7 +103,7 @@ export default function VaultEntryDetail({
       await deleteVaultEntry(entry.id)
       onDeleted()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setDeleting(false)
     }
   }

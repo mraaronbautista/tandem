@@ -21,6 +21,7 @@ import VaultEntryForm from './VaultEntryForm'
 import VaultEntryDetail from './VaultEntryDetail'
 import VaultExportForm from './VaultExportForm'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 const RESET_CONFIRM_WORD = 'RESET'
 
@@ -119,7 +120,7 @@ export default function VaultView({ me, members = [], onClose }) {
         setVaults(rows)
         setActiveVaultId((current) => current ?? rows[0]?.id ?? null)
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }, [])
 
   // Switching vaults means re-locking — each vault's key is genuinely
@@ -144,10 +145,10 @@ export default function VaultView({ me, members = [], onClose }) {
     setAccessRoster([])
     fetchVaultMeta(activeVaultId)
       .then(setMeta)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
     fetchVaultAccessRoster(activeVaultId)
       .then(setAccessRoster)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }, [activeVaultId])
 
   const activeVault = vaults?.find((v) => v.id === activeVaultId)
@@ -167,7 +168,7 @@ export default function VaultView({ me, members = [], onClose }) {
       )
       setEntries(decrypted)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -200,7 +201,7 @@ export default function VaultView({ me, members = [], onClose }) {
       setConfirmPassword('')
       await loadEntries(key)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setUnlocking(false)
     }
@@ -216,7 +217,7 @@ export default function VaultView({ me, members = [], onClose }) {
       setMasterPassword('')
       await loadEntries(key)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setUnlocking(false)
     }
@@ -232,7 +233,7 @@ export default function VaultView({ me, members = [], onClose }) {
       setShowReset(false)
       setResetConfirmText('')
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setResetting(false)
     }
@@ -274,7 +275,7 @@ export default function VaultView({ me, members = [], onClose }) {
       setSelectedEntry({ ...value, id: entry.id })
       loadEntries(vaultKey)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -311,7 +312,7 @@ export default function VaultView({ me, members = [], onClose }) {
       setRenamingFolder(null)
       await loadEntries(vaultKey)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setFolderBusy(false)
     }
@@ -334,7 +335,7 @@ export default function VaultView({ me, members = [], onClose }) {
       await Promise.all(affected.map((entry) => saveEntryFolder(entry, '')))
       await loadEntries(vaultKey)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setFolderBusy(false)
     }

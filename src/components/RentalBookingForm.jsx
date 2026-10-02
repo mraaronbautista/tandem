@@ -10,6 +10,7 @@ import {
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 // Matches .submission-field input[type='text'/'number']/textarea
 // (App.css:1366-1382) — same fix as the other 3 Rental forms. Deliberately
@@ -139,7 +140,7 @@ export default function RentalBookingForm({
         : await createRentalBooking({ ...payload, created_by: createdBy })
       onSaved(saved)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }

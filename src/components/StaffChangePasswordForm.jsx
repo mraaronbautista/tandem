@@ -3,6 +3,7 @@ import { changeOwnPassword } from '../lib/staff'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 const FIELD_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
@@ -32,7 +33,7 @@ export default function StaffChangePasswordForm({ onClose }) {
       await changeOwnPassword(newPassword)
       setDone(true)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }

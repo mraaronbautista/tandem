@@ -7,6 +7,7 @@ import PriorityItemsEditor from './PriorityItemsEditor'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 const PERIODS = [
   { value: 'day', label: 'Day' },
@@ -64,10 +65,10 @@ export default function PrioritiesForm({ me, members = [], onClose, embedded = f
   useEffect(() => {
     fetchLatestPriorities(me.id)
       .then(setLatest)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
     fetchLatestPrioritiesForTeam()
       .then(setTeamLatest)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -103,7 +104,7 @@ export default function PrioritiesForm({ me, members = [], onClose, embedded = f
       )
       onClose()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }

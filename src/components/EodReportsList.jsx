@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import AttachmentList from './AttachmentList'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -71,7 +72,7 @@ export default function EodReportsList({ memberName, meId }) {
     function reload() {
       fetchEodReports()
         .then(setReports)
-        .catch((err) => setError(err.message))
+        .catch((err) => setError(friendlyError(err)))
     }
     reload()
 
@@ -138,7 +139,7 @@ export default function EodReportsList({ memberName, meId }) {
       setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
       setEditingId(null)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }

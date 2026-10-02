@@ -25,6 +25,7 @@ import StaffChangePasswordForm from './StaffChangePasswordForm'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 // How long to wait after first noticing the property manager is outside
 // the active shift's geofence before actually prompting them — a single
@@ -167,7 +168,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setHistory(await fetchOwnTimeEntries(session.user.id, { from: startOfWeek().toISOString() }))
       await reloadRequests()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setLoading(false)
     }
@@ -177,7 +178,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
     try {
       setRequests(await fetchOwnTimeEntryRequests(session.user.id))
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -201,7 +202,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
     try {
       applySites(await fetchWorkSites())
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -365,7 +366,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setNotes('')
       setRateType('standard')
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSubmitting(false)
     }
@@ -441,7 +442,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       }
       setStopFlow(null)
     } catch (err) {
-      setStopError(err.message)
+      setStopError(friendlyError(err))
     } finally {
       setStopSubmitting(false)
     }
@@ -473,7 +474,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setStopFlow(null)
       setStopReportNote('')
     } catch (err) {
-      setStopError(err.message)
+      setStopError(friendlyError(err))
     } finally {
       setStopSubmitting(false)
     }
@@ -492,7 +493,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setReportDraft('')
       await loadAll()
     } catch (err) {
-      setReportSubmitError(err.message)
+      setReportSubmitError(friendlyError(err))
     } finally {
       setSubmittingReport(false)
     }
@@ -516,7 +517,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setCaptureMessage('Location captured. Ask Ada or Aaron to approve it before you can clock in here.')
       await loadAll()
     } catch (err) {
-      setCaptureError(err.message || "Couldn't get your location. Check this site's location permission and try again.")
+      setCaptureError(friendlyError(err))
     } finally {
       setCapturingSiteId(null)
     }
@@ -540,7 +541,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
       setRequestNote('')
       await reloadRequests()
     } catch (err) {
-      setRequestError(err.message)
+      setRequestError(friendlyError(err))
     } finally {
       setSubmittingRequest(false)
     }

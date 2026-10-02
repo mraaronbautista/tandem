@@ -14,6 +14,7 @@ import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
@@ -73,7 +74,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
       const saved = await approveWorkSiteLocationCapture(site)
       onSaved(saved)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setReviewing(false)
     }
   }
@@ -85,7 +86,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
       await rejectWorkSiteLocationCapture(site.id)
       onSaved(site)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setReviewing(false)
     }
   }
@@ -127,7 +128,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
       setAddressResults(results)
       if (!results.length) setLocationError('No matching address found. Add the city, state, or ZIP code and try again.')
     } catch (err) {
-      setLocationError(err.message)
+      setLocationError(friendlyError(err))
     } finally {
       setSearchingAddress(false)
     }
@@ -177,7 +178,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
       await assignRentalPropertiesToWorkSite(saved.id, propertyIds)
       onSaved(saved)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -197,7 +198,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
       await archiveWorkSite(site.id)
       onArchived()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setArchiving(false)
     }
   }

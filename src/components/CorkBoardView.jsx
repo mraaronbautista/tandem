@@ -6,6 +6,7 @@ import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCork
 import { createTask } from '../lib/tasks'
 import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 const composeClasses = 'flex flex-col gap-2 [&_textarea]:min-h-[70px] [&_textarea]:resize-y [&_textarea]:rounded-[8px] [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-card-bg [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-[15px] [&_textarea]:text-text-h [&_textarea]:[font-family:inherit] [&_textarea]:[font-style:inherit] [&_textarea]:[font-variant:inherit] [&_textarea]:[font-weight:inherit] [&_textarea]:[line-height:inherit]'
 const itemActionClasses = 'cursor-pointer rounded-[6px] border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h'
@@ -308,7 +309,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
   function reload() {
     fetchCorkNotes()
       .then(setNotes)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }
 
   // A roadmap step's "done" state reads straight off the real task's own
@@ -345,7 +346,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       setRoadmapDraft('')
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setPosting(false)
     }
@@ -370,7 +371,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       setSharingId(null)
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -383,7 +384,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       await updateCorkNote(note.id, { archived })
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setArchivingId(null)
     }
@@ -400,7 +401,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       await restoreArchivedTask(note)
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setRestoringId(null)
     }
@@ -417,7 +418,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       await deleteCorkNote(note.id)
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -447,7 +448,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       setEditingId(null)
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -465,7 +466,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       setCommentDrafts((prev) => ({ ...prev, [note.id]: '' }))
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setPostingCommentId(null)
     }
@@ -514,7 +515,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       })
       setPromoted((prev) => new Set(prev).add(note.id))
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setPromotingId(null)
     }
@@ -550,7 +551,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       setOpenAddKey(null)
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setAddingItemKey(null)
     }
@@ -593,7 +594,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       setAddSubtaskDraft('')
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -609,7 +610,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       removeUndoTimer.current = setTimeout(() => setRemovedItem(null), REMOVE_UNDO_MS)
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -624,7 +625,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       await updateCorkNote(note.id, { roadmap_items: [...(note.roadmap_items || []), pending.item] })
       reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 

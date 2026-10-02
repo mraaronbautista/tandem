@@ -9,6 +9,7 @@ import Modal from './Modal'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 // 'biweekly' is deliberately left out of this picker — Ada/Aaron found
 // it cluttered the tab row without pulling its weight day to day. Not a
@@ -122,7 +123,7 @@ export default function EndOfDayReportForm({ tasks, me, members = [], onClose })
           setMinutesInput('')
         }
       })
-      .catch((err) => !cancelled && setError(err.message))
+      .catch((err) => !cancelled && setError(friendlyError(err)))
 
     return () => {
       cancelled = true
@@ -159,7 +160,7 @@ export default function EndOfDayReportForm({ tasks, me, members = [], onClose })
       )
       onClose()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSubmitting(false)
     }

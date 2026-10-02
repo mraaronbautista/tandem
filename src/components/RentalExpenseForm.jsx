@@ -4,6 +4,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 // Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
 // — same fix as RentalSavingsGoalForm.jsx: this form's fields were bare
@@ -34,7 +35,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
         : await createRentalExpense(company, payload)
       onSaved(saved)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -53,7 +54,7 @@ export default function RentalExpenseForm({ company, expense, onClose, onSaved, 
       await deleteRentalExpense(expense.id)
       onDeleted()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setDeleting(false)
     }
   }

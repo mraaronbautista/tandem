@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import ThemeToggle from './ThemeToggle'
+import { friendlyError } from '../lib/friendlyError'
 
 const loginFormClasses =
   'flex flex-col gap-2.5 [&_button]:cursor-pointer [&_button]:rounded-[8px] [&_button]:border-0 [&_button]:bg-accent [&_button]:px-3 [&_button]:py-2.5 [&_button]:font-semibold [&_button]:text-on-accent [&_button:hover]:bg-accent-h [&_input]:rounded-sm [&_input]:border [&_input]:border-border [&_input]:bg-card-bg [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-[15px] [&_input]:text-text-h'
@@ -49,7 +50,7 @@ export default function Login({ theme, toggleTheme }) {
 
     if (error) {
       setStatus('error')
-      setError(error.message)
+      setError(friendlyError(error))
       return
     }
 

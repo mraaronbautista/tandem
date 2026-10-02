@@ -4,6 +4,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 // Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
 // — this form's fields were bare <label><input/></label> pairs with
@@ -42,7 +43,7 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
       const saved = goal ? await updateSavingsGoal(goal.id, payload) : await createSavingsGoal(company, payload)
       onSaved(saved)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -61,7 +62,7 @@ export default function RentalSavingsGoalForm({ company, goal, onClose, onSaved,
       await deleteSavingsGoal(goal.id)
       onDeleted()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setDeleting(false)
     }
   }

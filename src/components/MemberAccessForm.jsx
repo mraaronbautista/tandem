@@ -13,6 +13,7 @@ import {
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 const LEVEL_OPTIONS = [
   { value: '', label: "Can't see them" },
@@ -147,7 +148,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
         setPrioritiesAccessState(prioritiesIds)
         setLoading(false)
       })
-      .catch((err) => !cancelled && setError(err.message))
+      .catch((err) => !cancelled && setError(friendlyError(err)))
     return () => {
       cancelled = true
     }
@@ -209,7 +210,7 @@ export default function MemberAccessForm({ target, members, onClose, onSaved }) 
       await Promise.all(writes)
       onSaved()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }

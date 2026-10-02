@@ -20,6 +20,7 @@ import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
 import RentalLongTermView from './RentalLongTermView'
 import RentalPropertyForm from './RentalPropertyForm'
+import { friendlyError } from '../lib/friendlyError'
 
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
@@ -148,7 +149,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   function reloadProperties() {
     fetchRentalProperties(company)
       .then(setProperties)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }
 
   // Flips optimistically-fast rather than waiting on the rentals-changes
@@ -157,13 +158,13 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   function handleToggleNegotiating(property) {
     setUnitNegotiating(property.id, !property.in_negotiation)
       .then(reloadProperties)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }
 
   function reloadExpenses() {
     fetchRentalExpenses(company)
       .then(setExpenses)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }
 
   // Defaults to the first short/midterm unit once properties actually load
@@ -181,14 +182,14 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   function reloadGoals() {
     fetchSavingsGoals(company)
       .then(setGoals)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }
 
   function reloadBookings() {
     const { start, end } = monthRangeStrings(monthDate)
     fetchRentalBookings(company, start, end)
       .then(setBookings)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }
 
   // Separate from the month-scoped `bookings` above — the Overview tab
@@ -197,7 +198,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   function reloadUpcoming() {
     fetchUpcomingRentalBookings(company)
       .then(setUpcomingBookings)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyError(err)))
   }
 
   function handleBookingsChanged() {

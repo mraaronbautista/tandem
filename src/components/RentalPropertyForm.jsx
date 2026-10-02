@@ -4,6 +4,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 const DEFAULT_COLOR = '#3b82f6'
 
@@ -54,7 +55,7 @@ export default function RentalPropertyForm({ company, property, defaultTerm, onC
         : await createRentalProperty(company, payload)
       onSaved(saved)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -74,7 +75,7 @@ export default function RentalPropertyForm({ company, property, defaultTerm, onC
       await archiveRentalProperty(property.id)
       onArchived()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setArchiving(false)
     }
   }

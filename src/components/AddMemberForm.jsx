@@ -4,6 +4,7 @@ import { generateStrongPassword } from '../lib/vault'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { friendlyError } from '../lib/friendlyError'
 
 const FIELD_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
@@ -61,7 +62,7 @@ export default function AddMemberForm({ members, onClose, onCreated }) {
       })
       onCreated({ id: created.id, display_name: displayName.trim(), color, permissions, is_admin: false })
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }

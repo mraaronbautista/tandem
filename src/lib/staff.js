@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { startOfPeriod } from './tasks'
+import { throwFunctionError } from './functionError'
 
 const STAFF_COLUMNS = 'id, display_name, hourly_rate, emergency_rate, job_description, active, payroll_cadence'
 const WORK_SITE_COLUMNS =
@@ -36,7 +37,7 @@ export async function createStaffAccount({
   const { data, error } = await supabase.functions.invoke('create-staff-account', {
     body: { username, password, displayName, hourlyRate, emergencyRate, payrollCadence, jobDescription },
   })
-  if (error) throw error
+  if (error) await throwFunctionError(error)
   return data
 }
 
@@ -77,7 +78,7 @@ export async function updateStaffCredentials({ staffId, newUsername, newPassword
   const { data, error } = await supabase.functions.invoke('update-staff-credentials', {
     body: { staffId, newUsername, newPassword },
   })
-  if (error) throw error
+  if (error) await throwFunctionError(error)
   return data
 }
 

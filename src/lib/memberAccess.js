@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { throwFunctionError } from './functionError'
 
 // Feature keys members.permissions can deny — mirrors has_permission()'s
 // feature-name comment in schema.sql. 'reports' gates *submitting* an
@@ -37,7 +38,7 @@ export async function createMemberAccount({ username, password, displayName, col
   const { data, error } = await supabase.functions.invoke('create-member-account', {
     body: { username, password, displayName, color, permissions },
   })
-  if (error) throw error
+  if (error) await throwFunctionError(error)
   return data
 }
 
@@ -51,7 +52,7 @@ export async function updateMemberCredentials({ memberId, newUsername, newPasswo
   const { data, error } = await supabase.functions.invoke('update-member-credentials', {
     body: { memberId, newUsername, newPassword },
   })
-  if (error) throw error
+  if (error) await throwFunctionError(error)
   return data
 }
 

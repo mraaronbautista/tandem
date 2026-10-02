@@ -22,6 +22,7 @@ import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
 import { useConfirm } from '../lib/confirmContext'
 import { readableTextColor } from '../lib/colorContrast'
+import { friendlyError } from '../lib/friendlyError'
 
 const MS_PER_UNIT = { days: 86400000, hours: 3600000, minutes: 60000 }
 
@@ -261,7 +262,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
       )
       onCreated()
     } catch (err) {
-      setSubmitError(err.message)
+      setSubmitError(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -420,7 +421,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
       )
       onCreated()
     } catch (err) {
-      setApplyError(err.message)
+      setApplyError(friendlyError(err))
     } finally {
       setApplying(false)
     }
@@ -451,7 +452,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
       setSelectedIds(new Set())
       onCreated()
     } catch (err) {
-      setDeleteError(err.message)
+      setDeleteError(friendlyError(err))
     } finally {
       setDeleting(false)
     }

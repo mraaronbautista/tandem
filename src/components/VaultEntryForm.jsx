@@ -4,6 +4,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 export default function VaultEntryForm({
   vaultId,
@@ -99,7 +100,7 @@ export default function VaultEntryForm({
           })
       onSaved({ ...value, id: saved.id, sharedWith: saved.shared_with })
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }

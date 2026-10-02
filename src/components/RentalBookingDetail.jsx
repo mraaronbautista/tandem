@@ -12,6 +12,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
+import { friendlyError } from '../lib/friendlyError'
 
 function formatDateStr(dateStr) {
   // Parsed as local, not UTC — a bare 'YYYY-MM-DD' parsed via `new Date()`
@@ -49,7 +50,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
     try {
       await setChargePaid(booking.id, booking.paid_charges || [], nextUnpaidCharge)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setMarkingPaid(false)
     }
@@ -69,7 +70,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
       await deleteRentalBooking(booking.id)
       onDeleted()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setDeleting(false)
     }
   }
@@ -81,7 +82,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
       await confirmRentalBooking(booking.id)
       onConfirmed()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       setConfirming(false)
     }
   }

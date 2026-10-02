@@ -60,6 +60,7 @@ import IconButton from './IconButton'
 import NavItem from './NavItem'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { MonthNavRow, MonthNavLabel } from './MonthNavRow'
+import { friendlyError } from '../lib/friendlyError'
 
 const VIEW_MODES = [
   { key: 'day', label: 'Day' },
@@ -295,7 +296,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       const data = await fetchTasks()
       setTasks(data)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setLoading(false)
     }
@@ -312,7 +313,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       // vanish outright with nothing to explain why. A transient failure
       // here (e.g. a PWA resuming from the background mid-reconnect) used
       // to leave `members` empty indefinitely with zero visible trace.
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -322,7 +323,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
     } catch (err) {
       // Same reasoning as reloadMembers — this backs the Inbox's Nudges
       // section, not something that should fail silently.
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -437,7 +438,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   // user navigates to, instead of running recurrence generation during
   // every ordinary task refresh/delete.
   useEffect(() => {
-    ensureMonthRecurrences(selectedMonthKey).then(reload).catch((err) => setError(err.message))
+    ensureMonthRecurrences(selectedMonthKey).then(reload).catch((err) => setError(friendlyError(err)))
   }, [selectedMonthKey])
 
   // Default to your own tasks, not the shared "All" view — you should only
@@ -654,7 +655,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       reload() // pick up any spawned recurrence
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -663,7 +664,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       const updated = await updateTask(id, patch)
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -697,7 +698,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       await moveTasksToToday(overdue)
       setOverdueModalOpen(false)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setMovingOverdue(false)
     }
@@ -744,7 +745,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       reload()
       setSelectedOverdueIds(new Set())
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setCompletingOverdue(false)
     }
@@ -757,7 +758,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       await moveTasksToToday(overdue.filter((t) => selectedOverdueIds.has(t.id)))
       setSelectedOverdueIds(new Set())
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setMovingSelectedOverdue(false)
     }
@@ -782,7 +783,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       setTasks((prev) => prev.map((t) => (selectedOverdueIds.has(t.id) ? { ...t, archived: true } : t)))
       setSelectedOverdueIds(new Set())
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setArchivingOverdue(false)
     }
@@ -795,7 +796,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       await archiveTaskToBoard(task, me.id)
       setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, archived: true } : t)))
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 
@@ -806,7 +807,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       if (mode === 'single') setTasks((prev) => prev.filter((t) => t.id !== id))
       else reload()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 

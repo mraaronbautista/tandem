@@ -5,6 +5,7 @@ import { uploadCompletionAttachment } from '../lib/attachments'
 import AttachmentList from './AttachmentList'
 import AssigneePicker from './AssigneePicker'
 import { extractSteps } from '../lib/steps'
+import { friendlyError } from '../lib/friendlyError'
 
 // Its own component so the answer textarea can keep local draft state
 // while typing, same reasoning as ChecklistView's blocked-reason input —
@@ -44,7 +45,7 @@ function AnswerRow({ item, onChange, taskTitle, taskId, meId, otherMembers }) {
       )
       setAnswerAttachments((prev) => [...prev, ...uploaded])
     } catch (err) {
-      setUploadError(err.message)
+      setUploadError(friendlyError(err))
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -160,7 +161,7 @@ export default function TaskClarifications({
       )
       setQuestionAttachments((prev) => [...prev, ...uploaded])
     } catch (err) {
-      setUploadError(err.message)
+      setUploadError(friendlyError(err))
     } finally {
       setUploading(false)
       e.target.value = ''
