@@ -20,6 +20,7 @@ import { sendTimeEntryCorrectionRequest } from '../lib/manualNotify'
 import { findNearestSite, haversineDistanceM } from '../lib/geo'
 import ThemeToggle from './ThemeToggle'
 import MarkdownText from './MarkdownText'
+import HelpHint from './HelpHint'
 import StaffChangePasswordForm from './StaffChangePasswordForm'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -649,6 +650,10 @@ export default function StaffClockView({ theme, toggleTheme }) {
           {!activeEntry && !starting && captureSites.length > 0 && (
             <div className="flex flex-col gap-2 rounded-[8px] border border-border bg-card-bg p-4">
               <h2 className="text-[13px] opacity-60">Set up a location</h2>
+              <HelpHint label="What does this do?">
+                Ada and Aaron haven't confirmed where this place is yet. Stand at the property and tap Capture
+                location. They'll approve it, and after that you can clock in here.
+              </HelpHint>
               {captureError && <p className="error">{captureError}</p>}
               {captureMessage && <p className="text-sm text-online">{captureMessage}</p>}
               {captureSites.map((site) => {
@@ -737,6 +742,13 @@ export default function StaffClockView({ theme, toggleTheme }) {
                 )}
               </div>
 
+              {profile?.emergency_rate != null && (
+                <HelpHint label="Which rate should I pick?">
+                  Pick the rate that matches this shift. If you aren't sure which one applies, ask Ada or Aaron before
+                  you start — the rate you pick is saved with the shift.
+                </HelpHint>
+              )}
+
               <label className="flex flex-col gap-1 text-sm">
                 Notes (optional)
                 <textarea
@@ -777,7 +789,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
               <p className="text-4xl font-bold text-text-h tabular-nums">{formatElapsed(elapsedMs)}</p>
               {activeEntry.flagged && (
                 <p className="flex items-center gap-1 text-xs text-overdue">
-                  <AlertTriangle size={13} /> Flagged — clock-in was outside the expected radius.
+                  <AlertTriangle size={13} /> Heads up: you clocked in far from the work site. Ada and Aaron will see this on the shift.
                 </p>
               )}
               <button
@@ -822,6 +834,11 @@ export default function StaffClockView({ theme, toggleTheme }) {
                       disabled={stopSubmitting}
                     >
                       {stopSubmitting ? 'Clocking out…' : 'Taking a break'}
+                      {!stopSubmitting && (
+                        <span className="mt-0.5 block text-xs font-normal opacity-70">
+                          Stops the clock. Start again when you're back.
+                        </span>
+                      )}
                     </button>
                     <button
                       type="button"
@@ -830,6 +847,9 @@ export default function StaffClockView({ theme, toggleTheme }) {
                       disabled={stopSubmitting}
                     >
                       Clocking out for now
+                      <span className="mt-0.5 block text-xs font-normal opacity-85">
+                        Stops the clock, then you can say what you worked on.
+                      </span>
                     </button>
                   </div>
                 </>
@@ -897,10 +917,17 @@ export default function StaffClockView({ theme, toggleTheme }) {
                     <span className="min-w-0 truncate font-medium text-text-h">
                       {sites.find((site) => site.id === e.work_site_id)?.name || 'Work site'}
                     </span>
-                    <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>{e.status}</span>
+                    <span className={e.status === 'approved' ? 'text-online' : 'opacity-60'}>
+                      {e.status === 'approved' ? 'Approved' : e.status === 'pending' ? 'Waiting for approval' : e.status}
+                    </span>
                     <span className="text-xs opacity-65">
                       {new Date(e.clock_in_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                      {e.flagged && <AlertTriangle size={12} className="ml-1 inline align-[-1px] text-overdue" />}
+                      {e.flagged && (
+                        <span className="ml-1.5 text-overdue" title="You clocked in far from the work site">
+                          <AlertTriangle size={12} className="mr-0.5 inline align-[-1px]" />
+                          Far from site
+                        </span>
+                      )}
                     </span>
                     <span className="font-semibold">{e.clock_out_at ? money(computeEntryPay(e)) : 'in progress'}</span>
                     {/* Shift report — existing notes shown read-only above a
