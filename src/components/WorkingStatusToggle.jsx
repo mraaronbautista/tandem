@@ -118,12 +118,12 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
   }
 
   return (
-    <div className="relative flex items-center gap-1.5">
+    <div className="relative flex items-center gap-1.5 max-[480px]:gap-1">
       {canSetStatus ? (
         <>
           <button
             type="button"
-            className={`cursor-pointer whitespace-nowrap rounded-full border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] max-[480px]:px-2 max-[480px]:text-xs ${
+            className={`cursor-pointer whitespace-nowrap rounded-full border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] max-[480px]:px-1.5 max-[480px]:text-xs ${
               isWorking ? 'border-[var(--color-online)] text-[var(--color-online)]' : 'border-border text-text-h'
             }`}
             onClick={handleToggleClick}
@@ -142,14 +142,23 @@ export default function WorkingStatusToggle({ me, members, onChange }) {
               {isWorking ? (myStatus === 'available' ? 'Online' : STATUS_LABEL[myStatus]) : 'Offline'}
             </span>
           </button>
-          <IconButton size="header" onClick={() => setSheetOpen((v) => !v)} title="Status" aria-label="Status details">
+          {/* Deliberately left icon-only: a chevron sitting directly beside
+              the Online/Offline pill reads as that pill's dropdown by
+              convention, unlike the standalone Nudge/Settings icons, and a
+              third labeled button would not fit a 360px phone's header. */}
+          <IconButton
+            size="header"
+            onClick={() => setSheetOpen((v) => !v)}
+            title="Set your status and see who's working"
+            aria-label="Status details"
+          >
             <ChevronDown size={16} />
           </IconButton>
         </>
       ) : (
         <button
           type="button"
-          className={`cursor-pointer whitespace-nowrap rounded-full border border-border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] max-[480px]:px-2 max-[480px]:text-xs ${
+          className={`cursor-pointer whitespace-nowrap rounded-full border border-border bg-card-bg px-3 py-1.5 text-[13px] transition-all duration-[120ms] ease-tactile active:scale-[0.96] max-[480px]:px-1.5 max-[480px]:text-xs ${
             othersWorking.length ? 'text-[var(--color-online)]' : 'text-text opacity-70'
           }`}
           onClick={() => setSheetOpen((v) => !v)}

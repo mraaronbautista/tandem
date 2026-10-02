@@ -12,18 +12,30 @@
 // size="weekNav": the ‹ Today › week-step arrows (.view-mode-row
 //   .month-nav-arrows .icon-button) — a fixed 26px circle, 13px text,
 //   unrelated to viewport width.
+// size="headerLabeled": the header icons once they carry a visible text
+//   label (pass `label`) — UI/UX overhaul Phase 1. title/aria-label alone
+//   is a hover tooltip, which a phone (the app's main surface) never
+//   shows, so a first-time user had no way to learn what the bare icon
+//   does. Wide screens: icon and text side by side in a pill. Phones:
+//   icon stacked over a small text label, the same shape the bottom nav
+//   already uses, and at least a 44px touch target.
 const SIZE_CLASSES = {
   base: 'h-8 w-8 text-[15px]',
   header: 'h-8 w-8 text-[15px] max-[480px]:h-10 max-[480px]:w-10',
   weekNav: 'h-[26px] w-[26px] text-[13px]',
+  headerLabeled:
+    'h-8 gap-1.5 px-3 text-[13px] max-[480px]:h-auto max-[480px]:min-h-[44px] max-[480px]:min-w-[44px] max-[480px]:flex-col max-[480px]:gap-0.5 max-[480px]:rounded-lg max-[480px]:px-1 max-[480px]:py-1 max-[480px]:text-[10px]',
 }
 
-export default function IconButton({ size = 'base', className = '', ...props }) {
+export default function IconButton({ size = 'base', className = '', label, children, ...props }) {
   return (
     <button
       type="button"
       className={`flex flex-none cursor-pointer items-center justify-center rounded-full border border-border bg-card-bg leading-none transition-all duration-[120ms] ease-tactile active:scale-[0.92] disabled:cursor-default disabled:opacity-50 ${SIZE_CLASSES[size]} ${className}`}
       {...props}
-    />
+    >
+      {children}
+      {label && <span className="whitespace-nowrap">{label}</span>}
+    </button>
   )
 }

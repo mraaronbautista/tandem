@@ -991,11 +991,11 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 are now fully orphaned, left in place until a dedicated
                 dead-CSS cleanup pass. */}
             {isDesktop && <nav className="flex gap-1">{renderNavButtons('desktop')}</nav>}
-            <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-1.5">
+            <div className="flex flex-wrap items-center justify-end gap-3 max-[480px]:gap-1">
               <WorkingStatusToggle me={me} members={members} onChange={reloadMembers} />
               {otherMembers.length > 0 && (
                 <div className="relative">
-                  <IconButton size="header" onClick={handleNudgeClick} title="Nudge" aria-label="Nudge">
+                  <IconButton size="headerLabeled" label="Nudge" onClick={handleNudgeClick} title="Nudge a teammate">
                     <Hand size={16} />
                   </IconButton>
                   {nudgeMenuOpen && (
@@ -1017,7 +1017,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   )}
                 </div>
               )}
-              <IconButton size="header" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
+              <IconButton size="headerLabeled" label="Settings" onClick={() => setSettingsOpen(true)}>
                 <Settings size={16} />
               </IconButton>
             </div>
