@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
+import { totpToUri } from '../lib/totp'
 
 const CONFIRM_WORD = 'EXPORT'
 
@@ -19,9 +20,13 @@ function csvEscape(value) {
 }
 
 function buildCsv(entries) {
-  const header = ['Label', 'Username', 'Login Method', 'Password', 'URL', 'Notes']
+  const header = ['Label', 'Username', 'Login Method', 'Password', 'URL', 'Notes', 'Authenticator Link']
   const rows = entries.map((e) =>
-    [e.label, e.username, e.loginMethod, e.password, e.url, e.notes].map(csvEscape).join(','),
+    // A standard otpauth:// link: any authenticator app can import it, so
+    // exporting never strands a one-time-code key inside Tandem.
+    [e.label, e.username, e.loginMethod, e.password, e.url, e.notes, e.totp ? totpToUri(e.totp, { label: e.label, issuer: e.label }) : '']
+      .map(csvEscape)
+      .join(','),
   )
   return [header.join(','), ...rows].join('\n')
 }
@@ -50,7 +55,7 @@ export default function VaultExportForm({ entries, onClose }) {
         <h2>Export vault</h2>
 
         <p className="vault-warning">
-          This downloads a file with every password in this vault written in <strong>plain, unencrypted text</strong>{' '}
+          This downloads a file with every password, and every authenticator key, in this vault written in <strong>plain, unencrypted text</strong>{' '}
           — anyone who opens it can read everything. Store it somewhere very safe (not synced to cloud storage or
           email) and delete it once you no longer need it.
         </p>

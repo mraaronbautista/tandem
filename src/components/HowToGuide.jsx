@@ -238,6 +238,13 @@ const FAQS = [
     ],
   },
   {
+    title: 'Can the Vault give me one-time codes, like Google Authenticator?',
+    items: [
+      'Yes. When you add or edit an entry, paste the setup key a site shows you into "Authenticator key". The entry then shows the same changing 6-digit code an authenticator app would, with a countdown and a Copy button. Check the preview in the form: it should match the code the site asks for.',
+      'Tip: codes depend on your phone\'s clock being right, and everyone an entry is shared with can make its codes. For your most sensitive accounts, keep the key in your own authenticator app instead of the shared Vault.',
+    ],
+  },
+  {
     title: 'I forgot the Vault master password — how do I get back in?',
     items: [
       'There\'s no password-reset flow. The only way out is "Reset vault," which wipes every saved entry and requires typing a confirmation word first — so it\'s worth keeping the shared password written down somewhere safe rather than relying on memory alone.',

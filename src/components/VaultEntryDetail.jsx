@@ -6,6 +6,7 @@ import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import AssigneePicker from './AssigneePicker'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
+import TotpCode from './TotpCode'
 
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
@@ -188,6 +189,13 @@ export default function VaultEntryDetail({
             <button type="button" className="vault-copy" onClick={() => handleCopy('password', entry.password)}>
               {copiedField === 'password' ? 'Copied' : 'Copy'}
             </button>
+          </div>
+        )}
+
+        {entry.totp && (
+          <div className="flex items-start gap-2 text-sm">
+            <span className="w-[70px] flex-none pt-1 text-[13px] opacity-80">Code</span>
+            <TotpCode totp={entry.totp} onCopy={(code) => handleCopy('totp', code)} copied={copiedField === 'totp'} />
           </div>
         )}
 

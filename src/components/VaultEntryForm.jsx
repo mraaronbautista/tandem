@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { encryptJSON, generateStrongPassword, createVaultEntry, updateVaultEntry } from '../lib/vault'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
+import { parseTotpInput, totpToInput } from '../lib/totp'
+import TotpCode from './TotpCode'
+import HelpHint from './HelpHint'
 
 export default function VaultEntryForm({
   vaultId,
@@ -31,6 +34,19 @@ export default function VaultEntryForm({
   // same default cork_notes.shared_with already established.
   const [sharedWith, setSharedWith] = useState(entry?.sharedWith || [])
   const [showPassword, setShowPassword] = useState(false)
+  // What the person pasted: the bare setup key, or the otpauth:// link a QR
+  // code holds. Parsed live so a mistake is explained while typing, and a
+  // valid one shows the current code to compare against the site.
+  const [totpInput, setTotpInput] = useState(() => totpToInput(entry?.totp))
+  const [showTotp, setShowTotp] = useState(false)
+  const totpParsed = useMemo(() => {
+    if (!totpInput.trim()) return { config: null, error: '' }
+    try {
+      return { config: parseTotpInput(totpInput), error: '' }
+    } catch (err) {
+      return { config: null, error: err.message }
+    }
+  }, [totpInput])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -55,6 +71,7 @@ export default function VaultEntryForm({
       url !== (entry?.url || '') ||
       notes !== (entry?.notes || '') ||
       folder !== (entry?.folder || '') ||
+      totpInput.trim() !== totpToInput(entry?.totp) ||
       sharedWith.length !== originalShared.length ||
       sharedWith.some((id) => !originalShared.includes(id))
     )
@@ -76,6 +93,10 @@ export default function VaultEntryForm({
   async function handleSubmit(e) {
     e.preventDefault()
     if (!label.trim()) return
+    if (totpParsed.error) {
+      setError(`Authenticator key: ${totpParsed.error}`)
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -87,6 +108,9 @@ export default function VaultEntryForm({
         url: url.trim(),
         notes: notes.trim(),
         folder,
+        // Omitted entirely (not null) when blank, so an entry without one
+        // stays byte-for-byte what it was before this field existed.
+        ...(totpParsed.config ? { totp: totpParsed.config } : {}),
       }
       const { ciphertext, iv } = await encryptJSON(vaultKey, value)
       const saved = entry
@@ -175,6 +199,39 @@ export default function VaultEntryForm({
             </button>
           </div>
         </label>
+
+        <div className="submission-field">
+          <label>
+            Authenticator key (optional)
+            <div className="vault-password-input-row">
+              <input
+                type={showTotp ? 'text' : 'password'}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="Setup key, or the otpauth:// link"
+                value={totpInput}
+                onChange={(e) => setTotpInput(e.target.value)}
+              />
+              <button type="button" className="vault-copy" onClick={() => setShowTotp((v) => !v)}>
+                {showTotp ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </label>
+          {totpParsed.error && totpInput.trim() && <p className="error mt-1 text-xs">{totpParsed.error}</p>}
+          {totpParsed.config && (
+            <div className="mt-2 flex flex-col gap-1">
+              <span className="text-xs opacity-80">Looks right if this matches the code the site asks for:</span>
+              <TotpCode totp={totpParsed.config} />
+            </div>
+          )}
+          <HelpHint label="Where do I find this key?">
+            When a site offers an authenticator app, choose "can't scan the code" or "enter a key instead" and copy
+            the key it shows. Once it is saved here, this entry shows the same changing 6-digit code an authenticator
+            app would. Codes depend on your phone's clock being right. Everyone this entry is shared with can make
+            codes, so keep your most sensitive accounts in your own authenticator app instead.
+          </HelpHint>
+        </div>
 
         <label>
           URL

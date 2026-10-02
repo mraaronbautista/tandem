@@ -259,6 +259,9 @@ export default function VaultView({ me, members = [], onClose }) {
       url: entry.url,
       notes: entry.notes,
       folder,
+      // Re-encrypting from a fixed field list would otherwise silently drop
+      // the authenticator key the moment a folder was renamed or moved.
+      ...(entry.totp ? { totp: entry.totp } : {}),
     }
     const { ciphertext, iv } = await encryptJSON(vaultKey, value)
     await updateVaultEntry(entry.id, { ciphertext, iv })
