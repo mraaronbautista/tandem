@@ -70,6 +70,13 @@ Claude reported the audit complete after an additional mechanical pass over colu
 
 ## Activity log
 
+### October 6, 2026 — Codex: lease notes committed, pushed and public bundle verified
+
+- Feature committed as `9125b9b` and pushed to origin/main under Aaron’s explicit publication approval.
+- Public Netlify HTML now serves `/assets/index-C6OnU2O3.js`; fetched bundle contains Latest lease note, rental_lease_notes, dated history and past-note controls. Public deployment confirmed at the asset level; signed-in production-site write flows were not exercised.
+- SQL user-reported applied; signed-in local app reads/editor verified. Local database/UI/build/lint checks passed previously. Live author restrictions, saves and Realtime remain unverified; no test notes written to production.
+- Documentation updated to the published checkpoint. Next proposed phase: define Rentals CSV export scope. Call/text logging remains deferred. `.agents/` untouched.
+
 ### October 6, 2026 — Codex: lease notes publication authorized
 
 - Aaron explicitly approved committing and publishing the prepared lease notes phase (“yup”). Local checks passed; SQL user-reported applied and signed-in reads/editor confirmed. No production test notes created.

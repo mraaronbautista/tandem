@@ -257,7 +257,7 @@ Aaron reports the location SQL ran and worked (October 6). Migration not indepen
 
 ## Next phase — dated lease notes (October 6, 2026)
 
-**Status: implementation prepared locally; SQL user-reported applied and signed-in note reads/editor verified. Commit/publish pending.** Aaron requested the next phase and the preview, then asked to update Markdown. His subsequent “go on” was treated as authorization to implement the preview and its proposed author-only editing rules.
+**Status: committed as `9125b9b`, pushed and public bundle confirmed live. SQL user-reported applied; signed-in note reads/editor verified. Live write/author/Realtime checks remain pending.** Aaron requested the next phase and the preview, then asked to update Markdown. His subsequent “go on” was treated as authorization to implement the preview and its proposed author-only editing rules.
 
 Preview: `/Users/aaron/Documents/Codex/2026-10-06/i/outputs/lease-notes-preview.html` (example data only).
 
@@ -265,7 +265,7 @@ Preview: `/Users/aaron/Documents/Codex/2026-10-06/i/outputs/lease-notes-preview.
 
 - Long-term leases only. Show the latest note on each lease card, plus Add note and View notes with a count.
 - A separate sheet shows the original unit/tenant/lease dates, a new-note field, and dated history newest first with author names.
-- Everyone with Rentals permission can read and add notes. **Proposed, not approved:** only the author can edit/archive their own notes; archived notes can be restored and are hidden by default. Edited notes show an update timestamp.
+- Everyone with Rentals permission can read and add notes. Only the author can edit/archive their own notes; archived notes can be restored and are hidden by default. Edited notes show an update timestamp.
 - Notes remain associated with the original lease when a new tenancy starts. Existing booking notes remain separate; notes are not copied to replacement leases.
 - Passwords and door codes stay in the Vault. Staff and members without Rentals permission cannot access notes.
 - Rentals CSV export follows this phase; its detailed scope remains unapproved. Call/text logging remains deferred.
@@ -277,7 +277,8 @@ Preview: `/Users/aaron/Documents/Codex/2026-10-06/i/outputs/lease-notes-preview.
 - [x] Aaron requested continuing after the preview/checkpoint; implement the shown layout and author-only note changes.
 - [x] Prepare `supabase/add-rental-lease-notes.sql`, frontend and schema mirror.
 - [x] Local PostgreSQL and mounted 390px/1280px checks passed: access restrictions, trusted snapshots, edit/archive/restore, draft preservation on denied save, and original-lease history.
-- [ ] Aaron runs SQL manually; verify real signed-in saves, author restrictions and Realtime.
-- [ ] Commit/push/deploy require explicit authorization for this phase.
+- [x] Aaron reports running SQL manually; signed-in reads/editor verified.
+- [ ] Verify real signed-in saves, author restrictions and Realtime.
+- [x] Aaron explicitly authorized publication; committed/pushed `9125b9b`, public bundle confirmed.
 
-Lease-note code and SQL are prepared; no production migration, commit, push or deployment for this phase. Prior contacts/location grouping and long-term lease controls are already published; creating real Amarillo location/contact/lease records remains separate setup work.
+Lease notes are published. SQL application is user-reported and authenticated reads are verified; production write/access/Realtime checks remain outstanding. Prior contacts/location grouping and long-term lease controls are already published; creating real Amarillo location/contact/lease records remains separate setup work.
