@@ -25,6 +25,28 @@ import { friendlyError } from '../lib/friendlyError'
 // register and act on, short enough not to linger once ignored.
 const COMPLETION_NOTIFY_TIMEOUT_MS = 8000
 
+// The fields a "this and future tasks" edit can carry to the rest of a
+// repeating series, with how each is named in the question. Schedule fields
+// (date, time, zone, Repeats) are deliberately absent: the template-edit
+// trigger in the database already owns those.
+const SERIES_FIELDS = {
+  title: 'the title',
+  priority: 'the priority',
+  icon: 'the icon',
+  assignee_ids: 'who it is for',
+  duration_minutes: 'how long it takes',
+  source: 'where it came from',
+  source_note: 'where it came from',
+  notes: 'the notes',
+  checklist: 'the checklist',
+}
+
+// '' and null both mean "nothing here" (the form saves blank text as null).
+function sameFieldValue(a, b) {
+  const blank = (v) => (v === '' || v === undefined ? null : v)
+  return JSON.stringify(blank(a)) === JSON.stringify(blank(b))
+}
+
 const SOURCE_LABEL = { teams: 'Teams', email: 'Email', none: null }
 const DATE_TIME_FORMAT = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
 const TIME_ONLY_FORMAT = { hour: 'numeric', minute: '2-digit' }
@@ -84,6 +106,7 @@ export default function TaskRow({
   task,
   onStatusChange,
   onUpdate,
+  onUpdateSeries,
   onDelete,
   onDuplicate,
   onArchiveToBoard,
@@ -107,6 +130,9 @@ export default function TaskRow({
   const [nudgeSent, setNudgeSent] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
   const [deleteRecurringOpen, setDeleteRecurringOpen] = useState(false)
+  // Set when a save changed shared fields of a repeating task and the person
+  // still has to say whether it is for this task only or this and later ones.
+  const [scopePending, setScopePending] = useState(null)
   // Post-completion "Notify" prompt — null when not showing. `eligible`
   // is pre-filtered to members who can actually view this task, aren't
   // the assignee, aren't an admin (already covered by the automatic
@@ -323,8 +349,46 @@ export default function TaskRow({
     onUpdate(task.id, { completion_attachments: attachments.filter((_, i) => i !== index) })
   }
 
+  const scopeModal = scopePending && (
+      <Modal onClose={() => setScopePending(null)}>
+          <ModalCard>
+            <h2>Change this repeating task?</h2>
+            <p>
+              You changed {[...new Set(Object.keys(scopePending.changed).map((k) => SERIES_FIELDS[k]))].join(', ')}.
+              Choose whether that applies to only this task, or to this one and every later task in the series.
+            </p>
+            <SubmissionActions>
+              <SubmissionButton onClick={() => setScopePending(null)}>Cancel</SubmissionButton>
+              <SubmissionButton
+                onClick={async () => {
+                  const { values } = scopePending
+                  setScopePending(null)
+                  await onUpdate(task.id, values)
+                  setEditing(false)
+                }}
+              >
+                Only this task
+              </SubmissionButton>
+              <SubmissionButton
+                variant="primary"
+                onClick={async () => {
+                  const { values, changed } = scopePending
+                  setScopePending(null)
+                  await onUpdate(task.id, values)
+                  await onUpdateSeries(task.id, changed)
+                  setEditing(false)
+                }}
+              >
+                This and future tasks
+              </SubmissionButton>
+            </SubmissionActions>
+          </ModalCard>
+        </Modal>
+      )
+
   if (editing) {
     return (
+      <>
       <div className="task-row task-row-editing" onClick={(e) => e.stopPropagation()}>
         <TaskForm
           autoFocus={false}
@@ -333,11 +397,25 @@ export default function TaskRow({
           initialValues={{ ...task, ...splitDueDateInZone(task.due_date, task.due_timezone || DEFAULT_TIMEZONE) }}
           onCancel={() => setEditing(false)}
           onSubmit={async (values) => {
+            // A repeating task asks first when a shared field changed: the
+            // other copies would otherwise quietly keep the old value.
+            const changed = {}
+            if (task.recurrence_series_id && onUpdateSeries) {
+              for (const key of Object.keys(SERIES_FIELDS)) {
+                if (!sameFieldValue(values[key], task[key])) changed[key] = values[key]
+              }
+            }
+            if (Object.keys(changed).length) {
+              setScopePending({ values, changed })
+              return
+            }
             await onUpdate(task.id, values)
             setEditing(false)
           }}
         />
       </div>
+      {scopeModal}
+      </>
     )
   }
 
@@ -602,6 +680,8 @@ export default function TaskRow({
           </ModalCard>
         </Modal>
       )}
+
+      {scopeModal}
 
       {deleteRecurringOpen && (
         <Modal onClose={() => setDeleteRecurringOpen(false)}>

@@ -141,6 +141,23 @@ function addDaysToDateStr(dateStr, days) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+// First date on or after dateStr that falls on one of the chosen weekdays
+// (0 = Sunday ... 6 = Saturday). dateStr itself when it already does, or
+// when no weekday is chosen. A repeating task's own first date is part of
+// the schedule, so it has to be one of the days actually picked.
+function firstSelectedWeekdayOnOrAfter(dateStr, days) {
+  if (!dateStr || !days.length) return dateStr
+  for (let i = 0; i < 7; i++) {
+    const candidate = addDaysToDateStr(dateStr, i)
+    if (days.includes(new Date(`${candidate}T00:00:00`).getDay())) return candidate
+  }
+  return dateStr
+}
+
+function shortDateLabel(dateStr) {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
 function daysBetweenDateStrs(startStr, endStr) {
   const [y1, m1, d1] = startStr.split('-').map(Number)
   const [y2, m2, d2] = endStr.split('-').map(Number)
@@ -308,6 +325,46 @@ export default function TaskForm({
     setForm((f) => ({ ...f, [field]: value }))
   }
 
+  // Said out loud when the start date is moved to fit the chosen weekdays,
+  // so the change is never silent. Cleared by any later move or by a
+  // choice that needs no move.
+  const [dateNotice, setDateNotice] = useState('')
+
+  // A repeating task needs a date to repeat from; an All day task with the
+  // date left blank has none, so it cannot repeat (the schedule generator
+  // skips it). The Repeats control says so instead of saving something that
+  // looks repeating but never repeats.
+  const repeatBlocked = allDay && !allDayDate
+
+  function moveDateToFirstSelected(days) {
+    if (!days.length) return
+    if (allDay) {
+      if (!allDayDate) return
+      const moved = firstSelectedWeekdayOnOrAfter(allDayDate, days)
+      if (moved === allDayDate) return setDateNotice('')
+      const delta = daysBetweenDateStrs(allDayDate, moved)
+      setAllDayDate(moved)
+      if (allDayEndDate) setAllDayEndDate(addDaysToDateStr(allDayEndDate, delta))
+      setDateNotice(`Start date moved to ${shortDateLabel(moved)}, the first day you picked.`)
+      return
+    }
+    const moved = firstSelectedWeekdayOnOrAfter(form.due_date, days)
+    if (moved === form.due_date) return setDateNotice('')
+    set('due_date', moved)
+    setDateNotice(`Start date moved to ${shortDateLabel(moved)}, the first day you picked.`)
+  }
+
+  function toggleWeekday(dayValue) {
+    const nextDays = form.recurrence_days.includes(dayValue)
+      ? form.recurrence_days.filter((value) => value !== dayValue)
+      : [...form.recurrence_days, dayValue]
+    // Stays on "Selected weekdays" even with none ticked — flipping back to
+    // Never here would make this picker vanish under the person's finger.
+    // Saving is blocked (and explained below) until a day is picked.
+    setForm((current) => ({ ...current, recurrence_days: nextDays }))
+    moveDateToFirstSelected(nextDays)
+  }
+
   // Both selects below just read/write the same form.duration_minutes —
   // "End time" expresses it as a clock time, "Duration" as a span, but
   // they're two views on one value, so picking either one updates both.
@@ -323,18 +380,27 @@ export default function TaskForm({
     setSaving(true)
     try {
       const { due_time, ...rest } = form
+      // A repeating task cannot repeat without a date, and a weekday schedule
+      // must start on one of its own days — enforced here as well as live in
+      // the form, so no path can save a task that looks repeating but isn't.
+      const recurrence = repeatBlocked ? 'none' : form.recurrence
+      const recurrenceDays = recurrence === 'selected_weekdays' ? form.recurrence_days : []
+      const startDate = recurrence === 'selected_weekdays' ? firstSelectedWeekdayOnOrAfter(form.due_date, recurrenceDays) : form.due_date
+      const startAllDay = recurrence === 'selected_weekdays' ? firstSelectedWeekdayOnOrAfter(allDayDate, recurrenceDays) : allDayDate
       await onSubmit({
         ...rest,
+        recurrence,
+        recurrence_days: recurrenceDays,
         due_date: allDay
-          ? allDayDate
-            ? zonedTimeToUtcIso(allDayDate, '00:00', form.due_timezone)
+          ? startAllDay
+            ? zonedTimeToUtcIso(startAllDay, '00:00', form.due_timezone)
             : null
-          : !form.due_date
+          : !startDate
             ? null
-            : zonedTimeToUtcIso(form.due_date, due_time, form.due_timezone),
+            : zonedTimeToUtcIso(startDate, due_time, form.due_timezone),
         duration_minutes: allDay
-          ? allDayDate && allDayEndDate && allDayEndDate > allDayDate
-            ? daysBetweenDateStrs(allDayDate, allDayEndDate) * 1440
+          ? startAllDay && allDayEndDate && allDayEndDate > startAllDay
+            ? daysBetweenDateStrs(startAllDay, allDayEndDate) * 1440
             : null
           : !form.duration_minutes
             ? null
@@ -353,7 +419,7 @@ export default function TaskForm({
   // still sees that it is set.
   const moreSummary = [
     form.priority !== emptyTaskForm.priority && 'priority',
-    form.recurrence !== 'none' && 'repeats',
+    form.recurrence !== 'none' && !repeatBlocked && 'repeats',
     form.source !== 'none' && 'attachment',
     form.notes.trim() && 'notes',
     form.checklist.some((item) => item.text.trim()) && 'checklist',
@@ -561,15 +627,17 @@ export default function TaskForm({
           Repeats
           <select
             aria-label="Repeat frequency"
-            value={form.recurrence}
+            value={repeatBlocked ? 'none' : form.recurrence}
+            disabled={repeatBlocked}
             onChange={(e) => {
               const recurrence = e.target.value
+              setDateNotice('')
               setForm((current) => {
                 if (recurrence !== 'selected_weekdays') {
                   return { ...current, recurrence, recurrence_days: [] }
                 }
                 if (current.recurrence_days.length) return { ...current, recurrence }
-                const date = new Date(`${current.due_date}T00:00:00`)
+                const date = new Date(`${allDay && allDayDate ? allDayDate : current.due_date}T00:00:00`)
                 return {
                   ...current,
                   recurrence,
@@ -585,6 +653,9 @@ export default function TaskForm({
             ))}
           </select>
         </label>
+        )}
+        {moreOpen && repeatBlocked && (
+          <p className="m-0 basis-full text-xs">Pick a date for this all-day task to make it repeat.</p>
         )}
       </div>
 
@@ -616,18 +687,7 @@ export default function TaskForm({
                   aria-pressed={selected}
                   aria-label={day.label}
                   title={day.label}
-                  onClick={() => {
-                    setForm((current) => {
-                      const nextDays = current.recurrence_days.includes(day.value)
-                        ? current.recurrence_days.filter((value) => value !== day.value)
-                        : [...current.recurrence_days, day.value]
-                      // Stays on "Selected weekdays" even with none ticked —
-                      // flipping back to Never here would make this picker
-                      // vanish under the person's finger. Saving is blocked
-                      // (and explained below) until a day is picked.
-                      return { ...current, recurrence_days: nextDays }
-                    })
-                  }}
+                  onClick={() => toggleWeekday(day.value)}
                   className={`h-9 w-9 cursor-pointer rounded-full border text-xs font-semibold transition-colors ${
                     selected
                       ? 'border-accent bg-accent text-on-accent'
@@ -639,9 +699,17 @@ export default function TaskForm({
               )
             })}
         </div>
-        {!form.recurrence_days.length && (
+        {!form.recurrence_days.length ? (
           <p className="error mt-1.5 mb-0 text-xs" role="alert">
             Pick at least one day.
+          </p>
+        ) : (
+          <p className="mt-1.5 mb-0 text-xs" aria-live="polite">
+            {recurrenceLabel('selected_weekdays', form.recurrence_days)}.
+            {(allDay ? allDayDate : form.due_date) && (
+              <> The first one is {shortDateLabel(firstSelectedWeekdayOnOrAfter(allDay ? allDayDate : form.due_date, form.recurrence_days))}.</>
+            )}
+            {dateNotice && <span className="block font-semibold">{dateNotice}</span>}
           </p>
         )}
       </fieldset>

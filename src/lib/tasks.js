@@ -35,6 +35,20 @@ export async function ensureMonthRecurrences(monthDate) {
   if (error && error.code !== 'PGRST202') throw error
 }
 
+// "This and future tasks" edits for a repeating task — see
+// update_recurring_series_future in supabase/fix-recurrence-generation.sql.
+// Until that SQL has been run the function does not exist (PGRST202), which
+// gets its own plain message instead of a generic failure.
+export async function updateRecurringSeriesFuture(id, patch) {
+  const { error } = await supabase.rpc('update_recurring_series_future', { target_task_id: id, patch })
+  if (error) {
+    if (error.code === 'PGRST202') {
+      throw new Error("Updating future tasks needs a database update that hasn't been applied yet. The change was saved for this task only.")
+    }
+    throw error
+  }
+}
+
 export async function createTask(task) {
   const { data, error } = await supabase.from('tasks').insert(task).select(TASK_COLUMNS).single()
   if (error) throw error

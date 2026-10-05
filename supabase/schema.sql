@@ -3966,3 +3966,13 @@ create policy "members can read accessible priorities"
   using (is_member() and (set_by = auth.uid() or has_priorities_access(set_by)));
 
 commit;
+
+-- ---------------------------------------------------------------------------
+-- Recurrence generator fixes — see supabase/fix-recurrence-generation.sql
+-- ---------------------------------------------------------------------------
+-- generate_month_occurrences() above is the ORIGINAL version. Existing and new
+-- projects should also run supabase/fix-recurrence-generation.sql, which
+-- replaces it (no back-filling of past weekday copies, wall-clock time so a
+-- clock change cannot shift tasks, monthly dates computed from the original
+-- date), adds an hourly job that keeps this and next month ready, and adds
+-- update_recurring_series_future() for "this and future tasks" edits.

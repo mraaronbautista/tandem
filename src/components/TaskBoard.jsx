@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import {
   fetchTasks,
   ensureMonthRecurrences,
+  updateRecurringSeriesFuture,
   createTask,
   updateTask,
   deleteTask,
@@ -509,6 +510,26 @@ export default function TaskBoard({ theme, toggleTheme }) {
     return [selectedDate]
   }, [viewMode, selectedDate])
 
+  // A week can straddle two months, and only the selected date's month is
+  // asked for above — so the days in the other month would show no repeating
+  // tasks until somebody navigated into it. Ask for every month the visible
+  // days touch.
+  const otherVisibleMonthKeys = useMemo(() => {
+    const keys = new Set(
+      daysToShow.map((d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`),
+    )
+    keys.delete(selectedMonthKey)
+    return [...keys]
+  }, [daysToShow, selectedMonthKey])
+  const otherVisibleMonthSignature = otherVisibleMonthKeys.join(',')
+  useEffect(() => {
+    if (!otherVisibleMonthKeys.length) return
+    Promise.all(otherVisibleMonthKeys.map((key) => ensureMonthRecurrences(key)))
+      .then(reload)
+      .catch((err) => setError(friendlyError(err)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the joined month list, not array identity
+  }, [otherVisibleMonthSignature])
+
   const daySections = useMemo(
     () => daysToShow.map((date) => ({ date, tasks: getTasksForDay(whoFiltered, date, displayTimezone) })),
     [daysToShow, whoFiltered, displayTimezone],
@@ -664,6 +685,19 @@ export default function TaskBoard({ theme, toggleTheme }) {
       const updated = await updateTask(id, { status })
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       reload() // pick up any spawned recurrence
+    } catch (err) {
+      setError(friendlyError(err))
+    }
+  }
+
+  // "This and future tasks" after editing a repeating task. The edited task
+  // itself was already saved by handleUpdate; this carries the shared fields
+  // (title, priority, people, notes, checklist...) to the series' template and
+  // every later open copy, then refetches so they all show.
+  async function handleUpdateSeries(id, patch) {
+    try {
+      await updateRecurringSeriesFuture(id, patch)
+      await reload()
     } catch (err) {
       setError(friendlyError(err))
     }
@@ -857,6 +891,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const taskRowProps = {
     onStatusChange: handleStatusChange,
     onUpdate: handleUpdate,
+    onUpdateSeries: handleUpdateSeries,
     onDelete: handleDelete,
     onDuplicate: handleDuplicate,
     onArchiveToBoard: handleArchiveToBoard,
