@@ -139,10 +139,11 @@ Aaron approved the property contacts preview in chat. Scope: tenants/vendors/oth
 - [x] Prepare frontend, contact library, atomic save RPC and manual migration (`supabase/add-rental-contacts.sql`, mirrored in `schema.sql`).
 - [x] Local PostgreSQL checks: migration rerun, multi-unit create/edit, rollback on invalid link, archive preservation, Rentals-disabled/non-member read and write denial, publication entries.
 - [x] Lint/build and mounted-component checks at 390px/1280px: number search, edit, unit selection, cancel/close, no page errors or horizontal overflow. Follow-up simulated saves verified the RPC payload, permission-error draft preservation, archive/restore visibility, and cancel discarding edits.
-- [ ] Aaron runs the migration manually and checks live access with Rentals-enabled, Rentals-disabled and staff accounts.
+- [x] Aaron reports the contacts SQL has been run in Supabase (October 6, 2026); not independently verified.
+- [ ] Check live access with Rentals-enabled, Rentals-disabled and staff accounts.
 - [ ] Real signed-in create/edit/link/archive/restore/copy and live Realtime verification.
 - [x] Commit authorized by Aaron; feature and documentation saved in Git.
-- [ ] Push/deploy remain unauthorized and not performed.
+- [x] Aaron authorized publishing ("add it"); pushed `57f8c82` to origin/main. Public Tandem assets independently confirmed to contain the contacts directory and save RPC on October 6, 2026. Signed-in functional/access/Realtime checks remain pending.
 
 The original proposal below is retained as historical context. Its combined Phase 1 and call-logging dependencies do not describe the approved first delivery.
 

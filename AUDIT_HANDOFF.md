@@ -70,6 +70,17 @@ Claude reported the audit complete after an additional mechanical pass over colu
 
 ## Activity log
 
+### October 6, 2026 — Codex: property contacts published
+
+- Aaron requested adding contacts to the public site after identifying his screenshot as the production version. Pushed `57f8c82` to origin/main successfully.
+- Independently fetched `https://tandem-webapp.netlify.app/` and its referenced `/assets/index-Pf4DYSv3.js`; the published bundle contains `save_rental_contact` and `All rental contacts`. This confirms frontend publication, not signed-in functionality or live access/Realtime.
+- Migration remains user-reported run. Next: refresh production and check Rentals → All contacts, create/edit/link/archive/restore, restricted account access and cross-session Realtime. Unrelated .agents folder preserved.
+
+### October 6, 2026 — Codex: Aaron reports contacts SQL applied
+
+- Aaron reports he already ran `add-rental-contacts.sql` in Supabase. Treat migration as user-reported applied; no independent production schema/access verification performed.
+- Contacts implementation committed as `57f8c82`; no push/deploy. Next: signed-in local preview against the live backend, followed by access and Realtime checks. Preserve unrelated `.agents/` folder.
+
 ### October 6, 2026 — Codex: contacts commit authorized
 
 - Aaron explicitly requested committing the prepared property contacts feature. This checkpoint is included in that commit with frontend, manual migration and related documentation; the existing Rentals proposal is preserved as context.
