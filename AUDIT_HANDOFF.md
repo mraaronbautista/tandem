@@ -70,6 +70,19 @@ Claude reported the audit complete after an additional mechanical pass over colu
 
 ## Activity log
 
+### October 6, 2026 — Codex: location migration reported working; publishing follow-up
+
+- Aaron reports the location-contact SQL ran and worked. Production migration is user-reported applied, not independently schema/access-verified.
+- Saving the approved location-coverage follow-up in Git and pushing under Aaron’s existing request to add Contacts to the public site. Build/lint, local PostgreSQL and mounted phone/desktop checks already passed; no further code changes since those checks.
+- Keep Staff location names as the source; John/Martin examples are not seeded. Signed-in coverage, unit mapping, access and Realtime verification remain pending. Unrelated .agents folder excluded.
+
+### October 6, 2026 — Codex: approved location service contacts prepared
+
+- Aaron approved location-wide service contacts by default, with optional unit-specific coverage and tenants remaining unit-linked. Implemented existing work_site_id inheritance, direct + location links, Location/Service filters, and unit location picker. No guessed unit mappings or John/Martin data inserts.
+- Prepared `add-rental-contact-locations.sql` and schema mirror: location links, safe Rentals-only id/name projection, atomic invoker coverage save, tenant guard and metadata-only location refresh channel. Staff RLS unchanged; no GPS/payroll exposure. Original clients preserve new location links.
+- Local PGlite verified repeat migration, atomic rollback, tenant restrictions, old-client preservation, Rentals-only safe name reads while Staff table reads denied, restricted/non-member denial and location rename signal. Mounted UI at 390px/1280px verified inheritance, filters, new vendor/tenant defaults, save payloads and no errors/overflow. Build/lint passed with existing warnings.
+- Manual migration and live signed-in verification pending; this follow-up is uncommitted/unpushed/undeployed. Next: Aaron runs SQL, reviews returned unit/location mapping, then signed-in checks and publication. Preserve unrelated .agents folder.
+
 ### October 6, 2026 — Codex: property contacts published
 
 - Aaron requested adding contacts to the public site after identifying his screenshot as the production version. Pushed `57f8c82` to origin/main successfully.

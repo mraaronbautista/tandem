@@ -133,20 +133,20 @@ export async function fetchRentalProperties(company) {
   return data
 }
 
-export async function createRentalProperty(company, { unit_name, address, monthly_rent, color, term }) {
+export async function createRentalProperty(company, { unit_name, address, monthly_rent, color, term, work_site_id }) {
   const { data, error } = await supabase
     .from('rental_properties')
-    .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term })
+    .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term, ...(work_site_id !== undefined ? { work_site_id } : {}) })
     .select(PROPERTY_COLUMNS)
     .single()
   if (error) throw error
   return data
 }
 
-export async function updateRentalProperty(id, { unit_name, address, monthly_rent, color, term }) {
+export async function updateRentalProperty(id, { unit_name, address, monthly_rent, color, term, work_site_id }) {
   const { data, error } = await supabase
     .from('rental_properties')
-    .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term })
+    .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term, ...(work_site_id !== undefined ? { work_site_id } : {}) })
     .eq('id', id)
     .select(PROPERTY_COLUMNS)
     .single()

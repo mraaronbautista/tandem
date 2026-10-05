@@ -208,3 +208,7 @@ On mobile, navigation sits in a bottom tab bar; on desktop, the same nav buttons
 ## Property contacts — prepared, awaiting setup
 
 Each rental unit can show tenant, vendor and other contacts. All contacts searches names, organizations and phone numbers. A single contact can link to several units, with a role at each; Copy number supports pasting into your preferred calling app. Archive keeps details and links, and Include archived exposes Restore. Rentals permission governs viewing and editing. Door codes/passwords belong in the Vault. The contacts SQL migration and signed-in verification are pending; this feature is not confirmed live.
+
+### Location service contacts — prepared, awaiting setup
+
+Link a handyman, cleaner or other service contact to a whole location so they appear for every unit there, including new units. Choose specific units for narrower coverage; tenants remain unit-specific. All contacts filters by Location and Service. Edit unit can set its location. Location names come from existing Staff locations; no GPS/payroll details are shown to Rentals-only members. A new manual SQL step and live checks are pending.

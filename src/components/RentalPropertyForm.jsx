@@ -26,13 +26,14 @@ const FIELD_INPUT_CLASS =
 // tapped — same reasoning the company picker already scopes a new unit to
 // whichever company tab you're on, rather than making term a choice with
 // no sensible default.
-export default function RentalPropertyForm({ company, property, defaultTerm, onClose, onSaved, onArchived }) {
+export default function RentalPropertyForm({ company, property, defaultTerm, locations = null, onClose, onSaved, onArchived }) {
   const confirm = useConfirm()
   const [unitName, setUnitName] = useState(property?.unit_name || '')
   const [address, setAddress] = useState(property?.address || '')
   const [monthlyRent, setMonthlyRent] = useState(property?.monthly_rent ?? '')
   const [color, setColor] = useState(property?.color || DEFAULT_COLOR)
   const [term, setTerm] = useState(property?.term || defaultTerm || 'short_midterm')
+  const [workSiteId, setWorkSiteId] = useState(property?.work_site_id || '')
   const [saving, setSaving] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState('')
@@ -49,6 +50,7 @@ export default function RentalPropertyForm({ company, property, defaultTerm, onC
         monthly_rent: monthlyRent === '' ? null : Number(monthlyRent),
         color,
         term,
+        ...(locations ? { work_site_id: workSiteId || null } : {}),
       }
       const saved = property
         ? await updateRentalProperty(property.id, payload)
@@ -107,6 +109,8 @@ export default function RentalPropertyForm({ company, property, defaultTerm, onC
           </select>
         </label>
 
+        {locations && <label>Location<select aria-label="Location" className={FIELD_INPUT_CLASS} value={workSiteId} onChange={(event) => setWorkSiteId(event.target.value)}><option value="">No location set</option>{locations.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>}
+        <p className="text-sm text-text">Location-wide service contacts appear for every unit assigned to that location. Manage location names under Staff.</p>
         <label>
           Address (optional)
           <input

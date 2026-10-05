@@ -244,3 +244,13 @@ Impersonation checks that a member without Rentals permission and a staff accoun
 ### Next action
 
 Aaron answers the open questions and approves (or amends) the phases. Then Phase 1 starts with the SQL for review.
+
+## Contacts — location-wide service coverage (October 6, 2026)
+
+**Approved; migration reported successfully run by Aaron.** Aaron approved location-wide service coverage by default, with specific-unit coverage as an option. Units inherit service contacts through their existing `rental_properties.work_site_id`; tenants stay linked to units. New service contacts opened from a unit default to its location after choosing Vendor/Other. Existing direct-unit coverage is preserved. Directory adds Location and Service filters; unit forms can set the existing location link. No location mappings or John/Martin records are created automatically.
+
+`supabase/add-rental-contact-locations.sql` (run AFTER the original contacts migration) adds location links, a Rentals-only location-name RPC, atomic coverage save RPC, and a metadata-only Realtime refresh signal for location edits. It leaves Staff policies and GPS data inaccessible to Rentals-only members. Existing clients' unit-contact saves preserve location links. Guard prevents tenants acquiring location-wide coverage.
+
+Checks passed: local PostgreSQL migration rerun, restricted/non-member access denial, safe projection with direct Staff table access denied, atomic rollback, old-client preservation, tenant restriction and location refresh signal. Real components checked at 390px/1280px for inherited coverage, location/service filtering, new service/tenant defaults and correct save payload. Lint/build pass with existing warnings. No production migration or signed-in verification, commit/push/deploy for this update.
+
+Aaron reports the location SQL ran and worked (October 6). Migration not independently verified. Commit/push follows the existing Contacts publication authorization; signed-in coverage, mapping, access and Realtime checks remain pending.
