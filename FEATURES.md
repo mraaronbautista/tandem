@@ -212,3 +212,7 @@ Each rental unit can show tenant, vendor and other contacts. All contacts search
 ### Location service contacts — prepared, awaiting setup
 
 Link a handyman, cleaner or other service contact to a whole location so they appear for every unit there, including new units. Choose specific units for narrower coverage; tenants remain unit-specific. All contacts filters by Location and Service. Edit unit can set its location. Location names come from existing Staff locations; no GPS/payroll details are shown to Rentals-only members. A new manual SQL step and live checks are pending.
+
+### Long-term lease controls — prepared, publication pending
+
+Long Term unit cards have Add lease; existing/upcoming leases have Edit lease. The main + opens Add lease in Long Term. Uses the existing tenant/date form and overlap validation. Upcoming leases show tenant names/date range.

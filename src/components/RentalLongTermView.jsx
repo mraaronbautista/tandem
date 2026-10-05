@@ -1,4 +1,5 @@
 import { Bell, Plus } from 'lucide-react'
+import RentalButton from './RentalButton'
 import { bookingGuestLabel, daysBetweenStrs, monthsAndDaysBetween, formatMonthsAndDays, formatDateStr, todayDateStr } from '../lib/rentals'
 
 // The Long Term half of RentalsView.jsx's term toggle — deliberately not a
@@ -13,7 +14,7 @@ import { bookingGuestLabel, daysBetweenStrs, monthsAndDaysBetween, formatMonthsA
 // same as RentalOverview.jsx/nextAvailability() already require) — a
 // long-term lease's own check_in is almost always outside whatever month
 // happens to be browsed elsewhere in the tab.
-export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit, renderContacts }) {
+export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit, renderContacts, onAddLease, onEditLease }) {
   const units = properties.filter((p) => p.term === 'long_term')
   const todayStr = todayDateStr()
 
@@ -35,6 +36,8 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
           (b) => b.property_id === unit.id && b.status === 'confirmed' && b.check_in <= todayStr && b.check_out >= todayStr,
         )
 
+        const upcoming = !current && bookings.filter((booking) => booking.property_id === unit.id && booking.status === 'confirmed' && booking.check_in > todayStr).sort((a, b) => a.check_in.localeCompare(b.check_in))[0]
+        const lease = current || upcoming
         return (
           <div key={unit.id} className="rounded-[10px] border border-border bg-card-bg p-4 shadow-[var(--shadow-resting)]">
             <div className="flex items-start justify-between gap-3">
@@ -85,8 +88,12 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
                 </div>
               </>
             ) : (
-              <div className="mt-2 text-[13px] text-text opacity-80">Vacant</div>
+              <div className="mt-2 text-[13px] text-text">{upcoming ? `Upcoming: ${bookingGuestLabel(upcoming)} · ${formatDateStr(upcoming.check_in)} – ${formatDateStr(upcoming.check_out)}` : 'Vacant'}</div>
             )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <RentalButton className="min-h-[44px]" onClick={() => onAddLease?.(unit)}>+ Add lease</RentalButton>
+              {lease && <RentalButton className="min-h-[44px]" onClick={() => onEditLease?.(lease)}>Edit lease</RentalButton>}
+            </div>
             {renderContacts?.(unit)}
           </div>
         )

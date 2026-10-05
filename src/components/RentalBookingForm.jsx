@@ -57,6 +57,7 @@ function addDays(dateStr, days) {
 // booking source) on a booking created before that field existed.
 export default function RentalBookingForm({
   properties,
+  leaseMode = false,
   defaultPropertyId,
   defaultCheckIn,
   booking,
@@ -149,7 +150,7 @@ export default function RentalBookingForm({
   return (
     <Modal onClose={onClose}>
       <ModalCard as="form" onSubmit={handleSubmit}>
-        <h2>{booking ? 'Edit booking' : 'Add booking'}</h2>
+        <h2>{leaseMode ? (booking ? 'Edit lease' : 'Add lease') : (booking ? 'Edit booking' : 'Add booking')}</h2>
 
         {error && <p className="error">{error}</p>}
 
@@ -262,7 +263,7 @@ export default function RentalBookingForm({
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           <SubmissionButton type="submit" variant="primary" disabled={saving}>
-            {saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}
+            {saving ? 'Saving…' : booking ? 'Save changes' : leaseMode ? 'Add lease' : 'Add booking'}
           </SubmissionButton>
         </SubmissionActions>
       </ModalCard>

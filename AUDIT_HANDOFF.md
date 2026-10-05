@@ -70,6 +70,25 @@ Claude reported the audit complete after an additional mechanical pass over colu
 
 ## Activity log
 
+### October 6, 2026 — Codex: long-term lease fix ready; publish approval needed
+
+- Aaron reported he could not add an Amarillo tenant and clarified Lease / booking. Reproduced signed in: Long Term had no Add/Edit lease controls; main plus referenced the unmounted RentalCalendar and did nothing.
+- Prepared per-unit Add lease / Edit lease and repaired the main plus route by reusing RentalBookingForm with only long-term property choices and lease labels. Upcoming confirmed leases show tenant/date range rather than Vacant. No SQL change.
+- Build/lint passed with existing warnings. Signed-in local preview verified Amarillo Add lease and main plus both open the form with Amarillo selected. Canceled forms; no business data submitted.
+- Automatic approval review rejected the combined commit/push step: production-impacting main publication was not clearly authorized for this specific fix. Command never executed. Changes remain local and uncommitted; ask Aaron for explicit commit/push approval. Unrelated .agents preserved.
+
+### October 6, 2026 — Codex: signed-in read-only location/contact check
+
+- Inspected existing signed-in local-preview session through built-in browser UI against live backend. All contacts loaded without setup errors; names list is 1072 Rachel, 937 Findlay, 967 Parkside. Vendor form renders whole-location coverage choices. Tenants render unit-specific choices.
+- Actual UI mappings: Healthcare Haven, Laminate Loft, Main Floor Manor and Peaceful Cottage → 1072 Rachel; 937 Findlay → 937 Findlay; displayed Parkside units → 967 Parkside. Amarillo unit shows No location and no Amarillo location exists in selector.
+- Directory is empty including archived. John and Martin remain user-provided examples, not seeded records. No forms submitted or business records changed; canceled draft and restored Rentals screen.
+- Next: configure an Amarillo location and link its unit, then add real service contacts. Contact phone/email details have not been provided. Actual save/access/Realtime flows remain unverified in the live account.
+
+### October 6, 2026 — Codex: location contacts frontend confirmed published
+
+- Committed/pushed `deb69c9` successfully. Public page now references `/assets/index-BJhr5knB.js`; independently fetched bundle includes `save_rental_contact_coverage` and `get_rental_locations`.
+- Frontend publication confirmed; SQL remains user-reported working. No signed-in functional, access or Realtime claim. Next: refresh Rentals, confirm actual unit locations, then assign real service contacts to locations or selected units.
+
 ### October 6, 2026 — Codex: location migration reported working; publishing follow-up
 
 - Aaron reports the location-contact SQL ran and worked. Production migration is user-reported applied, not independently schema/access-verified.

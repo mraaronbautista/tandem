@@ -19,6 +19,7 @@ import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
 import RentalOverview from './RentalOverview'
 import RentalLongTermView from './RentalLongTermView'
+import RentalBookingForm from './RentalBookingForm'
 import RentalPropertyForm from './RentalPropertyForm'
 import { friendlyError } from '../lib/friendlyError'
 import LoadingText from './LoadingText'
@@ -82,12 +83,19 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   // here, and both layouts need to reach it.
   const [propertyFormOpen, setPropertyFormOpen] = useState(false)
   const [editingProperty, setEditingProperty] = useState(null)
+  const [leaseForm, setLeaseForm] = useState(null)
 
   useEffect(() => {
     if (!registerQuickAdd) return undefined
-    registerQuickAdd(() => calendarRef.current?.openAddBooking())
+    registerQuickAdd(() => {
+      if (rentalTerm === 'long_term') {
+        const unit = properties?.find((item) => item.term === 'long_term')
+        if (unit) setLeaseForm({ propertyId: unit.id, booking: null })
+        else openNewProperty()
+      } else calendarRef.current?.openAddBooking()
+    })
     return () => registerQuickAdd(null)
-  }, [registerQuickAdd])
+  }, [registerQuickAdd, rentalTerm, properties])
 
   function openNewProperty() {
     setEditingProperty(null)
@@ -297,8 +305,19 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           bookings={upcomingBookings}
           onEditUnit={openEditProperty}
           onAddUnit={openNewProperty}
+          onAddLease={(unit) => setLeaseForm({ propertyId: unit.id, booking: null })}
+          onEditLease={(booking) => setLeaseForm({ propertyId: booking.property_id, booking })}
           renderContacts={(unit) => <RentalContacts store={contactStore} property={unit} />}
         />
+        {leaseForm && <RentalBookingForm
+          properties={properties.filter((unit) => unit.term === 'long_term')}
+          defaultPropertyId={leaseForm.propertyId}
+          booking={leaseForm.booking}
+          createdBy={me?.id}
+          leaseMode
+          onClose={() => setLeaseForm(null)}
+          onSaved={() => { setLeaseForm(null); handleBookingsChanged() }}
+        />}
         {propertyFormOpen && (
           <RentalPropertyForm
             company={company}
