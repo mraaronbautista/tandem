@@ -1,8 +1,10 @@
-import { useState } from 'react'
-import { Bell, BellOff, Moon, Sun, Globe, HelpCircle, Lock, LogOut, ShieldCheck, UserCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Bell, BellOff, Moon, Sun, Globe, HelpCircle, Lock, LogOut, MapPinned, ShieldCheck, UserCircle } from 'lucide-react'
 import { TIMEZONE_OPTIONS, detectDefaultTimezone } from '../lib/timezone'
 import Modal from './Modal'
 import HowToGuide from './HowToGuide'
+import ExternalToolView from './ExternalToolView'
+import { fetchExternalTools } from '../lib/externalTools'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
@@ -30,6 +32,18 @@ export default function SettingsMenu({
   onOpenMyProfile,
 }) {
   const [guideOpen, setGuideOpen] = useState(false)
+  // Outside tools this person may open (e.g. Dallas Property Finder). Empty
+  // for everyone not listed on one, and empty until loaded — Settings looks
+  // exactly as before until a tool actually exists for them.
+  const [tools, setTools] = useState([])
+  const [openTool, setOpenTool] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetchExternalTools().then((list) => !cancelled && setTools(list))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <Modal onClose={onClose}>
@@ -114,6 +128,18 @@ export default function SettingsMenu({
             </button>
           )}
 
+          {tools.map((tool) => (
+            <button key={tool.id} type="button" className={settingsItemClasses} onClick={() => setOpenTool(tool)}>
+              <span className="text-[17px]">
+                <MapPinned size={17} />
+              </span>
+              <span className="flex min-w-0 flex-col">
+                <span>{tool.title}</span>
+                {tool.description && <span className="text-xs opacity-80">{tool.description}</span>}
+              </span>
+            </button>
+          ))}
+
           {onOpenManageAccess && (
             <button type="button" className={settingsItemClasses} onClick={onOpenManageAccess}>
               <span className="text-[17px]">
@@ -144,6 +170,7 @@ export default function SettingsMenu({
       </ModalCard>
 
       {guideOpen && <HowToGuide onClose={() => setGuideOpen(false)} />}
+      {openTool && <ExternalToolView tool={openTool} onClose={() => setOpenTool(null)} />}
     </Modal>
   )
 }

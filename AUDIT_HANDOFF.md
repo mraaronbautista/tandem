@@ -1,6 +1,6 @@
 # Tandem — shared bug audit and handoff
 
-Last updated: October 2, 2026 (Asia/Manila), by Claude. **Session paused here at Aaron's request** — see the bug audit's own status and the click-through list below for exactly where to resume.
+Last updated: October 6, 2026 (Asia/Manila), by Claude. **Newer work (UI/UX Phases 2–5, Vault codes, recurrence fixes, Bulk Add repeats, Dallas Property Finder) is recorded in `PROJECT_JOURNEY.md` Chapter 11 and its Oct 6 handoff, not in the Priorities-focused sections below; the audit itself is closed.** Earlier note: session paused at Aaron's request — see the bug audit's own status and the click-through list below for exactly where to resume.
 
 ## Purpose and working agreement
 
@@ -69,6 +69,12 @@ Claude reported the audit complete after an additional mechanical pass over colu
 - Latest observed commit: b803016, October 2 at 00:50 +08:00. Recent commits document deployment-cohesion fixes, Staff rental-property live updates, and guide/documentation corrections. Do not infer every production component is current solely from Git history.
 
 ## Activity log
+
+### October 6, 2026 — Claude: handoff refresh before Aaron hands the project to ChatGPT
+
+- Brought `PROJECT_JOURNEY.md` up to date (Chapter 11, current-state addendum, new top block in "Active handoff"); copied the external UI/UX plan to `docs/ui-ux-overhaul-plan.md`.
+- State at this entry: last pushed commit `2d449d6` on `origin/main`. **Uncommitted:** Dallas Property Finder files, `ONGOING_PLANS.md` rental-contacts plan (unapproved), untracked `.agents/`, `docs/`. The recurrence SQL (`supabase/fix-recurrence-generation.sql`) was run by Aaron, who reported it worked; not independently re-verified against production. The Dallas SQL has not been confirmed run.
+- No audit phase reopened. Next action: see `PROJECT_JOURNEY.md` → "Update, October 6, 2026".
 
 ### October 2, 2026 — Codex: recovered checkpoint and reusable skill
 

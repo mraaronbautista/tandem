@@ -61,7 +61,7 @@ Tasks are the core object in the app, assigned to any one member or several at o
 
 **Duration & scheduling conflicts:** a task can carry a duration in minutes; its end time is always calculated from the start (never stored separately), and shown as a range like "5:30–6:10 PM (40 min)." If one person has two of their own tasks that overlap in time, the app visually flags them as conflicting — this only applies within one person's own schedule, since two different people having simultaneous tasks isn't actually a conflict.
 
-**Recurrence:** a task can repeat. Every upcoming occurrence for the current and viewed months is generated ahead of time (not spawned one at a time on completion), so picking a repeat schedule shows its future occurrences on the calendar right away.
+**Recurrence:** a task can repeat. Every upcoming occurrence for the current and viewed months is generated ahead of time (not spawned one at a time on completion), so picking a repeat schedule shows its future occurrences on the calendar right away. Copies are also created ahead of time by an hourly background job, weekday schedules never back-fill days before the task's own date, times stay put across daylight-saving changes, and a monthly task on the 31st lands on the last day of shorter months without drifting. Editing a repeating task asks whether the change applies to only that task or to it and all future ones. Bulk Add can create repeating tasks too: add a marker such as `~weekly` or `~mon,wed,fri` to a line, or use the Repeats dropdown in Guided mode.
 
 **Task icons:** tasks can show a small icon next to their title, either picked manually or automatically guessed from the task's title (e.g. a task titled "Gym" gets a dumbbell icon). A manual pick always wins over the automatic guess.
 
@@ -187,11 +187,15 @@ Reached from Settings → "Manage member access" (admin only). Lists every other
 - **Task visibility** — Hidden / View only / View & update toward that member's own tasks, plus separate Create/Delete/Reassign permissions layered on top.
 - **Report visibility** — a simple checkbox per teammate for whether they can read this member's reports.
 
+An entry can also hold a **one-time code (authenticator) key**: paste the setup key a site shows when you turn on an authenticator app, and the entry shows the live 6-digit code with a countdown and a Copy button, like Google Authenticator. The key is stored encrypted inside the entry, so anyone the entry is shared with can generate its codes; keep your most sensitive accounts in your own authenticator app. If the device's clock is off by 10+ seconds, a warning appears (a wrong clock is the usual reason a code is rejected). The CSV export includes an authenticator link so a key is never stranded.
+
 A separate "Add member" flow creates a brand-new account end to end — username, a generated password shown once, display name, badge color, and a starting feature template — without needing a deployment or a manual database edit; it hands straight into the access screen above so the new member's task visibility can be set immediately. Every member can also edit their own display name, badge color, and password from a self-service "My Profile" screen, and an admin can reset another member's username or password directly for easy account handoff.
 
 ## Navigation & app structure
 
 Five persistent tabs: **Today**, **Rentals**, **Reports**, **Board** (which folds together Cork Board/Projects and Inbox as switchable sections), and — when staff exist — the Hours/staff admin screen. The floating "+" is contextual: Today opens a tabbed Task Tools modal (New task / Bulk / Priorities), Rentals opens Add booking, Reports opens Submit report (if you have that permission), and Board focuses the new-pin composer; Staff has no ambiguous add action. The header holds the working-status indicator, the nudge icon, and Settings. Vault has a dedicated row in Settings alongside theme, notifications, default timezone, sign out, "Manage member access" (admin only), "My profile," and the in-app guide.
+
+**Outside tools (Settings):** Settings can list outside tools, today the Dallas Property Finder, which open full screen inside Tandem without interrupting the board. They are shown only to the members named on that tool's row; its address is stored in the database, never in the app's code.
 
 On mobile, navigation sits in a bottom tab bar; on desktop, the same nav buttons fold into the header row instead of a sidebar. Everything responsive is handled with plain CSS media queries except two genuinely different component trees for mobile vs. desktop (Rentals' stacked-vs-dashboard layout, and the mobile/desktop nav mount point) — those are the only places the app renders structurally different markup rather than just repositioning the same one.
 

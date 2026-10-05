@@ -3976,3 +3976,9 @@ commit;
 -- clock change cannot shift tasks, monthly dates computed from the original
 -- date), adds an hourly job that keeps this and next month ready, and adds
 -- update_recurring_series_future() for "this and future tasks" edits.
+
+-- ---------------------------------------------------------------------------
+-- External tools (Settings) — see supabase/add-external-tools.sql
+-- ---------------------------------------------------------------------------
+-- Run that file once to create external_tools (rows readable only by the
+-- members listed on each) and add the Dallas Property Finder row.

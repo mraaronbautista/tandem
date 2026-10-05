@@ -14,7 +14,7 @@ const SECTIONS = [
     items: [
       'Five tabs — Timeline, Rentals, Reports, Board, and Staff. On a phone they sit in a bar along the bottom; on a tablet or wider screen they fold into the top header next to Settings instead, since there\'s no separate sidebar.',
       'The + button changes with the screen you are on: task tools on Today, add booking on Rentals, submit report on Reports (only for members who have that turned on), and add pin on Board. Staff has no + because it has no single obvious add action.',
-      'The ⚙️ icon opens Settings: who\'s signed in, notifications, theme, default timezone, Vault, and this guide.',
+      'The ⚙️ icon opens Settings: who\'s signed in, notifications, theme, default timezone, Vault, any outside tool you have been given (such as Dallas Property Finder, which opens full screen without leaving Tandem), and this guide.',
     ],
   },
   {

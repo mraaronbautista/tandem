@@ -1,6 +1,6 @@
 # Tandem — Project Journey (Single Source of Truth)
 
-Last updated: October 2, 2026, by Claude.
+Last updated: October 6, 2026, by Claude (Sonnet 5.5). Chapter 11 and the top of "Active handoff" are the current picture; older paragraphs below are history.
 
 ## What this document is
 
@@ -69,7 +69,30 @@ A deliberate pause, mid-way through a longer list of "shipped but never actually
 
 Also decided, the same day: **Working Hours (profile schedules) — deliberately skipped, not deferred by accident.** This was the one remaining unbuilt item from the original `multi-member-permissions.md` plan (alongside the later-phase "Recorded online patterns," which depends on it and is correspondingly also on hold). Walked through *why* before touching design: the app already has a *live*, manual Online/Busy/In-a-meeting status with expiry, which answers "is this person actually around right now" better than a static recurring weekly schedule would — a schedule goes stale, can't capture a day off, and the original design doc had already scoped it to never automate anything (no auto-toggling status, purely informational team-sheet context). Asked directly whether there'd been a real recurring annoyance a schedule would have fixed (an off-hours ping, a task set at a bad time for the assignee, genuine uncertainty about when someone's starting) — there wasn't one; it was more "a natural next item from the old plan" than a felt problem. Aaron: *"it's probably not worth it, skip it for now."* If this comes up again later, don't rebuild the case from scratch — re-ask the same question (is there now a concrete recurring annoyance?) before resuming design, since the reasoning above, not just the conclusion, is what should carry forward.
 
-## Current state (as of this writing)
+### Chapter 11 — UI/UX overhaul finished, Vault codes, recurrence rebuild, Dallas Property Finder (Oct 2–6, 2026)
+
+Chapter 10's pause ended with the UI/UX overhaul (plan copied into the repo at `docs/ui-ux-overhaul-plan.md`; its Phase 0–5 status blocks are the detail). All five phases are built and pushed: first-login primer and labelled buttons (1), a simpler New Task form and plain-language Staff screens (2), one in-app confirm dialog replacing 15 native `confirm()`s plus Bulk Add Guided mode (3), measured contrast/touch-target/error-message fixes (4), and empty/loading states (5). Rules that came out of it live in `CLAUDE.md` ("Accessibility rules", "Empty and loading states", "Confirming destructive actions") — follow them for any new UI.
+
+Other work in this window, all committed and pushed to `origin/main`:
+
+- **Vault one-time codes (TOTP)** — an entry can hold an authenticator secret and show live 6-digit codes (`src/lib/totp.js`, checked against the RFC 6238 vectors; `TotpCode.jsx`). Secret lives inside the encrypted entry payload, so no schema change. A device-clock check (`src/lib/clockCheck.js`) warns when the phone's clock is 10+ seconds off, since that is the usual reason a code is rejected. (`45854d7`, `20dbe14`)
+- **Staff tab filter** — All/Pending/Approved is a dropdown on phones (`58e5dbd`, `8a89668`). This is also where Aaron set the working rule now saved in memory: **show him options/a mockup and wait for his pick before implementing, committing or pushing any design or behaviour choice.** Obvious single-fix bugs can be fixed directly.
+- **Repeating tasks rebuilt (seven defects)** — Aaron reported "selected weekday is buggy" and "repeats is buggy". Reproduced against a real Postgres (PGlite) and fixed: weekday schedules back-filled overdue copies before the template's date; a 3 PM task slid to 2 PM after a clock change; monthly tasks drifted (Jan 31 → Feb 28 → Mar 28); copies were only created when someone opened the app; editing a repeating task changed only one copy; plus form fixes. `supabase/fix-recurrence-generation.sql` was **run by Aaron in the Supabase SQL editor and he reported it worked** (it also schedules the hourly `ensure-upcoming-recurrences` pg_cron job). The new rules and the "edit this task or this and future?" dialog are in `CLAUDE.md` under Recurrence. (`0264dec`, `2d449d6`)
+- **Bulk Add repeats** — a `~weekly` / `~mon,wed,fri` / `~monthly` marker in the paste format plus a Repeats dropdown in Guided mode, sharing one token table with the task form (`6dbe088`).
+- **Dallas Property Finder (NOT yet committed)** — Ada wants the separate `db2re-preferred-zone` site (at `https://dallas-properties.netlify.app`) reachable from inside Tandem without interrupting the board. Built as a Settings row that opens the site full screen in a sandboxed iframe (`ExternalToolView.jsx`, `lib/externalTools.js`, edits to `SettingsMenu.jsx`/`HowToGuide.jsx`). Aaron's requirements: only Ada and Aaron see it, and "I don't want any exposure" — so the address is **not in the JavaScript bundle**; it lives in a new `external_tools` table readable only by the members listed on the row. `supabase/add-external-tools.sql` creates the table and inserts the row; the file keeps a placeholder URL on purpose (so the real address isn't committed), and Aaron was given the full SQL with the real address in chat to paste. Details in `CLAUDE.md` ("External tools (Settings)").
+
+## Current state addendum (Oct 6, 2026)
+
+| Area | Status |
+| --- | --- |
+| UI/UX overhaul Phases 0–5 | Built and pushed; **never seen inside the real signed-in app** (see verification debt) |
+| Vault TOTP codes + clock warning | Pushed; verified on mounted components and RFC test vectors, not in the signed-in vault |
+| Recurrence fixes + hourly job | Pushed; SQL run by Aaron (reported working); not independently re-checked against production by an AI |
+| Bulk Add repeats | Pushed; verified on mounted component, not signed-in |
+| Dallas Property Finder | **Uncommitted** in the working tree; SQL given to Aaron but he has not yet said he ran it; nothing pushed or live |
+| Rental contacts / call log / lease notes / CSV export plan | Planned only, in `ONGOING_PLANS.md`; **awaiting Aaron's approval**; no code written |
+
+## Current state (as of Oct 2, 2026 — see the Oct 6 addendum above for newer rows)
 
 A quick status map — for *how* each of these works, read the matching CLAUDE.md section, not this list.
 
@@ -118,7 +141,28 @@ These are real incidents or deliberate decisions from this project's history. Kn
 
 ## Active handoff — read this first
 
-**As of this writing, the project is in a deliberate, clean pause — not an interruption.** Working tree is clean; everything is committed and pushed to `origin/main` (no feature branches; this whole project has been developed via direct commits to `main`).
+### Update, October 6, 2026 (supersedes the Oct 2 text below where they disagree)
+
+**Working tree is NOT clean.** Everything through Bulk Add repeats is committed and pushed (last commit `2d449d6`). Uncommitted and unpushed:
+- The Dallas Property Finder work: new `src/components/ExternalToolView.jsx`, `src/lib/externalTools.js`, `supabase/add-external-tools.sql`; modified `src/components/SettingsMenu.jsx`, `src/components/HowToGuide.jsx`, `supabase/schema.sql`, `CLAUDE.md`. Lint and build passed; behaviour verified by mounting the real component and Settings in the browser pane (listed person sees the row and it opens full screen with the right sandbox/referrer/link; unlisted person sees nothing; title wraps on phones).
+- `ONGOING_PLANS.md` — a new, **unapproved** plan section "Rental contacts, call logging, lease notes, unit files, reply templates and export".
+- `.agents/` — an untracked folder from another tool; leave it alone.
+- `docs/ui-ux-overhaul-plan.md` — a copy of the previously external UI/UX plan so it travels with the repo.
+
+**Next concrete steps, in order:**
+1. Aaron runs the Dallas SQL in the Supabase SQL editor (the full text with the real address was given in chat; the repo file has a placeholder). The final query should show one row with `people_who_can_see_it` = 2. If it shows 0 or 1, a member display name isn't matching `ada`/`aaron`. To fix a wrong address: `update external_tools set url = 'https://…' where title = 'Dallas Property Finder';`.
+2. After he confirms, commit and push the Dallas work (only with his go-ahead; leave `ONGOING_PLANS.md` and `.agents/` out unless he says otherwise). Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+3. Aaron checks on a real phone: Settings → Dallas Property Finder → map gestures work, and Excel/PDF exports download inside the frame. Not tested by any AI session. The finder has no login of its own, so its address is its only protection.
+4. Rental contacts plan: Aaron is becoming Ada's point of contact for tenants and vendors via a shared Google Voice number. His constraints: phone-first; door/lockbox codes only in the Vault; same access as Rentals (hidden from members without Rentals permission and from staff); no SSNs or bank details; he later asked for lease-notes context and a major CSV export. **"Don't push or deploy. Give me any SQL I need to run in Supabase by hand."** The plan has 17 open questions and is waiting for his approval — do not implement before he approves it.
+
+**Verification debt (honest list):** an AI session cannot sign in, so none of the following has been seen in the real signed-in app: UI/UX Phases 1–5, Vault codes, recurrence changes, Bulk Add repeats, the Settings tool row. Also open: the Today-header density check at 375px; RC Lina's two self-check items (Inbox scoping, comment-notification targeting); Netlify's build status for the pushed commits has not been confirmed. The Phase 4 contrast sweep did not cover Vault, Reports, Staff, Inbox or Settings.
+
+**Working rules from Aaron:** show options/mockups and wait for his pick before implementing or committing design/behaviour choices (memory: `feedback_show_before_building`); an AI never runs SQL against Supabase, never enters credentials, and sends nothing to other people — he does those. Multiple Claude sessions may touch this repo; re-check `git status` first. Edge Functions deploy separately from the frontend; nothing in this window changed an Edge Function.
+
+### Earlier handoff text (Oct 2, 2026 — partly historical)
+
+
+**(Oct 2 text:) the project was in a deliberate, clean pause.** The working tree was clean and everything was committed and pushed to `origin/main` (no feature branches; this whole project has been developed via direct commits to `main`).
 
 **What's fully done, verified, and not waiting on anything:**
 - The 6-phase deployment-cohesion bug audit (Chapter 9) — complete, see `AUDIT_HANDOFF.md`'s phase table.
