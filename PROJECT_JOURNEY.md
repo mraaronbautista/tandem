@@ -93,7 +93,7 @@ Other work in this window, all committed and pushed to `origin/main`:
 | Rental contacts and location coverage | Published (`57f8c82`, `deb69c9`); SQL user-reported applied; signed-in directory and location mapping checked |
 | Long-term Add/Edit lease controls | Published (`0b5ab92`); both signed-in entry points checked without creating records |
 | Dated lease notes | Published (`9125b9b`); SQL user-reported applied; signed-in reads/editor verified, live writes/author access/Realtime outstanding |
-| All-record Excel / CSV export | Approved and implemented locally; checks passed, publication pending. Tasks excluded; optional Vault |
+| All-record Excel / CSV export | Published (`4801425`), public bundle confirmed; local checks passed. Tasks excluded; optional Vault |
 | Call/text logging | Deferred |
 
 ## Current state (as of Oct 2, 2026 — see the Oct 6 addendum above for newer rows)
@@ -150,6 +150,10 @@ Aaron deferred call/text logging, then selected property contacts and approved t
 Correction to the older handoff: Dallas Property Finder is already committed in `622859c` and present on locally recorded `origin/main`; its production SQL and phone verification are still unconfirmed. Do not repeat the stale commit/push step below.
 
 ## Active handoff — read this first
+
+### Latest Export checkpoint — October 6, 2026
+
+Export is committed/pushed as `4801425` and confirmed in the public Netlify bundle after Aaron approved publication. Settings → Export records offers one Excel file with separate sheets plus individual exports; Tasks excluded, Vault optional with unlock/confirmation. No SQL needed. Local checks and signed-in preparation passed; production download and actual Vault unlock remain unverified. Next: Aaron checks the published download in his browser. Call/text logging remains deferred. `.agents/` stays untouched.
 
 ### Export continuation — October 6, 2026, Codex
 

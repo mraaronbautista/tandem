@@ -270,3 +270,7 @@ Aaron asked to go through the click-through list from `multi-member-permissions.
 - Commit / migration / deployment status:
 - Remaining uncertainty or blocker:
 - Next action and owner:
+
+### Export publication — October 6, 2026
+
+Aaron’s “perfect” answered the concrete commit/publish request. Export feature committed as `4801425` and pushed to origin/main. Public Netlify HTML serves `/assets/index-BjxgKnvs.js`; fetched bundle confirms Export records, all-record XLSX download, contact coverage and Vault confirmation controls. Public deployment confirmed at asset level; production-site download/Vault unlock not exercised. Local checks and signed-in preparation passed as documented above. No SQL, production writes or access changes. Call/text logging remains deferred.
