@@ -51,6 +51,7 @@ const SECTIONS = [
   {
     title: 'Rentals',
     items: [
+      'Contacts: each unit has a Contacts section for tenants, vendors and other people. All contacts searches names, companies and phone numbers. Link one person to several units; Copy number lets you paste into your calling app. Archive keeps their details, and Include archived lets you restore them. Keep door codes and passwords in the Vault.',
       'Tracks occupancy and finances for a rental business — tap the company name at the top to switch between Awa Rentalz and Azu Rentals, each with its own separate units, bookings, and financials.',
       'Layout adapts to screen width: on a phone, switch between Calendar / Financials / Overview with tabs, one panel at a time. On a tablet or desktop-width screen, all three show together instead — Calendar and Overview share the main column, Financials stays visible in a column of its own — and you switch units by tapping one in Overview or the calendar\'s own unit-nav arrows rather than tabs.',
       'Calendar: tap a booked day to view, edit, or delete that booking. A striped cell is a pending request, not yet confirmed — it still blocks the dates, but doesn\'t count toward revenue until you confirm it.',

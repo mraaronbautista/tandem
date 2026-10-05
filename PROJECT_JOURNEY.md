@@ -139,6 +139,12 @@ These are real incidents or deliberate decisions from this project's history. Kn
 - **Multi-agent handoff discipline**: when more than one AI session may be working this repo, always distinguish *prepared* (code written) from *tested* (checks run) from *committed* from *pushed* from *confirmed live in production* — never collapse these into a single "done." Re-read the shared handoff log before resuming, and never overwrite or silently reattribute another agent's logged work.
 - **Deny-list vs. presence-grant access models, used deliberately differently depending on intent.** `members.permissions` is a deny-list (`{}` means full access) specifically so an existing member needs zero data to keep working unchanged when a new feature gate is added. `task_access`/`report_access`/`priorities_access`/`vault_access` are the opposite — a *present* row is required for access, because those exist specifically to *restrict* something that used to be automatic. Don't confuse the two shapes when adding a new gated feature; pick deliberately based on whether you're adding a restriction or a preservable default.
 
+## Codex takeover checkpoint — October 6, 2026
+
+Aaron deferred call/text logging, then selected property contacts and approved the screen preview. Property contacts are now prepared locally for both rental terms, with a searchable shared directory, multi-unit role links, archive/restore and copy number. Migration `supabase/add-rental-contacts.sql` is prepared for Aaron to run manually. Local PostgreSQL access/atomicity checks and mounted phone/desktop UI checks passed; no live migration, commit, push or deploy. Next: Aaron applies SQL, then signed-in live verification. Other rental improvements remain proposals.
+
+Correction to the older handoff: Dallas Property Finder is already committed in `622859c` and present on locally recorded `origin/main`; its production SQL and phone verification are still unconfirmed. Do not repeat the stale commit/push step below.
+
 ## Active handoff — read this first
 
 ### Update, October 6, 2026 (supersedes the Oct 2 text below where they disagree)

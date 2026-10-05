@@ -204,3 +204,7 @@ On mobile, navigation sits in a bottom tab bar; on desktop, the same nav buttons
 - **Frontend:** a static build (`npm run build`) deployed to Netlify.
 - **Backend:** Supabase — schema changes (`supabase/schema.sql`) and Edge Function deploys are both applied by hand (SQL editor / `supabase functions deploy`), not part of the Netlify build.
 - See [README.md](README.md) for the full first-time setup walkthrough.
+
+## Property contacts — prepared, awaiting setup
+
+Each rental unit can show tenant, vendor and other contacts. All contacts searches names, organizations and phone numbers. A single contact can link to several units, with a role at each; Copy number supports pasting into your preferred calling app. Archive keeps details and links, and Include archived exposes Restore. Rentals permission governs viewing and editing. Door codes/passwords belong in the Vault. The contacts SQL migration and signed-in verification are pending; this feature is not confirmed live.

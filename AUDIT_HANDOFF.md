@@ -70,6 +70,32 @@ Claude reported the audit complete after an additional mechanical pass over colu
 
 ## Activity log
 
+### October 6, 2026 — Codex: contacts commit authorized
+
+- Aaron explicitly requested committing the prepared property contacts feature. This checkpoint is included in that commit with frontend, manual migration and related documentation; the existing Rentals proposal is preserved as context.
+- Build, lint, local PostgreSQL access/transaction checks and mounted phone/desktop lifecycle checks passed (existing lint and bundle warnings remain). Live migration and signed-in verification remain unconfirmed.
+- Push/deploy not authorized or performed. Unrelated untracked `.agents/` folder excluded. Next: confirm manual migration and live verification before publishing.
+
+### October 6, 2026 — Codex: contact lifecycle checks continued
+
+- Continued within approved contacts scope. Mounted real UI at 390px and 1280px with a simulated backend, with no production requests: save payload included two unit links; permission error retained the edited draft; archive hid the contact until Include archived; restore returned it; cancel discarded an unsaved edit.
+- Added Try again to the directory setup/error state, including when there are no unit panels available. Reconciled the plan status to distinguish prepared contacts from unapproved remaining improvements.
+- Production SQL confirmation is pending Aaron’s answer. No production migration, live verification, commit, push or deployment. Next: migration confirmation and signed-in end-to-end checks.
+
+### October 6, 2026 — Codex: approved property contacts prepared locally
+
+- Aaron selected rental property contacts and approved the preview. Call/text logging remains explicitly deferred; other Rentals improvements remain proposed.
+- Prepared `RentalContacts.jsx`, `rentalContacts.js`, `useRentalContacts.js`, both Rentals layouts, manual `add-rental-contacts.sql` and schema mirror. Updated plan, journey, feature and technical docs plus in-app guide. Preserved prior plan and .agents edits.
+- Checks: lint passed with existing warnings; production build passed with bundle-size warning. PGlite verified migration rerun, atomic create/edit/link rollback, archive history and Rentals-disabled/non-member read/write denial. Real components exercised at 390px/1280px with number search/edit/link selection/cancel/close, no page errors/overflow. Screenshots inspected. Fixture preview needed React initialization repaired before checks passed.
+- Not run: production SQL, signed-in browser flows, actual live Realtime or live account access checks. No commit, push or deploy. Next: Aaron runs migration manually, then signed-in verification.
+
+### October 6, 2026 — Codex: takeover review and call/text logging deferred
+
+- Reviewed current working tree, recent commits, PROJECT_JOURNEY.md and ONGOING_PLANS.md. Dallas Property Finder is committed as 622859c and present on the locally recorded origin/main; older handoff text calling it uncommitted is stale. No remote refresh or production verification performed.
+- Aaron explicitly deferred call/text logging because it may not be useful now. Recorded this in ONGOING_PLANS.md; remaining Rentals proposals are not yet approved or selected.
+- Preserved existing uncommitted plan content and untracked .agents/ folder. No application changes, checks, SQL execution, commits, pushes, or deployments. Dallas SQL and live phone verification remain unconfirmed.
+- Next action: choose the next useful Rentals item or resume outstanding verification; do not build call/text logging unless Aaron resumes it.
+
 ### October 6, 2026 — Claude: handoff refresh before Aaron hands the project to ChatGPT
 
 - Brought `PROJECT_JOURNEY.md` up to date (Chapter 11, current-state addendum, new top block in "Active handoff"); copied the external UI/UX plan to `docs/ui-ux-overhaul-plan.md`.

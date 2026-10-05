@@ -22,6 +22,8 @@ import RentalLongTermView from './RentalLongTermView'
 import RentalPropertyForm from './RentalPropertyForm'
 import { friendlyError } from '../lib/friendlyError'
 import LoadingText from './LoadingText'
+import RentalContacts from './RentalContacts'
+import { useRentalContacts } from '../lib/useRentalContacts'
 
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
@@ -49,6 +51,7 @@ import LoadingText from './LoadingText'
 // row, not a narrow column, so the two layouts solve the same redundancy
 // in different ways on purpose.
 export default function RentalsView({ me, company, registerQuickAdd }) {
+  const contactStore = useRentalContacts()
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
@@ -272,6 +275,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   const shortMidtermProperties = properties.filter((p) => (p.term || 'short_midterm') === 'short_midterm')
 
   const termToggle = (
+    <div className="flex flex-wrap items-center gap-2">
     <PeriodTabs className="w-auto min-w-0 flex-none">
       <PeriodTab active={rentalTerm === 'short_midterm'} onClick={() => setRentalTerm('short_midterm')}>
         Short/Midterm
@@ -280,6 +284,8 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
         Long Term
       </PeriodTab>
     </PeriodTabs>
+    <RentalContacts store={contactStore} directoryOnly />
+    </div>
   )
 
   if (rentalTerm === 'long_term') {
@@ -291,6 +297,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           bookings={upcomingBookings}
           onEditUnit={openEditProperty}
           onAddUnit={openNewProperty}
+          renderContacts={(unit) => <RentalContacts store={contactStore} property={unit} />}
         />
         {propertyFormOpen && (
           <RentalPropertyForm
@@ -337,6 +344,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
             </RentalButton>
             <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
           </div>
+          {selectedUnit && <RentalContacts key={selectedUnit.id} store={contactStore} property={selectedUnit} />}
 
           {/* The per-unit status list renders in place of the (hidden)
               unit-tabs toolbar row and, same as mobile's Overview tab,
@@ -418,6 +426,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
         onToggleNegotiating={handleToggleNegotiating}
       />
       <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
+      {properties.find((unit) => unit.id === selectedUnitId) && <RentalContacts key={selectedUnitId} store={contactStore} property={properties.find((unit) => unit.id === selectedUnitId)} />}
 
       <MonthNavRow>
         <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">

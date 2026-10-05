@@ -513,3 +513,9 @@ The rule, so each new delete path picks the same tier instead of inventing its o
 ## Deployment
 
 Netlify (static frontend, env vars in Netlify's dashboard) + Supabase (schema and Edge Functions both applied by hand — schema via the SQL editor, functions via `supabase functions deploy` — neither is wired into the Netlify build). See README.md for the step-by-step.
+
+## Property contacts (October 6, 2026 — prepared locally, migration pending)
+
+`RentalContacts.jsx` supplies per-unit contact panels and an All contacts directory inside both Rentals term views. `useRentalContacts.js` loads one shared store for the view and refetches contacts/links/properties via Realtime, ignoring stale overlapping fetch results. `rentalContacts.js` supplies search (including formatted-number digit matching), reads, archive/restore, and saves. Contact types are tenant/vendor/other; optional organization, trade, two phones, email and notes. Cross-company contacts can link to multiple units with a role per link. Archived contacts/units retain their associations. Phone copy errors expose the number for manual copying; no dialer or Google Voice integration. Existing contact forms opened from a unit preselect that unit as a draft, persisted only on Save.
+
+Manual SQL: `supabase/add-rental-contacts.sql`. Two tables (`rental_contacts`, `rental_contact_links`) with authenticated-only RLS requiring both `is_member()` and `has_permission('rentals')`. `save_rental_contact(uuid,jsonb,jsonb)` is security invoker, explicitly checks permission, and updates details plus replacement links atomically. Neither tasks nor task_source changes. Realtime publication additions are idempotent. No production SQL applied by Codex; local PGlite access and transaction checks passed. Mounted UI checked at phone/desktop widths; signed-in live checks pending.

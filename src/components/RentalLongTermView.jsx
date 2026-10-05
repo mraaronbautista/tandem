@@ -13,7 +13,7 @@ import { bookingGuestLabel, daysBetweenStrs, monthsAndDaysBetween, formatMonthsA
 // same as RentalOverview.jsx/nextAvailability() already require) — a
 // long-term lease's own check_in is almost always outside whatever month
 // happens to be browsed elsewhere in the tab.
-export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit }) {
+export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit, renderContacts }) {
   const units = properties.filter((p) => p.term === 'long_term')
   const todayStr = todayDateStr()
 
@@ -87,6 +87,7 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
             ) : (
               <div className="mt-2 text-[13px] text-text opacity-80">Vacant</div>
             )}
+            {renderContacts?.(unit)}
           </div>
         )
       })}
