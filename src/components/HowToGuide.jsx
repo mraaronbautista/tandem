@@ -197,7 +197,8 @@ const FAQS = [
   {
     title: 'How do I add my whole week\'s schedule at once instead of one task at a time?',
     items: [
-      'On Today, tap + → Bulk → Add. The default Guided view gives each task its own title, date, optional time and priority — tap "Add another task" for more. A live preview shows exactly what will be created before you confirm.',
+      'On Today, tap + → Bulk → Add. The default Guided view gives each task its own title, date, optional time, priority and Repeats — tap "Add another task" for more. A live preview shows exactly what will be created before you confirm.',
+      'Tip: a task can repeat from Bulk Add too. In Guided, pick a Repeats option on its card (for "Selected weekdays", tick the days). In Paste a list, add a marker such as ~weekly, ~daily, ~monthly, ~weekdays or ~mon,wed,fri. A repeat needs a date, and a weekday schedule starts on the first day you picked.',
       'Tip: if you already have a list written out, switch to "Paste a list". One line per task: "date – description", with an optional time or time range right before the dash ("Aug 28 8am-9am – Plumber at 1072 Rachel"). Switching from Guided shows you the lines your fields produced, so you can learn the format from your own tasks.',
     ],
   },

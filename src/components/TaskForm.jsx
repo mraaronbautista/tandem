@@ -3,6 +3,7 @@ import { CalendarClock, ChevronDown, ChevronRight, ChevronUp } from 'lucide-reac
 import { TIMEZONE_OPTIONS, detectDefaultTimezone, zonedTimeToUtcIso, zoneAbbreviation } from '../lib/timezone'
 import { formatDuration } from '../lib/tasks'
 import { PRIORITY_SHORT_LABEL } from '../lib/priorityColors'
+import { addDaysToDateStr, firstSelectedWeekdayOnOrAfter, shortDateLabel } from '../lib/recurrence'
 import ChecklistEditor from './ChecklistEditor'
 import ScrollSelect from './ScrollSelect'
 import TaskIcon from './TaskIcon'
@@ -134,30 +135,6 @@ function defaultDueDateTime() {
 // new Date(dateStr), which parses as UTC midnight and can land on the
 // wrong local day depending on the viewer's own offset) keeps this
 // unambiguous.
-function addDaysToDateStr(dateStr, days) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const date = new Date(y, m - 1, d + days)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-// First date on or after dateStr that falls on one of the chosen weekdays
-// (0 = Sunday ... 6 = Saturday). dateStr itself when it already does, or
-// when no weekday is chosen. A repeating task's own first date is part of
-// the schedule, so it has to be one of the days actually picked.
-function firstSelectedWeekdayOnOrAfter(dateStr, days) {
-  if (!dateStr || !days.length) return dateStr
-  for (let i = 0; i < 7; i++) {
-    const candidate = addDaysToDateStr(dateStr, i)
-    if (days.includes(new Date(`${candidate}T00:00:00`).getDay())) return candidate
-  }
-  return dateStr
-}
-
-function shortDateLabel(dateStr) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
-}
-
 function daysBetweenDateStrs(startStr, endStr) {
   const [y1, m1, d1] = startStr.split('-').map(Number)
   const [y2, m2, d2] = endStr.split('-').map(Number)

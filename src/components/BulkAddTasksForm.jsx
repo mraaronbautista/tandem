@@ -17,7 +17,8 @@ import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import PriorityDot from './PriorityDot'
 import AssigneePicker from './AssigneePicker'
-import { TIME_OPTIONS } from './TaskForm'
+import { TIME_OPTIONS, RECURRENCE_OPTIONS, WEEKDAY_OPTIONS, recurrenceLabel } from './TaskForm'
+import { firstSelectedWeekdayOnOrAfter, repeatToToken, shortDateLabel } from '../lib/recurrence'
 import Modal from './Modal'
 import TaskExportForm from './TaskExportForm'
 import { useConfirm } from '../lib/confirmContext'
@@ -50,7 +51,7 @@ function localDateString() {
 }
 
 function newGuidedRow() {
-  return { id: crypto.randomUUID(), title: '', date: localDateString(), time: '', priority: 'med' }
+  return { id: crypto.randomUUID(), title: '', date: localDateString(), time: '', priority: 'med', repeat: 'none', days: [], note: '' }
 }
 
 // '14:30' -> '2:30pm', the clock style the paste format already teaches.
@@ -69,13 +70,17 @@ function guidedRowsToText(rows) {
     .map((row) => {
       const when = row.date ? [row.date, row.time ? formatGuidedTime(row.time) : ''].filter(Boolean).join(' ') : 'ASAP'
       const marker = row.priority && row.priority !== 'med' ? ` !${row.priority}` : ''
-      return `${when}${marker} – ${row.title.trim()}`
+      // A repeat needs a date; a dateless row writes "ASAP" and no marker.
+      const token = row.date ? repeatToToken(row.repeat, row.days) : null
+      const repeatMarker = token ? ` ~${token}` : ''
+      return `${when}${marker}${repeatMarker} – ${row.title.trim()}`
     })
     .join('\n')
 }
 
 const PLACEHOLDER = `Aug 28 8am-9am CT !high – Plumber at 1072 Rachel
   - Confirm parts on hand
+Sep 1 ~weekly – Pay the vendors
 Aug 30 – Abdul vacates Master Haven (schedule cleaning)
 Today 3pm ET – Call Ingrid about the turnover
 If Ingrid unavailable – Follow-up with Martin (backup)`
@@ -167,6 +172,10 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
   const [inputMode, setInputMode] = useState(readSavedInputMode)
   const [guidedRows, setGuidedRows] = useState(() => [newGuidedRow()])
   const guidedText = useMemo(() => guidedRowsToText(guidedRows), [guidedRows])
+  // A weekday repeat with no day ticked would silently save as a plain task.
+  const guidedHasEmptyWeekdays = guidedRows.some(
+    (row) => row.title.trim() && row.date && row.repeat === 'selected_weekdays' && row.days.length === 0,
+  )
   // Everything downstream (the live preview, the parser, saving) reads
   // this one string, whichever way it was entered.
   const activeText = inputMode === 'guided' ? guidedText : text
@@ -191,6 +200,29 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
 
   function addGuidedRow() {
     setGuidedRows((rows) => [...rows, newGuidedRow()])
+  }
+
+  // Choosing "Selected weekdays" starts with the weekday of the row's own
+  // date ticked, the same default the task form uses.
+  function changeRowRepeat(row, repeat) {
+    const day = row.date ? new Date(`${row.date}T00:00:00`).getDay() : null
+    updateGuidedRow(row.id, {
+      repeat,
+      days: repeat === 'selected_weekdays' && day != null ? [day] : [],
+      note: '',
+    })
+  }
+
+  // A weekday schedule starts on one of its own days: ticking days moves the
+  // row's date to the first chosen day on or after it, and says so.
+  function toggleRowDay(row, dayValue) {
+    const days = row.days.includes(dayValue) ? row.days.filter((d) => d !== dayValue) : [...row.days, dayValue]
+    const moved = firstSelectedWeekdayOnOrAfter(row.date, days)
+    updateGuidedRow(row.id, {
+      days,
+      date: moved,
+      note: days.length && moved !== row.date ? `Start date moved to ${shortDateLabel(moved)}, the first day you picked.` : '',
+    })
   }
 
   function removeGuidedRow(id) {
@@ -256,6 +288,8 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
             // when the key is omitted from the insert entirely, not when
             // it's explicitly null.
             priority: t.priority || 'med',
+            recurrence: t.recurrence || 'none',
+            recurrence_days: t.recurrence_days || [],
             created_by: me.id,
           }),
         ),
@@ -502,6 +536,10 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                   <code>!high</code> / <code>!med</code> / <code>!low</code> → sets that task's priority
                 </li>
                 <li>Start the line with "ASAP" → no date at all</li>
+                <li>
+                  <code>~weekly</code> / <code>~daily</code> / <code>~monthly</code> / <code>~weekdays</code> /{' '}
+                  <code>~mon,wed,fri</code> → makes it repeat (needs a date)
+                </li>
                 <li>Indent a line underneath → adds it as a checklist item on the task above</li>
               </ul>
             </div>
@@ -569,6 +607,20 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                           <option value="low">Low</option>
                         </select>
                       </label>
+                      <label className="flex min-w-[130px] flex-1 flex-col gap-1 text-xs">
+                        Repeats
+                        <select
+                          value={row.date ? row.repeat : 'none'}
+                          disabled={!row.date}
+                          onChange={(e) => changeRowRepeat(row, e.target.value)}
+                        >
+                          {RECURRENCE_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <button
                         type="button"
                         onClick={() => removeGuidedRow(row.id)}
@@ -577,7 +629,46 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                         Remove
                       </button>
                     </div>
-                    {!row.date && <p className="m-0 text-xs opacity-80">No date — this task will have no due date.</p>}
+                    {!row.date && (
+                      <p className="m-0 text-xs opacity-80">
+                        No date, so this task will have no due date and cannot repeat. Add a date to choose how often.
+                      </p>
+                    )}
+                    {row.date && row.repeat === 'selected_weekdays' && (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Repeat on weekdays">
+                          {WEEKDAY_OPTIONS.map((day) => {
+                            const on = row.days.includes(day.value)
+                            return (
+                              <button
+                                key={day.label}
+                                type="button"
+                                aria-pressed={on}
+                                aria-label={day.label}
+                                title={day.label}
+                                onClick={() => toggleRowDay(row, day.value)}
+                                className={`h-9 w-9 cursor-pointer rounded-full border text-xs font-semibold transition-colors ${
+                                  on ? 'border-accent bg-accent text-on-accent' : 'border-border bg-bg text-text-h hover:border-accent'
+                                }`}
+                              >
+                                {day.shortLabel}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {row.days.length === 0 ? (
+                          <p className="error m-0 text-xs" role="alert">
+                            Pick at least one day.
+                          </p>
+                        ) : (
+                          <p className="m-0 text-xs" aria-live="polite">
+                            {recurrenceLabel('selected_weekdays', row.days)}. The first one is{' '}
+                            {shortDateLabel(firstSelectedWeekdayOnOrAfter(row.date, row.days))}.
+                            {row.note && <span className="block font-semibold">{row.note}</span>}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <button
@@ -633,6 +724,19 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
                               </span>
                             )}
                           </div>
+                          {/* On its own line, not a badge in the row: the row's title
+                              must keep its room, and "Every Monday, Wednesday, and
+                              Friday" is long. */}
+                          {t.recurrence && t.recurrence !== 'none' && (
+                            <div className="text-xs opacity-80">
+                              Repeats: {recurrenceLabel(t.recurrence, t.recurrence_days).replace(/^Every /, 'every ')}.
+                              {t.dateMovedFrom &&
+                                ` First one is ${shortDateLabel(t.due_date)}, the first day you picked (not ${shortDateLabel(t.dateMovedFrom)}).`}
+                            </div>
+                          )}
+                          {t.repeatDropped && (
+                            <div className="text-xs text-notice-text">Can't repeat with no date, so this one is saved as a one-off task.</div>
+                          )}
                           {t.checklist?.length > 0 && (
                             <div className="bulk-add-preview-checklist">
                               {t.checklist.map((c) => (
@@ -917,7 +1021,7 @@ export default function BulkAddTasksForm({ me, members, tasks, defaultAssigneeId
         <SubmissionActions>
           <SubmissionButton onClick={onClose}>Cancel</SubmissionButton>
           {view === 'add' ? (
-            <SubmissionButton type="submit" variant="primary" disabled={saving || parsedTasks.length === 0 || assigneeIds.length === 0}>
+            <SubmissionButton type="submit" variant="primary" disabled={saving || parsedTasks.length === 0 || assigneeIds.length === 0 || (inputMode === 'guided' && guidedHasEmptyWeekdays)}>
               {saving
                 ? 'Creating…'
                 : parsedTasks.length

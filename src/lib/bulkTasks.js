@@ -1,4 +1,5 @@
 import { TIMEZONE_OPTIONS } from './timezone'
+import { firstSelectedWeekdayOnOrAfter, parseRepeatToken } from './recurrence'
 
 const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 const WEEKDAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
@@ -291,8 +292,28 @@ const PRIORITY_MARKER_RE = new RegExp(`(?:^|\\s)!(${Object.keys(PRIORITY_ALIAS).
 function splitPriorityMarker(prefix) {
   const m = prefix.match(PRIORITY_MARKER_RE)
   if (!m) return { rest: prefix, priority: null }
-  const rest = prefix.slice(0, m.index) + prefix.slice(m.index + m[0].length)
-  return { rest: rest.trim(), priority: PRIORITY_ALIAS[m[1].toLowerCase()] }
+  // Rejoined with a space: the match swallows the whitespace on both sides, so
+  // a plain concatenation glued whatever came after the marker onto whatever
+  // came before it ("3:00pm !high ~monthly" became "3:00pm~monthly").
+  const rest = prefix.slice(0, m.index) + ' ' + prefix.slice(m.index + m[0].length)
+  return { rest: rest.trim().replace(/\s+/g, ' '), priority: PRIORITY_ALIAS[m[1].toLowerCase()] }
+}
+
+// An optional "~weekly" / "~daily" / "~monthly" / "~mon,wed,fri" /
+// "~weekdays" anywhere in a date/time prefix, e.g. "Oct 5 9am ~weekly" —
+// the "~" sigil can't collide with any date/time/zone/priority syntax, so
+// like "!priority" it needs no fixed position. Tokens are defined once in
+// recurrence.js (shared with Guided mode). An unrecognised token is an
+// error rather than left in the text, so a typo ("~weakly") cannot quietly
+// produce a non-repeating task.
+const REPEAT_MARKER_RE = /(?:^|\s)~(\S+)(?=\s|$)/
+
+function splitRepeatMarker(prefix) {
+  const m = prefix.match(REPEAT_MARKER_RE)
+  if (!m) return { rest: prefix, repeat: null, unknown: null }
+  const rest = (prefix.slice(0, m.index) + ' ' + prefix.slice(m.index + m[0].length)).trim()
+  const repeat = parseRepeatToken(m[1])
+  return { rest, repeat, unknown: repeat ? null : m[1] }
 }
 
 // One parser, two line shapes it recognizes freely mixed in the same
@@ -419,14 +440,38 @@ export function parseBulkTasks(text) {
         return
       }
       const { rest: prefixNoPriority, priority } = splitPriorityMarker(split.prefix)
-      const { rest: prefixNoZone, due_timezone } = splitTrailingZone(prefixNoPriority)
+      const { rest: prefixNoRepeat, repeat, unknown: unknownRepeat } = splitRepeatMarker(prefixNoPriority)
+      if (unknownRepeat) {
+        errors.push({
+          line: i + 1,
+          text: raw.trim(),
+          message: `Don't know the repeat "~${unknownRepeat}". Try ~daily, ~weekly, ~monthly, ~weekdays or ~mon,wed,fri.`,
+        })
+        return
+      }
+      const { rest: prefixNoZone, due_timezone } = splitTrailingZone(prefixNoRepeat)
       const { datePart, due_time, duration_minutes } = splitDateAndTime(prefixNoZone)
       const date = parseDateHeader(datePart)
       const resolved = date || isNoDateMarker(datePart)
+      // A repeat needs a date to repeat from. Without one the task is still
+      // created, just not repeating, and the preview says so (same rule the
+      // task form follows for an All day task with no date).
+      const repeats = Boolean(repeat && date)
+      // A weekday schedule has to start on one of its own days: move the date
+      // to the first chosen day on or after it, and remember where it came
+      // from so the preview can say so.
+      const startDate =
+        repeats && repeat.recurrence === 'selected_weekdays'
+          ? firstSelectedWeekdayOnOrAfter(date, repeat.recurrence_days)
+          : date
       tasks.push({
         type: 'item',
         title: resolved ? split.description : line,
-        due_date: date,
+        due_date: startDate,
+        recurrence: repeats ? repeat.recurrence : 'none',
+        recurrence_days: repeats ? repeat.recurrence_days : [],
+        dateMovedFrom: repeats && startDate !== date ? date : null,
+        repeatDropped: Boolean(repeat && !date),
         // Only a real resolved date carries its extracted time/zone
         // through — a no-date-marker ("ASAP 3pm") drops them (a marker
         // plus a time or zone is a contradiction, not worth guessing at),
