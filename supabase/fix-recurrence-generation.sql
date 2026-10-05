@@ -18,8 +18,10 @@
 --      so a task due early on the 1st had no row (and no reminder) until
 --      then. A scheduled job now keeps this month and next month ready.
 --
--- Part 5 adds the function behind "this and future tasks" when editing a
--- repeating task. Part 4 is read-only review.
+-- Part 4 adds the function behind "this and future tasks" when editing a
+-- repeating task. Part 5 is a read-only review and is deliberately LAST: the
+-- Supabase SQL editor only shows the result of the final statement, so the
+-- list of old back-filled copies is what you see when the run finishes.
 
 -- ---------------------------------------------------------------------------
 -- Part 1: the generator
@@ -219,28 +221,7 @@ select cron.schedule('ensure-upcoming-recurrences', '5 * * * *', $job$select ens
 select ensure_upcoming_recurrences();
 
 -- ---------------------------------------------------------------------------
--- Part 4: READ-ONLY review of copies the old weekday rule created in the past
--- ---------------------------------------------------------------------------
--- These are not-done copies that sit BEFORE their repeating task's own start
--- date. Nothing here changes data. Look the list over, and only if every row
--- is junk, run the delete below it (it is commented out on purpose).
-select occ.id, occ.title, occ.due_date, tpl.due_date as task_starts
-from tasks occ
-join tasks tpl on tpl.id = occ.recurrence_series_id and tpl.id <> occ.id
-where tpl.recurrence = 'selected_weekdays'
-  and occ.status <> 'done'
-  and occ.due_date < tpl.due_date
-order by tpl.title, occ.due_date;
-
--- delete from tasks occ
--- using tasks tpl
--- where tpl.id = occ.recurrence_series_id and tpl.id <> occ.id
---   and tpl.recurrence = 'selected_weekdays'
---   and occ.status <> 'done'
---   and occ.due_date < tpl.due_date;
-
--- ---------------------------------------------------------------------------
--- Part 5: "this and future tasks" edits
+-- Part 4: "this and future tasks" edits
 -- ---------------------------------------------------------------------------
 -- Copies the listed fields from a patch onto the repeating task's template
 -- (so copies made later pick them up) and onto every open copy from the
@@ -281,3 +262,25 @@ begin
     );
 end;
 $$ language plpgsql security invoker;
+
+-- ---------------------------------------------------------------------------
+-- Part 5: READ-ONLY review of copies the old weekday rule created in the past
+-- ---------------------------------------------------------------------------
+-- These are not-done copies that sit BEFORE their repeating task's own start
+-- date. Nothing here changes data. Look the list over, and only if every row
+-- is junk, run the delete below it (it is commented out on purpose, so
+-- copy it out and run it by itself).
+select occ.id, occ.title, occ.due_date, tpl.due_date as task_starts
+from tasks occ
+join tasks tpl on tpl.id = occ.recurrence_series_id and tpl.id <> occ.id
+where tpl.recurrence = 'selected_weekdays'
+  and occ.status <> 'done'
+  and occ.due_date < tpl.due_date
+order by tpl.title, occ.due_date;
+
+-- delete from tasks occ
+-- using tasks tpl
+-- where tpl.id = occ.recurrence_series_id and tpl.id <> occ.id
+--   and tpl.recurrence = 'selected_weekdays'
+--   and occ.status <> 'done'
+--   and occ.due_date < tpl.due_date;
