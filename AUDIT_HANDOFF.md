@@ -29,6 +29,16 @@ Recovered from Claude's local session `abbc8761-8663-4088-88d3-ba2a1239d026`, Oc
 
 Claude reported the audit complete after an additional mechanical pass over columns, RPC permissions, constraints, and enum types. The final walkthrough was scoped, not every feature exhaustively tested in the browser. **Current checkpoint: approved per-person Priorities follow-up after the audit**, not an unknown unfinished audit phase.
 
+## Latest Export handoff — October 6, 2026
+
+Approved all-record workbook/section tabs implemented locally in DataExport.jsx/dataExport.js and Settings/TaskBoard, plus write-excel-file dependency. No SQL. Build/lint, 1,205-row pagination, permission sections, task exclusion, CSV injection/cell-limit checks and 21-sheet fixture XML passed. Signed-in All records preparation succeeded (20 data sheets, 90 records); browser download-event wait timed out, no file-path verification. Vault gated controls/390px layout checked, no real unlock. Four pre-existing npm audit findings; new writer has none. Documentation refreshed; all changes local/uncommitted/unpublished. Next: explicit commit/publish approval. Preserve `.agents/`.
+
+## Latest development handoff — October 6, 2026
+
+Rental contacts, location coverage, long-term Add/Edit lease and dated lease notes are published. Lease notes: feature `9125b9b`, publication record `927e2fd`; public bundle confirmed. SQL user-reported applied; signed-in local reads/editor verified. Live saves/author restrictions/Realtime are outstanding; local checks passed. Next proposed delivery is Rentals CSV export, pending scope/preview approval. Call/text logging remains deferred. Historical audit/Priorities handoffs below remain records, not the next development task.
+
+This Markdown refresh corrects stale current-state headings and the main resume point in PROJECT_JOURNEY, CLAUDE and FEATURES. Documentation edits are local and uncommitted; no application change or new publication performed.
+
 ## Current handoff — per-person Priorities
 
 **Owner:** Claude prepared the edits; Codex inspected them and created this handoff; Claude then closed the viewing gap Codex identified and committed/pushed the full batch. Aaron applied the production migration himself in the Supabase SQL editor; Claude independently re-verified it read-only plus impersonation afterward.

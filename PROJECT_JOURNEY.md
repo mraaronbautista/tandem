@@ -1,6 +1,6 @@
 # Tandem — Project Journey (Single Source of Truth)
 
-Last updated: October 6, 2026, by Claude (Sonnet 5.5). Chapter 11 and the top of "Active handoff" are the current picture; older paragraphs below are history.
+Last updated: October 6, 2026, by Codex. The latest Current state addendum and Active handoff below supersede historical checkpoints.
 
 ## What this document is
 
@@ -90,7 +90,11 @@ Other work in this window, all committed and pushed to `origin/main`:
 | Recurrence fixes + hourly job | Pushed; SQL run by Aaron (reported working); not independently re-checked against production by an AI |
 | Bulk Add repeats | Pushed; verified on mounted component, not signed-in |
 | Dallas Property Finder | **Uncommitted** in the working tree; SQL given to Aaron but he has not yet said he ran it; nothing pushed or live |
-| Rental contacts / call log / lease notes / CSV export plan | Planned only, in `ONGOING_PLANS.md`; **awaiting Aaron's approval**; no code written |
+| Rental contacts and location coverage | Published (`57f8c82`, `deb69c9`); SQL user-reported applied; signed-in directory and location mapping checked |
+| Long-term Add/Edit lease controls | Published (`0b5ab92`); both signed-in entry points checked without creating records |
+| Dated lease notes | Published (`9125b9b`); SQL user-reported applied; signed-in reads/editor verified, live writes/author access/Realtime outstanding |
+| All-record Excel / CSV export | Approved and implemented locally; checks passed, publication pending. Tasks excluded; optional Vault |
+| Call/text logging | Deferred |
 
 ## Current state (as of Oct 2, 2026 — see the Oct 6 addendum above for newer rows)
 
@@ -147,7 +151,23 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
-### Update, October 6, 2026 (supersedes the Oct 2 text below where they disagree)
+### Export continuation — October 6, 2026, Codex
+
+Aaron approved the preview for all app records except Tasks and a single multi-sheet Excel workbook. Settings → Export records is implemented locally, with section tabs, individual CSVs and optional Vault unlock/confirmation. No SQL needed. Build/lint and isolated workbook/pagination checks passed; signed-in All records preparation and phone layout checked without unlocking Vault. Export and the preceding documentation refresh remain uncommitted/unpublished. Next: review the local screen, then explicit commit/publish approval for Export. Call/text logging remains deferred.
+
+### Latest checkpoint — October 6, 2026, Codex
+
+Contacts, location service coverage, long-term lease controls and dated lease notes are committed, pushed and confirmed in public Netlify bundles. Lease notes shipped in `9125b9b`; publication records followed in `927e2fd`. Aaron ran the incremental SQL himself (user-reported). The signed-in local app successfully reads lease notes and opens the editor for the correct original lease. Live saves, author restrictions and Realtime delivery remain unverified; local database and phone/desktop UI checks passed. No production test notes were created.
+
+The application working tree was clean after publication; `.agents/` is unrelated and untracked. This documentation refresh is local and uncommitted. Re-check git status on resume.
+
+Next: present the Rentals CSV export scope/preview for approval before implementing. Call/text logging stays deferred. Amarillo still needs real location/lease setup; John and Martin were examples, not seeded contacts. Preserve remaining whole-app and RC Lina verification debt in the historical handoff.
+
+Aaron authorizes publication phase by phase; earlier blanket “don't push” notes were superseded for the delivered features by explicit approvals. He runs production SQL and enters credentials himself. Do not send messages to others. No new export implementation or publication is authorized by this documentation request.
+
+### Historical checkpoint — earlier October 6 (superseded for rental delivery and working-tree state)
+
+
 
 **Working tree is NOT clean.** Everything through Bulk Add repeats is committed and pushed (last commit `2d449d6`). Uncommitted and unpushed:
 - The Dallas Property Finder work: new `src/components/ExternalToolView.jsx`, `src/lib/externalTools.js`, `supabase/add-external-tools.sql`; modified `src/components/SettingsMenu.jsx`, `src/components/HowToGuide.jsx`, `supabase/schema.sql`, `CLAUDE.md`. Lint and build passed; behaviour verified by mounting the real component and Settings in the browser pane (listed person sees the row and it opens full screen with the right sandbox/referrer/link; unlisted person sees nothing; title wraps on phones).
@@ -195,7 +215,7 @@ October 6 update: Aaron reports the location-contact SQL ran successfully. Publi
 
 October 6 bug fix prepared: Amarillo could not receive a lease because Long Term lacked add/edit controls and its + pointed at an unmounted calendar. Reused the booking form for long-term leases, fixed +, verified both signed-in entry points without saving records. No SQL needed. Publishing rejected by automatic approval review pending explicit approval for this fix.
 
-## Next-phase checkpoint — lease notes preview (October 6, 2026)
+## Historical lease-notes checkpoints — October 6, 2026 (published status above supersedes these)
 
 Contacts, location coverage, and the long-term Add/Edit lease fix are published. Aaron next requested the lease-notes phase. A sample screen preview is prepared at `/Users/aaron/Documents/Codex/2026-10-06/i/outputs/lease-notes-preview.html`: latest note on long-term cards and a full dated author history. Proposed rules allow Rentals members to read/add, authors to edit/archive/restore their own notes, and preserve each note under its original lease. Layout and editing rules still await approval; Aaron’s request to update Markdown records the status only. No lease-notes application code or SQL exists yet. ONGOING_PLANS.md holds the current scope and next action. Export follows; call/text logging remains deferred.
 

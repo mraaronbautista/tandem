@@ -28,6 +28,7 @@ export default function SettingsMenu({
   defaultTimezone,
   onChangeDefaultTimezone,
   onOpenVault,
+  onOpenExport,
   onOpenManageAccess,
   onOpenMyProfile,
 }) {
@@ -119,6 +120,7 @@ export default function SettingsMenu({
             </div>
           )}
 
+          {onOpenExport && <button type="button" className={settingsItemClasses} onClick={onOpenExport}>Export records</button>}
           {onOpenVault && (
             <button type="button" className={settingsItemClasses} onClick={onOpenVault}>
               <span className="text-[17px]">

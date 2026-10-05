@@ -1,3 +1,4 @@
+import DataExport from './DataExport'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GanttChart, Home, FileText, LayoutGrid, Timer, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -175,6 +176,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [reportOpen, setReportOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [manageAccessOpen, setManageAccessOpen] = useState(false)
   const [myProfileOpen, setMyProfileOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
@@ -1450,6 +1452,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} members={members} onClose={() => setReportOpen(false)} />}
 
+      {exportOpen && <DataExport me={me} onClose={() => setExportOpen(false)} />}
       {vaultOpen && <VaultView me={me} members={members} onClose={() => setVaultOpen(false)} />}
 
       {manageAccessOpen && (
@@ -1467,6 +1470,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
 
       {settingsOpen && (
         <SettingsMenu
+          onOpenExport={() => { setSettingsOpen(false); setExportOpen(true) }}
           theme={theme}
           toggleTheme={toggleTheme}
           showPush={pushSupported()}

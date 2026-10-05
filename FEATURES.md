@@ -205,18 +205,22 @@ On mobile, navigation sits in a bottom tab bar; on desktop, the same nav buttons
 - **Backend:** Supabase — schema changes (`supabase/schema.sql`) and Edge Function deploys are both applied by hand (SQL editor / `supabase functions deploy`), not part of the Netlify build.
 - See [README.md](README.md) for the full first-time setup walkthrough.
 
-## Property contacts — prepared, awaiting setup
+## Property contacts — published
 
-Each rental unit can show tenant, vendor and other contacts. All contacts searches names, organizations and phone numbers. A single contact can link to several units, with a role at each; Copy number supports pasting into your preferred calling app. Archive keeps details and links, and Include archived exposes Restore. Rentals permission governs viewing and editing. Door codes/passwords belong in the Vault. The contacts SQL migration and signed-in verification are pending; this feature is not confirmed live.
+Each rental unit can show tenant, vendor and other contacts. All contacts searches names, organizations and phone numbers. A single contact can link to several units, with a role at each; Copy number supports pasting into your preferred calling app. Archive keeps details and links, and Include archived exposes Restore. Rentals permission governs viewing and editing. Door codes/passwords belong in the Vault. Contacts are published; Aaron reports the SQL applied, and the signed-in directory was checked.
 
-### Location service contacts — prepared, awaiting setup
+### Location service contacts — published
 
-Link a handyman, cleaner or other service contact to a whole location so they appear for every unit there, including new units. Choose specific units for narrower coverage; tenants remain unit-specific. All contacts filters by Location and Service. Edit unit can set its location. Location names come from existing Staff locations; no GPS/payroll details are shown to Rentals-only members. A new manual SQL step and live checks are pending.
+Link a handyman, cleaner or other service contact to a whole location so they appear for every unit there, including new units. Choose specific units for narrower coverage; tenants remain unit-specific. All contacts filters by Location and Service. Edit unit can set its location. Location names come from existing Staff locations; no GPS/payroll details are shown to Rentals-only members. Published with SQL user-reported applied; signed-in location mappings checked. Live save/access/Realtime checks remain outstanding.
 
-### Long-term lease controls — prepared, publication pending
+### Long-term lease controls — published
 
 Long Term unit cards have Add lease; existing/upcoming leases have Edit lease. The main + opens Add lease in Long Term. Uses the existing tenant/date form and overlap validation. Upcoming leases show tenant names/date range.
 
-## Dated lease notes — prepared, awaiting setup
+## Dated lease notes — published
 
-Long-term lease cards show the latest dated note. Add note records an update; View notes opens history with author names and edited timestamps. Everyone with Rentals access can read/add; only the author can edit/archive/restore a note. Original tenancy history remains available under the lease picker when a new tenancy begins. Existing booking notes stay separate. Manual SQL and real signed-in verification remain pending.
+Long-term lease cards show the latest dated note. Add note records an update; View notes opens history with author names and edited timestamps. Everyone with Rentals access can read/add; only the author can edit/archive/restore a note. Original tenancy history remains available under the lease picker when a new tenancy begins. Existing booking notes stay separate. Published in `9125b9b`; SQL user-reported applied and signed-in reads/editor verified. Live saves, author access and Realtime remain unverified.
+
+## Export records — prepared locally
+
+Settings → Export records offers section tabs and one Excel workbook with separate sheets for all accessible records, across both rental companies. Individual sections also offer CSV by record type. Tasks and their comments/submissions are excluded. Optional Vault inclusion requires master password entry and typed EXPORT confirmation; included passwords/secrets are readable in the downloaded workbook. Archived records can be included. No SQL required. Built and checked locally; not committed or published.
