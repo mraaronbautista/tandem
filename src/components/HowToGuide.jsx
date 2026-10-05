@@ -51,6 +51,7 @@ const SECTIONS = [
   {
     title: 'Rentals',
     items: [
+      'Lease notes: long-term lease cards show the latest update. Add note records a conversation or reminder; View notes shows dated history and past leases. Everyone with Rentals access can read and add, but only a note’s author can edit, archive or restore it. Keep codes and passwords in the Vault.',
       'Long Term: use Add lease on a unit to enter its tenants and dates, or Edit lease to update an existing or upcoming lease. The main + also opens Add lease while viewing Long Term.',
       'Service contacts can cover all units at a location, or only selected units. Tenants stay linked to their own units. Choose a location in Edit unit; use Location and Service in All contacts to find the right person. Location names are managed under Staff.',
       'Contacts: each unit has a Contacts section for tenants, vendors and other people. All contacts searches names, companies and phone numbers. Link one person to several units; Copy number lets you paste into your calling app. Archive keeps their details, and Include archived lets you restore them. Keep door codes and passwords in the Vault.',

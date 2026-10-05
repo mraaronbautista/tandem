@@ -216,3 +216,7 @@ Link a handyman, cleaner or other service contact to a whole location so they ap
 ### Long-term lease controls — prepared, publication pending
 
 Long Term unit cards have Add lease; existing/upcoming leases have Edit lease. The main + opens Add lease in Long Term. Uses the existing tenant/date form and overlap validation. Upcoming leases show tenant names/date range.
+
+## Dated lease notes — prepared, awaiting setup
+
+Long-term lease cards show the latest dated note. Add note records an update; View notes opens history with author names and edited timestamps. Everyone with Rentals access can read/add; only the author can edit/archive/restore a note. Original tenancy history remains available under the lease picker when a new tenancy begins. Existing booking notes stay separate. Manual SQL and real signed-in verification remain pending.

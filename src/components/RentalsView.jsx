@@ -301,6 +301,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       <div className="tab-panel">
         {termToggle}
         <RentalLongTermView
+          me={me}
           properties={properties}
           bookings={upcomingBookings}
           onEditUnit={openEditProperty}

@@ -70,6 +70,38 @@ Claude reported the audit complete after an additional mechanical pass over colu
 
 ## Activity log
 
+### October 6, 2026 — Codex: lease notes publication authorized
+
+- Aaron explicitly approved committing and publishing the prepared lease notes phase (“yup”). Local checks passed; SQL user-reported applied and signed-in reads/editor confirmed. No production test notes created.
+- Committing the feature, migration and documentation; unrelated `.agents/` excluded. Push and live deployment confirmation follow.
+
+### October 6, 2026 — Codex: lease notes SQL reported run; signed-in reads verified
+
+- Aaron reports running `add-rental-lease-notes.sql`. Retried both long-term unit note panels in the signed-in local app; both successfully loaded empty histories from Supabase.
+- Opened Findlay’s Add note editor and confirmed its original Danikka Jones lease (2026-07-01 through 2027-07-01), empty history and disabled empty Save. Closed without writing production data. Amarillo remains vacant and correctly asks for a lease first.
+- Migration application is user-reported; authenticated read availability is independently verified. Live write permissions, author changes and Realtime delivery remain unverified; local database/UI checks passed previously.
+- Lease notes remain uncommitted, unpushed and unpublished. Next: explicit authorization to commit and publish the prepared phase.
+
+### October 6, 2026 — Codex: lease-notes phase implemented locally
+
+- Aaron requested continuation after the preview and Markdown checkpoint; implemented the shown long-term latest-note/history flow with author-only edit/archive/restore and original-lease retention. Added past-lease picker and stable snapshots; existing booking notes unchanged.
+- Prepared `LeaseNotes.jsx`, `leaseNotes.js`, long-term integration, `add-rental-lease-notes.sql` and schema mirror. RLS requires membership + Rentals; authors only UPDATE; no DELETE. Trigger validates long-term pair and stamps trusted immutable context. Notes survive original lease deletion.
+- Checks: local PGlite migration rerun, spoofed metadata replacement, long-term validation, immutable identity, author edit/archive/restore, nonauthor read-only, restricted/staff denial, no delete and original history retention. Mounted real UI with simulated backend at 390px/1280px passed add/edit/archive/restore, denied-save draft retention, author controls and past-lease history; screenshots inspected. Build/lint passed with existing warnings. Test harness Date equality and fixture syntax corrected; no app failure hidden.
+- No production SQL, live saves, commit, push or deploy for this phase. Next: Aaron runs manual SQL, then real signed-in checks and explicit publication approval. Preserve previous documentation edits and .agents folder.
+
+### October 6, 2026 — Codex: next-phase lease notes preview; Markdown updated
+
+- Aaron requested the next phase, then continuation of the proposed lease-notes preview, then asked to update the Markdown files.
+- Prepared `outputs/lease-notes-preview.html` in this chat workspace with example data: latest note on long-term lease card, Add note, dated author history, proposed own-note edit/archive/restore, retained original-lease context.
+- Updated ONGOING_PLANS.md and PROJECT_JOURNEY.md. Layout and editing rules remain unapproved. Request to update Markdown is not implementation approval.
+- No lease-note code, SQL, migration, commit, push or deploy. Next: Aaron approves/amends the preview and edit rules, then prepare manual SQL and implement. Call/text logging remains deferred; export is the subsequent proposed phase.
+
+### October 6, 2026 — Codex: lease fix explicitly approved and published
+
+- Aaron explicitly approved committing/pushing the specific long-term lease fix. Committed as `0b5ab92` and pushed to origin/main.
+- Public Tandem references `/assets/index-DW-HvKKS.js`; fetched bundle contains Add lease and Edit lease controls. Frontend publication confirmed; no tenant/lease business record created during verification.
+- Next: refresh public Rentals → Long Term → Amarillo → Add lease and enter real tenant/dates. No SQL needed.
+
 ### October 6, 2026 — Codex: long-term lease fix ready; publish approval needed
 
 - Aaron reported he could not add an Amarillo tenant and clarified Lease / booking. Reproduced signed in: Long Term had no Add/Edit lease controls; main plus referenced the unmounted RentalCalendar and did nothing.

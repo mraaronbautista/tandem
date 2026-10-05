@@ -1,5 +1,6 @@
 import { Bell, Plus } from 'lucide-react'
 import RentalButton from './RentalButton'
+import LeaseNotes from './LeaseNotes'
 import { bookingGuestLabel, daysBetweenStrs, monthsAndDaysBetween, formatMonthsAndDays, formatDateStr, todayDateStr } from '../lib/rentals'
 
 // The Long Term half of RentalsView.jsx's term toggle — deliberately not a
@@ -14,7 +15,7 @@ import { bookingGuestLabel, daysBetweenStrs, monthsAndDaysBetween, formatMonthsA
 // same as RentalOverview.jsx/nextAvailability() already require) — a
 // long-term lease's own check_in is almost always outside whatever month
 // happens to be browsed elsewhere in the tab.
-export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit, renderContacts, onAddLease, onEditLease }) {
+export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit, renderContacts, onAddLease, onEditLease, me }) {
   const units = properties.filter((p) => p.term === 'long_term')
   const todayStr = todayDateStr()
 
@@ -94,6 +95,7 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
               <RentalButton className="min-h-[44px]" onClick={() => onAddLease?.(unit)}>+ Add lease</RentalButton>
               {lease && <RentalButton className="min-h-[44px]" onClick={() => onEditLease?.(lease)}>Edit lease</RentalButton>}
             </div>
+            <LeaseNotes key={lease?.id || unit.id} unit={unit} lease={lease} me={me} />
             {renderContacts?.(unit)}
           </div>
         )
