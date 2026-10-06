@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Paperclip, Check, ListChecks } from 'lucide-react'
 import { sendClarificationAsked, sendClarificationAnswered } from '../lib/manualNotify'
 import { uploadCompletionAttachment } from '../lib/attachments'
@@ -132,7 +132,43 @@ export default function TaskClarifications({
   taskId,
   extraActions,
   onAddChecklistItems,
+  taskDone = false,
+  completionNote = '',
+  completionAttachments = [],
+  onSaveCompletion,
 }) {
+  // Discussion and proof use separate drafts: toggling never reclassifies a comment.
+  const [composeMode, setComposeMode] = useState(taskDone ? 'completion' : 'comment')
+  const [completionDraft, setCompletionDraft] = useState(completionNote)
+  const [completionFiles, setCompletionFiles] = useState(completionAttachments)
+  const [editingCompletion, setEditingCompletion] = useState(false)
+  const [completionSaving, setCompletionSaving] = useState(false)
+  const [completionError, setCompletionError] = useState('')
+  const completionPending = useRef(false)
+  useEffect(() => {
+    setComposeMode(taskDone ? 'completion' : 'comment')
+  }, [taskDone])
+  const completionMode = taskDone && onSaveCompletion && composeMode === 'completion'
+  const hasCompletion = Boolean(completionNote || completionAttachments.length)
+  const showingSavedCompletion = completionMode && hasCompletion && !editingCompletion
+
+  async function handleSaveCompletion() {
+    if (completionPending.current || uploading) return
+    completionPending.current = true
+    setCompletionSaving(true)
+    setCompletionError('')
+    try {
+      // Persist note and attachment references together; retain drafts on failure.
+      await onSaveCompletion(completionDraft, completionFiles)
+      setEditingCompletion(false)
+    } catch (err) {
+      setCompletionError(friendlyError(err))
+    } finally {
+      completionPending.current = false
+      setCompletionSaving(false)
+    }
+  }
+
   const otherMembers = members.filter((m) => m.id !== meId)
   // Defaults to the task's own other assignees — the people it already
   // concerns — falling back to every other member only when there's
@@ -159,7 +195,8 @@ export default function TaskClarifications({
       const uploaded = await Promise.all(
         files.map(async (file) => ({ url: await uploadCompletionAttachment(taskId, file), name: file.name })),
       )
-      setQuestionAttachments((prev) => [...prev, ...uploaded])
+      if (completionMode) setCompletionFiles((prev) => [...prev, ...uploaded])
+      else setQuestionAttachments((prev) => [...prev, ...uploaded])
     } catch (err) {
       setUploadError(friendlyError(err))
     } finally {
@@ -208,7 +245,7 @@ export default function TaskClarifications({
   // lib/steps.js). Moving them onto the task's checklist clears the draft
   // so they are not also sent as a comment; an attachment already queued
   // stays and can still be sent on its own.
-  const draftSteps = onAddChecklistItems ? extractSteps(questionDraft) : null
+  const draftSteps = !completionMode && onAddChecklistItems ? extractSteps(questionDraft) : null
   const checklistSavePending = useRef(false)
   const [addingChecklist, setAddingChecklist] = useState(false)
   const [checklistError, setChecklistError] = useState('')
@@ -302,18 +339,39 @@ export default function TaskClarifications({
       )}
 
       <div className="flex flex-col gap-2">
+        {taskDone && onSaveCompletion && (
+          <div className="period-tabs w-fit" role="group" aria-label="Message type">
+            <button type="button" className={`period-tab min-h-10 whitespace-nowrap ${!completionMode ? 'period-tab-active' : ''}`} aria-pressed={!completionMode} disabled={uploading || completionSaving || asking || addingChecklist} onClick={() => setComposeMode('comment')}>Comment</button>
+            <button type="button" className={`period-tab min-h-10 whitespace-nowrap ${completionMode ? 'period-tab-active' : ''}`} aria-pressed={Boolean(completionMode)} disabled={uploading || completionSaving || asking || addingChecklist} onClick={() => setComposeMode('completion')}>Completion details</button>
+          </div>
+        )}
+        {showingSavedCompletion ? (
+          <div className="rounded-md border border-border bg-pill-bg p-3">
+            <p className="text-xs font-semibold">Completion details</p>
+            {completionNote && <p className="whitespace-pre-wrap break-words text-sm">{completionNote}</p>}
+            <AttachmentList attachments={completionAttachments} />
+            <button type="button" className="period-tab mt-2 min-h-10" onClick={() => {
+              setCompletionDraft(completionNote)
+              setCompletionFiles(completionAttachments)
+              setEditingCompletion(true)
+            }}>Edit details</button>
+          </div>
+        ) : <>
         <textarea
           className="w-full resize-y rounded-[6px] border border-border bg-bg px-2 py-[7px] text-[13px] text-text-h [font-family:inherit] [font-style:inherit] [font-variant:inherit] [font-weight:inherit] [line-height:inherit]"
           rows={2}
-          placeholder="Ask a question or leave a comment…"
-          value={questionDraft}
-          disabled={addingChecklist}
-          onChange={(e) => setQuestionDraft(e.target.value)}
+          aria-label={completionMode ? 'Completion details' : 'Comment'}
+          placeholder={completionMode ? 'What did you finish? Add a link, note, or details…' : 'Ask a question or leave a comment…'}
+          value={completionMode ? completionDraft : questionDraft}
+          disabled={addingChecklist || completionSaving || asking}
+          onChange={(e) => completionMode ? setCompletionDraft(e.target.value) : setQuestionDraft(e.target.value)}
         />
         <AttachmentList
-          attachments={questionAttachments}
-          onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+          attachments={completionMode ? completionFiles : questionAttachments}
+          onRemove={completionSaving || uploading ? undefined : (i) => (completionMode ? setCompletionFiles : setQuestionAttachments)((prev) => prev.filter((_, idx) => idx !== i))}
         />
+        </>}
+        {completionMode && completionError && <p role="alert" className="error">{completionError}</p>}
         {uploadError && <p className="error">{uploadError}</p>}
         {checklistError && <p role="alert" className="error">{checklistError}</p>}
         {draftSteps && (
@@ -338,7 +396,7 @@ export default function TaskClarifications({
             feature. Reuses AssigneePicker (the same toggle-pill multi-
             select TaskForm.jsx already uses for assignees) rather than a
             separate checkbox list. */}
-        {(questionDraft.trim() || questionAttachments.length > 0) && otherMembers.length > 0 && (
+        {!completionMode && (questionDraft.trim() || questionAttachments.length > 0) && otherMembers.length > 0 && (
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold uppercase tracking-wide opacity-80">Notify</span>
             <AssigneePicker members={otherMembers} value={notifyIds} onChange={setNotifyIds} />
@@ -346,17 +404,29 @@ export default function TaskClarifications({
         )}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
+            {!showingSavedCompletion && <label className="task-submission-upload mt-0 px-2.5 py-1.5 text-xs" title="Attach files">
               {uploading ? 'Uploading…' : <Paperclip width={15} height={15} />}
-              <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
-            </label>
+              <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" disabled={uploading || completionSaving || asking || addingChecklist} />
+            </label>}
             {extraActions}
           </div>
           {/* Only shown once there's actually something to send — an empty
               Send button sitting right next to the task's own Edit/
               Delete/Duplicate row (extraActions, to its left) was an easy
               misclick target when reaching for one of those instead. */}
-          {(questionDraft.trim() || questionAttachments.length > 0) && (
+          {completionMode && !showingSavedCompletion && (
+            <div className="flex flex-wrap gap-2">
+              {editingCompletion && <button type="button" className="period-tab" disabled={completionSaving || uploading} onClick={() => {
+                setCompletionDraft(completionNote)
+                setCompletionFiles(completionAttachments)
+                setEditingCompletion(false)
+              }}>Cancel edit</button>}
+              <button type="button" className="min-h-10 rounded-md border border-accent bg-accent px-3 py-2 text-sm font-semibold text-on-accent disabled:opacity-60" onClick={handleSaveCompletion} disabled={completionSaving || uploading || (!editingCompletion && !completionDraft.trim() && !completionFiles.length)}>
+                {completionSaving ? 'Saving…' : 'Save completion details'}
+              </button>
+            </div>
+          )}
+          {!completionMode && (questionDraft.trim() || questionAttachments.length > 0) && (
             <button type="button" className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-on-accent disabled:cursor-default disabled:opacity-60" onClick={handleAsk} disabled={asking || uploading || addingChecklist}>
               {asking ? 'Sending…' : 'Send'}
             </button>

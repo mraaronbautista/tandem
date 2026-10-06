@@ -4,9 +4,9 @@ import { isOverdue, isAllDayTask, formatDuration, fetchMembersWhoCanViewTask } f
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import { assigneeBadge } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
-import { uploadCompletionAttachment, isImageAttachment } from '../lib/attachments'
+import { isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge, sendTaskCompletedNotify } from '../lib/manualNotify'
-import { Pencil, Paperclip, Copy, Eye, Trash2, Check, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, X, Pin } from 'lucide-react'
+import { Pencil, Paperclip, Copy, Eye, Trash2, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, Pin } from 'lucide-react'
 import TaskForm, { recurrenceLabel as getRecurrenceLabel } from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -18,7 +18,6 @@ import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
 import { readableTextColor } from '../lib/colorContrast'
-import { friendlyError } from '../lib/friendlyError'
 
 // Auto-dismiss window for the post-completion Notify prompt — same 8s
 // Projects' own undo-on-remove banner uses, long enough to actually
@@ -121,11 +120,7 @@ export default function TaskRow({
   const confirm = useConfirm()
   const [open, setOpen] = useState(defaultOpen)
   const [editing, setEditing] = useState(false)
-  const [submitOpen, setSubmitOpen] = useState(false)
   const [viewSubmissionOpen, setViewSubmissionOpen] = useState(false)
-  const [noteDraft, setNoteDraft] = useState(task.completion_note || '')
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
   const [nudging, setNudging] = useState(false)
   const [nudgeSent, setNudgeSent] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
@@ -237,7 +232,7 @@ export default function TaskRow({
   function handleStatusToggle() {
     const next = task.status === 'done' ? 'to_do' : 'done'
     onStatusChange(task.id, next)
-    // Marking done surfaces Edit/Delete/Submit right away, instead of
+    // Marking done opens the completion composer right away, instead of
     // making you dig into the row separately.
     if (next === 'done') {
       setOpen(true)
@@ -315,38 +310,11 @@ export default function TaskRow({
     setNotesExpanded(false)
   }
 
-  function handleSaveNote() {
-    if (noteDraft !== (task.completion_note || '')) onUpdate(task.id, { completion_note: noteDraft || null })
-    setSubmitOpen(false)
-  }
-
-  async function handleAttachmentUpload(e) {
-    const files = Array.from(e.target.files || [])
-    if (!files.length) return
-    setUploading(true)
-    setUploadError('')
-    try {
-      const uploaded = await Promise.all(
-        files.map(async (file) => ({ url: await uploadCompletionAttachment(task.id, file), name: file.name })),
-      )
-      await onUpdate(task.id, { completion_attachments: [...attachments, ...uploaded] })
-    } catch (err) {
-      setUploadError(friendlyError(err))
-    } finally {
-      setUploading(false)
-      e.target.value = ''
-    }
-  }
-
-  async function handleRemoveAttachment(e, index) {
-    e.stopPropagation()
-    const ok = await confirm({
-      title: 'Remove this attachment?',
-      message: 'It will be taken off this submission.',
-      confirmLabel: 'Remove attachment',
-    })
-    if (!ok) return
-    onUpdate(task.id, { completion_attachments: attachments.filter((_, i) => i !== index) })
+  function handleSaveCompletion(note, files) {
+    return onUpdate(task.id, {
+      completion_note: note.trim() || null,
+      completion_attachments: files,
+    }, { throwOnError: true })
   }
 
   const scopeModal = scopePending && (
@@ -582,6 +550,10 @@ export default function TaskRow({
             taskTitle={task.title}
             taskId={task.id}
             onAddChecklistItems={handleAddChecklistItems}
+            taskDone={task.status === 'done'}
+            completionNote={task.completion_note || ''}
+            completionAttachments={attachments}
+            onSaveCompletion={handleSaveCompletion}
             extraActions={
               // Icon + visible text on every button, not icon-only with a
               // title tooltip — a tooltip only ever shows on hover, which
@@ -623,16 +595,6 @@ export default function TaskRow({
                   <button onClick={() => setViewSubmissionOpen(true)} title="View submission" aria-label="View submission">
                     <Eye width={15} height={15} />
                     View submission
-                  </button>
-                )}
-                {task.status === 'done' && (
-                  <button
-                    onClick={() => setSubmitOpen(true)}
-                    title={hasSubmission ? 'Edit submission' : 'Submit'}
-                    aria-label={hasSubmission ? 'Edit submission' : 'Submit'}
-                  >
-                    {hasSubmission ? <Pencil width={15} height={15} /> : <Check width={15} height={15} />}
-                    {hasSubmission ? 'Edit submission' : 'Submit'}
                   </button>
                 )}
                 <button className="!text-overdue-text" onClick={handleDelete} title="Delete" aria-label="Delete">
@@ -713,86 +675,6 @@ export default function TaskRow({
         </Modal>
       )}
 
-      {submitOpen && (
-        <Modal onClose={() => setSubmitOpen(false)}>
-          <ModalCard>
-            <h2>Submission</h2>
-            <label className="submission-field">
-              Link, note, or details
-              <textarea
-                rows={4}
-                placeholder="Link, note, or details…"
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-              />
-            </label>
-
-            <div className="submission-field">
-              <span className="submission-field-label">Attachments</span>
-
-              {attachments.length > 0 && (
-                <div className="task-submission-attachments">
-                  {attachments.map((a, i) =>
-                    isImageAttachment(a.name) ? (
-                      <div className="task-submission-attachment task-submission-attachment-image" key={i}>
-                        <PrivateAttachment image url={a.url} alt={a.name || 'Attachment'} />
-                        <button
-                          type="button"
-                          className="task-submission-remove"
-                          onClick={(e) => handleRemoveAttachment(e, i)}
-                          title="Remove"
-                          aria-label="Remove attachment"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="task-submission-attachment task-submission-file-link" key={i}>
-                        <PrivateAttachment url={a.url} target="_blank" rel="noreferrer" className="task-submission-file-open">
-                          <span className="task-submission-file-icon">
-                        <Paperclip size={13} />
-                      </span>
-                          <span className="task-submission-file-name">{a.name || 'View attachment'}</span>
-                        </PrivateAttachment>
-                        <button
-                          type="button"
-                          className="task-submission-remove"
-                          onClick={(e) => handleRemoveAttachment(e, i)}
-                          title="Remove"
-                          aria-label="Remove attachment"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ),
-                  )}
-                </div>
-              )}
-
-              <label className="task-submission-upload" title="Attach files">
-                {uploading ? 'Uploading…' : <Paperclip width={16} height={16} />}
-                <input type="file" multiple onChange={handleAttachmentUpload} hidden aria-label="Attach files" />
-              </label>
-              {uploadError && <p className="error">{uploadError}</p>}
-            </div>
-
-            <SubmissionActions>
-              <SubmissionButton
-                onClick={() => {
-                  setNoteDraft(task.completion_note || '')
-                  setUploadError('')
-                  setSubmitOpen(false)
-                }}
-              >
-                Cancel
-              </SubmissionButton>
-              <SubmissionButton variant="primary" onClick={handleSaveNote}>
-                Save
-              </SubmissionButton>
-            </SubmissionActions>
-          </ModalCard>
-        </Modal>
-      )}
     </div>
   )
 }

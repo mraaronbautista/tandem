@@ -94,6 +94,8 @@ Other work in this window, all committed and pushed to `origin/main`:
 | Long-term Add/Edit lease controls | Published (`0b5ab92`); both signed-in entry points checked without creating records |
 | Dated lease notes | Published (`9125b9b`); SQL user-reported applied; signed-in reads/editor verified, live writes/author access/Realtime outstanding |
 | All-record Excel / CSV export | Published (`4801425`), public bundle confirmed; local checks passed. Tasks excluded; optional Vault |
+| October 6 bug-fix phases 1–3B | Published (`67bb76b`); public new-batch code and roadmap SQL verified; real phone/signed-in writes pending |
+| Overdue timezone / contact catch-up fixes | Pushed (`4c8e2a1`, `7343015`); Aaron confirms both contacts visible on phone after refresh/reopen; missed-change automatic catch-up still unverified |
 | Call/text logging | Deferred |
 
 ## Current state (as of Oct 2, 2026 — see the Oct 6 addendum above for newer rows)
@@ -151,10 +153,42 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
-### Current bug hunt — October 6, 2026, Codex
+### October 6 approved follow-up — unified completion composer
 
-Aaron requested a fresh bug hunt. Four locally reproduced faults: checklist conversion loses draft before save succeeds; successful report save followed by failed push can duplicate body on retry; Day priorities combine device date with preferred timezone; lease notes miss resume/reconnect catch-up. AUDIT_HANDOFF.md records actual-source execution evidence and proposed repairs. Aaron requested phased fixes. Phase 1 is now prepared and locally verified: retain checklist draft until saving succeeds, and separate report persistence from push failure with a concurrent-submit guard. Not committed/pushed/live. Phase 2 is also prepared and locally verified: chosen-zone dates in Priorities/Board and lease-note catch-up on resume/reconnect. Phase 3 continues remaining hunt. No production writes; remaining Vault/access/Staff and cross-device checks are incomplete. This supersedes older delivery resume points below.
+Aaron approved reusing the task comment box with Comment / Completion details toggles. Implemented locally in TaskClarifications/TaskRow: done defaults to completion mode, separate drafts and file lists, one save for note+attachments, retained draft/error on failure, repeat-save guard, inline saved details/Edit details, old Submit editor removed. Existing View submission preserved. No SQL or notification changes. Actual components mounted with fake data at 390px/1100px; draft isolation, failure/retry, edit/cancel, double-click and TaskRow integration verified. Attachment routing/save payload checked with extracted actual handlers. Lint/build verification recorded in AUDIT_HANDOFF. Not committed, pushed or live; no real task/attachment writes. Existing bug-hunt verification debts below remain open.
 
+### October 6 bug fixes — published checkpoint
+
+Ten bugs fixed in this round. Counts describe separate affected flows; rapid double-click guards are part of the save fixes, not additional numbered bugs.
+
+| # | Bug | Resulting behavior | Publication |
+| --- | --- | --- | --- |
+| 1 | Moving overdue tasks used the original timezone and left them on yesterday in the viewed timeline | Timed tasks use displayed-zone today/time; original zone metadata and all-day date semantics retained | `4c8e2a1`, pushed |
+| 2 | New contacts stayed stale after phone resume or missed live events | Refetch on visible resume, focus, online and subscription reconnect | `7343015`, pushed |
+| 3 | Converting comment steps to a checklist cleared the draft before saving succeeded | Await save; retain draft/show error on failure; block concurrent conversion | `67bb76b`, pushed |
+| 4 | Report save succeeded but notification failure invited duplicate append on retry | Close after successful save; push is best-effort; concurrent submit guarded | `67bb76b`, pushed |
+| 5 | Day priorities combined device calendar date with a different chosen timezone | Today’s date and 23:59 use the same chosen zone | `67bb76b`, pushed |
+| 6 | Board Focus Today and roadmap default dates had the same calendar-zone mismatch | Defaults use chosen-zone today; explicit picked dates retained | `67bb76b`, pushed |
+| 7 | Lease notes missed updates while the phone app was suspended | Catch-up refetch on resume/focus/online/reconnect | `67bb76b`, pushed |
+| 8 | Moving a Vault entry’s folder dropped creator/sharing metadata from its open detail | Retain row metadata and owner controls; late response respects closed/switched detail | `67bb76b`, pushed |
+| 9 | An old Staff filter request could overwrite newer results | Ignore outdated results/errors and responses after unmount | `67bb76b`, pushed |
+| 10 | Project task creation succeeded but linking failed; retry created duplicates | Atomic owner-only create/link RPC; successful retry reuses existing task ID | `67bb76b`, pushed |
+
+**Verification:** actual handler/effect tests exercised failure, retry, missed-event, clock-boundary and out-of-order-response cases. Local PostgreSQL tested roadmap rollback, retry and RLS denial. Lint/build passed with existing warnings. Roadmap migration was run by Aaron and independently checked read-only: exact function body matches, security invoker, authenticated execution allowed, anonymous denied. Public Netlify bundle `/assets/index-CsENemu9.js` confirmed the new batch at asset level; this does not certify every signed-in workflow.
+
+**Publication records:** `53b8733` (overdue), `cac58ea` (contacts), `0b7bf97` (phased fixes). Application and publication records are pushed to origin/main. Unrelated `.agents/` remains untracked and untouched.
+
+**Next checks, in order:**
+
+**October 6 signed-in verification:** production loaded `/assets/index-CsENemu9.js`. At 390×844, Timeline header, Rentals contacts/search and lease-note editor, Staff dropdown/location list, Reports list/compose entry, Board Projects, Settings/export options and Vault locked entry were inspected. Checked page widths did not overflow. Staff All/Pending/Approved selected states and total labels changed correctly; there are no shifts to validate populated results. Correct lease selected in note editor; no note saved. Aaron confirms Fred and John both appear on his actual phone after refresh/reopen. This proves current visibility, not automatic missed-event recovery. Desktop override reset; Timeline/Staff entry checked. Vault was locked; no export downloaded, credentials entered, records changed or notifications sent. No app-origin errors in captured logs; unrelated Chrome-extension warnings present. This is a scoped read/layout pass, not completion of the full UI/UX or write/access audit.
+
+1. Verify contacts/lease notes catch up automatically after another device adds data while the phone is suspended; refreshed current contact visibility is already confirmed by Aaron.
+2. Check Vault folder move preserves Edit/Share, Staff quick-filter switching stays correct, and an owner’s project step produces exactly one linked task.
+3. Verify checklist/report save failure handling in a safe test environment; no intentional live duplicate reports or test credentials.
+4. Resolve the shared-project “Add to timeline” affordance: viewers still see it but existing owner-only permissions reject scheduling. Atomic RPC prevents orphan creation; it does not grant viewers project editing.
+5. Continue scoped access, notification delivery, cross-device and phone checks. Real Vault unlock, actual staff clock-in and Lina’s remaining Inbox/comment checks are not certified by this round.
+
+**Limitations:** report fix addresses notification-induced retry, not every ambiguous save response; no production multi-session concurrency test was run for roadmap locking. Signed-in read/layout and user-reported phone contact visibility checked; live writes and missed-change phone recovery remain unverified. Earlier SQL/data changes have their own recorded verification debt.
 
 ### Latest Export checkpoint — October 6, 2026
 
@@ -263,3 +297,5 @@ Phase 3B checkpoint (October 6): atomic idempotent roadmap task creation/linking
 October 6 migration checkpoint: Aaron ran the roadmap SQL. Read-only production query confirms the function exists, exact body matches, uses invoker security/public search path, authenticated execute allowed and anonymous denied. No live tasks created for verification. Application fixes remain uncommitted/unpushed; next is authorized publication and signed-in/phone checks.
 
 October 6, 2026 — Codex publication checkpoint: Phases 1–3B committed as `67bb76b` and pushed to origin/main following Aaron's acknowledgment of publication-ready fixes. Public Netlify bundle `/assets/index-CsENemu9.js` contains atomic roadmap RPC, report push-failure warning and opt-in task-save error propagation. New frontend code confirmed deployed at public asset level; actual signed-in write flows/phone resume still unverified. Roadmap function separately confirmed live with matching body and execute permissions. No production test writes or secrets used. Remaining: shared-viewer project Add button mismatch, broader live access/notification checks, real-phone validation.
+
+October 6 documentation checkpoint: Aaron requested an updated Markdown round-up. Current state and Active handoff now enumerate all ten fixes, publication/verification evidence and next checks; older preparation entries remain historical. This documentation refresh is local, not committed/pushed.

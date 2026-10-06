@@ -1,14 +1,20 @@
 # Tandem — shared bug audit and handoff
 
-Last updated: October 6, 2026 (Asia/Manila), by Claude. **Newer work (UI/UX Phases 2–5, Vault codes, recurrence fixes, Bulk Add repeats, Dallas Property Finder) is recorded in `PROJECT_JOURNEY.md` Chapter 11 and its Oct 6 handoff, not in the Priorities-focused sections below; the audit itself is closed.** Earlier note: session paused at Aaron's request — see the bug audit's own status and the click-through list below for exactly where to resume.
+Last updated: October 6, 2026 (Asia/Manila), by Codex. The October 2 deployment-cohesion audit remains historical. The fresh October 6 bug hunt and publication checkpoint below supersede older prepared/unpublished resume notes.
+
+## Current development follow-up — October 6, 2026, Codex
+
+Approved unified task composer built locally: Comment / Completion details toggle in existing box, default after Done, separate drafts/files, save failure retention and single-save guard, inline saved details/edit, removed Submit modal. No SQL needed. Fake-data mounted mobile/desktop and handler checks passed; no real task writes. Not committed/pushed/live. Prior verification checkpoint below remains relevant.
 
 ## Current bug-hunting checkpoint — October 6, 2026, Codex
 
-Aaron requested a fresh bug hunt. This is a new focused regression pass, not a reopening or certification of every old audit phase. First batch: tasks, recently changed Rentals, Reports and timezone behavior. Four faults reproduced by executing actual handlers/effects with mocked writes, events and fixed time (details below). Browser entry-screen inspection only; no production records written. Aaron requested phased work. Phase 1 (checklist draft preservation and report save/notification separation) is now prepared and locally verified, not committed/pushed/live. Phase 2 (timezone dates and lease-note catch-up) is also prepared and locally verified following Aaron’s “ok” checkpoint; Phase 3 first batch reproduced three additional faults (Vault folder metadata, Staff response ordering, Board task/link partial failure). Phase 3A Vault metadata/Staff request-order fixes are prepared and locally verified; Phase 3B atomic Board create/link protection is now prepared and locally PostgreSQL-tested; production SQL now independently confirmed matching the prepared body and expected execute permissions. No commits/publication authorized yet for this batch. `.agents/` preserved.
+Phases 1–3B fixes committed as `67bb76b`, pushed and confirmed in public frontend code. Earlier overdue timezone and contact resume fixes pushed as `4c8e2a1` and `7343015`. Ten affected flows are enumerated in PROJECT_JOURNEY.md → Active handoff. Local failure/retry/date/resume/request-order tests and PostgreSQL rollback/RLS checks passed; lint/build passed with existing warnings. Aaron applied roadmap SQL; read-only check confirms exact body/security/execute grants. Publication checkpoint `0b7bf97` is pushed. Real phone and signed-in write-flow verification remains pending.
+
+Signed-in production read/layout pass completed at 390×844: Timeline, Rentals/directory search/lease-note editor, Staff filters/location list, Reports/list/compose entry, Projects, Settings/export options and locked Vault entry. Aaron confirms Fred and John both appear on his actual phone after refresh/reopen. Staff dropdown switches All/Pending/Approved; no shifts exist, so populated request races/payroll remain unverified. No horizontal page overflow measured on the checked screens. Desktop viewport restored; Timeline and Staff entry checked. Next: missed-change catch-up, Vault folder controls and owner project scheduling; then shared-viewer scheduling affordance decision and broader access/notification checks. No production test records/credentials used during regression work. `.agents/` remains untracked and untouched. Documentation refresh is local/uncommitted.
 
 ## Purpose and working agreement
 
-This is the shared current-work record for Claude and Codex. The current objective is a phased bug audit of Tandem after the expansion to multiple members, including Lina. Priorities is the current fix within that audit, not a separate feature-expansion initiative.
+This is the shared current-work record for Claude and Codex. The current objective is the October 6 phased bug hunt and live verification of its published fixes. Older Priorities and deployment-cohesion entries below are historical records, not the current task.
 
 - Read this file and inspect the working tree before starting or resuming work. Re-read before editing if another session may have updated it.
 - Update it after each meaningful finding, decision, fix, verification, migration, or deployment, and before a handoff or session end. Record the date/time in Asia/Manila, agent, evidence, remaining work, and next action.
@@ -33,11 +39,11 @@ Recovered from Claude's local session `abbc8761-8663-4088-88d3-ba2a1239d026`, Oc
 
 Claude reported the audit complete after an additional mechanical pass over columns, RPC permissions, constraints, and enum types. The final walkthrough was scoped, not every feature exhaustively tested in the browser. **Current checkpoint: approved per-person Priorities follow-up after the audit**, not an unknown unfinished audit phase.
 
-## Latest Export handoff — October 6, 2026
+## Historical Export preparation handoff — October 6, 2026 (superseded by publication log)
 
 Approved all-record workbook/section tabs implemented locally in DataExport.jsx/dataExport.js and Settings/TaskBoard, plus write-excel-file dependency. No SQL. Build/lint, 1,205-row pagination, permission sections, task exclusion, CSV injection/cell-limit checks and 21-sheet fixture XML passed. Signed-in All records preparation succeeded (20 data sheets, 90 records); browser download-event wait timed out, no file-path verification. Vault gated controls/390px layout checked, no real unlock. Four pre-existing npm audit findings; new writer has none. Documentation refreshed; all changes local/uncommitted/unpublished. Next: explicit commit/publish approval. Preserve `.agents/`.
 
-## Latest development handoff — October 6, 2026
+## Historical development handoff — October 6, 2026 (superseded by current checkpoint)
 
 Rental contacts, location coverage, long-term Add/Edit lease and dated lease notes are published. Lease notes: feature `9125b9b`, publication record `927e2fd`; public bundle confirmed. SQL user-reported applied; signed-in local reads/editor verified. Live saves/author restrictions/Realtime are outstanding; local checks passed. Next proposed delivery is Rentals CSV export, pending scope/preview approval. Call/text logging remains deferred. Historical audit/Priorities handoffs below remain records, not the next development task.
 
@@ -369,3 +375,22 @@ October 6, 2026 — Codex publication checkpoint: contact resume/reconnect refre
 - Migration is independently confirmed live. Frontend fixes for Phases 1–3B remain local/uncommitted/unpushed; signed-in production frontend still awaits publication/verification. Next: Aaron authorizes commit/push, then browser/phone checks. Broader access/notification checks remain open.
 
 October 6, 2026 — Codex publication checkpoint: Phases 1–3B committed as `67bb76b` and pushed to origin/main following Aaron's acknowledgment of publication-ready fixes. Public Netlify bundle `/assets/index-CsENemu9.js` contains atomic roadmap RPC, report push-failure warning and opt-in task-save error propagation. New frontend code confirmed deployed at public asset level; actual signed-in write flows/phone resume still unverified. Roadmap function separately confirmed live with matching body and execute permissions. No production test writes or secrets used. Remaining: shared-viewer project Add button mismatch, broader live access/notification checks, real-phone validation.
+
+### October 6, 2026 — Codex: requested Markdown round-up refreshed
+
+- Updated PROJECT_JOURNEY Current state/Active handoff and this top checkpoint with the ten separate bug fixes, commits/publication evidence, pending phone/signed-in checks and known limits. Corrected obsolete top-level prepared/unpublished states while preserving historical entries.
+- No app edits, SQL execution, tests, commits or pushes in this documentation-only step. Working tree was clean except unrelated untracked .agents before edits; now these two Markdown updates are local. Next: real-device verification and shared-project Add affordance decision.
+
+### October 6, 2026 — Codex: signed-in production phone-width verification
+
+- Aaron authorized working through remaining verification. Production build index-CsENemu9.js loaded in signed-in Chrome at 390×844. Timeline/header, rental contacts directory and John search, long-term note editor with correct lease, Staff dropdown/location list, Reports expansion/compose entry, Projects, Settings/export options and locked Vault inspected. No horizontal page overflow on measured screens.
+- Aaron reports Fred and John both visible on his actual phone after refresh/reopen. Current visibility is verified by user; automatic recovery of a new missed change is not yet exercised. Three former overdue tasks now appear on October 6 in CT; no move was performed in this pass, so this is current-state evidence only.
+- Staff All/Pending/Approved selected states and total labels changed correctly. No recorded shifts: populated response-order, approval and payroll remain unverified. Lease-note history empty; no save or live author/Realtime test. Reports form opened/cancelled without saving. Vault remained locked; no export download or sensitive entry inspected.
+- Temporary phone viewport reset; desktop Timeline/Staff entry inspected. Captured logs show unrelated extension warnings, no app-origin errors. Mobile Staff evidence saved to /private/tmp/tandem-staff-mobile-verification.png. No production writes, notifications, credential changes, code edits or publication. Documentation changes local/uncommitted; diff whitespace check passed.
+- Next: automatic cross-device catch-up, live owner project scheduling, Vault folder controls, actual Staff sessions, safe save-failure checks and shared-viewer scheduling UI decision. This scoped pass does not close the full-app UI/UX or access/notification audit.
+
+### October 6, 2026 — Codex: approved completion composer implemented locally
+
+- Aaron requested reusing the existing comment box as submission via explicit toggle, then approved implementation. TaskClarifications now provides Comment/Completion details for completed tasks; Done selects completion mode. Discussion drafts/files remain separate; submissions save note+private file references in one update. Saved details render inline with Edit details; Submit/Edit submission modal removed, View submission kept. TaskRow callback opts into save-error propagation. No required submission fields existed; no schema/permission/notification changes.
+- Actual components mounted with local fake data: 390px mobile and 1100px desktop no overflow; Done default, separate drafts, failed save retention/friendly error, successful retry, edit/cancel, double-click one write, actual TaskRow saves and displays View submission verified. Extracted real handlers checked attachment routing and combined note/files payload including clearing. Real file uploads/production writes not performed. Screenshot /private/tmp/tandem-completion-toggle-mobile.png. Temporary fixture removed, browser viewport restored.
+- Lint/build passed with existing warnings; no new lint warnings after fixture cleanup. Local changes only, not committed, pushed or published. Prior phone/read verification notes preserved. Next: user reviews built screenshot; publication when requested.
