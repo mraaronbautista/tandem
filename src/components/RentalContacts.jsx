@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ContactImport from './ContactImport'
 import { CONTACT_KINDS, filterRentalContacts, saveRentalContact, setRentalContactActive } from '../lib/rentalContacts'
 import { friendlyError } from '../lib/friendlyError'
 import { useConfirm } from '../lib/confirmContext'
@@ -13,6 +14,7 @@ const BUTTON = 'min-h-[44px]'
 
 export default function RentalContacts({ store, property = null, directoryOnly = false }) {
   const [open, setOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
   const [kind, setKind] = useState('all')
@@ -71,7 +73,8 @@ export default function RentalContacts({ store, property = null, directoryOnly =
       </>}
     </>}
     {notice && !open && <p role="status" className="break-words text-sm">{notice}</p>}
-    {open && (editing ? <ContactForm contact={editing.id ? editing : null} properties={properties} locations={locations} initialProperty={property} contacts={contacts || []}
+    {importing && <ContactImport contacts={contacts || []} properties={properties} locations={locations} onClose={() => setImporting(false)} onImported={reload} />}
+    {open && !importing && (editing ? <ContactForm contact={editing.id ? editing : null} properties={properties} locations={locations} initialProperty={property} contacts={contacts || []}
       onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); setNotice('Contact saved.') }} /> : <Modal onClose={close}><ModalCard>
       <h2>{property && !allUnits ? `${property.unit_name} contacts` : 'All rental contacts'}</h2>
       {error ? <p role="alert">{error} <RentalButton className={BUTTON} onClick={reload}>Try again</RentalButton></p> : !contacts ? <LoadingText /> : <>
@@ -81,7 +84,7 @@ export default function RentalContacts({ store, property = null, directoryOnly =
         <label>Service<input className={INPUT} placeholder="Handyman, cleaning, plumbing…" value={service} onChange={(event) => setService(event.target.value)} /></label>
         <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}><input type="checkbox" checked={archived} onChange={(event) => setArchived(event.target.checked)} />Include archived</label>
         {property && <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}><input type="checkbox" checked={allUnits} onChange={(event) => setAllUnits(event.target.checked)} />Show contacts from all units to link an existing person</label>}
-        <RentalButton className={BUTTON} onClick={() => setEditing({})}>+ Add contact</RentalButton>
+        <div className="flex flex-wrap gap-2"><RentalButton className={BUTTON} onClick={() => setEditing({})}>+ Add contact</RentalButton><RentalButton className={BUTTON} onClick={() => setImporting(true)}>Import contacts</RentalButton></div>
         {visible.length ? visible.map((contact) => card(contact, true)) : <p>No matching contacts. Add a contact or change your search.</p>}
       </>}
       {notice && <p role="status" className="break-words">{notice}</p>}

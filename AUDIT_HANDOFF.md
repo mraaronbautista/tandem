@@ -2,6 +2,10 @@
 
 Last updated: October 6, 2026 (Asia/Manila), by Codex. The October 2 deployment-cohesion audit remains historical. The fresh October 6 bug hunt and publication checkpoint below supersede older prepared/unpublished resume notes.
 
+## Current importer checkpoint — October 7, 2026, Codex
+
+Working Google CSV importer prepared locally; parser/retry tests and synthetic mounted review checks passed. No SQL or production contact writes. Browser file-picker unverified due extension local-file access. Not committed/pushed/live. Next: authorized publication, then user file selection/review/import verification. Detailed latest activity entry below. Preserve .agents/.
+
 ## Current development follow-up — October 6, 2026, Codex
 
 Approved unified task composer built locally: Comment / Completion details toggle in existing box, default after Done, separate drafts/files, save failure retention and single-save guard, inline saved details/edit, removed Submit modal. No SQL needed. Fake-data mounted mobile/desktop and handler checks passed; no real task writes. Committed as `6cc76df` and pushed to origin/main at Aaron’s request. Netlify bundle index-DSGOLEKn.js confirmed; signed-in completed task shows both composer modes and no Submit button. Live save/reload/file checks remain pending. Prior verification checkpoint below remains relevant.
@@ -406,3 +410,10 @@ October 7, 2026 — Codex publication checkpoint: Aaron explicitly requested com
 October 7, 2026 — Codex Google Contacts import preview: Aaron supplied Google CSV, 19 contacts/all with phone; 5 notes, 1 email. No import currently exists. Following preview-before-implementation preference, prepared docs/previews/google-contacts-import.html with illustrative rows (no copied private contact data), review/select/type/optional-link controls and duplicate explanation. Checked 390px no overflow. No app importer, SQL, contact writes, commit or publication. Next: preview approval, then implement CSV parsing/review/duplicate checks and controlled saving through existing contact RPC. Actual CSV not added to repository.
 
 October 7, 2026 — Import preview publication checkpoint: at Aaron’s explicit request, preview and notes committed as `cc96e09` and pushed to origin/main. This is a design preview only; there is still no working contact importer or new Import button in Tandem. CSV/private contacts were not committed or imported. Next: implement the approved import workflow; production preview deployment not independently verified.
+
+### October 7, 2026 — Codex: working Google Contacts importer prepared
+
+- Aaron requested building the previewed import. Added ContactImport.jsx, googleContactImport.js and RentalContacts Import contacts entry. Local CSV parsing, editable review, optional type/coverage, duplicate matching/refetch, sequential existing-RPC saves, preserved success/skip markers and stop-on-save-error retry handling. No new permissions/migration; no existing contacts overwritten. Uploaded refs not applicable; CSV read locally in client.
+- Actual user CSV parses 19 phone-bearing contacts, 5 with notes; source CSV/private contents not copied to repo. Local tests passed quoted multiline/BOM and malformed CSV, name/email/US-phone matching, tenant/site coverage limits, repeat import click, partial save failure and response lost after commit (retry skips stored match). Client checks do not guarantee cross-session uniqueness.
+- Mounted review UI with synthetic rows at 390px/1100px: no page overflow, duplicate unchecked, count updates/import disabled with zero selected, Tenant clears site link. Browser file-picker attempt blocked by extension file-access setting; switched to preloaded synthetic layout fixture, not an upload bypass. Actual browser CSV selection remains unverified. No real contact saves or production writes. Fixture removed and viewport restored; screenshot /private/tmp/tandem-contact-import-working-desktop.png.
+- Lint/build and diff whitespace passed with existing warnings. Local only, not committed/pushed/published. Next: user-authorized publication then actual file-picker/review/import test and contact visibility on phone. Existing preview publication entries below/above are historical; preview push never meant importer shipped.

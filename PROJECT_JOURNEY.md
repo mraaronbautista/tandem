@@ -153,9 +153,9 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
-### October 7 Google Contacts import — preview ready
+### October 7 Google Contacts import — working importer prepared
 
-Aaron supplied a 19-contact Google CSV and requested importing into Tandem. Import is not yet implemented. Preview at docs/previews/google-contacts-import.html uses illustrative rows, review checkboxes, type and optional property/location links, duplicate warnings. Phone layout checked. No private CSV data copied into repo, no database writes or publication. Next: review preview then implement import with duplicate/partial-failure handling using existing contact coverage RPC. Preserve other uncommitted verification notes.
+Aaron supplied a 19-contact Google CSV and requested importing into Tandem. Working importer implemented locally in ContactImport.jsx/googleContactImport.js and directory entry point. Editable review rows, duplicate checks against refreshed contacts, sequential saving through existing contact coverage RPC, imported/skipped state and stopped failure/retry flow. No migration. Actual 19-row CSV parsed in local checks (not copied to repo); synthetic mounted review UI checked at 390px/1100px. Parser and actual handler tests cover quoting, duplicate normalization, coverage, partial failure and response-loss retry. Browser file-picker upload was blocked by extension local-file access; no permission bypass or actual contact writes. Lint/build passed. Not committed/pushed/live. Next: publish when Aaron requests; then verify user file selection/review/import and phone visibility. Client duplicate checks do not guarantee multi-session uniqueness.
 
 ### October 6 spacing follow-up — pushed October 7
 
