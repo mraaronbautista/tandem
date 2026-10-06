@@ -39,10 +39,25 @@ export default function LeaseNotes({ unit, lease, me }) {
           ? 'Lease notes are not set up yet. Ask Aaron to run the lease notes SQL, then try again.' : friendlyError(err))
       }
     }
+    function refreshWhenVisible() {
+      if (document.visibilityState === 'visible') load()
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('focus', refreshWhenVisible)
+    window.addEventListener('online', refreshWhenVisible)
     load()
     const channel = supabase.channel(`lease-notes-${unit.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_lease_notes', filter: `property_id=eq.${unit.id}` }, load).subscribe()
-    return () => { cancelled = true; supabase.removeChannel(channel) }
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_lease_notes', filter: `property_id=eq.${unit.id}` }, load)
+      .subscribe((status) => {
+        if (!cancelled && status === 'SUBSCRIBED') load()
+      })
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('focus', refreshWhenVisible)
+      window.removeEventListener('online', refreshWhenVisible)
+      supabase.removeChannel(channel)
+    }
   }, [unit.id, reloadKey])
   const active = (notes || []).filter((note) => note.booking_id === lease?.id && !note.archived)
   const history = new Map()

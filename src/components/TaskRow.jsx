@@ -222,7 +222,7 @@ export default function TaskRow({
   // { id, text, done, blocked, blockedReason } shape ChecklistEditor builds.
   function handleAddChecklistItems(texts) {
     const added = texts.map((text) => ({ id: crypto.randomUUID(), text, done: false, blocked: false, blockedReason: '' }))
-    onUpdate(task.id, { checklist: [...checklist, ...added] })
+    return onUpdate(task.id, { checklist: [...checklist, ...added] }, { throwOnError: true })
   }
 
   function handleChecklistItemChange(itemId, patch) {

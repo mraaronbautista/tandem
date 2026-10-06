@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Paperclip, Check, ListChecks } from 'lucide-react'
 import { sendClarificationAsked, sendClarificationAnswered } from '../lib/manualNotify'
 import { uploadCompletionAttachment } from '../lib/attachments'
@@ -209,11 +209,24 @@ export default function TaskClarifications({
   // so they are not also sent as a comment; an attachment already queued
   // stays and can still be sent on its own.
   const draftSteps = onAddChecklistItems ? extractSteps(questionDraft) : null
+  const checklistSavePending = useRef(false)
+  const [addingChecklist, setAddingChecklist] = useState(false)
+  const [checklistError, setChecklistError] = useState('')
 
-  function handleTurnIntoChecklist() {
-    if (!draftSteps) return
-    onAddChecklistItems(draftSteps)
-    setQuestionDraft('')
+  async function handleTurnIntoChecklist() {
+    if (!draftSteps || asking || checklistSavePending.current) return
+    checklistSavePending.current = true
+    setAddingChecklist(true)
+    setChecklistError('')
+    try {
+      await onAddChecklistItems(draftSteps)
+      setQuestionDraft('')
+    } catch (err) {
+      setChecklistError(friendlyError(err))
+    } finally {
+      checklistSavePending.current = false
+      setAddingChecklist(false)
+    }
   }
 
   async function handleEntryAnswered(updatedEntry) {
@@ -294,6 +307,7 @@ export default function TaskClarifications({
           rows={2}
           placeholder="Ask a question or leave a comment…"
           value={questionDraft}
+          disabled={addingChecklist}
           onChange={(e) => setQuestionDraft(e.target.value)}
         />
         <AttachmentList
@@ -301,6 +315,7 @@ export default function TaskClarifications({
           onRemove={(i) => setQuestionAttachments((prev) => prev.filter((_, idx) => idx !== i))}
         />
         {uploadError && <p className="error">{uploadError}</p>}
+        {checklistError && <p role="alert" className="error">{checklistError}</p>}
         {draftSteps && (
           <div role="note" className="flex flex-col gap-1.5 rounded-md bg-pill-bg px-2.5 py-2 text-xs leading-snug">
             <span>
@@ -310,9 +325,10 @@ export default function TaskClarifications({
               type="button"
               className="flex w-fit cursor-pointer items-center gap-1.5 rounded-[6px] border border-border bg-bg px-2.5 py-1.5 text-xs font-semibold text-text-h [font-family:inherit]"
               onClick={handleTurnIntoChecklist}
+              disabled={addingChecklist || asking || uploading}
             >
               <ListChecks size={14} aria-hidden="true" />
-              Add as checklist
+              {addingChecklist ? 'Saving…' : 'Add as checklist'}
             </button>
           </div>
         )}
@@ -341,7 +357,7 @@ export default function TaskClarifications({
               Delete/Duplicate row (extraActions, to its left) was an easy
               misclick target when reaching for one of those instead. */}
           {(questionDraft.trim() || questionAttachments.length > 0) && (
-            <button type="button" className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-on-accent disabled:cursor-default disabled:opacity-60" onClick={handleAsk} disabled={asking || uploading}>
+            <button type="button" className="flex-none cursor-pointer rounded-[6px] border border-accent bg-accent px-3 py-[7px] text-[13px] font-semibold text-on-accent disabled:cursor-default disabled:opacity-60" onClick={handleAsk} disabled={asking || uploading || addingChecklist}>
               {asking ? 'Sending…' : 'Send'}
             </button>
           )}

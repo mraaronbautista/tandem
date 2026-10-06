@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPriorities, fetchLatestPriorities, fetchLatestPrioritiesForTeam } from '../lib/priorities'
 import { createTask } from '../lib/tasks'
-import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
+import { detectDefaultTimezone, splitDueDateInZone, zonedTimeToUtcIso } from '../lib/timezone'
 import Modal from './Modal'
 import PriorityItemsEditor from './PriorityItemsEditor'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
@@ -19,12 +19,10 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-// 'YYYY-MM-DD' for today in the browser's own local timezone — matches
-// what zonedTimeToUtcIso expects as its date argument.
-function todayDateString() {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+// Calendar date and time must use the same zone, even when the device
+// is already on tomorrow while the chosen zone is still on today.
+function todayDateString(timeZone) {
+  return splitDueDateInZone(new Date().toISOString(), timeZone).due_date
 }
 
 // Any member can set their own priorities for the upcoming day/week/
@@ -90,7 +88,7 @@ export default function PrioritiesForm({ me, members = [], onClose, embedded = f
       // Eastern — that mismatch used to push "today 23:59" into tomorrow
       // morning for Aaron (Philippines, ~12-13h ahead of Eastern).
       const zone = detectDefaultTimezone()
-      const dueDate = period === 'day' ? zonedTimeToUtcIso(todayDateString(), '23:59', zone) : null
+      const dueDate = period === 'day' ? zonedTimeToUtcIso(todayDateString(zone), '23:59', zone) : null
       await Promise.all(
         validItems.map((item) =>
           createTask({

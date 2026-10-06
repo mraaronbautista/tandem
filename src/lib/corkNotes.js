@@ -41,6 +41,21 @@ export async function updateCorkNote(id, patch) {
   return data
 }
 
+// One transaction creates the task and records its link. A retry reuses
+// the linked task, including after a lost successful response.
+export async function addRoadmapItemTask(noteId, itemId, dueDate, dueTimezone) {
+  const { data, error } = await supabase.rpc('add_roadmap_item_task', {
+    p_note_id: noteId, p_item_id: itemId, p_due_date: dueDate, p_due_timezone: dueTimezone,
+  })
+  if (error) {
+    if (error.code === 'PGRST202') {
+      throw new Error('Project scheduling needs a database update. Ask Aaron to run add-roadmap-task-atomic.sql, then try again.')
+    }
+    throw error
+  }
+  return data
+}
+
 // Appends a comment via the add_cork_note_comment() RPC rather than a
 // plain update() — the update RLS policy is author-only (see schema.sql),
 // so a comment from a targeted member on a shared pin has to go through

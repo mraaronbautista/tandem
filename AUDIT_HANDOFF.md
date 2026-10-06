@@ -2,6 +2,10 @@
 
 Last updated: October 6, 2026 (Asia/Manila), by Claude. **Newer work (UI/UX Phases 2–5, Vault codes, recurrence fixes, Bulk Add repeats, Dallas Property Finder) is recorded in `PROJECT_JOURNEY.md` Chapter 11 and its Oct 6 handoff, not in the Priorities-focused sections below; the audit itself is closed.** Earlier note: session paused at Aaron's request — see the bug audit's own status and the click-through list below for exactly where to resume.
 
+## Current bug-hunting checkpoint — October 6, 2026, Codex
+
+Aaron requested a fresh bug hunt. This is a new focused regression pass, not a reopening or certification of every old audit phase. First batch: tasks, recently changed Rentals, Reports and timezone behavior. Four faults reproduced by executing actual handlers/effects with mocked writes, events and fixed time (details below). Browser entry-screen inspection only; no production records written. Aaron requested phased work. Phase 1 (checklist draft preservation and report save/notification separation) is now prepared and locally verified, not committed/pushed/live. Phase 2 (timezone dates and lease-note catch-up) is also prepared and locally verified following Aaron’s “ok” checkpoint; Phase 3 first batch reproduced three additional faults (Vault folder metadata, Staff response ordering, Board task/link partial failure). Phase 3A Vault metadata/Staff request-order fixes are prepared and locally verified; Phase 3B atomic Board create/link protection is now prepared and locally PostgreSQL-tested; production SQL now independently confirmed matching the prepared body and expected execute permissions. No commits/publication authorized yet for this batch. `.agents/` preserved.
+
 ## Purpose and working agreement
 
 This is the shared current-work record for Claude and Codex. The current objective is a phased bug audit of Tandem after the expansion to multiple members, including Lina. Priorities is the current fix within that audit, not a separate feature-expansion initiative.
@@ -309,3 +313,57 @@ October 6, 2026 — Codex: overdue timezone fix committed as `4c8e2a1` and succe
 - Prepared locally, not committed/pushed/deployed. Next: user-authorized publication then phone check.
 
 October 6, 2026 — Codex publication checkpoint: contact resume/reconnect refresh committed as `7343015` and successfully pushed to origin/main at Aaron's request. Local lifecycle checks, lint and build passed. Netlify deployment and real phone verification remain pending.
+
+### October 6, 2026 — Codex: fresh bug hunt, first regression batch
+
+- User authorized bug hunting. Actual source extracted/executed locally with simulated failures/time/event delivery; no live test records created. Connected Chrome signed-in Rentals, Board, Reports/Staff entry screens inspected, no console errors on initial screen. Loaded asset /assets/index-CjYvdoUO.js; latest deploy equivalence not independently confirmed.
+- Confirmed P1: TaskClarifications.handleTurnIntoChecklist clears questionDraft immediately, before asynchronous checklist persistence. TaskRow.handleAddChecklistItems doesn't return the onUpdate promise. A failed write loses typed steps. Reproduced cleared draft while write remained pending.
+- Confirmed P1: EndOfDayReportForm.handleSubmit saves the report then awaits notification in the same try/catch. Notification failure leaves the form open with a save-looking error; retry repeats submitEodReport, whose RPC appends body. Two attempts with mocked failed notification appended identical chunks twice.
+- Confirmed P2: PrioritiesForm.todayDateString uses device calendar date, then assigns it in preferred timezone. Fixed 2026-10-06T17:00Z with device Asia/Manila yields October 7 whereas preferred America/Chicago today is October 6. CorkBoard Focus Today uses the same pattern (source-confirmed companion path, not separately executed).
+- Confirmed P2: LeaseNotes effect lacks resume/focus/online/subscription-reconnect refresh. Executed effect with missed fixture note: wake events made no fetch and list stayed stale. Same fault class as repaired contacts. Actual phone note incident not observed.
+- Proposed behavior: retain draft until checklist save succeeds; report-save success remains success even if push fails; today follows chosen timezone; lease notes catch up after resume/reconnect. No application edits, commits, pushes or migrations. Lint/build not rerun for a documentation-only audit.
+- Not audited exhaustively: Vault unlocking/secret behavior, other-member RLS, live notification delivery, production schema publication, actual staff clock-in, offline conflicts and phone layout. Next: Aaron reviews first fix batch; continue remaining checks without treating entry-screen rendering as full verification.
+
+### October 6, 2026 — Codex: bug hunt Phase 1 prepared and verified
+
+- Aaron requested working through the reported fixes by phase. Agreed working order: Phase 1 protect work (checklist conversion/report duplicate retry); Phase 2 timezone date/lease-note freshness; Phase 3 remaining Board/Vault/Staff/access/cross-device hunt. No phase 2/3 application work in this checkpoint.
+- TaskBoard.handleUpdate accepts opt-in throwOnError for the conversion path; default existing callers unchanged. TaskRow returns conversion save promise. TaskClarifications awaits success before clearing text, retains draft and displays local error on failure, blocks concurrent conversions/send while saving and prevents typing into the pending draft.
+- EndOfDayReportForm now treats notification as best-effort after persistence, closes after save without awaiting push, and guards concurrent submit with a ref. Save failures remain visible/retryable. This fixes notification-induced duplicate retry, not general database idempotency after ambiguous network failures.
+- Executed actual source callback chain with mock writes: failed checklist persistence retains draft; repeated click causes one write; retry clears only on success. Report tests: failed push closes saved report without save error; duplicate in-flight click blocked; save failure stays retryable; successful retry closes. Lint/build exit 0 with existing warnings.
+- No production writes or schema changes. Application/docs prepared locally, not committed/pushed/deployed; no mounted UI or real-phone verification yet. `.agents/` untouched. Next: Phase 1 publication when Aaron requests it, then production check/Phase 2.
+
+### October 6, 2026 — Codex: bug hunt Phase 2 prepared and verified
+
+- Continued after Aaron's Phase 1 checkpoint acknowledgment. Priorities and CorkBoard Focus Today/roadmap defaults now derive calendar date in detectDefaultTimezone's chosen zone; explicit picked roadmap dates remain intact. Submissions use the same captured zone for date and time.
+- LeaseNotes now refetches on visible resume, focus, online and successful subscription/reconnect; removes all lifecycle listeners on cleanup. Existing generation guard and author/history behavior unchanged.
+- Executed actual date helpers with frozen October 6 17:00 UTC under Asia/Manila device: CT stays October 6, PHT October 7, correct CT 23:59 instant. Board default zone date also checked. Actual lease-notes effect with mock data recovers missed note on resume/focus/online/reconnect and removes listeners/channel on cleanup. Lint/build exit 0 with existing warnings.
+- Phase 1 and Phase 2 application/documentation batch remains local, uncommitted/unpushed/unpublished. No SQL or production writes; real phone/mounted UI behavior not independently exercised for these fixes. Phase 3 and live verification remain open. Next: commit/publish if Aaron requests, or continue agreed Phase 3 audit.
+
+### October 6, 2026 — Codex: Phase 3 first fault batch reproduced
+
+- Continued at Aaron's “ok”. Read Board roadmap promotion, Vault folder/detail metadata, Staff reload races and member-access save structure. Executed actual handlers locally with fake records/promises; no live Vault unlock, staff write, access grant/revoke or production task creation.
+- Confirmed P2 Vault: handleMoveFolder sets selectedEntry to encrypted-field payload plus id, dropping createdBy/sharedWith; detail's canManage then becomes false for owner in private vault. Local fixture confirms missing metadata after successful move; list refresh does not replace selectedEntry. Proposed repair retains row metadata while changing folder.
+- Confirmed P2 Staff: reloadEntries has no request generation guard. Delayed old Pending response overwrote later Approved response in fixture after status filter changed. Proposed repair ignores out-of-order responses and guards unmount.
+- Confirmed P1 Board: handleAddRoadmapItem creates task then separately updates pin JSON. If link update fails, retry creates another real task. Fixture called twice with failed link produced two tasks and unchanged step.taskId. Proposed repair should make create-and-link atomic or persist/reuse the created task on retry; durable cross-device protection needs database-side treatment, not just a button disable. No design chosen or SQL prepared.
+- Source risks not yet established end-to-end: other screens' resume freshness; member-access multi-RPC partial success; Vault live sharing/revocation freshness. Do not treat these as confirmed permission bypasses. Broader RLS/live notification/real-phone/actual Staff sessions remain unverified.
+- No new application edits in Phase 3. Phases 1–2 still prepared locally, uncommitted/unpublished. Next: review Phase 3 repair scope before implementation; suggest 3A Vault metadata + Staff race, then 3B durable Board link fix.
+
+### October 6, 2026 — Codex: Phase 3A prepared and verified
+
+- Continued at Aaron's “ok” after the proposed 3A/3B sequence. Vault handleMoveFolder now merges new encrypted-field values into the still-selected matching entry, retaining createdBy/sharedWith; doesn't reopen closed detail or replace a newly selected different entry. Staff reloadEntries uses shared request-generation and mounted refs, invalidating requests on filter-effect cleanup/unmount and ignoring stale results/errors.
+- Actual-handler fixture tests passed: Vault keeps creator, sharing and TOTP; late move respects closed/different detail. Staff delayed Pending response cannot overwrite Approved; obsolete failure doesn't surface; post-unmount response ignored. Lint/build exit 0 with existing warnings.
+- Phases 1, 2 and 3A remain local/uncommitted/unpushed/unpublished. No real Vault credentials, Staff writes, SQL or production records changed. Real signed-in write paths and phone behavior still unverified.
+- Phase 3B remains: durable Board create-and-link duplicate protection, likely a transaction/idempotent RPC with matching existing task/pin permissions. No schema prepared or run yet. Next: review 3B approach or publish current tested fixes if Aaron requests.
+
+### October 6, 2026 — Codex: Phase 3B atomic roadmap scheduling prepared
+
+- Aaron's “ok” continued the proposed 3B fix. Prepared add_roadmap_item_task security-invoker RPC, matching existing owner-only cork_notes update and self-assigned task RLS. Locks active owner pin; validates step/date/zone; existing taskId returns unchanged; new task and JSON link commit together. No access expansion. Shared viewers' existing visible Add button now fails without orphan task, rather than silently granting project edit. UX of that button is a separate unresolved mismatch.
+- Added frontend addRoadmapItemTask wrapper and switched roadmap scheduling to it; missing RPC produces explicit setup message with no unsafe sequential-write fallback. SQL in supabase/add-roadmap-task-atomic.sql and schema.sql incremental section. CLAUDE.md updated.
+- Real local PostgreSQL (PGlite) with authenticated role/RLS tests: create/link succeeds, retry same UUID/one task; forced update-trigger failure rolls task insertion back; missing step/nonmember/shared viewer/archived project denied; second step works after retry; function confirmed invoker. Multi-session production concurrency not independently tested; row lock handles serialization by construction. Lint/build/diff whitespace checks pass with existing lint/build warnings.
+- SQL NOT run against production. All Phases 1–3B code/docs remain local/uncommitted/unpushed. No production writes, credential exposure or permission changes. Required next: Aaron runs standalone SQL manually before frontend publication, then report completion for verification. Still outstanding: real phone/UI paths, access/live notifications and broader audit debt.
+
+### October 6, 2026 — Codex: roadmap migration confirmed live, read-only
+
+- Aaron reported running add-roadmap-task-atomic.sql. Read-only linked database query confirms add_roadmap_item_task(uuid,text,timestamptz,text) exists; pg_proc.prosrc MD5 matches the exact prepared function body; security invoker (prosecdef=false), search_path=public, authenticated execute=true, anon execute=false.
+- Supabase CLI initially failed due sandbox telemetry write; approved escalation permitted read-only verification. No production function invocation/task creation or data changes in this check. Local rollback/retry/RLS tests already passed.
+- Migration is independently confirmed live. Frontend fixes for Phases 1–3B remain local/uncommitted/unpushed; signed-in production frontend still awaits publication/verification. Next: Aaron authorizes commit/push, then browser/phone checks. Broader access/notification checks remain open.

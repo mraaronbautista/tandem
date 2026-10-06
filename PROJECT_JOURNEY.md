@@ -151,6 +151,11 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
+### Current bug hunt — October 6, 2026, Codex
+
+Aaron requested a fresh bug hunt. Four locally reproduced faults: checklist conversion loses draft before save succeeds; successful report save followed by failed push can duplicate body on retry; Day priorities combine device date with preferred timezone; lease notes miss resume/reconnect catch-up. AUDIT_HANDOFF.md records actual-source execution evidence and proposed repairs. Aaron requested phased fixes. Phase 1 is now prepared and locally verified: retain checklist draft until saving succeeds, and separate report persistence from push failure with a concurrent-submit guard. Not committed/pushed/live. Phase 2 is also prepared and locally verified: chosen-zone dates in Priorities/Board and lease-note catch-up on resume/reconnect. Phase 3 continues remaining hunt. No production writes; remaining Vault/access/Staff and cross-device checks are incomplete. This supersedes older delivery resume points below.
+
+
 ### Latest Export checkpoint — October 6, 2026
 
 Export is committed/pushed as `4801425` and confirmed in the public Netlify bundle after Aaron approved publication. Settings → Export records offers one Excel file with separate sheets plus individual exports; Tasks excluded, Vault optional with unlock/confirmation. No SQL needed. Local checks and signed-in preparation passed; production download and actual Vault unlock remain unverified. Next: Aaron checks the published download in his browser. Call/text logging remains deferred. `.agents/` stays untouched.
@@ -244,3 +249,15 @@ Active contact follow-up (October 6): Aaron reports missing new contacts after r
 Contact catch-up checkpoint (October 6): approved repair implemented locally in useRentalContacts. Resume/focus/network recovery/subscription reconnect now refetch contacts; cleanup verified. Mocked hook lifecycle checks, lint and build passed. Not committed, pushed or deployed; real phone check remains pending.
 
 October 6, 2026 — Codex publication checkpoint: contact resume/reconnect refresh committed as `7343015` and successfully pushed to origin/main at Aaron's request. Local lifecycle checks, lint and build passed. Netlify deployment and real phone verification remain pending.
+
+Bug hunt Phase 1 checkpoint (October 6): checklist conversion draft preservation and report-notification duplicate retry repairs prepared locally. Actual callback-chain failure/retry/double-click checks, lint and build passed. Not committed or pushed; no production UI/phone write verification. Phase 2 and Phase 3 remain pending.
+
+Bug hunt Phase 2 checkpoint (October 6): timezone date and lease-note resume/reconnect fixes prepared; actual helper/effect regression checks, lint/build passed. Phases 1–2 are still local and uncommitted/unpublished; no live writes or phone verification. Phase 3 remains pending.
+
+Phase 3 first checkpoint (October 6): actual-handler fixture tests reproduced Vault folder move dropping owner/sharing metadata, Staff old-filter response overwriting new results, and Board create-then-link failure generating duplicate tasks on retry. No Phase 3 repairs yet. Proposed next subphase: Vault metadata + Staff request ordering; then choose durable Board create/link repair. Phases 1–2 remain local/unpublished. Live access/phone/notification verification outstanding.
+
+Phase 3A checkpoint (October 6): Vault folder moves retain owner/sharing/TOTP details and respect closed/switched detail; Staff ignores old-filter responses, stale errors and post-unmount results. Actual-handler fixtures, lint/build passed. Phases 1–3A remain local/uncommitted/unpublished; no live writes. Phase 3B Board create/link duplicate protection remains to design and prepare.
+
+Phase 3B checkpoint (October 6): atomic idempotent roadmap task creation/linking prepared in add-roadmap-task-atomic.sql, schema.sql and frontend RPC path. Local PostgreSQL rollback/retry/RLS checks and lint/build passed. Existing owner-only project scheduling rule retained; shared-viewer Add button mismatch remains. Production SQL must be applied manually before publishing frontend. All bug-fix phases still uncommitted/unpublished; live phone/access/notification verification incomplete.
+
+October 6 migration checkpoint: Aaron ran the roadmap SQL. Read-only production query confirms the function exists, exact body matches, uses invoker security/public search path, authenticated execute allowed and anonymous denied. No live tasks created for verification. Application fixes remain uncommitted/unpushed; next is authorized publication and signed-in/phone checks.

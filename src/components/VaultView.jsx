@@ -276,7 +276,11 @@ export default function VaultView({ me, members = [], onClose }) {
   async function handleMoveFolder(entry, folder) {
     try {
       const value = await saveEntryFolder(entry, folder)
-      setSelectedEntry({ ...value, id: entry.id })
+      // Ownership and sharing are row metadata, not encrypted fields.
+      // Keep them so a folder move cannot hide the owner's controls.
+      setSelectedEntry((current) => current?.id === entry.id
+        ? { ...current, ...value }
+        : current)
       loadEntries(vaultKey)
     } catch (err) {
       setError(friendlyError(err))

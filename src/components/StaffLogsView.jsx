@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, ChevronLeft, ChevronRight, Clock3, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { fetchRentalProperties } from '../lib/rentals'
@@ -78,6 +78,16 @@ export default function StaffLogsView({ me }) {
   const [editingCredentialsStaff, setEditingCredentialsStaff] = useState(null)
   const [editingEntry, setEditingEntry] = useState(null)
   const [addingEntry, setAddingEntry] = useState(false)
+  const entriesGeneration = useRef(0)
+  const mounted = useRef(true)
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      entriesGeneration.current += 1
+    }
+  }, [])
 
   // Drives the period stepper — the first active roster member's own
   // cadence. There's currently exactly one property manager, so this is a
@@ -86,6 +96,7 @@ export default function StaffLogsView({ me }) {
   const payrollCadence = roster.find((s) => s.active)?.payroll_cadence || 'biweekly'
 
   async function reloadEntries() {
+    const generation = ++entriesGeneration.current
     try {
       const range = showAllTime
         ? {}
@@ -93,11 +104,10 @@ export default function StaffLogsView({ me }) {
             from: startOfPayrollPeriod(payrollCadence, periodOffset).toISOString(),
             to: startOfPayrollPeriod(payrollCadence, periodOffset + 1).toISOString(),
           }
-      setEntries(
-        await fetchAllTimeEntries({ status: statusFilter === 'all' ? undefined : statusFilter, ...range }),
-      )
+      const rows = await fetchAllTimeEntries({ status: statusFilter === 'all' ? undefined : statusFilter, ...range })
+      if (mounted.current && generation === entriesGeneration.current) setEntries(rows)
     } catch (err) {
-      setError(friendlyError(err))
+      if (mounted.current && generation === entriesGeneration.current) setError(friendlyError(err))
     }
   }
 
@@ -168,6 +178,7 @@ export default function StaffLogsView({ me }) {
 
   useEffect(() => {
     reloadEntries()
+    return () => { entriesGeneration.current += 1 }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, periodOffset, showAllTime, payrollCadence])
 

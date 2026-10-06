@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getCompletedInPeriod, getCompletedSince, reportDateForPeriod, periodBucketLabel } from '../lib/tasks'
 import IconButton from './IconButton'
@@ -92,6 +92,7 @@ export default function EndOfDayReportForm({ tasks, me, members = [], onClose })
   const [hoursInput, setHoursInput] = useState('')
   const [minutesInput, setMinutesInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const submissionPending = useRef(false)
   const [error, setError] = useState('')
 
   function handlePeriodClick(value) {
@@ -136,6 +137,8 @@ export default function EndOfDayReportForm({ tasks, me, members = [], onClose })
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (submissionPending.current) return
+    submissionPending.current = true
     setSubmitting(true)
     setError('')
     try {
@@ -155,13 +158,16 @@ export default function EndOfDayReportForm({ tasks, me, members = [], onClose })
       // — otherwise "submitted month report" arriving in September, about
       // August, reads as if it just happened today.
       const bucketText = offset !== 0 ? ` (${periodBucketLabel(period, offset)})` : ''
-      await sendEodReportNotification(
+      // Saving succeeded. A failed or stalled push must never invite a
+      // second submission of the same append-only report chunk.
+      sendEodReportNotification(
         `${hoursText}${existingReport ? 'updated' : 'submitted'} ${period} report${bucketText}.`,
-      )
+      ).catch(() => console.warn('Report saved, but its notification could not be sent.'))
       onClose()
     } catch (err) {
       setError(friendlyError(err))
     } finally {
+      submissionPending.current = false
       setSubmitting(false)
     }
   }

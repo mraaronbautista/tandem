@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Target, Undo2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import HelpHint from './HelpHint'
-import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask } from '../lib/corkNotes'
+import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask, addRoadmapItemTask } from '../lib/corkNotes'
 import { createTask } from '../lib/tasks'
-import { detectDefaultTimezone, zonedTimeToUtcIso } from '../lib/timezone'
+import { detectDefaultTimezone, splitDueDateInZone, zonedTimeToUtcIso } from '../lib/timezone'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
 import LoadingText from './LoadingText'
@@ -34,13 +34,9 @@ function sharedLabel(sharedWith, memberName) {
   return `Shared with ${sharedWith.map((id) => memberName(id)).join(', ')}`
 }
 
-// 'YYYY-MM-DD' for today in the browser's own local timezone — matches
-// what zonedTimeToUtcIso expects as its date argument (same helper as
-// PrioritiesForm.jsx's day-period logic, which this mirrors).
-function todayDateString() {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+// Use the task's chosen zone for both its date and end-of-day time.
+function todayDateString(timeZone = detectDefaultTimezone()) {
+  return splitDueDateInZone(new Date().toISOString(), timeZone).due_date
 }
 
 // A `## ` line sets which milestone every following step belongs to, until
@@ -509,7 +505,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       await createTask({
         title: note.body,
         assignee_ids: [me.id],
-        due_date: zonedTimeToUtcIso(todayDateString(), '23:59', zone),
+        due_date: zonedTimeToUtcIso(todayDateString(zone), '23:59', zone),
         due_timezone: zone,
         created_by: me.id,
         checklist,
@@ -528,10 +524,8 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
   // assigned to whoever's adding it. No checklist carryover the way
   // handleFocusToday's own comments do — a roadmap step is already the
   // smallest unit here, not a note with its own follow-up thread. Marks
-  // taskId on that item (a plain read-modify-write on roadmap_items, same
-  // low-ceremony pattern tasks.checklist/rental_bookings.paid_charges
-  // already use for their own jsonb array fields) so the button can't be
-  // double-clicked into creating two tasks for the same step — from that
+  // taskId atomically with creation through add_roadmap_item_task, so a
+  // failed link rolls back creation and a retry reuses the same task. From that
   // point on, this item's "done" state is read off the real task via
   // taskById, not tracked here at all.
   async function handleAddRoadmapItem(note, item, dateStr) {
@@ -540,15 +534,8 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
     setAddingItemKey(key)
     try {
       const zone = detectDefaultTimezone()
-      const task = await createTask({
-        title: item.text,
-        assignee_ids: [me.id],
-        due_date: zonedTimeToUtcIso(dateStr || todayDateString(), '23:59', zone),
-        due_timezone: zone,
-        created_by: me.id,
-      })
-      const nextItems = note.roadmap_items.map((i) => (i.id === item.id ? { ...i, taskId: task.id } : i))
-      await updateCorkNote(note.id, { roadmap_items: nextItems })
+      await addRoadmapItemTask(note.id, item.id,
+        zonedTimeToUtcIso(dateStr || todayDateString(zone), '23:59', zone), zone)
       setOpenAddKey(null)
       reload()
     } catch (err) {

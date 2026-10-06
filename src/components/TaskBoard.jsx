@@ -706,12 +706,13 @@ export default function TaskBoard({ theme, toggleTheme }) {
     }
   }
 
-  async function handleUpdate(id, patch) {
+  async function handleUpdate(id, patch, { throwOnError = false } = {}) {
     try {
       const updated = await updateTask(id, patch)
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
     } catch (err) {
       setError(friendlyError(err))
+      if (throwOnError) throw err
     }
   }
 
