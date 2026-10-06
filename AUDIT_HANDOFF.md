@@ -294,3 +294,5 @@ Aaron’s “perfect” answered the concrete commit/publish request. Export fea
 - Local code and documentation only; not committed, pushed or deployed. No further production task writes after the earlier reproduction. Publication awaits Aaron's instruction.
 
 October 6, 2026 publication checkpoint: Aaron requested committing the verified overdue timezone fix. Committing TaskBoard.jsx and these checkpoint notes only; push/deployment not requested in this step.
+
+October 6, 2026 — Codex: overdue timezone fix committed as `4c8e2a1` and successfully pushed to origin/main at Aaron's request. Local regression checks, lint and build passed; Netlify deployment and production move behavior have not yet been verified.

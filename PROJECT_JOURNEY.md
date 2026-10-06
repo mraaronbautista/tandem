@@ -236,3 +236,5 @@ Codex reproduced Aaron's production report: Move all to today succeeds but tasks
 Overdue follow-up checkpoint: Aaron approved the fix. TaskBoard's shared move path now uses display-zone today/time for timed tasks and original-zone calendar semantics for all-day tasks, preserving stored zone/duration. Focused regression checks, lint and build passed. Prepared locally; not committed, pushed or live. Next: publication when authorized.
 
 October 6, 2026 publication checkpoint: Aaron requested committing the verified overdue timezone fix. Committing TaskBoard.jsx and these checkpoint notes only; push/deployment not requested in this step.
+
+October 6, 2026 — Codex: overdue timezone fix committed as `4c8e2a1` and successfully pushed to origin/main at Aaron's request. Local regression checks, lint and build passed; Netlify deployment and production move behavior have not yet been verified.
