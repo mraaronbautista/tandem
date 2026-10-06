@@ -5150,3 +5150,33 @@ label.new-task-checkbox-label {
 .inbox-item-footer .task-done-checkbox {
   flex: none;
 }
+
+/* Equal room for both compose modes; labels must not touch the highlight edge. */
+.task-compose-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 4px;
+}
+.task-compose-tab {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--pill-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+}
+.task-compose-tab-active {
+  background: color-mix(in srgb, var(--accent) 18%, var(--card-bg));
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.task-compose-tab:disabled { cursor: default; opacity: .6; }

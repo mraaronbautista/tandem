@@ -153,9 +153,13 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
+### October 6 spacing follow-up — prepared locally
+
+Aaron approved replacing the cramped composer capsule with equal-width padded buttons and a gap. Scoped styles implemented and actual composer checked at 320px/390px/1100px; no overflow. Lint/build passed. Not committed or published; completion feature itself is already live as recorded below.
+
 ### October 6 approved follow-up — unified completion composer
 
-Aaron approved reusing the task comment box with Comment / Completion details toggles. Implemented locally in TaskClarifications/TaskRow: done defaults to completion mode, separate drafts and file lists, one save for note+attachments, retained draft/error on failure, repeat-save guard, inline saved details/Edit details, old Submit editor removed. Existing View submission preserved. No SQL or notification changes. Actual components mounted with fake data at 390px/1100px; draft isolation, failure/retry, edit/cancel, double-click and TaskRow integration verified. Attachment routing/save payload checked with extracted actual handlers. Lint/build verification recorded in AUDIT_HANDOFF. Committed as `6cc76df` and pushed to origin/main at Aaron’s explicit request. Deployment/production submission not yet independently verified; no real task/attachment writes. Existing bug-hunt verification debts below remain open.
+Aaron approved reusing the task comment box with Comment / Completion details toggles. Implemented locally in TaskClarifications/TaskRow: done defaults to completion mode, separate drafts and file lists, one save for note+attachments, retained draft/error on failure, repeat-save guard, inline saved details/Edit details, old Submit editor removed. Existing View submission preserved. No SQL or notification changes. Actual components mounted with fake data at 390px/1100px; draft isolation, failure/retry, edit/cancel, double-click and TaskRow integration verified. Attachment routing/save payload checked with extracted actual handlers. Lint/build verification recorded in AUDIT_HANDOFF. Committed as `6cc76df` and pushed to origin/main at Aaron’s explicit request. Netlify deployment confirmed in index-DSGOLEKn.js and signed-in completed-task UI: both modes work, completion default selected, Submit absent. No real task/attachment writes; phone save/reload still pending. Existing bug-hunt verification debts below remain open.
 
 ### October 6 bug fixes — published checkpoint
 

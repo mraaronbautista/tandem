@@ -340,9 +340,9 @@ export default function TaskClarifications({
 
       <div className="flex flex-col gap-2">
         {taskDone && onSaveCompletion && (
-          <div className="period-tabs w-fit" role="group" aria-label="Message type">
-            <button type="button" className={`period-tab min-h-10 whitespace-nowrap ${!completionMode ? 'period-tab-active' : ''}`} aria-pressed={!completionMode} disabled={uploading || completionSaving || asking || addingChecklist} onClick={() => setComposeMode('comment')}>Comment</button>
-            <button type="button" className={`period-tab min-h-10 whitespace-nowrap ${completionMode ? 'period-tab-active' : ''}`} aria-pressed={Boolean(completionMode)} disabled={uploading || completionSaving || asking || addingChecklist} onClick={() => setComposeMode('completion')}>Completion details</button>
+          <div className="task-compose-tabs" role="group" aria-label="Message type">
+            <button type="button" className={`task-compose-tab ${!completionMode ? 'task-compose-tab-active' : ''}`} aria-pressed={!completionMode} disabled={uploading || completionSaving || asking || addingChecklist} onClick={() => setComposeMode('comment')}>Comment</button>
+            <button type="button" className={`task-compose-tab ${completionMode ? 'task-compose-tab-active' : ''}`} aria-pressed={Boolean(completionMode)} disabled={uploading || completionSaving || asking || addingChecklist} onClick={() => setComposeMode('completion')}>Completion details</button>
           </div>
         )}
         {showingSavedCompletion ? (

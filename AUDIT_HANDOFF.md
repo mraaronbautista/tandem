@@ -4,7 +4,7 @@ Last updated: October 6, 2026 (Asia/Manila), by Codex. The October 2 deployment-
 
 ## Current development follow-up — October 6, 2026, Codex
 
-Approved unified task composer built locally: Comment / Completion details toggle in existing box, default after Done, separate drafts/files, save failure retention and single-save guard, inline saved details/edit, removed Submit modal. No SQL needed. Fake-data mounted mobile/desktop and handler checks passed; no real task writes. Committed as `6cc76df` and pushed to origin/main at Aaron’s request. Netlify deployment and production completion flow not yet independently verified. Prior verification checkpoint below remains relevant.
+Approved unified task composer built locally: Comment / Completion details toggle in existing box, default after Done, separate drafts/files, save failure retention and single-save guard, inline saved details/edit, removed Submit modal. No SQL needed. Fake-data mounted mobile/desktop and handler checks passed; no real task writes. Committed as `6cc76df` and pushed to origin/main at Aaron’s request. Netlify bundle index-DSGOLEKn.js confirmed; signed-in completed task shows both composer modes and no Submit button. Live save/reload/file checks remain pending. Prior verification checkpoint below remains relevant.
 
 ## Current bug-hunting checkpoint — October 6, 2026, Codex
 
@@ -396,3 +396,7 @@ October 6, 2026 — Codex publication checkpoint: Phases 1–3B committed as `67
 - Lint/build passed with existing warnings; no new lint warnings after fixture cleanup. Local changes only, not committed, pushed or published. Prior phone/read verification notes preserved. Next: user reviews built screenshot; publication when requested.
 
 October 6, 2026 — Codex publication checkpoint: Aaron explicitly requested commit and push. Completion composer and accumulated project verification notes committed as `6cc76df`; push to origin/main succeeded. Existing local component/handler checks, lint and build passed. No SQL needed. Netlify deployment and actual phone submission still await verification. Unrelated untracked .agents/ preserved.
+
+October 6, 2026 — Codex deployment verification: public Netlify bundle `/assets/index-DSGOLEKn.js` contains completion toggle/save/edit markers. Refreshed signed-in production tab and opened existing completed task: Completion details defaults selected, Comment toggle works, old Submit button absent. No text submitted/files uploaded/task state changed. Screenshot `/private/tmp/tandem-completion-live.png`. Actual phone save/reload/attachment check remains pending. Verification notes local/uncommitted.
+
+October 6, 2026 — Codex approved composer spacing follow-up: replaced shared capsule with dedicated two-column equal-width buttons, 8px gap, 12px horizontal padding, 44px minimum height and soft selected highlight. Scoped CSS only; behavior unchanged. Mounted actual composer at 390px (both buttons 167×44), 320px and 1100px with no horizontal page overflow. Screenshot /private/tmp/tandem-compose-spacing.png; viewport restored and test fixture removed. Lint/build passed with existing warnings. Local, not committed/pushed/live.
