@@ -274,3 +274,23 @@ Aaron asked to go through the click-through list from `multi-member-permissions.
 ### Export publication — October 6, 2026
 
 Aaron’s “perfect” answered the concrete commit/publish request. Export feature committed as `4801425` and pushed to origin/main. Public Netlify HTML serves `/assets/index-BjxgKnvs.js`; fetched bundle confirms Export records, all-record XLSX download, contact coverage and Vault confirmation controls. Public deployment confirmed at asset level; production-site download/Vault unlock not exercised. Local checks and signed-in preparation passed as documented above. No SQL, production writes or access changes. Call/text logging remains deferred.
+
+### October 6, 2026 — Codex: overdue move failure investigation
+
+- Aaron reports clicking the overdue move control does nothing. Source confirms move errors use the page error banner behind the open Overdue modal, so failure feedback can be hidden. No actual runtime error obtained yet.
+- A possible repeating-task conflict exists: occurrence generation enforces uniqueness on (recurrence_series_id, due_date), while the move path changes due_date without resolving an existing occurrence. This is a hypothesis, not a confirmed root cause.
+- Connected browser inventory has no Tandem tabs; Chrome native observation reached an extension notice rather than the app. No production tasks changed, application edits, tests, commits, or pushes. Next: obtain the visible error after closing Overdue or inspect a connected signed-in Tandem tab.
+
+### October 6, 2026 — Codex: live overdue move timezone mismatch reproduced
+
+- Chrome extension connected. In Aaron's production Tandem tab, clicked Move all to today for the three overdue tasks at his request. Operation closed the modal successfully with no page error, but reopening still showed October 5 Central time.
+- Opened Jack and Jill's Edit form without saving: stored schedule shown as October 6, 1:00 AM PHT, while its row shows October 5, noon CT. Cancelled edit. Source uses original task due_timezone for today's date, whereas overdue/day bucketing uses viewer displayTimezone. This confirms the date interpretation mismatch; prior duplicate/error hypothesis was not observed.
+- Proposed behavior awaiting Aaron's approval: timed tasks move to today's date in the displayed timezone, preserving their displayed time of day and original timezone metadata; all-day tasks retain calendar-date semantics. No application changes, commits, or pushes.
+
+### October 6, 2026 — Codex: approved overdue timezone fix prepared
+
+- Aaron approved using the viewed timezone for Move to today. Updated the shared bulk/selected move path in TaskBoard.jsx: timed tasks preserve displayed wall time and land on today's display-zone date; all-day tasks retain original calendar-zone behavior. Original due_timezone and duration remain unchanged. One now snapshot is shared across the batch.
+- Passed focused execution of the actual move function with mocked writes/frozen time: reported noon CT / 1 AM PHT case, reverse zone direction, multi-day all-day case, unchanged zone/duration. Lint and production build exit 0 with existing warnings.
+- Local code and documentation only; not committed, pushed or deployed. No further production task writes after the earlier reproduction. Publication awaits Aaron's instruction.
+
+October 6, 2026 publication checkpoint: Aaron requested committing the verified overdue timezone fix. Committing TaskBoard.jsx and these checkpoint notes only; push/deployment not requested in this step.

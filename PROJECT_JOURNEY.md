@@ -228,3 +228,11 @@ October 6 continuation: Aaron asked to go on after the lease-notes preview/Markd
 October 6 migration checkpoint: Aaron reports running the lease-note SQL. Signed-in local note panels now load successfully from Supabase; Findlay’s Add note editor shows the correct original lease. No production note was created during verification. Live writes/access/Realtime remain unverified; local checks passed. Lease-note code is not committed or published. Next: explicit commit/publish authorization.
 
 October 6 publication checkpoint: Aaron explicitly approved committing and publishing lease notes. Feature commit `9125b9b` pushed to origin/main; public Netlify HTML and bundle `/assets/index-C6OnU2O3.js` confirm deployed note controls. No production notes created during verification. Live saves/author access/Realtime remain outstanding. Next proposed phase is Rentals CSV export scope; call/text logging stays deferred.
+
+### Active follow-up — October 6, 2026: overdue move
+
+Codex reproduced Aaron's production report: Move all to today succeeds but tasks remain overdue because moving uses original PHT date while the timeline shows CT. Jack and Jill's edit form shows October 6 at 1 AM PHT; row shows October 5 noon CT. Proposed fix uses display-timezone today/time for timed tasks, preserving original zone metadata; user approval pending. No code change or publication. See AUDIT_HANDOFF.md for evidence.
+
+Overdue follow-up checkpoint: Aaron approved the fix. TaskBoard's shared move path now uses display-zone today/time for timed tasks and original-zone calendar semantics for all-day tasks, preserving stored zone/duration. Focused regression checks, lint and build passed. Prepared locally; not committed, pushed or live. Next: publication when authorized.
+
+October 6, 2026 publication checkpoint: Aaron requested committing the verified overdue timezone fix. Committing TaskBoard.jsx and these checkpoint notes only; push/deployment not requested in this step.

@@ -11,6 +11,7 @@ import {
   deleteTask,
   deleteRecurringTask,
   getOverdueTasks,
+  isAllDayTask,
   getTasksForDay,
   getCompletedToday,
   getOverlappingTaskIds,
@@ -714,21 +715,19 @@ export default function TaskBoard({ theme, toggleTheme }) {
     }
   }
 
-  // Reschedules the given tasks to today, keeping each one's own time-of-day
-  // and due_timezone — only the date moves. Each task's own due_timezone
-  // decides what "today" means for it (falling back to DEFAULT_TIMEZONE,
-  // same as everywhere else an unset due_timezone is treated), so a
-  // Philippines-time task and a Central-time task each land on their own
-  // actual "today" rather than one shared date. Shared by both the
-  // move-everything and move-just-what's-selected paths below — the
-  // per-task zone math is identical either way, only which tasks it runs
-  // over differs.
+  // Timed tasks move to today in the timeline's display timezone, keeping
+  // their displayed time. Using the original zone could leave a PHT task
+  // on yesterday in a CT timeline. All-day tasks retain their original
+  // calendar-zone semantics. Neither path changes due_timezone or duration.
   async function moveTasksToToday(taskList) {
+    const nowIso = new Date().toISOString()
     const updates = await Promise.all(
       taskList.map((task) => {
-        const timeZone = task.due_timezone || DEFAULT_TIMEZONE
+        const timeZone = isAllDayTask(task)
+          ? task.due_timezone || DEFAULT_TIMEZONE
+          : displayTimezone
         const { due_time } = splitDueDateInZone(task.due_date, timeZone)
-        const todayStr = splitDueDateInZone(new Date().toISOString(), timeZone).due_date
+        const todayStr = splitDueDateInZone(nowIso, timeZone).due_date
         return updateTask(task.id, { due_date: zonedTimeToUtcIso(todayStr, due_time, timeZone) })
       })
     )
