@@ -153,9 +153,9 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
-### October 6 spacing follow-up — prepared locally
+### October 6 spacing follow-up — pushed October 7
 
-Aaron approved replacing the cramped composer capsule with equal-width padded buttons and a gap. Scoped styles implemented and actual composer checked at 320px/390px/1100px; no overflow. Lint/build passed. Not committed or published; completion feature itself is already live as recorded below.
+Aaron approved replacing the cramped composer capsule with equal-width padded buttons and a gap. Scoped styles implemented and actual composer checked at 320px/390px/1100px; no overflow. Lint/build passed. Committed as `4f40a1f` and pushed October 7 at Aaron’s request; Netlify spacing deployment not yet independently verified. Completion feature itself is already live as recorded below.
 
 ### October 6 approved follow-up — unified completion composer
 
