@@ -307,3 +307,5 @@ October 6, 2026 — Codex: overdue timezone fix committed as `4c8e2a1` and succe
 - Aaron approved automatically refreshing contacts on phone resume and connection recovery. useRentalContacts now refetches on visible visibilitychange, focus, online and successful SUBSCRIBED (including reconnect); effect cleanup removes all listeners. Existing generation/cancel guards remain. No contact edits or production writes.
 - Actual hook executed with mocked data and lifecycle events: hidden missed contact appears on resume; focus/online/reconnect catch up; cleanup prevents further event/reconnect fetches. Lint/build exit 0 with existing warnings. Real phone reopening and production live publication remain unverified.
 - Prepared locally, not committed/pushed/deployed. Next: user-authorized publication then phone check.
+
+October 6, 2026 — Codex publication checkpoint: contact resume/reconnect refresh committed as `7343015` and successfully pushed to origin/main at Aaron's request. Local lifecycle checks, lint and build passed. Netlify deployment and real phone verification remain pending.

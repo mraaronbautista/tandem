@@ -242,3 +242,5 @@ October 6, 2026 — Codex: overdue timezone fix committed as `4c8e2a1` and succe
 Active contact follow-up (October 6): Aaron reports missing new contacts after reopening the phone app. Confirmed source gap: contacts hook has no resume/reconnect catch-up fetch. Proposed fix awaiting approval; phone behavior and production Realtime publication not yet verified. No app change.
 
 Contact catch-up checkpoint (October 6): approved repair implemented locally in useRentalContacts. Resume/focus/network recovery/subscription reconnect now refetch contacts; cleanup verified. Mocked hook lifecycle checks, lint and build passed. Not committed, pushed or deployed; real phone check remains pending.
+
+October 6, 2026 — Codex publication checkpoint: contact resume/reconnect refresh committed as `7343015` and successfully pushed to origin/main at Aaron's request. Local lifecycle checks, lint and build passed. Netlify deployment and real phone verification remain pending.
