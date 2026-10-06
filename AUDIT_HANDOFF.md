@@ -4,7 +4,7 @@ Last updated: October 6, 2026 (Asia/Manila), by Codex. The October 2 deployment-
 
 ## Current importer checkpoint — October 7, 2026, Codex
 
-Working Google CSV importer prepared locally; parser/retry tests and synthetic mounted review checks passed. No SQL or production contact writes. Browser file-picker unverified due extension local-file access. Not committed/pushed/live. Next: authorized publication, then user file selection/review/import verification. Detailed latest activity entry below. Preserve .agents/.
+Working Google CSV importer prepared locally; parser/retry tests and synthetic mounted review checks passed. No SQL or production contact writes. Browser file-picker unverified due extension local-file access. Committed `752d4c9` and pushed. Netlify bundle index-O_RBv978.js and signed-in live Import contacts entry/editor verified. Actual CSV selection/import and phone visibility remain pending. Detailed latest activity entry below. Preserve .agents/.
 
 ## Current development follow-up — October 6, 2026, Codex
 
@@ -417,3 +417,5 @@ October 7, 2026 — Import preview publication checkpoint: at Aaron’s explicit
 - Actual user CSV parses 19 phone-bearing contacts, 5 with notes; source CSV/private contents not copied to repo. Local tests passed quoted multiline/BOM and malformed CSV, name/email/US-phone matching, tenant/site coverage limits, repeat import click, partial save failure and response lost after commit (retry skips stored match). Client checks do not guarantee cross-session uniqueness.
 - Mounted review UI with synthetic rows at 390px/1100px: no page overflow, duplicate unchecked, count updates/import disabled with zero selected, Tenant clears site link. Browser file-picker attempt blocked by extension file-access setting; switched to preloaded synthetic layout fixture, not an upload bypass. Actual browser CSV selection remains unverified. No real contact saves or production writes. Fixture removed and viewport restored; screenshot /private/tmp/tandem-contact-import-working-desktop.png.
 - Lint/build and diff whitespace passed with existing warnings. Local only, not committed/pushed/published. Next: user-authorized publication then actual file-picker/review/import test and contact visibility on phone. Existing preview publication entries below/above are historical; preview push never meant importer shipped.
+
+October 7, 2026 — Importer publication: Aaron explicitly requested commit/push. Working importer committed `752d4c9` and pushed origin/main. Latest Netlify bundle index-O_RBv978.js contains importer markers; fresh signed-in production tab Rentals → All contacts → Import contacts opens file chooser screen. No CSV loaded or contacts saved. Screenshot /private/tmp/tandem-import-live-screen.png. Initial cached asset returned 404 during rollout; refreshed HTML and latest asset succeeded. Next: Aaron chooses contacts (1).csv, reviews and imports selected contacts; check phone visibility afterward.
