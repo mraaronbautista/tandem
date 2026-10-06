@@ -153,6 +153,10 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
+### October 7 Google Contacts import — preview ready
+
+Aaron supplied a 19-contact Google CSV and requested importing into Tandem. Import is not yet implemented. Preview at docs/previews/google-contacts-import.html uses illustrative rows, review checkboxes, type and optional property/location links, duplicate warnings. Phone layout checked. No private CSV data copied into repo, no database writes or publication. Next: review preview then implement import with duplicate/partial-failure handling using existing contact coverage RPC. Preserve other uncommitted verification notes.
+
 ### October 6 spacing follow-up — pushed October 7
 
 Aaron approved replacing the cramped composer capsule with equal-width padded buttons and a gap. Scoped styles implemented and actual composer checked at 320px/390px/1100px; no overflow. Lint/build passed. Committed as `4f40a1f` and pushed October 7 at Aaron’s request; Netlify spacing deployment not yet independently verified. Completion feature itself is already live as recorded below.
