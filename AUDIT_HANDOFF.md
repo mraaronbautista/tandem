@@ -296,3 +296,14 @@ Aaron’s “perfect” answered the concrete commit/publish request. Export fea
 October 6, 2026 publication checkpoint: Aaron requested committing the verified overdue timezone fix. Committing TaskBoard.jsx and these checkpoint notes only; push/deployment not requested in this step.
 
 October 6, 2026 — Codex: overdue timezone fix committed as `4c8e2a1` and successfully pushed to origin/main at Aaron's request. Local regression checks, lint and build passed; Netlify deployment and production move behavior have not yet been verified.
+
+### October 6, 2026 — Codex: phone contact freshness report
+
+- Aaron reports newly added contacts missing when reopening Tandem on his phone. useRentalContacts refreshes on mount, own-device saves and received database events, but has no resume/visibility, focus, online or subscription-reconnect refresh. A suspended phone can therefore keep its old list if events were missed. This gap is confirmed in source; actual phone cause and live publication status remain unverified.
+- Proposed repair: refetch contacts on app resume and connection recovery, retaining live event updates. No application edits, writes, commit or deployment for this issue. Immediate diagnostic: refresh phone and check All contacts to distinguish stale state from unit coverage filtering.
+
+### October 6, 2026 — Codex: approved contact catch-up refresh prepared
+
+- Aaron approved automatically refreshing contacts on phone resume and connection recovery. useRentalContacts now refetches on visible visibilitychange, focus, online and successful SUBSCRIBED (including reconnect); effect cleanup removes all listeners. Existing generation/cancel guards remain. No contact edits or production writes.
+- Actual hook executed with mocked data and lifecycle events: hidden missed contact appears on resume; focus/online/reconnect catch up; cleanup prevents further event/reconnect fetches. Lint/build exit 0 with existing warnings. Real phone reopening and production live publication remain unverified.
+- Prepared locally, not committed/pushed/deployed. Next: user-authorized publication then phone check.

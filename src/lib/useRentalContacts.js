@@ -22,6 +22,14 @@ export function useRentalContacts() {
           ? 'Contacts are not set up yet. Ask Aaron to run the location contacts setup SQL, then try again.' : friendlyError(err))
       }
     }
+    // A phone can miss database events while the installed app is suspended.
+    // Catch up from the server on resume and after the subscription reconnects.
+    function refreshWhenVisible() {
+      if (document.visibilityState === 'visible') load()
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('focus', refreshWhenVisible)
+    window.addEventListener('online', refreshWhenVisible)
     load()
     const channel = supabase.channel('rental-contacts-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_contacts' }, load)
@@ -29,8 +37,16 @@ export function useRentalContacts() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_properties' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_contact_location_links' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_location_changes' }, load)
-      .subscribe()
-    return () => { cancelled = true; supabase.removeChannel(channel) }
+      .subscribe((status) => {
+        if (!cancelled && status === 'SUBSCRIBED') load()
+      })
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('focus', refreshWhenVisible)
+      window.removeEventListener('online', refreshWhenVisible)
+      supabase.removeChannel(channel)
+    }
   }, [reloadKey])
   return { contacts, properties, locations, error, reload: () => setReloadKey((key) => key + 1) }
 }

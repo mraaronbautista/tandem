@@ -238,3 +238,7 @@ Overdue follow-up checkpoint: Aaron approved the fix. TaskBoard's shared move pa
 October 6, 2026 publication checkpoint: Aaron requested committing the verified overdue timezone fix. Committing TaskBoard.jsx and these checkpoint notes only; push/deployment not requested in this step.
 
 October 6, 2026 — Codex: overdue timezone fix committed as `4c8e2a1` and successfully pushed to origin/main at Aaron's request. Local regression checks, lint and build passed; Netlify deployment and production move behavior have not yet been verified.
+
+Active contact follow-up (October 6): Aaron reports missing new contacts after reopening the phone app. Confirmed source gap: contacts hook has no resume/reconnect catch-up fetch. Proposed fix awaiting approval; phone behavior and production Realtime publication not yet verified. No app change.
+
+Contact catch-up checkpoint (October 6): approved repair implemented locally in useRentalContacts. Resume/focus/network recovery/subscription reconnect now refetch contacts; cleanup verified. Mocked hook lifecycle checks, lint and build passed. Not committed, pushed or deployed; real phone check remains pending.
