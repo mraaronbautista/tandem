@@ -1,6 +1,6 @@
 # Tandem — Project Journey (Single Source of Truth)
 
-Last updated: October 6, 2026, by Codex. The latest Current state addendum and Active handoff below supersede historical checkpoints.
+Last updated: October 8, 2026, by Claude (Sonnet 5.5), reconciling Codex's Oct 6–7 work. The "Current summary (Oct 8)" at the top of "Active handoff" is the resume point; anything labelled historical or superseded below is kept only for the record.
 
 ## What this document is
 
@@ -79,9 +79,13 @@ Other work in this window, all committed and pushed to `origin/main`:
 - **Staff tab filter** — All/Pending/Approved is a dropdown on phones (`58e5dbd`, `8a89668`). This is also where Aaron set the working rule now saved in memory: **show him options/a mockup and wait for his pick before implementing, committing or pushing any design or behaviour choice.** Obvious single-fix bugs can be fixed directly.
 - **Repeating tasks rebuilt (seven defects)** — Aaron reported "selected weekday is buggy" and "repeats is buggy". Reproduced against a real Postgres (PGlite) and fixed: weekday schedules back-filled overdue copies before the template's date; a 3 PM task slid to 2 PM after a clock change; monthly tasks drifted (Jan 31 → Feb 28 → Mar 28); copies were only created when someone opened the app; editing a repeating task changed only one copy; plus form fixes. `supabase/fix-recurrence-generation.sql` was **run by Aaron in the Supabase SQL editor and he reported it worked** (it also schedules the hourly `ensure-upcoming-recurrences` pg_cron job). The new rules and the "edit this task or this and future?" dialog are in `CLAUDE.md` under Recurrence. (`0264dec`, `2d449d6`)
 - **Bulk Add repeats** — a `~weekly` / `~mon,wed,fri` / `~monthly` marker in the paste format plus a Repeats dropdown in Guided mode, sharing one token table with the task form (`6dbe088`).
-- **Dallas Property Finder (NOT yet committed)** — Ada wants the separate `db2re-preferred-zone` site (at `https://dallas-properties.netlify.app`) reachable from inside Tandem without interrupting the board. Built as a Settings row that opens the site full screen in a sandboxed iframe (`ExternalToolView.jsx`, `lib/externalTools.js`, edits to `SettingsMenu.jsx`/`HowToGuide.jsx`). Aaron's requirements: only Ada and Aaron see it, and "I don't want any exposure" — so the address is **not in the JavaScript bundle**; it lives in a new `external_tools` table readable only by the members listed on the row. `supabase/add-external-tools.sql` creates the table and inserts the row; the file keeps a placeholder URL on purpose (so the real address isn't committed), and Aaron was given the full SQL with the real address in chat to paste. Details in `CLAUDE.md` ("External tools (Settings)").
+- **Dallas Property Finder (committed and pushed as `622859c`; its production SQL and phone check are still unconfirmed)** — Ada wants the separate `db2re-preferred-zone` site (at `https://dallas-properties.netlify.app`) reachable from inside Tandem without interrupting the board. Built as a Settings row that opens the site full screen in a sandboxed iframe (`ExternalToolView.jsx`, `lib/externalTools.js`, edits to `SettingsMenu.jsx`/`HowToGuide.jsx`). Aaron's requirements: only Ada and Aaron see it, and "I don't want any exposure" — so the address is **not in the JavaScript bundle**; it lives in a new `external_tools` table readable only by the members listed on the row. `supabase/add-external-tools.sql` creates the table and inserts the row; the file keeps a placeholder URL on purpose (so the real address isn't committed), and Aaron was given the full SQL with the real address in chat to paste. Details in `CLAUDE.md` ("External tools (Settings)").
 
-## Current state addendum (Oct 6, 2026)
+### Chapter 12 — Codex builds the rental-contact suite and ships a run of fixes (Oct 6–8, 2026)
+
+After the Oct 6 handoff, Codex took over day-to-day work. Aaron approves each phase, then asks for the commit and push, and runs all production SQL himself. Pushed and confirmed in the public Netlify bundle: property contacts with a searchable directory and per-unit links; location-wide service contacts (a handyman or cleaner covers a whole building); long-term lease Add/Edit controls (Long Term previously had none, and its + button pointed at an unmounted calendar); dated lease notes that stay with the original tenancy; Export records (one Excel workbook plus per-section CSVs, no Tasks, optional Vault); ten fixes found in a bug hunt (overdue "Move to today" in the displayed timezone, contacts refreshing on app resume, failed saves keeping drafts, roadmap steps no longer creating duplicate tasks, and more); the unified Comment / Completion details task composer; the Google Contacts CSV importer; and the Rentals term-selector spacing (`2cbd9de`). Call/text logging was deliberately deferred. Details and the commit for each are in the status table below and in `AUDIT_HANDOFF.md`.
+
+## Current state addendum (updated Oct 8, 2026)
 
 | Area | Status |
 | --- | --- |
@@ -89,13 +93,16 @@ Other work in this window, all committed and pushed to `origin/main`:
 | Vault TOTP codes + clock warning | Pushed; verified on mounted components and RFC test vectors, not in the signed-in vault |
 | Recurrence fixes + hourly job | Pushed; SQL run by Aaron (reported working); not independently re-checked against production by an AI |
 | Bulk Add repeats | Pushed; verified on mounted component, not signed-in |
-| Dallas Property Finder | **Uncommitted** in the working tree; SQL given to Aaron but he has not yet said he ran it; nothing pushed or live |
+| Dallas Property Finder | Committed and pushed (`622859c`). Whether Aaron ran `add-external-tools.sql` is unconfirmed, so the Settings row may not appear yet; phone/map/export behaviour inside the frame untested |
 | Rental contacts and location coverage | Published (`57f8c82`, `deb69c9`); SQL user-reported applied; signed-in directory and location mapping checked |
 | Long-term Add/Edit lease controls | Published (`0b5ab92`); both signed-in entry points checked without creating records |
 | Dated lease notes | Published (`9125b9b`); SQL user-reported applied; signed-in reads/editor verified, live writes/author access/Realtime outstanding |
 | All-record Excel / CSV export | Published (`4801425`), public bundle confirmed; local checks passed. Tasks excluded; optional Vault |
 | October 6 bug-fix phases 1–3B | Published (`67bb76b`); public new-batch code and roadmap SQL verified; real phone/signed-in writes pending |
 | Overdue timezone / contact catch-up fixes | Pushed (`4c8e2a1`, `7343015`); Aaron confirms both contacts visible on phone after refresh/reopen; missed-change automatic catch-up still unverified |
+| Unified task composer (Comment / Completion details) | Published (`6cc76df`, `4f40a1f`); signed-in UI checked, no real task writes; saving/reloading/files on a phone unverified |
+| Google Contacts CSV import | Published (`752d4c9`); live Import button and editor seen; no real CSV imported yet, and the file picker was never exercised |
+| Rentals term-selector spacing | Pushed (`2cbd9de`, Oct 8); Netlify build not independently confirmed |
 | Call/text logging | Deferred |
 
 ## Current state (as of Oct 2, 2026 — see the Oct 6 addendum above for newer rows)
@@ -145,7 +152,7 @@ These are real incidents or deliberate decisions from this project's history. Kn
 - **Multi-agent handoff discipline**: when more than one AI session may be working this repo, always distinguish *prepared* (code written) from *tested* (checks run) from *committed* from *pushed* from *confirmed live in production* — never collapse these into a single "done." Re-read the shared handoff log before resuming, and never overwrite or silently reattribute another agent's logged work.
 - **Deny-list vs. presence-grant access models, used deliberately differently depending on intent.** `members.permissions` is a deny-list (`{}` means full access) specifically so an existing member needs zero data to keep working unchanged when a new feature gate is added. `task_access`/`report_access`/`priorities_access`/`vault_access` are the opposite — a *present* row is required for access, because those exist specifically to *restrict* something that used to be automatic. Don't confuse the two shapes when adding a new gated feature; pick deliberately based on whether you're adding a restriction or a preservable default.
 
-## Codex takeover checkpoint — October 6, 2026
+## Codex takeover checkpoint — October 6, 2026 (historical; the contacts work it describes has shipped)
 
 Aaron deferred call/text logging, then selected property contacts and approved the screen preview. Property contacts are now prepared locally for both rental terms, with a searchable shared directory, multi-unit role links, archive/restore and copy number. Migration `supabase/add-rental-contacts.sql` is prepared for Aaron to run manually. Local PostgreSQL access/atomicity checks and mounted phone/desktop UI checks passed; no live migration, commit, push or deploy. Next: Aaron applies SQL, then signed-in live verification. Other rental improvements remain proposals.
 
@@ -153,13 +160,28 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
-### October 7 Rentals pill spacing — prepared locally
+### Current summary (Oct 8, 2026)
 
-Aaron approved keeping one capsule while adding label padding and gap. Scoped RentalsView/App.css change built, actual PeriodTabs checked at 320px/390px/1100px; lint/build passed. No behavior changes, not committed/pushed/live. Next: publication when requested. Importer remains live as noted below; actual user CSV import still unverified.
+**Repo state:** `main` equals `origin/main` at `2cbd9de` plus whatever the doc commit after it adds. The only untracked item is `.agents/` (another tool's folder; never touch or commit it). All feature work through the Rentals pill spacing is pushed.
 
-### October 7 Google Contacts import — working importer prepared
+**Still needs a human or a real device (no AI session can sign in or enter credentials):**
+- Dallas Property Finder: confirm `supabase/add-external-tools.sql` was run (the repo copy has a placeholder URL on purpose; the real address is `https://dallas-properties.netlify.app`), then check the map and Excel/PDF exports on a phone.
+- Google Contacts import: run it with a real CSV in the browser and confirm the contacts appear on the phone.
+- Phone checks of live writes: the composer save, contact and lease-note saves, and Realtime catch-up after the phone was suspended.
+- Never seen in the signed-in app: UI/UX Phases 1–5, Vault codes, recurrence changes, Bulk Add repeats, the Today-header density check at 375px, and RC Lina's two self-checks (Inbox scoping, comment-notification targeting).
+- Netlify build status of the newest commits is checked by fetching the public bundle, not from the dashboard.
 
-Aaron supplied a 19-contact Google CSV and requested importing into Tandem. Working importer implemented locally in ContactImport.jsx/googleContactImport.js and directory entry point. Editable review rows, duplicate checks against refreshed contacts, sequential saving through existing contact coverage RPC, imported/skipped state and stopped failure/retry flow. No migration. Actual 19-row CSV parsed in local checks (not copied to repo); synthetic mounted review UI checked at 390px/1100px. Parser and actual handler tests cover quoting, duplicate normalization, coverage, partial failure and response-loss retry. Browser file-picker upload was blocked by extension local-file access; no permission bypass or actual contact writes. Lint/build passed. Not committed/pushed/live. Next: publish when Aaron requests; then verify user file selection/review/import and phone visibility. Client duplicate checks do not guarantee multi-session uniqueness.
+**Next work Codex had queued:** missed-change catch-up verification, Vault folder controls, owner project scheduling, then the shared-viewer "Add to timeline" decision (viewers still see the button but the owner-only rule rejects it) and wider access and notification checks. Call/text logging stays deferred.
+
+**Working rules from Aaron (still in force):** show options or a mockup and wait for his pick before building, committing or pushing design or behaviour choices; he authorises publication phase by phase; he runs production SQL and enters credentials himself; never message other people on his behalf; Edge Functions deploy separately from the frontend (none changed since Oct 2). Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+
+### October 7 Rentals pill spacing — pushed Oct 8 as `2cbd9de`
+
+Aaron approved keeping one capsule while adding label padding and gap. Scoped RentalsView/App.css change built, actual PeriodTabs checked at 320px/390px/1100px; lint/build passed. No behavior changes. Committed and pushed Oct 8 at Aaron's request; Netlify deployment not independently confirmed. Importer remains live as noted below; actual user CSV import still unverified.
+
+### October 7 Google Contacts import — published (`752d4c9`)
+
+Aaron supplied a 19-contact Google CSV and requested importing into Tandem. Working importer implemented locally in ContactImport.jsx/googleContactImport.js and directory entry point. Editable review rows, duplicate checks against refreshed contacts, sequential saving through existing contact coverage RPC, imported/skipped state and stopped failure/retry flow. No migration. Actual 19-row CSV parsed in local checks (not copied to repo); synthetic mounted review UI checked at 390px/1100px. Parser and actual handler tests cover quoting, duplicate normalization, coverage, partial failure and response-loss retry. Browser file-picker upload was blocked by extension local-file access; no permission bypass or actual contact writes. Lint/build passed. Since then committed, pushed and seen live (bundle `index-O_RBv978.js`, Import contacts button and editor). Next: Aaron imports his real file, then verify phone visibility. Client duplicate checks do not guarantee multi-session uniqueness.
 
 ### October 6 spacing follow-up — pushed October 7
 
@@ -206,11 +228,11 @@ Ten bugs fixed in this round. Counts describe separate affected flows; rapid dou
 
 Export is committed/pushed as `4801425` and confirmed in the public Netlify bundle after Aaron approved publication. Settings → Export records offers one Excel file with separate sheets plus individual exports; Tasks excluded, Vault optional with unlock/confirmation. No SQL needed. Local checks and signed-in preparation passed; production download and actual Vault unlock remain unverified. Next: Aaron checks the published download in his browser. Call/text logging remains deferred. `.agents/` stays untouched.
 
-### Export continuation — October 6, 2026, Codex
+### Export continuation — October 6, 2026, Codex (superseded: Export was committed as `4801425` and published)
 
 Aaron approved the preview for all app records except Tasks and a single multi-sheet Excel workbook. Settings → Export records is implemented locally, with section tabs, individual CSVs and optional Vault unlock/confirmation. No SQL needed. Build/lint and isolated workbook/pagination checks passed; signed-in All records preparation and phone layout checked without unlocking Vault. Export and the preceding documentation refresh remain uncommitted/unpublished. Next: review the local screen, then explicit commit/publish approval for Export. Call/text logging remains deferred.
 
-### Latest checkpoint — October 6, 2026, Codex
+### Earlier checkpoint — October 6, 2026, Codex (historical; Export and everything after it shipped, see the summary above)
 
 Contacts, location service coverage, long-term lease controls and dated lease notes are committed, pushed and confirmed in public Netlify bundles. Lease notes shipped in `9125b9b`; publication records followed in `927e2fd`. Aaron ran the incremental SQL himself (user-reported). The signed-in local app successfully reads lease notes and opens the editor for the correct original lease. Live saves, author restrictions and Realtime delivery remain unverified; local database and phone/desktop UI checks passed. No production test notes were created.
 
@@ -220,25 +242,9 @@ Next: present the Rentals CSV export scope/preview for approval before implement
 
 Aaron authorizes publication phase by phase; earlier blanket “don't push” notes were superseded for the delivered features by explicit approvals. He runs production SQL and enters credentials himself. Do not send messages to others. No new export implementation or publication is authorized by this documentation request.
 
-### Historical checkpoint — earlier October 6 (superseded for rental delivery and working-tree state)
+### Historical checkpoint — earlier October 6 (superseded; kept short)
 
-
-
-**Working tree is NOT clean.** Everything through Bulk Add repeats is committed and pushed (last commit `2d449d6`). Uncommitted and unpushed:
-- The Dallas Property Finder work: new `src/components/ExternalToolView.jsx`, `src/lib/externalTools.js`, `supabase/add-external-tools.sql`; modified `src/components/SettingsMenu.jsx`, `src/components/HowToGuide.jsx`, `supabase/schema.sql`, `CLAUDE.md`. Lint and build passed; behaviour verified by mounting the real component and Settings in the browser pane (listed person sees the row and it opens full screen with the right sandbox/referrer/link; unlisted person sees nothing; title wraps on phones).
-- `ONGOING_PLANS.md` — a new, **unapproved** plan section "Rental contacts, call logging, lease notes, unit files, reply templates and export".
-- `.agents/` — an untracked folder from another tool; leave it alone.
-- `docs/ui-ux-overhaul-plan.md` — a copy of the previously external UI/UX plan so it travels with the repo.
-
-**Next concrete steps, in order:**
-1. Aaron runs the Dallas SQL in the Supabase SQL editor (the full text with the real address was given in chat; the repo file has a placeholder). The final query should show one row with `people_who_can_see_it` = 2. If it shows 0 or 1, a member display name isn't matching `ada`/`aaron`. To fix a wrong address: `update external_tools set url = 'https://…' where title = 'Dallas Property Finder';`.
-2. After he confirms, commit and push the Dallas work (only with his go-ahead; leave `ONGOING_PLANS.md` and `.agents/` out unless he says otherwise). Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
-3. Aaron checks on a real phone: Settings → Dallas Property Finder → map gestures work, and Excel/PDF exports download inside the frame. Not tested by any AI session. The finder has no login of its own, so its address is its only protection.
-4. Rental contacts plan: Aaron is becoming Ada's point of contact for tenants and vendors via a shared Google Voice number. His constraints: phone-first; door/lockbox codes only in the Vault; same access as Rentals (hidden from members without Rentals permission and from staff); no SSNs or bank details; he later asked for lease-notes context and a major CSV export. **"Don't push or deploy. Give me any SQL I need to run in Supabase by hand."** The plan has 17 open questions and is waiting for his approval — do not implement before he approves it.
-
-**Verification debt (honest list):** an AI session cannot sign in, so none of the following has been seen in the real signed-in app: UI/UX Phases 1–5, Vault codes, recurrence changes, Bulk Add repeats, the Settings tool row. Also open: the Today-header density check at 375px; RC Lina's two self-check items (Inbox scoping, comment-notification targeting); Netlify's build status for the pushed commits has not been confirmed. The Phase 4 contrast sweep did not cover Vault, Reports, Staff, Inbox or Settings.
-
-**Working rules from Aaron:** show options/mockups and wait for his pick before implementing or committing design/behaviour choices (memory: `feedback_show_before_building`); an AI never runs SQL against Supabase, never enters credentials, and sends nothing to other people — he does those. Multiple Claude sessions may touch this repo; re-check `git status` first. Edge Functions deploy separately from the frontend; nothing in this window changed an Edge Function.
+This block used to say the working tree was dirty, that the Dallas work was uncommitted, and that the rental-contacts plan awaited approval. All of that is out of date: Dallas was committed in `622859c`, and the contacts plan was approved and built in phases (see Chapter 12). Two things from it are still true and are carried into the Oct 8 summary above: the working rules, and the fact that nothing from UI/UX Phases 1–5, Vault codes, recurrence or Bulk Add repeats has been seen in the signed-in app. The original plan for what became the rental-contact suite is the Aaron request, quoted accurately here: phone-first; door and lockbox codes only in the Vault; same access as Rentals (hidden from members without Rentals permission and from staff); no SSNs or bank details.
 
 ### Earlier handoff text (Oct 2, 2026 — partly historical)
 
@@ -262,7 +268,7 @@ Aaron authorizes publication phase by phase; earlier blanket “don't push” no
 
 **Phase 3 (consistency and recognition-over-recall) was built Oct 2, 2026** (`3d2f6f7`, `fc7f3b4`, plus the copy-pass commit): (1) every native `window.confirm()` (15 call sites) now goes through one in-app `ConfirmProvider`/`useConfirm()` with labelled buttons and a four-tier rule documented in `CLAUDE.md` ("Confirming destructive actions") — do not add a new `window.confirm()`; (2) Bulk Add has a Guided mode (default; remembered per device) that builds the same paste text from plain fields, with "Paste a list" kept for people who know the format; (3) the admin access form and staff profile form copy was rewritten in plain language; (4) Staff-facing copy was largely covered in Phase 2. Verified by mounting the real components in the browser at 375px; the preview browser still has no signed-in session, so nothing was seen inside the real signed-in app. **Phase 4 (accessibility and forgiveness hardening) was built Oct 2-3, 2026** (`891b1be`, `5798570`, and the errors commit): measured contrast failures fixed with new colour tokens (gold buttons were 2.3:1; field outlines ~1.3:1; muted text 3.2-3.9:1), priority no longer colour-only (dot shapes plus a High/Low badge), the done-checkbox redrawn as a 40px tap target with other small controls enlarged on phones, and ~100 raw `err.message` displays replaced by `friendlyError()` (plus the account Edge Functions' own messages finally reaching the screen). The rules for new UI are in `CLAUDE.md` under "Accessibility rules" — notably: never `text-white` on `bg-accent`, never opacity on a container that holds controls, never show `err.message` raw. Verified by mounting real components at 375px in light and dark (0 contrast failures on the screens swept); NOT seen in the signed-in app, and several screens (Vault, Reports, Staff, Inbox, Settings) were not swept. **Phase 5 (final polish) was partly built Oct 3, 2026:** ~25 empty states now say what belongs there and what to do next (Today's empty day names the period/person and points at +; Pins, Projects, Inbox tabs, Reports, Vault, Rentals, Bulk Edit), and every "Loading…" is one `LoadingText` component with `role="status"` (conventions in `CLAUDE.md`, "Empty and loading states"). **The Phase 5 full-app click-through at desktop and phone width has NOT been done** — it needs a signed-in session in the browser pane, which an AI session cannot create. That, plus the still-open Today-header density check from Phase 2 and the two RC-Lina self-checks, is the remaining verification debt for the whole UI/UX overhaul; nothing from Phases 1-5 has been seen inside the real signed-in app. The Phase 2 Today-header density check is still open for the same no-session reason.
 
-## October 6 follow-up — location service contacts
+## October 6 follow-up — location service contacts (historical; published, see the status table)
 
 After the original contacts feature was published, Aaron approved grouping service people by location (John as the Amarillo handyman, Martin for Rachel cleaning were examples, not seeded data). Location-wide coverage plus optional specific-unit links is prepared locally; tenants stay unit-specific. Manual migration `add-rental-contact-locations.sql` is pending. Local access/atomicity and mounted phone/desktop UI checks passed; real unit mappings are not independently verified. New SQL lists them for Aaron to review. No publication of this follow-up yet.
 
@@ -280,7 +286,9 @@ October 6 migration checkpoint: Aaron reports running the lease-note SQL. Signed
 
 October 6 publication checkpoint: Aaron explicitly approved committing and publishing lease notes. Feature commit `9125b9b` pushed to origin/main; public Netlify HTML and bundle `/assets/index-C6OnU2O3.js` confirm deployed note controls. No production notes created during verification. Live saves/author access/Realtime remain outstanding. Next proposed phase is Rentals CSV export scope; call/text logging stays deferred.
 
-### Active follow-up — October 6, 2026: overdue move
+### October 6, 2026: overdue move (historical; fixed in `4c8e2a1`)
+
+*The dated notes from here to the end of the file are a running log of Oct 6 work. Every item in them has since been fixed, committed and pushed; the bug-fix table under "Active handoff" is the authoritative record.*
 
 Codex reproduced Aaron's production report: Move all to today succeeds but tasks remain overdue because moving uses original PHT date while the timeline shows CT. Jack and Jill's edit form shows October 6 at 1 AM PHT; row shows October 5 noon CT. Proposed fix uses display-timezone today/time for timed tasks, preserving original zone metadata; user approval pending. No code change or publication. See AUDIT_HANDOFF.md for evidence.
 
