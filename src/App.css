@@ -5180,3 +5180,16 @@ label.new-task-checkbox-label {
   font-weight: 600;
 }
 .task-compose-tab:disabled { cursor: default; opacity: .6; }
+
+/* Keep the Rentals term selector as one capsule, with breathing room for labels. */
+.rental-term-pill {
+  gap: 6px;
+  padding: 4px;
+  max-width: 100%;
+}
+.rental-term-pill button {
+  flex: 1 0 auto;
+  min-height: 44px;
+  padding: 9px 16px;
+  white-space: nowrap;
+}

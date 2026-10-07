@@ -153,6 +153,10 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
+### October 7 Rentals pill spacing — prepared locally
+
+Aaron approved keeping one capsule while adding label padding and gap. Scoped RentalsView/App.css change built, actual PeriodTabs checked at 320px/390px/1100px; lint/build passed. No behavior changes, not committed/pushed/live. Next: publication when requested. Importer remains live as noted below; actual user CSV import still unverified.
+
 ### October 7 Google Contacts import — working importer prepared
 
 Aaron supplied a 19-contact Google CSV and requested importing into Tandem. Working importer implemented locally in ContactImport.jsx/googleContactImport.js and directory entry point. Editable review rows, duplicate checks against refreshed contacts, sequential saving through existing contact coverage RPC, imported/skipped state and stopped failure/retry flow. No migration. Actual 19-row CSV parsed in local checks (not copied to repo); synthetic mounted review UI checked at 390px/1100px. Parser and actual handler tests cover quoting, duplicate normalization, coverage, partial failure and response-loss retry. Browser file-picker upload was blocked by extension local-file access; no permission bypass or actual contact writes. Lint/build passed. Not committed/pushed/live. Next: publish when Aaron requests; then verify user file selection/review/import and phone visibility. Client duplicate checks do not guarantee multi-session uniqueness.

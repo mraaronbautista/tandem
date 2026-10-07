@@ -284,7 +284,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
 
   const termToggle = (
     <div className="flex flex-wrap items-center gap-2">
-    <PeriodTabs className="w-auto min-w-0 flex-none">
+    <PeriodTabs className="rental-term-pill w-auto min-w-0 flex-none">
       <PeriodTab active={rentalTerm === 'short_midterm'} onClick={() => setRentalTerm('short_midterm')}>
         Short/Midterm
       </PeriodTab>
