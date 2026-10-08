@@ -94,6 +94,32 @@ This Markdown refresh corrects stale current-state headings and the main resume 
 
 ## Activity log
 
+### October 8, 2026 — Claude: full static audit (read-only, no code changed)
+
+Scope: lint/build/npm audit, RLS and security-definer review across schema and add-*.sql, all five account Edge Functions plus the two webhook/cron ones, the newest Codex features (contacts, import, export, lease notes, roadmap RPC, composer), Bulk Add parser and timezone probes. No sign-in, no production access, no SQL run. Lint and build exit 0.
+
+Findings (none fixed yet; awaiting Aaron's pick):
+1. Medium — `notify-task-events` (deployed --no-verify-jwt) never checks who is calling; anyone with the public function URL can POST a fake task-completed payload and push attacker-written text to every admin. `notify-reminders` is the same shape but takes no input.
+2. Medium — `create-staff-account` and `update-staff-credentials` require only membership, not the Staff permission, so a member with Staff turned off (e.g. the VA) can call them directly and reset the property manager's login or create staff accounts.
+3. Low — `generate_month_occurrences()` is security definer with no caller check and no revoke, so any signed-in user (or anon) who knows a template id can generate its copies. Limited by unguessable ids and the unique index.
+4. Low — Export CSV prefixes an apostrophe to any value starting with - + = @, which also hits negative numbers (longitudes) and phone numbers starting with +. Excel files are unaffected.
+5. Low — Vault entry URL is rendered as a link with no scheme check, so a `javascript:` URL in a shared entry would run on click.
+6. Low — No `public/_headers`/netlify.toml: no X-Frame-Options/CSP, so Tandem can be framed by other sites.
+7. Low — Bulk Add does not understand 12/31 or 12/31/2026 and does not flag it: the line silently becomes a dateless task titled with the whole line. Impossible dates (Feb 30, 25:00) behave the same way.
+8. Info — react-router-dom is unused and carries a high npm advisory (RSC mode, not in use); `members_who_can_view_task` and ~20 older definer functions lack `set search_path` (low risk; created before the convention). Vault export of an authenticator secret in the Excel file is JSON, not an otpauth link.
+
+Addendum — `notify-reminders` read end to end (same day):
+9. Low-medium — neither the 15-minute "Starting soon" check nor the 3-day "Still on your plate?" check excludes archived tasks (the file never mentions `archived`), so a task sent to the board still gets nagged.
+10. Low-medium — Month-end rent dates: a check-in on the 29th–31st rolls into the next month in both the Edge Function and `src/lib/rentals.js`. A Jan 31 check-in bills Jan 31, Mar 3, Mar 31, May 1, May 31, Jul 1, Jul 31: no February, April or June charge, and two in March, May and July. This skews the Financials page and the "Rent due today" ping. A 30th check-in only misses February.
+11. Low — "Today" for rent and lease reminders is the server's UTC date, so "Rent due today" arrives the evening before for Central time. Documented in the file, but the wording is misleading.
+12. Low — A failed push is logged, then the "sent" flag is still set, so a one-shot reminder (lease ending, overdue nudge) is lost for good if the push service errors once.
+
+13. Gap (Aaron's request, Oct 8) — "Send to board" did not carry the task's comments to the pin. Fixed locally as Phase 6 of the fix plan: option B chosen (comments plus one first comment with notes, checklist and completion details; attachments noted as "Attachment: name (still on the original task)"). `src/lib/taskToPin.js` (new), `corkNotes.js`, a How-to FAQ entry and CLAUDE.md updated. Lint/build exit 0; builder tested on a realistic task; the real `archiveTaskToBoard` run in the browser with the database call intercepted sent one pin insert with the expected comments and a task update of only `archived: true`. No real pin or task written. Not committed or pushed; existing pins not back-filled; comments added on a pin do not flow back to the task on restore.
+
+Status update (Oct 8): Aaron ran `add-external-tools.sql` (idempotent re-run safe) and the check query returned one row, `https://dallas-properties.netlify.app`, with 2 people able to see it (screenshot). He also reports importing his real Google Contacts CSV. Both are user-reported; not independently checked by an AI session.
+
+Checked and fine: RLS enabled on every table; no `using (true)` policies; admin gates on create/update-member functions; vault crypto (AES-GCM, 250k PBKDF2); no service key or token in src; no unchecked Supabase errors; timezone conversion at DST edges; importer, composer and roadmap RPC logic; service worker has no fetch handler (clock check valid).
+
 ### October 6, 2026 — Codex: lease notes committed, pushed and public bundle verified
 
 - Feature committed as `9125b9b` and pushed to origin/main under Aaron’s explicit publication approval.

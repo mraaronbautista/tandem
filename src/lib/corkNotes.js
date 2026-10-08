@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { updateTask } from './tasks'
+import { taskCommentsForPin } from './taskToPin'
 
 // RLS already scopes the select to "own or targeted" (see schema.sql), so
 // this returns exactly what the caller is allowed to see with no extra
@@ -20,10 +21,10 @@ export async function fetchCorkNotes() {
 // optional — an empty array (the column's own default) for every pin that
 // isn't a roadmap; CorkBoardView.jsx's compose form only passes a non-empty
 // one when the roadmap-steps textarea actually has content.
-export async function createCorkNote({ body, shared_with = [], author_id, archived_task_id = null, roadmap_items }) {
+export async function createCorkNote({ body, shared_with = [], author_id, archived_task_id = null, roadmap_items, comments }) {
   const { data, error } = await supabase
     .from('cork_notes')
-    .insert({ body, shared_with, author_id, archived_task_id, ...(roadmap_items && { roadmap_items }) })
+    .insert({ body, shared_with, author_id, archived_task_id, ...(roadmap_items && { roadmap_items }), ...(comments?.length && { comments }) })
     .select(CORK_NOTE_COLUMNS)
     .single()
   if (error) throw error
@@ -83,7 +84,16 @@ export async function deleteCorkNote(id) {
 // can share it with specific members afterward with the same control
 // every other own pin already has.
 export async function archiveTaskToBoard(task, authorId) {
-  const pin = await createCorkNote({ body: task.title, shared_with: [], author_id: authorId, archived_task_id: task.id })
+  // The task's notes, checklist and comment thread are copied onto the pin
+  // as comments (taskToPin.js) so the board record is not just a title. The
+  // task itself is untouched, so Restore to Today brings everything back.
+  const pin = await createCorkNote({
+    body: task.title,
+    shared_with: [],
+    author_id: authorId,
+    archived_task_id: task.id,
+    comments: taskCommentsForPin(task, authorId),
+  })
   await updateTask(task.id, { archived: true })
   return pin
 }

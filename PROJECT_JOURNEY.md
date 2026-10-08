@@ -93,7 +93,7 @@ After the Oct 6 handoff, Codex took over day-to-day work. Aaron approves each ph
 | Vault TOTP codes + clock warning | Pushed; verified on mounted components and RFC test vectors, not in the signed-in vault |
 | Recurrence fixes + hourly job | Pushed; SQL run by Aaron (reported working); not independently re-checked against production by an AI |
 | Bulk Add repeats | Pushed; verified on mounted component, not signed-in |
-| Dallas Property Finder | Committed and pushed (`622859c`). Whether Aaron ran `add-external-tools.sql` is unconfirmed, so the Settings row may not appear yet; phone/map/export behaviour inside the frame untested |
+| Dallas Property Finder | Committed and pushed (`622859c`). Aaron ran the SQL on Oct 8 and the check query showed one row, `https://dallas-properties.netlify.app`, visible to 2 people (screenshot, user-reported). Settings row on a real phone, map gestures and Excel/PDF downloads inside the frame still untested |
 | Rental contacts and location coverage | Published (`57f8c82`, `deb69c9`); SQL user-reported applied; signed-in directory and location mapping checked |
 | Long-term Add/Edit lease controls | Published (`0b5ab92`); both signed-in entry points checked without creating records |
 | Dated lease notes | Published (`9125b9b`); SQL user-reported applied; signed-in reads/editor verified, live writes/author access/Realtime outstanding |
@@ -101,7 +101,7 @@ After the Oct 6 handoff, Codex took over day-to-day work. Aaron approves each ph
 | October 6 bug-fix phases 1–3B | Published (`67bb76b`); public new-batch code and roadmap SQL verified; real phone/signed-in writes pending |
 | Overdue timezone / contact catch-up fixes | Pushed (`4c8e2a1`, `7343015`); Aaron confirms both contacts visible on phone after refresh/reopen; missed-change automatic catch-up still unverified |
 | Unified task composer (Comment / Completion details) | Published (`6cc76df`, `4f40a1f`); signed-in UI checked, no real task writes; saving/reloading/files on a phone unverified |
-| Google Contacts CSV import | Published (`752d4c9`); live Import button and editor seen; no real CSV imported yet, and the file picker was never exercised |
+| Google Contacts CSV import | Published (`752d4c9`); Aaron reports he imported his real CSV (Oct 8, user-reported). Result quality (duplicates, phone fields) and phone visibility not yet reviewed |
 | Rentals term-selector spacing | Pushed (`2cbd9de`, Oct 8); Netlify build not independently confirmed |
 | Call/text logging | Deferred |
 
@@ -165,8 +165,8 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 **Repo state:** `main` equals `origin/main` at `2cbd9de` plus whatever the doc commit after it adds. The only untracked item is `.agents/` (another tool's folder; never touch or commit it). All feature work through the Rentals pill spacing is pushed.
 
 **Still needs a human or a real device (no AI session can sign in or enter credentials):**
-- Dallas Property Finder: confirm `supabase/add-external-tools.sql` was run (the repo copy has a placeholder URL on purpose; the real address is `https://dallas-properties.netlify.app`), then check the map and Excel/PDF exports on a phone.
-- Google Contacts import: run it with a real CSV in the browser and confirm the contacts appear on the phone.
+- Dallas Property Finder: SQL is applied (Aaron's screenshot, Oct 8). Remaining: open it from Settings on a phone and check the map and Excel/PDF exports.
+- Google Contacts import: Aaron imported his real CSV. Remaining: he looks over the imported contacts for duplicates or misplaced phone numbers, and confirms they show on the phone.
 - Phone checks of live writes: the composer save, contact and lease-note saves, and Realtime catch-up after the phone was suspended.
 - Never seen in the signed-in app: UI/UX Phases 1–5, Vault codes, recurrence changes, Bulk Add repeats, the Today-header density check at 375px, and RC Lina's two self-checks (Inbox scoping, comment-notification targeting).
 - Netlify build status of the newest commits is checked by fetching the public bundle, not from the dashboard.

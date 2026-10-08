@@ -237,6 +237,12 @@ const FAQS = [
     ],
   },
   {
+    title: 'What happens to a task\'s comments when I send it to the board?',
+    items: [
+      'The pin starts with the task\'s title, and everything else is copied onto it as comments: one first comment with the task\'s notes, checklist and completion details, then each question and reply from the task in order, with who wrote it and when. A file attached to a comment can\'t be copied, so the comment says "Attachment: name (still on the original task)". Nothing is removed from the task. Restore to Today brings it back exactly as it was. Comments you add on the pin afterward stay on the pin and do not move back to the task.',
+    ],
+  },
+  {
     title: 'Where can I find the Vault?',
     items: [
       'Open Settings (⚙️), then tap Vault. It moved out of the + button because Vault is something you browse and unlock, not a new item you create.',
