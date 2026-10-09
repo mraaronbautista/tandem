@@ -110,6 +110,7 @@ const SECTIONS = [
       'Tip: the clock-in point and radius belong to the physical location only—you never configure GPS separately for every unit. The default allowed radius is 150 meters, and an outside-radius clock-in is recorded but flagged for review rather than blocked.',
       'Pending shifts can be approved after reviewing the location, duration, rate, pay, and any outside-geofence warning. Export CSV downloads the shifts currently shown by the active filter.',
       'Use Edit in the Property manager card to change the display name or standard/emergency rates. A rate change only affects future clock-ins; previous shifts keep the rate captured when they started.',
+      'The property manager also has a read-only Schedule tab next to Clock. It lists the next 60 days: tenants moving in or out (first name and last initial only) and the cleaners and vendors you scheduled under What\'s happening in Rentals, grouped by day and filterable by location. They never see rent, phone numbers of tenants, notes or any other Rentals data, only the vendor name, trade and phone you picked for a visit and the one-line note you wrote, so write that note with the house manager in mind.',
       'Deactivate pauses future staff access without deleting historical shifts. Physical locations are also deactivated rather than deleted so old payroll records keep their original location.',
     ],
   },

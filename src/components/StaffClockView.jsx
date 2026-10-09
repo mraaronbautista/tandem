@@ -22,6 +22,8 @@ import ThemeToggle from './ThemeToggle'
 import MarkdownText from './MarkdownText'
 import HelpHint from './HelpHint'
 import StaffChangePasswordForm from './StaffChangePasswordForm'
+import StaffScheduleView from './StaffScheduleView'
+import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -100,6 +102,8 @@ export default function StaffClockView({ theme, toggleTheme }) {
   const [error, setError] = useState('')
   const [changingPassword, setChangingPassword] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
+  // 'clock' (the default) or 'schedule' (read-only: move-ins/outs and visits).
+  const [tab, setTab] = useState('clock')
 
   // On-site capture flow local state
   const [capturingSiteId, setCapturingSiteId] = useState(null)
@@ -548,6 +552,12 @@ export default function StaffClockView({ theme, toggleTheme }) {
     }
   }
 
+  // The "you've left the site" prompt can appear while someone is looking at
+  // the schedule; bring them back to the clock so it cannot be missed.
+  useEffect(() => {
+    if (stopFlow) setTab('clock')
+  }, [stopFlow])
+
   if (loading) return <LoadingText className="p-6" />
 
   const todayPay = history
@@ -623,7 +633,23 @@ export default function StaffClockView({ theme, toggleTheme }) {
       )}
 
       {profile?.active !== false && (
-        <>
+        <PeriodTabs role="tablist" aria-label="Clock or schedule">
+          <PeriodTab role="tab" aria-selected={tab === 'clock'} active={tab === 'clock'} onClick={() => setTab('clock')}>
+            Clock
+          </PeriodTab>
+          <PeriodTab role="tab" aria-selected={tab === 'schedule'} active={tab === 'schedule'} onClick={() => setTab('schedule')}>
+            Schedule
+          </PeriodTab>
+        </PeriodTabs>
+      )}
+
+      {profile?.active !== false && tab === 'schedule' && <StaffScheduleView />}
+
+      {/* Hidden rather than unmounted on the Schedule tab, so a shift that is
+          running (and the stop prompt) keeps its state while someone checks
+          the schedule. */}
+      {profile?.active !== false && (
+        <div className={tab === 'clock' ? 'flex flex-col gap-4' : 'hidden'}>
           {!activeEntry && !starting && (
             <div className="flex flex-col gap-2">
               <button
@@ -1094,7 +1120,7 @@ export default function StaffClockView({ theme, toggleTheme }) {
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )
