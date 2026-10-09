@@ -9,6 +9,7 @@ import {
   fetchSavingsGoals,
   monthRangeStrings,
   setUnitNegotiating,
+  todayDateStr,
 } from '../lib/rentals'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import IconButton from './IconButton'
@@ -25,6 +26,9 @@ import { friendlyError } from '../lib/friendlyError'
 import LoadingText from './LoadingText'
 import RentalContacts from './RentalContacts'
 import { useRentalContacts } from '../lib/useRentalContacts'
+import { useRentalVisits } from '../lib/useRentalVisits'
+import { upcomingVisitCount } from '../lib/unitTimeline'
+import UnitActivitySheet from './UnitActivitySheet'
 
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
@@ -53,6 +57,8 @@ import { useRentalContacts } from '../lib/useRentalContacts'
 // in different ways on purpose.
 export default function RentalsView({ me, company, registerQuickAdd }) {
   const contactStore = useRentalContacts()
+  const visitStore = useRentalVisits()
+  const [activityUnitId, setActivityUnitId] = useState('')
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
@@ -282,6 +288,22 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
 
   const shortMidtermProperties = properties.filter((p) => (p.term || 'short_midterm') === 'short_midterm')
 
+  // "What's happening" sheet: one shared list of scheduled visits feeds the
+  // cards' "N visits" badge and the sheet's timeline.
+  const visitCounts = new Map(properties.map((p) => [p.id, upcomingVisitCount(visitStore.visits || [], p, todayDateStr())]))
+  const openActivity = (unit) => setActivityUnitId(unit.id)
+  const activityUnit = properties.find((p) => p.id === activityUnitId)
+  const activitySheet = activityUnit && (
+    <UnitActivitySheet
+      unit={activityUnit}
+      bookings={upcomingBookings}
+      visitStore={visitStore}
+      contacts={contactStore.contacts}
+      locations={contactStore.locations}
+      onClose={() => setActivityUnitId('')}
+    />
+  )
+
   const termToggle = (
     <div className="flex flex-wrap items-center gap-2">
     <PeriodTabs className="rental-term-pill w-auto min-w-0 flex-none">
@@ -300,6 +322,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
     return (
       <div className="tab-panel">
         {termToggle}
+        {activitySheet}
         <RentalLongTermView
           me={me}
           properties={properties}
@@ -308,6 +331,8 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           onAddUnit={openNewProperty}
           onAddLease={(unit) => setLeaseForm({ propertyId: unit.id, booking: null })}
           onEditLease={(booking) => setLeaseForm({ propertyId: booking.property_id, booking })}
+          onOpenActivity={openActivity}
+          visitCounts={visitCounts}
           renderContacts={(unit) => <RentalContacts store={contactStore} property={unit} />}
         />
         {leaseForm && <RentalBookingForm
@@ -345,6 +370,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       <div className="rentals-desktop-dashboard grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6">
         <div className="flex min-w-0 flex-col gap-3">
           {termToggle}
+          {activitySheet}
           <div className="flex flex-wrap items-center gap-3.5">
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               <ChevronLeft size={14} />
@@ -394,6 +420,8 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
                 selectedUnitId={selectedUnitId}
                 onSelectUnit={setSelectedUnitId}
                 onToggleNegotiating={handleToggleNegotiating}
+                onOpenActivity={openActivity}
+                visitCounts={visitCounts}
               />
             }
           />
@@ -438,6 +466,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   return (
     <div className="tab-panel">
       {termToggle}
+      {activitySheet}
       <h3 className="task-section-heading">Overview</h3>
       <RentalOverview
         properties={shortMidtermProperties}
@@ -446,6 +475,8 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
         onSelectUnit={setSelectedUnitId}
         onEditUnit={openEditProperty}
         onToggleNegotiating={handleToggleNegotiating}
+        onOpenActivity={openActivity}
+        visitCounts={visitCounts}
       />
       <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
       {properties.find((unit) => unit.id === selectedUnitId) && <RentalContacts key={selectedUnitId} store={contactStore} property={properties.find((unit) => unit.id === selectedUnitId)} />}

@@ -1,4 +1,4 @@
-import { Handshake } from 'lucide-react'
+import { Handshake, ListChecks } from 'lucide-react'
 import { formatDateStr, unitOccupancyStatus } from '../lib/rentals'
 
 // "All units at a glance" — a plain status line per unit rather than a
@@ -27,6 +27,8 @@ export default function RentalOverview({
   onSelectUnit,
   onEditUnit,
   onToggleNegotiating,
+  onOpenActivity,
+  visitCounts,
 }) {
   if (properties.length === 0) {
     return <p className="task-notes-empty">No units yet. Tap "+ Add unit" to add your first rental.</p>
@@ -38,6 +40,8 @@ export default function RentalOverview({
         const status = unitOccupancyStatus(bookings, p.id)
         const itemClasses = ['rental-overview-item']
         if (p.id === selectedUnitId) itemClasses.push('rental-overview-item-selected')
+        // The desktop toolbar fixes cards at 90px; the activity row needs room.
+        if (onOpenActivity) itemClasses.push('rental-overview-item-activity')
 
         // Two lines, not one long run of inline spans — name+price up
         // top, status below. Reads cleanly as a compact card at any
@@ -68,6 +72,31 @@ export default function RentalOverview({
               </span>
             ) : (
               <span className="rental-overview-status-line text-[13px] opacity-80">Vacant</span>
+            )}
+            {onOpenActivity && (
+              // Opens the "what is happening here" sheet. Kept separate from
+              // the card's own tap (which switches the calendar to this unit),
+              // so stopPropagation stops it also selecting the unit.
+              <span className="mt-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  className="flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--control-border)] bg-transparent px-3 py-1 text-xs font-semibold text-text-h"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenActivity(p)
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  aria-label={`What's happening at ${p.unit_name}`}
+                >
+                  <ListChecks size={14} aria-hidden="true" />
+                  What's happening
+                </button>
+                {visitCounts?.get(p.id) > 0 && (
+                  <span className="rounded-full border border-border bg-pill-bg px-2 py-0.5 text-[11px] font-semibold text-accent-text">
+                    {visitCounts.get(p.id)} {visitCounts.get(p.id) === 1 ? 'visit' : 'visits'}
+                  </span>
+                )}
+              </span>
             )}
           </>
         )

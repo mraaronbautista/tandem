@@ -52,6 +52,7 @@ const SECTIONS = [
     title: 'Rentals',
     items: [
       'Lease notes: long-term lease cards show the latest update. Add note records a conversation or reminder; View notes shows dated history and past leases. Everyone with Rentals access can read and add, but only a note’s author can edit, archive or restore it. Keep codes and passwords in the Vault.',
+      'What\'s happening: each unit card has a What\'s happening button. It lists that unit\'s upcoming move-outs and move-ins together with visits you schedule (a cleaner, a plumber, an inspection, anything). Tap + Schedule a visit, pick or type the kind, set the date and time, choose who is coming from your contacts, and save. A move-out with no cleaning booked shows a reminder with a Schedule cleaning shortcut. Mark a visit done when it is finished and it moves to Past visits. Tick Whole building to show a visit on every unit at that location.',
       'Long Term: use Add lease on a unit to enter its tenants and dates, or Edit lease to update an existing or upcoming lease. The main + also opens Add lease while viewing Long Term.',
       'Service contacts can cover all units at a location, or only selected units. Tenants stay linked to their own units. Choose a location in Edit unit; use Location and Service in All contacts to find the right person. Location names are managed under Staff.',
       'Contacts: each unit has a Contacts section for tenants, vendors and other people. All contacts searches names, companies and phone numbers. Link one person to several units; Copy number lets you paste into your calling app. Archive keeps their details, and Include archived lets you restore them. Keep door codes and passwords in the Vault.',
@@ -240,6 +241,12 @@ const FAQS = [
     title: 'What happens to a task\'s comments when I send it to the board?',
     items: [
       'The pin starts with the task\'s title, and everything else is copied onto it as comments: one first comment with the task\'s notes, checklist and completion details, then each question and reply from the task in order, with who wrote it and when. A file attached to a comment can\'t be copied, so the comment says "Attachment: name (still on the original task)". Nothing is removed from the task. Restore to Today brings it back exactly as it was. Comments you add on the pin afterward stay on the pin and do not move back to the task.',
+    ],
+  },
+  {
+    title: 'How do I record when a cleaner or plumber is coming?',
+    items: [
+      'Open Rentals, find the unit, and tap What\'s happening, then + Schedule a visit. The kind of visit is free text with quick buttons (Cleaning, Repair, Inspection, plus anything you have typed before). Pick who is coming from your contacts, or choose Someone else and type a name. For work on the whole building, such as a gate, tick Whole building and it will show on every unit at that location. After a move-out the sheet also reminds you when no cleaning is booked yet.',
     ],
   },
   {

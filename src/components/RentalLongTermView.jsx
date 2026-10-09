@@ -15,7 +15,7 @@ import { bookingGuestLabel, daysBetweenStrs, monthsAndDaysBetween, formatMonthsA
 // same as RentalOverview.jsx/nextAvailability() already require) — a
 // long-term lease's own check_in is almost always outside whatever month
 // happens to be browsed elsewhere in the tab.
-export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit, renderContacts, onAddLease, onEditLease, me }) {
+export default function RentalLongTermView({ properties, bookings, onEditUnit, onAddUnit, renderContacts, onAddLease, onEditLease, onOpenActivity, visitCounts, me }) {
   const units = properties.filter((p) => p.term === 'long_term')
   const todayStr = todayDateStr()
 
@@ -94,6 +94,11 @@ export default function RentalLongTermView({ properties, bookings, onEditUnit, o
             <div className="mt-3 flex flex-wrap gap-2">
               <RentalButton className="min-h-[44px]" onClick={() => onAddLease?.(unit)}>+ Add lease</RentalButton>
               {lease && <RentalButton className="min-h-[44px]" onClick={() => onEditLease?.(lease)}>Edit lease</RentalButton>}
+              {onOpenActivity && (
+                <RentalButton className="min-h-[44px]" onClick={() => onOpenActivity(unit)}>
+                  What's happening{visitCounts?.get(unit.id) > 0 ? ` (${visitCounts.get(unit.id)} ${visitCounts.get(unit.id) === 1 ? 'visit' : 'visits'})` : ''}
+                </RentalButton>
+              )}
             </div>
             <LeaseNotes key={lease?.id || unit.id} unit={unit} lease={lease} me={me} />
             {renderContacts?.(unit)}

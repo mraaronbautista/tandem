@@ -4080,6 +4080,14 @@ label.new-task-checkbox-label {
   font-size: 12px;
 }
 
+/* With the "What's happening" row (RentalOverview onOpenActivity) a card
+   needs more than the toolbar's fixed 90px, or the button is clipped. */
+.rental-calendar-toolbar .rental-overview-item.rental-overview-item-activity {
+  height: auto;
+  min-height: 90px;
+  overflow: visible;
+}
+
 /* UNUSED, through .rental-overview-status-vacant below — as of the
    RentalOverview.jsx Tailwind conversion (combined inline with
    .rental-overview-status above per usage, since both migrated together).
