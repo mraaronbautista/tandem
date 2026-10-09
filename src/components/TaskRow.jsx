@@ -6,7 +6,7 @@ import { assigneeBadge } from '../lib/whoLabels'
 import { splitDueDateInZone, DEFAULT_TIMEZONE, zoneAbbreviation, zoneLabel } from '../lib/timezone'
 import { isImageAttachment } from '../lib/attachments'
 import { sendTaskNudge, sendTaskCompletedNotify } from '../lib/manualNotify'
-import { Pencil, Paperclip, Copy, Eye, Trash2, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, Pin } from 'lucide-react'
+import { Pencil, Paperclip, Copy, Eye, Trash2, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, Pin, CalendarPlus } from 'lucide-react'
 import TaskForm, { recurrenceLabel as getRecurrenceLabel } from './TaskForm'
 import ChecklistView from './ChecklistView'
 import TaskClarifications from './TaskClarifications'
@@ -14,6 +14,8 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import TaskIcon from './TaskIcon'
 import PriorityBadge from './PriorityBadge'
+import TurnoverVisitModal from './TurnoverVisitModal'
+import { isTurnoverTask } from '../lib/turnoverTask'
 import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
@@ -121,6 +123,7 @@ export default function TaskRow({
   const [open, setOpen] = useState(defaultOpen)
   const [editing, setEditing] = useState(false)
   const [viewSubmissionOpen, setViewSubmissionOpen] = useState(false)
+  const [turnoverVisitOpen, setTurnoverVisitOpen] = useState(false)
   const [nudging, setNudging] = useState(false)
   const [nudgeSent, setNudgeSent] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
@@ -574,6 +577,12 @@ export default function TaskRow({
                   <Copy width={15} height={15} />
                   Duplicate
                 </button>
+                {isTurnoverTask(task) && task.status !== 'done' && (
+                  <button onClick={() => setTurnoverVisitOpen(true)} title="Schedule visit" aria-label="Schedule visit">
+                    <CalendarPlus width={15} height={15} />
+                    Schedule visit
+                  </button>
+                )}
                 {onArchiveToBoard && (
                   <button onClick={handleArchiveToBoard} title="Send to board" aria-label="Send to board">
                     <Pin width={15} height={15} />
@@ -605,6 +614,10 @@ export default function TaskRow({
             }
           />
         </div>
+      )}
+
+      {turnoverVisitOpen && (
+        <TurnoverVisitModal task={task} onUpdateTask={onUpdate} onClose={() => setTurnoverVisitOpen(false)} />
       )}
 
       {viewSubmissionOpen && (

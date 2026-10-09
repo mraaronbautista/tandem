@@ -18,7 +18,7 @@ export function assigneeIdsOverlap(a, b) {
 }
 
 const TASK_COLUMNS =
-  'id, title, assignee_ids, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at, archived'
+  'id, title, assignee_ids, status, priority, icon, due_date, due_timezone, duration_minutes, source, source_note, notes, checklist, recurrence, recurrence_days, recurrence_series_id, created_by, created_at, updated_at, completed_at, completion_note, completion_attachments, clarifications, overdue_nudge_sent_at, archived, rental_turnover_booking_id'
 
 export async function fetchTasks() {
   const { data, error } = await supabase

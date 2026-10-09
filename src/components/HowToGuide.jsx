@@ -248,6 +248,7 @@ const FAQS = [
     title: 'How do I record when a cleaner or plumber is coming?',
     items: [
       'Open Rentals, find the unit, and tap What\'s happening, then + Schedule a visit. The kind of visit is free text with quick buttons (Cleaning, Repair, Inspection, plus anything you have typed before). Pick who is coming from your contacts, or choose Someone else and type a name. For work on the whole building, such as a gate, tick Whole building and it will show on every unit at that location. After a move-out the sheet also reminds you when no cleaning is booked yet.',
+      'Shortcut: when Tandem makes a "Schedule turnover cleaning" task for a move-out, open the task and tap Schedule visit. The unit, Cleaning and the day after the move-out are already filled in; save it and the "book the cleaner" step on the task is ticked for you.',
     ],
   },
   {
