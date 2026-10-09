@@ -85,6 +85,10 @@ Other work in this window, all committed and pushed to `origin/main`:
 
 After the Oct 6 handoff, Codex took over day-to-day work. Aaron approves each phase, then asks for the commit and push, and runs all production SQL himself. Pushed and confirmed in the public Netlify bundle: property contacts with a searchable directory and per-unit links; location-wide service contacts (a handyman or cleaner covers a whole building); long-term lease Add/Edit controls (Long Term previously had none, and its + button pointed at an unmounted calendar); dated lease notes that stay with the original tenancy; Export records (one Excel workbook plus per-section CSVs, no Tasks, optional Vault); ten fixes found in a bug hunt (overdue "Move to today" in the displayed timezone, contacts refreshing on app resume, failed saves keeping drafts, roadmap steps no longer creating duplicate tasks, and more); the unified Comment / Completion details task composer; the Google Contacts CSV importer; and the Rentals term-selector spacing (`2cbd9de`). Call/text logging was deliberately deferred. Details and the commit for each are in the status table below and in `AUDIT_HANDOFF.md`.
 
+### Chapter 13 — Full audit, unit visits and the house manager's schedule (Oct 8–10, 2026)
+
+A full bug and security audit produced twelve findings, which Aaron had fixed in phases (details in `AUDIT_HANDOFF.md`). Security: the two database-called notification functions now require a shared secret (a first attempt silently refused every reminder for about 36 hours because the trigger and the function secret held different values; fixed with one SQL file that sets both from one value), the staff-account functions check the Staff permission, the recurrence generator can no longer be called directly, and `public/_headers` stops other sites framing Tandem. Correctness: reminders skip archived tasks and retry on a temporary push failure, month-end rent clamps to the last day (Jan 31 bills Feb 28, Mar 31, Apr 30), reminders use Central time for "today", CSV exports no longer mangle numbers or Vault passwords, Vault URLs are only links if http(s), the records export writes a real authenticator link, and Bulk Add reads `12/31` and reports dates that do not exist. New feature, all of it pushed: `rental_visits` plus a "What's happening" sheet on each unit (move-outs, move-ins, availability and scheduled cleaners/vendors), a read-only Schedule tab for the house manager through the narrow `staff_schedule()` function, and a "Schedule visit" shortcut on the turnover cleaning task. Also Send-to-board now carries the task's notes, checklist and comments. On Oct 10 Aaron allowed Claude to run read-only database checks and Edge Function deploys itself (via the linked Supabase CLI), while production SQL still needs his "run it" per file and secrets stay with him.
+
 ## Current state addendum (updated Oct 8, 2026)
 
 | Area | Status |
@@ -160,20 +164,23 @@ Correction to the older handoff: Dallas Property Finder is already committed in 
 
 ## Active handoff — read this first
 
-### Current summary (Oct 8, 2026)
+### Current summary (Oct 10, 2026 — paused for the week)
 
-**Repo state:** `main` equals `origin/main` at `2cbd9de` plus whatever the doc commit after it adds. The only untracked item is `.agents/` (another tool's folder; never touch or commit it). All feature work through the Rentals pill spacing is pushed.
+**Repo state:** `main` equals `origin/main` at `fc712b6`. The only untracked item is `.agents/` (another tool's folder; never touch or commit it). Everything built this week is pushed. Production SQL run so far: visits table, staff schedule functions, the generator revoke (confirmed applied by a read-only privilege check), the notification secret reset. Edge Functions: `notify-reminders` is version 19 (deployed Oct 9 UTC with the month-end, Central-time and retry changes); the other six are unchanged this week. Live site confirmed Oct 10: HTTP 200, anti-framing headers present, newest bundle contains the visits, Schedule, shortcut and Bulk Add date strings. Cron: the 5-minute reminder job returned 200 on every tick checked; the hourly recurrence job succeeded through the 20:05 UTC run and its 21:05 run (the first after the generator lock-down) had not yet been read when the work paused.
 
-**Still needs a human or a real device (no AI session can sign in or enter credentials):**
-- Dallas Property Finder: SQL is applied (Aaron's screenshot, Oct 8). Remaining: open it from Settings on a phone and check the map and Excel/PDF exports.
-- Google Contacts import: Aaron imported his real CSV. Remaining: he looks over the imported contacts for duplicates or misplaced phone numbers, and confirms they show on the phone.
-- Phone checks of live writes: the composer save, contact and lease-note saves, and Realtime catch-up after the phone was suspended.
-- Never seen in the signed-in app: UI/UX Phases 1–5, Vault codes, recurrence changes, Bulk Add repeats, the Today-header density check at 375px, and RC Lina's two self-checks (Inbox scoping, comment-notification targeting).
-- Netlify build status of the newest commits is checked by fetching the public bundle, not from the dashboard.
+**First thing next session:** read the `ensure-upcoming-recurrences` runs in `cron.job_run_details` (`supabase db query --linked`, read-only) and confirm 21:05 UTC and later succeeded.
 
-**Next work Codex had queued:** missed-change catch-up verification, Vault folder controls, owner project scheduling, then the shared-viewer "Add to timeline" decision (viewers still see the button but the owner-only rule rejects it) and wider access and notification checks. Call/text logging stays deferred.
+**Still needs a human or a real device:**
+- Phone: add a real cleaning from a unit's What's happening; use Schedule visit on a turnover task and check the "book the cleaner" step ticks.
+- Sign in as the house manager and check the Schedule tab shows the cleaning and move-outs.
+- Financials: any tenant who checked in on the 29th-31st has new charge dates; any "paid in advance" mark saved against an old rolled-over date needs re-marking.
+- Export a Vault CSV and check a password starting with `=`, `+`, `-` or `@` is unchanged; try `12/31 – test` in Bulk Add.
+- Dallas Property Finder on a phone (map, Excel/PDF), Google Contacts import result review on a phone, phone checks of live writes and Realtime catch-up.
+- Never seen in the signed-in app: UI/UX Phases 1-5, Vault codes, recurrence changes, Bulk Add repeats, RC Lina's two self-checks.
 
-**Working rules from Aaron (still in force):** show options or a mockup and wait for his pick before building, committing or pushing design or behaviour choices; he authorises publication phase by phase; he runs production SQL and enters credentials himself; never message other people on his behalf; Edge Functions deploy separately from the frontend (none changed since Oct 2). Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+**Left on purpose:** adding `set search_path` to about 20 older security definer functions (optional, low risk, would be an untested production change). Call/text logging stays deferred.
+
+**Working rules from Aaron (still in force):** show options or a mockup and wait for his pick before building, committing or pushing design or behaviour choices; commit and push only when he says so; he runs production SQL and enters credentials himself, except that from Oct 10 Claude runs read-only database checks and Edge Function deploys (after a commit/push request) and runs a given SQL file only after he says "run it" for it; never message other people on his behalf; at the end of a stretch of work, give him a numbered checklist of what only he can check. Edge Functions deploy separately from the frontend. Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 
 ### October 7 Rentals pill spacing — pushed Oct 8 as `2cbd9de`
 
