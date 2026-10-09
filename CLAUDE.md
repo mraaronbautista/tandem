@@ -34,7 +34,7 @@ A shared task board that started as exactly two named people — Ada and Aaron �
 
 ## Architecture
 
-**Stack:** React 19 + Vite, no router (despite `react-router-dom` being a listed dependency — it's unused; `App.jsx` conditionally renders `Login`, `TaskBoard`, `StaffClockView`, or a blocked screen based on session state and `useAccountRole()` — see Property manager / staff time tracking below). Backend is Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) on the free tier, accessed directly from the client via `src/lib/supabaseClient.js` — there is no separate API server, except for the Edge Functions described below.
+**Stack:** React 19 + Vite, no router (the unused `react-router-dom` dependency was removed Oct 10, 2026; `App.jsx` conditionally renders `Login`, `TaskBoard`, `StaffClockView`, or a blocked screen based on session state and `useAccountRole()` — see Property manager / staff time tracking below). Backend is Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) on the free tier, accessed directly from the client via `src/lib/supabaseClient.js` — there is no separate API server, except for the Edge Functions described below.
 
 **Icons:** `lucide-react` (outline-style SVG icons, `currentColor`-based so they inherit whatever text color the surrounding element already sets) is the icon system app-wide — nav, header actions, task-row badges, settings, staff clock in/out, everything. `src/components/icons.jsx` (a handful of hand-inlined SVGs matching the same visual recipe — 24×24 viewBox, `stroke="currentColor"`, `strokeWidth 2`, round caps/joins) was TaskRow.jsx/TaskClarifications.jsx's icon source before this and is now fully unused — left in place rather than deleted, matching this codebase's own don't-delete-until-verified convention for migration leftovers. Emoji still appear throughout this doc and in a few genuinely textual spots in the app itself (`HowToGuide.jsx`'s prose, push-notification message bodies built as plain strings for `manual-notify`) — those aren't rendered icon elements and were deliberately left alone; an emoji mentioned elsewhere in this file is describing a concept, not literal current markup.
 
@@ -513,6 +513,8 @@ The rule, so each new delete path picks the same tier instead of inventing its o
 `tone: 'neutral'` gives the gold (non-red) confirm button for confirmations that are not data loss (removing a folder tag, discarding an unsaved form, "Mark all as no reply needed"). A recurring task's delete keeps its own scope dialog in `TaskRow.jsx` ("Only this task" / "This and future tasks"), which already follows the same shape.
 
 ## Deployment
+
+`public/_headers` (Netlify, copied to `dist/`) sends `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`, `nosniff` and a referrer policy on every response, so no other site can frame Tandem (clickjacking; audit finding 6). It governs who may frame Tandem, not what Tandem frames (the external-tool screen still works). `supabase/revoke-generate-month-occurrences.sql` removes direct API access to `generate_month_occurrences()` (audit finding 3): every real caller is a security definer function or the cron job and keeps working (checked on a real Postgres).
 
 Netlify (static frontend, env vars in Netlify's dashboard) + Supabase (schema and Edge Functions both applied by hand — schema via the SQL editor, functions via `supabase functions deploy` — neither is wired into the Netlify build). See README.md for the step-by-step.
 

@@ -1,0 +1,12 @@
+# Netlify response headers for every page and file.
+#
+# Stops other websites from putting Tandem inside a frame (a page that
+# overlays invisible buttons on top of a signed-in Tandem and tricks someone
+# into clicking them). Tandem opens outside tools in its own frame; that is
+# unaffected, since these headers govern who may frame Tandem, not what
+# Tandem frames.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

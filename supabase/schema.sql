@@ -4475,3 +4475,6 @@ end $$;
 
 revoke all on function public.staff_schedule(date, integer) from public, anon;
 grant execute on function public.staff_schedule(date, integer) to authenticated;
+
+-- Audit finding 3: nobody but the database itself calls the generator (revoke-generate-month-occurrences.sql).
+revoke all on function public.generate_month_occurrences(uuid, date) from public, anon, authenticated;
