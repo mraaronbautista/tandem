@@ -7,6 +7,7 @@ import AssigneePicker from './AssigneePicker'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
 import TotpCode from './TotpCode'
+import { webLinkHref } from '../lib/safeUrl'
 
 // View-then-act, same as RentalBookingDetail.jsx — tapping an entry in
 // the list shows details first, deletion is an explicit button here, not
@@ -202,9 +203,15 @@ export default function VaultEntryDetail({
         {entry.url && (
           <div className="flex items-center gap-2 text-sm">
             <span className="w-[70px] flex-none text-[13px] opacity-80">URL</span>
-            <a href={entry.url} target="_blank" rel="noreferrer" className="flex-1 break-all text-text-h">
-              {entry.url}
-            </a>
+            {webLinkHref(entry.url) ? (
+              <a href={webLinkHref(entry.url)} target="_blank" rel="noreferrer" className="flex-1 break-all text-text-h">
+                {entry.url}
+              </a>
+            ) : (
+              // Not a web address (for example a javascript: or mailto: value),
+              // so it is shown as text and never made clickable.
+              <span className="flex-1 break-all text-text-h">{entry.url}</span>
+            )}
           </div>
         )}
 

@@ -3,18 +3,17 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { totpToUri } from '../lib/totp'
+import { formulaSafeText } from '../lib/csvSafe'
 
 const CONFIRM_WORD = 'EXPORT'
 
-// A value starting with =/+/-/@ is interpreted as a formula by Excel/
-// Sheets on open, not literal text — on the one export in this app that's
-// explicitly every password in plaintext, that's a real (if narrow)
-// injection risk if any stored field ever starts with one of these.
-// Prefixing a leading apostrophe forces spreadsheet apps to treat the
-// cell as literal text while staying invisible in any plain-text viewer.
-function csvEscape(value) {
-  let s = String(value ?? '')
-  if (/^[=+\-@]/.test(s)) s = `'${s}`
+// Formula protection lives in lib/csvSafe.js. Credentials (username, login
+// method, password, authenticator link) are written exactly as stored: this
+// file exists so they can be moved to another password manager, and an
+// apostrophe added to a password that starts with = + - or @ would silently
+// break it there. Labels, URLs and notes still get the protection.
+function csvEscape(value, { exact = false } = {}) {
+  const s = formulaSafeText(value, { exact })
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
   return s
 }
@@ -24,9 +23,15 @@ function buildCsv(entries) {
   const rows = entries.map((e) =>
     // A standard otpauth:// link: any authenticator app can import it, so
     // exporting never strands a one-time-code key inside Tandem.
-    [e.label, e.username, e.loginMethod, e.password, e.url, e.notes, e.totp ? totpToUri(e.totp, { label: e.label, issuer: e.label }) : '']
-      .map(csvEscape)
-      .join(','),
+    [
+      csvEscape(e.label),
+      csvEscape(e.username, { exact: true }),
+      csvEscape(e.loginMethod, { exact: true }),
+      csvEscape(e.password, { exact: true }),
+      csvEscape(e.url),
+      csvEscape(e.notes),
+      csvEscape(e.totp ? totpToUri(e.totp, { label: e.label, issuer: e.label }) : '', { exact: true }),
+    ].join(','),
   )
   return [header.join(','), ...rows].join('\n')
 }

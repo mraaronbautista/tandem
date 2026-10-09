@@ -2,6 +2,7 @@ import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { computeEntryPay } from '../lib/staff'
+import { formulaSafeText } from '../lib/csvSafe'
 
 // Same csvEscape/buildCsv/Blob-download mechanics as VaultExportForm.jsx
 // — duplicated locally rather than extracted to a shared module,
@@ -13,8 +14,7 @@ import { computeEntryPay } from '../lib/staff'
 // export leaks raw passwords; names/hours/pay don't carry that same
 // risk class, so a plain export button is proportionate.
 function csvEscape(value) {
-  let s = String(value ?? '')
-  if (/^[=+\-@]/.test(s)) s = `'${s}`
+  const s = formulaSafeText(value)
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
   return s
 }

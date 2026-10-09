@@ -1,5 +1,7 @@
 import { supabase } from './supabaseClient'
 import { fetchAccessibleVaults, fetchVaultMeta, unlockVault, decryptJSON } from './vault'
+import { totpToUri } from './totp'
+import { formulaSafeText } from './csvSafe'
 
 // Only user records: no task tables, credentials, push subscriptions or access grants.
 export const EXPORT_GROUPS = {
@@ -106,10 +108,11 @@ export async function collectVault(passwords) {
     const encrypted = await readPages('vault_entries', 'id,ciphertext,iv,created_at,updated_at', ['id'], supabase, ['vault_id', vault.id])
     for (const row of encrypted) {
       const entry = await decryptJSON(key, row.ciphertext, row.iv)
-      rows.push({ vault: vault.name, id: row.id, folder: entry.folder || '', label: entry.label || '', username: entry.username || '', login_method: entry.loginMethod || '', password: entry.password || '', url: entry.url || '', notes: entry.notes || '', authenticator: entry.totp || '', created_at: row.created_at, updated_at: row.updated_at })
+      rows.push({ vault: vault.name, id: row.id, folder: entry.folder || '', label: entry.label || '', username: entry.username || '', login_method: entry.loginMethod || '', password: entry.password || '', url: entry.url || '', notes: entry.notes || '', authenticator: entry.totp?.secret ? totpToUri(entry.totp, { label: entry.label || 'Tandem', issuer: entry.label || '' }) : '', created_at: row.created_at, updated_at: row.updated_at })
     }
   }
-  return { name: 'Vault', rows, columns: ['vault','id','folder','label','username','login_method','password','url','notes','authenticator','created_at','updated_at'] }
+  // Credentials come out exactly as stored in the CSV (see csvSafe.js).
+  return { name: 'Vault', rows, columns: ['vault','id','folder','label','username','login_method','password','url','notes','authenticator','created_at','updated_at'], exactColumns: ['username', 'login_method', 'password', 'authenticator'] }
 }
 export function cellValue(value) {
   const result = value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : value
@@ -117,12 +120,15 @@ export function cellValue(value) {
   return result
 }
 export function csvText(sheet) {
-  const escape = value => {
-    let text = String(cellValue(value))
-    if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`
+  const exact = new Set(sheet.exactColumns || [])
+  const escape = (value, column) => {
+    const text = formulaSafeText(cellValue(value), { exact: exact.has(column) })
     return `"${text.replaceAll('"', '""')}"`
   }
-  return '\uFEFF' + [sheet.columns, ...sheet.rows.map(r => sheet.columns.map(c => r[c]))].map(row => row.map(escape).join(',')).join('\r\n')
+  // The header row is plain column names, never user data.
+  const header = sheet.columns.map(c => `"${c.replaceAll('"', '""')}"`).join(',')
+  const body = sheet.rows.map(r => sheet.columns.map(c => escape(r[c], c)).join(','))
+  return '\uFEFF' + [header, ...body].join('\r\n')
 }
 export async function workbookBlob(sheets) {
   const { default: writeXlsx } = await import('write-excel-file/universal')
