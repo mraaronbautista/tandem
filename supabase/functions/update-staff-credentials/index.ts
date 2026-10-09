@@ -14,6 +14,7 @@
 // those two — without it, --no-verify-jwt would let anyone with a network
 // path to this URL overwrite any account's login, staff or member.
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
+import { featureAllowed, STAFF_ACCESS_DENIED } from '../_shared/permissions.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -30,8 +31,11 @@ Deno.serve(async (req) => {
   } = await supabaseUser.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401, headers: corsHeaders })
 
-  const { data: memberRow } = await supabaseAdmin.from('members').select('id').eq('id', user.id).maybeSingle()
+  const { data: memberRow } = await supabaseAdmin.from('members').select('id, permissions').eq('id', user.id).maybeSingle()
   if (!memberRow) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
+  // Being a member is not enough: this function uses the service-role key, so
+  // row-level security cannot stop a member whose Staff permission is off.
+  if (!featureAllowed(memberRow, 'staff')) return new Response(STAFF_ACCESS_DENIED, { status: 403, headers: corsHeaders })
 
   const { staffId, newUsername, newPassword } = await req.json()
   const cleanUsername = newUsername ? String(newUsername).trim().toLowerCase() : null

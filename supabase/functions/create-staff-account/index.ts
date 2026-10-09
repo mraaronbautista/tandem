@@ -17,6 +17,7 @@
 // their choosing. This function is the one place in the app where getting
 // that check wrong has real consequences beyond a UX bug.
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
+import { featureAllowed, STAFF_ACCESS_DENIED } from '../_shared/permissions.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -36,8 +37,11 @@ Deno.serve(async (req) => {
   } = await supabaseUser.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401, headers: corsHeaders })
 
-  const { data: memberRow } = await supabaseAdmin.from('members').select('id').eq('id', user.id).maybeSingle()
+  const { data: memberRow } = await supabaseAdmin.from('members').select('id, permissions').eq('id', user.id).maybeSingle()
   if (!memberRow) return new Response('Forbidden — members only', { status: 403, headers: corsHeaders })
+  // Being a member is not enough: this function uses the service-role key, so
+  // row-level security cannot stop a member whose Staff permission is off.
+  if (!featureAllowed(memberRow, 'staff')) return new Response(STAFF_ACCESS_DENIED, { status: 403, headers: corsHeaders })
 
   const { username, password, displayName, hourlyRate, emergencyRate, payrollCadence, jobDescription } = await req.json()
   const cleanUsername = String(username || '').trim().toLowerCase()
