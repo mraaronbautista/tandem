@@ -120,24 +120,64 @@ function parseDateHeader(rawLine) {
   }
 
   let m = line.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`
+  if (m) return realDate(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+
+  // 12/31 or 12/31/2026 (or 12/31/26): month first, the US way. With no year
+  // it follows the same "this year, or next once it is long past" rule as
+  // "Aug 21" below.
+  m = line.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?$/)
+  if (m) {
+    const year = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : null
+    return resolveMonthDay(Number(m[1]) - 1, Number(m[2]), year)
+  }
 
   m = line.match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?$/)
   if (!m) return null
   const monthIdx = MONTH_NAMES.findIndex((mo) => m[1].toLowerCase().startsWith(mo))
   if (monthIdx === -1) return null
-  const day = Number(m[2])
+  return resolveMonthDay(monthIdx, Number(m[2]), m[3] ? Number(m[3]) : null)
+}
+
+// 'YYYY-MM-DD' for a real calendar date, null for one that does not exist
+// (Feb 30, month 13, day 0).
+function realDate(year, monthIdx, day) {
+  const candidate = new Date(year, monthIdx, day)
+  if (candidate.getFullYear() !== year || candidate.getMonth() !== monthIdx || candidate.getDate() !== day) return null
+  return `${year}-${pad(monthIdx + 1)}-${pad(day)}`
+}
+
+// A month and day, with the year optional: no year means this year, or next
+// year once that date is more than YEAR_ROLLOVER_GRACE_DAYS in the past.
+function resolveMonthDay(monthIdx, day, explicitYear) {
   const today = new Date()
   const todayAtMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  let year = m[3] ? Number(m[3]) : today.getFullYear()
-  let candidate = new Date(year, monthIdx, day)
-  const daysPast = (todayAtMidnight - candidate) / (24 * 60 * 60 * 1000)
-  if (!m[3] && daysPast > YEAR_ROLLOVER_GRACE_DAYS) {
-    year += 1
-    candidate = new Date(year, monthIdx, day)
+  let year = explicitYear ?? today.getFullYear()
+  if (explicitYear == null) {
+    const daysPast = (todayAtMidnight - new Date(year, monthIdx, day)) / (24 * 60 * 60 * 1000)
+    if (daysPast > YEAR_ROLLOVER_GRACE_DAYS) year += 1
   }
-  if (candidate.getMonth() !== monthIdx || candidate.getDate() !== day) return null // e.g. "Feb 30"
-  return `${year}-${pad(monthIdx + 1)}-${pad(day)}`
+  return realDate(year, monthIdx, day)
+}
+
+// True for text that is clearly MEANT as a date, whether or not it is a real
+// one: 12/31, 31/12, 2026-02-30, Feb 30, Aug 5 14:00. Used to tell "a note
+// that happens to come before the dash" (kept as the task title, as always)
+// from "a date that does not exist" (an error, never silently dropped). Must
+// match the WHOLE phrase, so "3/4 of the units" and "Aug 2026 invoices" stay
+// ordinary notes.
+function looksLikeDatePhrase(text) {
+  const t = text.trim().replace(/\s*\([^)]*\)\s*$/, '').replace(/:\s*$/, '')
+  if (/^\d{1,2}\/\d{1,2}(?:\/(?:\d{2}|\d{4}))?(?:\s+\d{1,2}:\d{2})?$/.test(t)) return true
+  if (/^\d{4}-\d{1,2}-\d{1,2}(?:\s+\d{1,2}:\d{2})?$/.test(t)) return true
+  const m = t.match(/^([A-Za-z]{3,9})\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?(?:\s+\d{1,2}:\d{2})?$/)
+  return Boolean(m) && MONTH_NAMES.some((mo) => m[1].toLowerCase().startsWith(mo))
+}
+
+function notRealDateMessage(text) {
+  const t = text.trim()
+  if (/^\d{1,2}\/\d{1,2}/.test(t)) return `"${t}" is not a real date. Numbers are read as month/day, like 12/31.`
+  if (/:\d{2}$/.test(t)) return `"${t}": add am or pm to the time (for example 2pm or 9:30am).`
+  return `"${t}" is not a real date.`
 }
 
 // '4', '4:30' + 'a'/'p' (from 'a'/'am'/'a.m.'/'p'/'pm'/'p.m.' — see
@@ -173,6 +213,16 @@ function splitDateAndTime(prefix) {
   )
   if (!m) return { datePart: prefix, due_time: null, duration_minutes: null }
   const [, datePart, startNum, startAmPm, endNum, endAmPm] = m
+  // With am/pm the hour is 1-12 and the minutes 0-59; "25pm" or "9:75am" is
+  // not a time. Reported to the caller (which flags it only when the date in
+  // front of it is real) instead of being wrapped into some other time.
+  const badClock = (n) => {
+    const [h, min = '0'] = n.split(':')
+    return Number(h) < 1 || Number(h) > 12 || Number(min) > 59
+  }
+  if (badClock(startNum) || (endNum && badClock(endNum))) {
+    return { datePart, due_time: null, duration_minutes: null, invalidTime: true }
+  }
   const startMin = toMinutes(startNum, startAmPm)
   let duration_minutes = null
   if (endNum) {
@@ -426,6 +476,12 @@ export function parseBulkTasks(text) {
       currentDate = dateHeader
       return
     }
+    // A line that is only a date-shaped phrase but not a real date (Feb 30,
+    // 31/12) is a typo to report, not a heading to skip.
+    if (looksLikeDatePhrase(line)) {
+      errors.push({ line: i + 1, text: raw.trim(), message: notRealDateMessage(line) })
+      return
+    }
 
     const shift = parseShiftLine(line)
     if (shift) {
@@ -450,8 +506,24 @@ export function parseBulkTasks(text) {
         return
       }
       const { rest: prefixNoZone, due_timezone } = splitTrailingZone(prefixNoRepeat)
-      const { datePart, due_time, duration_minutes } = splitDateAndTime(prefixNoZone)
+      const { datePart, due_time, duration_minutes, invalidTime } = splitDateAndTime(prefixNoZone)
       const date = parseDateHeader(datePart)
+      // Something written as a date that is not a real one is reported rather
+      // than silently becoming a dateless task titled with the whole line.
+      // (Ordinary notes before the dash, like "If Ingrid unavailable" or
+      // "3/4 of the units", are not date-shaped and keep working as before.)
+      if (!date && !isNoDateMarker(datePart) && looksLikeDatePhrase(datePart)) {
+        errors.push({ line: i + 1, text: raw.trim(), message: notRealDateMessage(datePart) })
+        return
+      }
+      if (date && invalidTime) {
+        errors.push({
+          line: i + 1,
+          text: raw.trim(),
+          message: 'That time is not valid. Use 1 to 12 with am or pm, like 2pm or 9:30am.',
+        })
+        return
+      }
       const resolved = date || isNoDateMarker(datePart)
       // A repeat needs a date to repeat from. Without one the task is still
       // created, just not repeating, and the preview says so (same rule the
