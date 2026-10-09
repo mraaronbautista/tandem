@@ -119,9 +119,8 @@ export default function RentalFinancials({
   // Tracks bookingIds alongside the raw count, not just a running total —
   // ×2 in one month can come from two different tenants (a checkout and
   // the next tenant's move-in both landing in the same calendar month)
-  // or, rarely, from one tenant's own cycles (a check-in day near a
-  // month's end can roll two of the SAME booking's cycles into one
-  // calendar month — see addCalendarMonths' day-31 rollover). Those read
+  // or, rarely, from one tenant's own charges (a charge on the move-in
+  // day plus a cycle landing in the same calendar month). Those read
   // very differently to a person scanning this list, so the Units row
   // below only calls out "N tenants" when it's actually more than one
   // booking, rather than always implying a double payment from the same

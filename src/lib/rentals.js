@@ -51,15 +51,16 @@ export function monthRangeStrings(monthDate) {
 // which drifts the billing day earlier every cycle it crosses a
 // shorter month (Jan 30 + 30 days lands on Mar 1, not Feb 30). Always
 // computed from the ORIGINAL date, not the previous cycle's result, so
-// a short month's rollover (see chargeDatesForBooking below) can't
-// compound into the next cycle too. JS's own month-overflow handling
-// covers the one case with no clean answer — a check-in on the 31st
-// hitting a 30-day month — by rolling into early the following month,
-// same as most billing systems do when a due day doesn't exist that
-// month.
+// a short month can't compound into the next cycle. When the day does
+// not exist in the target month (a check-in on the 29th, 30th or 31st),
+// the charge lands on that month's LAST day instead: Jan 31 bills
+// Feb 28, Mar 31, Apr 30, May 31, Jun 30. (JS's own overflow used to
+// roll such a date into the next month, which skipped a month and
+// double-billed another; fixed Oct 10, 2026, audit finding 10.)
 function addCalendarMonths(dateStr, months) {
   const [y, m, d] = dateStr.split('-').map(Number)
-  const dt = new Date(y, m - 1 + months, d)
+  const lastDayOfTargetMonth = new Date(y, m - 1 + months + 1, 0).getDate()
+  const dt = new Date(y, m - 1 + months, Math.min(d, lastDayOfTargetMonth))
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
 }
 

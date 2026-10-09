@@ -47,10 +47,27 @@ function pad(n: number) {
 // addCalendarMonths in src/lib/rentals.js — duplicated rather than
 // shared, since this Edge Function can't import from the frontend's src/
 // (same reasoning _shared/notify.ts already gives for re-deriving the
-// who/display_name mapping).
+// who/display_name mapping). A day that does not exist in the target
+// month (the 29th-31st) lands on that month's last day, so a Jan 31
+// check-in is billed Feb 28, Mar 31, Apr 30 (audit finding 10).
 function addCalendarMonths(dateStr: string, months: number): string {
   const [y, m, d] = dateStr.split('-').map(Number)
-  const dt = new Date(y, m - 1 + months, d)
+  const lastDayOfTargetMonth = new Date(y, m - 1 + months + 1, 0).getDate()
+  const dt = new Date(y, m - 1 + months, Math.min(d, lastDayOfTargetMonth))
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+}
+
+// The calendar date ('YYYY-MM-DD') in Central time at the given instant.
+// 'en-CA' formats as year-month-day.
+const CENTRAL_TIMEZONE = 'America/Chicago'
+function centralDateStr(at: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: CENTRAL_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(at)
+}
+
+// Calendar arithmetic on a bare date, with no clock or timezone involved.
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + days)
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
 }
 
@@ -162,11 +179,11 @@ Deno.serve(async (req) => {
 
   // Plain calendar dates (Postgres `date` columns, no time-of-day or
   // timezone of their own) — matches how src/lib/rentals.js treats every
-  // rental date as a bare 'YYYY-MM-DD' string throughout, with no
-  // per-viewer timezone conversion anywhere in that module either.
-  // "Today" here is this function's own server clock, not adjusted for
-  // either member's local timezone.
-  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  // rental date as a bare 'YYYY-MM-DD' string throughout. "Today" is the
+  // calendar date in Central time (America/Chicago), not this server's UTC
+  // clock: by evening Central it is already "tomorrow" in UTC, so "Rent due
+  // today" used to arrive the evening before (audit finding 11).
+  const todayStr = centralDateStr(now)
 
   const { data: activeBookings } = await supabaseAdmin
     .from('rental_bookings')
@@ -195,8 +212,7 @@ Deno.serve(async (req) => {
   // turnover_reminder_sent_at), unlike the recurring rent-due check above,
   // since a lease only has one final month and one move-out, not a
   // repeating monthly cycle.
-  const sevenDaysOut = new Date(now.getTime() + 7 * 24 * 60 * 60_000)
-  const sevenDaysOutStr = `${sevenDaysOut.getFullYear()}-${pad(sevenDaysOut.getMonth() + 1)}-${pad(sevenDaysOut.getDate())}`
+  const sevenDaysOutStr = addDays(todayStr, 7)
 
   const { data: longTermBookings } = await supabaseAdmin
     .from('rental_bookings')
