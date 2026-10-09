@@ -723,7 +723,10 @@ returns trigger as $$
 begin
   perform net.http_post(
     url := 'https://qizvsymlntbukuhypkxh.supabase.co/functions/v1/notify-task-events',
-    headers := '{"Content-Type": "application/json"}'::jsonb,
+    -- x-notify-secret: the function refuses callers without it (see
+    -- supabase/set-notify-secret.sql). Keep the real value out of git: this
+    -- placeholder is replaced by hand when the SQL is run.
+    headers := '{"Content-Type": "application/json", "x-notify-secret": "REPLACE-WITH-NOTIFY-SECRET"}'::jsonb,
     body := jsonb_build_object(
       'type', tg_op,
       'table', 'tasks',

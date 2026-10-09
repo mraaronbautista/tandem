@@ -21,10 +21,19 @@
 //     single-owner task can (this webhook has no caller identity, only
 //     assignee_ids, and no one assignee "already knows" more than
 //     another for a shared task), so it uses generic wording instead.
-import { fetchAllMembers, notifyMember } from '../_shared/notify.ts'
+import { fetchAllMembers, notifyMember, rejectUnlessNotifySecret } from '../_shared/notify.ts'
 
 Deno.serve(async (req) => {
-  const payload = await req.json()
+  // Only the database trigger (supabase/set-notify-secret.sql) may call this.
+  const denied = rejectUnlessNotifySecret(req)
+  if (denied) return denied
+
+  let payload
+  try {
+    payload = await req.json()
+  } catch {
+    return new Response('Bad request', { status: 400 })
+  }
   const allMembers = await fetchAllMembers()
 
   if (payload.type === 'INSERT') {
@@ -38,7 +47,7 @@ Deno.serve(async (req) => {
   if (payload.type === 'UPDATE') {
     const task = payload.record
     const previous = payload.old_record
-    if (previous.status !== 'done' && task.status === 'done') {
+    if (previous?.status !== 'done' && task.status === 'done') {
       const assigneeIds: string[] = task.assignee_ids || []
       const others = allMembers.filter((m) => m.is_admin && !assigneeIds.includes(m.id))
       if (assigneeIds.length === 1) {

@@ -19,6 +19,35 @@ webpush.setVapidDetails(
 
 export { supabaseAdmin }
 
+// Shared-secret check for the two functions only the database calls
+// (notify-task-events from a trigger, notify-reminders from a scheduled
+// job). Both are deployed with --no-verify-jwt and their address is not a
+// secret, so without this anyone could POST a made-up payload and push text
+// of their choosing to every admin. The database sends the same value in an
+// `x-notify-secret` header; the function refuses everything else. Fails
+// closed: if NOTIFY_SECRET was never set, every request is refused (and the
+// log says why), rather than silently accepting everyone.
+function sameText(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a)
+  const y = new TextEncoder().encode(b)
+  // Always walk the longer length, so timing does not reveal how much matched.
+  let diff = x.length ^ y.length
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0)
+  return diff === 0
+}
+
+export function rejectUnlessNotifySecret(req: Request): Response | null {
+  const expected = Deno.env.get('NOTIFY_SECRET')
+  if (!expected) {
+    console.error('NOTIFY_SECRET is not set; refusing the request. Set it with `supabase secrets set NOTIFY_SECRET=...`.')
+    return new Response('Unauthorized', { status: 401 })
+  }
+  if (!sameText(req.headers.get('x-notify-secret') ?? '', expected)) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+  return null
+}
+
 // Every real member — no more hardcoded Ada/Aaron extraction now that a
 // task's own assignee_ids already carries real member ids directly (no
 // resolution step needed there any more). `permissions` included so

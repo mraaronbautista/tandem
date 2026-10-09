@@ -33,7 +33,7 @@
 // ids) — none of these are tied to a specific assignee the way a task
 // is, and Rentals is mutually visible to every member who has access to
 // it, not necessarily every member in the app any more.
-import { fetchAllMembers, memberHasPermission, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
+import { fetchAllMembers, memberHasPermission, notifyMember, rejectUnlessNotifySecret, supabaseAdmin } from '../_shared/notify.ts'
 
 const REMINDER_WINDOW_MINUTES = 15
 const OVERDUE_NUDGE_DAYS = 3
@@ -99,7 +99,11 @@ function monthIndex(dateStr: string): number {
   return y * 12 + (m - 1)
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  // Only the scheduled job (which sends x-notify-secret) may run this.
+  const denied = rejectUnlessNotifySecret(req)
+  if (denied) return denied
+
   const allMembers = await fetchAllMembers()
   const rentalsMembers = allMembers.filter((m) => memberHasPermission(m, 'rentals'))
 

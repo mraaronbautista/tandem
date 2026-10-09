@@ -298,3 +298,29 @@ Status: prepared locally, uncommitted, unpushed and unpublished. Existing unrela
 ### Export publication — October 6, 2026
 
 Aaron’s “perfect” answered the concrete commit/publish request. Export feature committed as `4801425` and pushed to origin/main. Public Netlify HTML serves `/assets/index-BjxgKnvs.js`; fetched bundle confirms Export records, all-record XLSX download, contact coverage and Vault confirmation controls. Public deployment confirmed at asset level; production-site download/Vault unlock not exercised. Local checks and signed-in preparation passed as documented above. No SQL, production writes or access changes. Call/text logging remains deferred.
+
+## Unit activity, scheduled visits and the house manager's Schedule tab
+
+**Status:** Approved by Aaron on Oct 10, 2026 (design picks below); not started. Queued behind the notification fix (Phase 1) and the Staff-permission check (Phase 2) from the Oct 8 audit, because a staff login will start reading tenant first names.
+
+### Why
+The house manager (a staff account) needs to know when tenants move in or out and when cleaners and other vendors are coming. Today a staff login can read no rental data at all, and Tandem has no record of a cleaner or vendor visit: the automatic turnover task only reminds Aaron to book one, and tasks are hidden from staff. Aaron's own workflow: the reminder task arrives about a week before a move-in/out, he books a cleaner, then ticks the task.
+
+### Decisions (Aaron's picks)
+1. **Tenant detail shown to staff:** first name and last initial only, plus unit and dates. No phone, rent, notes or payments.
+2. **Visits list:** members record visits in Tandem; entry must be quick on a phone ("easy to add on the go"). The visit type is free text with quick suggestions (Cleaning, Repair, Inspection) and remembers what has been used, so any type can be typed without a settings screen. Fields: date, time, unit or location, who is coming (picked from existing contacts, or typed), one-line note.
+3. **Units staff can see:** every unit. Units not yet linked to a location show under "No location" until set up.
+4. **Vendor contacts for staff:** name, trade and phone for vendor/cleaner contacts only; never tenant contacts.
+5. **Where it opens (Rentals):** a "What's happening" button on each unit card with a small "N coming up" count. Tapping the card itself keeps switching the calendar to that unit.
+6. **Visit status:** a visit is scheduled; it can be marked done or deleted. Done visits move to a collapsed "Past visits" fold.
+7. **Whole-building work** (for example a gate latch) can be attached to a location instead of one unit and shows on every unit at that location.
+8. **Link to the turnover task (second step, approved):** a "Schedule visit" action from the turnover task prefills the unit and ticks the "book the cleaner" checklist item. Built after the basics work.
+
+### Shape
+- **Member side:** the sheet lists a unit's story in date order (move-outs, move-ins, visits), a "+ Schedule a visit" button, a "Past visits" fold, and a "No cleaning booked yet" nudge under Available only when a move-out is coming with no cleaning scheduled.
+- **Staff side:** a read-only Schedule tab next to Clock, grouped by day and filterable by location. It reads through one narrow `security definer` function that returns only the projection above; staff never touch `rental_*` tables, tasks or the Vault.
+- **SQL (run by hand by Aaron):** a `rental_visits` table (RLS: member plus Rentals permission, and no staff access), a read-only staff schedule function with explicit staff checks and fixed search path, publication add for Realtime. Nothing is applied by an AI session.
+- **Checks planned:** permissions tested on a real Postgres (staff can call only the function, cannot read tables, cannot see tenant contacts or money; members without Rentals cannot see visits); mounted phone-width checks of the sheet, the visit form and the Schedule tab; lint and build.
+
+### Order
+1. Phase 1: notification secret (in progress). 2. Phase 2: Staff-permission check on the two staff account functions. 3. This feature, member side first, then the staff Schedule tab, then the turnover-task link.
