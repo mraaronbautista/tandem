@@ -34,6 +34,7 @@
 // is, and Rentals is mutually visible to every member who has access to
 // it, not necessarily every member in the app any more.
 import { fetchAllMembers, memberHasPermission, notifyMember, rejectUnlessNotifySecret, supabaseAdmin } from '../_shared/notify.ts'
+import { shouldRetryReminder } from '../_shared/delivery.ts'
 
 const REMINDER_WINDOW_MINUTES = 15
 const OVERDUE_NUDGE_DAYS = 3
@@ -99,6 +100,13 @@ function monthIndex(dateStr: string): number {
   return y * 12 + (m - 1)
 }
 
+// Records that a one-shot reminder went out. A failure here is logged: the
+// reminder would otherwise repeat on every run with nothing saying why.
+async function markSent(table: string, id: string, patch: Record<string, string>) {
+  const { error } = await supabaseAdmin.from(table).update(patch).eq('id', id)
+  if (error) console.error(`notify-reminders: could not mark ${table} ${id} as reminded: ${error.message}`)
+}
+
 Deno.serve(async (req) => {
   // Only the scheduled job (which sends x-notify-secret) may run this.
   const denied = rejectUnlessNotifySecret(req)
@@ -110,34 +118,46 @@ Deno.serve(async (req) => {
   const now = new Date()
   const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_MINUTES * 60_000)
 
-  const { data: dueSoon } = await supabaseAdmin
+  // A task sent to the board is archived on purpose ("not doing this now"),
+  // so neither task check may nag about it.
+  const { data: dueSoon, error: dueSoonError } = await supabaseAdmin
     .from('tasks')
     .select('*')
     .is('reminder_sent_at', null)
     .neq('status', 'done')
+    .eq('archived', false)
     .gte('due_date', now.toISOString())
     .lte('due_date', windowEnd.toISOString())
 
+  if (dueSoonError) console.error(`notify-reminders: could not load tasks due soon: ${dueSoonError.message}`)
+
   for (const task of dueSoon || []) {
     const targets: string[] = task.assignee_ids || []
-    await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Starting soon', body: task.title, url: '/' })))
-    await supabaseAdmin.from('tasks').update({ reminder_sent_at: new Date().toISOString() }).eq('id', task.id)
+    const results = await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Starting soon', body: task.title, url: '/' })))
+    // Nobody was reached and something temporary went wrong: leave it
+    // unmarked so the next run (every 5 minutes) tries again.
+    if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Starting soon" for task ${task.id}`); continue }
+    await markSent('tasks', task.id, { reminder_sent_at: new Date().toISOString() })
   }
 
   const overdueCutoff = new Date(now.getTime() - OVERDUE_NUDGE_DAYS * 24 * 60 * 60_000)
 
-  const { data: staleOverdue } = await supabaseAdmin
+  const { data: staleOverdue, error: staleOverdueError } = await supabaseAdmin
     .from('tasks')
     .select('*')
     .is('overdue_nudge_sent_at', null)
     .neq('status', 'done')
+    .eq('archived', false)
     .not('due_date', 'is', null)
     .lt('due_date', overdueCutoff.toISOString())
 
+  if (staleOverdueError) console.error(`notify-reminders: could not load overdue tasks: ${staleOverdueError.message}`)
+
   for (const task of staleOverdue || []) {
     const targets: string[] = task.assignee_ids || []
-    await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Still on your plate?', body: task.title, url: '/' })))
-    await supabaseAdmin.from('tasks').update({ overdue_nudge_sent_at: new Date().toISOString() }).eq('id', task.id)
+    const results = await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Still on your plate?', body: task.title, url: '/' })))
+    if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Still on your plate?" for task ${task.id}`); continue }
+    await markSent('tasks', task.id, { overdue_nudge_sent_at: new Date().toISOString() })
   }
 
   // Plain calendar dates (Postgres `date` columns, no time-of-day or
@@ -163,10 +183,11 @@ Deno.serve(async (req) => {
     const property = b.rental_properties
     const amount = property ? `$${Number(property.monthly_rent).toLocaleString()}` : ''
     const unitName = property?.unit_name || 'A unit'
-    await Promise.all(
+    const results = await Promise.all(
       rentalsMembers.map((m) => notifyMember(m.id, { title: 'Rent due today', body: `${unitName} — ${amount}`, url: '/' })),
     )
-    await supabaseAdmin.from('rental_bookings').update({ rent_reminder_sent_for: todayStr }).eq('id', b.id)
+    if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Rent due today" for booking ${b.id}`); continue }
+    await markSent('rental_bookings', b.id, { rent_reminder_sent_for: todayStr })
   }
 
   // Long-term lease reminders — see the file-top comment (checks 4 & 5).
@@ -197,13 +218,11 @@ Deno.serve(async (req) => {
     // check_out's exact date would not: see monthIndex's own comment).
     if (!b.last_month_reminder_sent_at && monthIndex(todayStr) >= monthIndex(b.check_out) - 1) {
       const body = `Their lease ends ${longDate(b.check_out)} — this is their final month.`
-      await Promise.all(
+      const results = await Promise.all(
         rentalsMembers.map((m) => notifyMember(m.id, { title: `${guest}'s last month at ${unitName}`, body, url: '/' })),
       )
-      await supabaseAdmin
-        .from('rental_bookings')
-        .update({ last_month_reminder_sent_at: new Date().toISOString() })
-        .eq('id', b.id)
+      if (shouldRetryReminder(results)) console.error(`notify-reminders: will retry "last month" for booking ${b.id}`)
+      else await markSent('rental_bookings', b.id, { last_month_reminder_sent_at: new Date().toISOString() })
     }
 
     // "Turnover in one week" — branches on whether a CONFIRMED booking
@@ -229,11 +248,9 @@ Deno.serve(async (req) => {
         ? `${guest} moves out ${shortDate(b.check_out)}, ${nextGuest} moves in ${shortDate(nextBooking.check_in)}. Confirm the turnover cleaning task is set.`
         : `${guest}'s last day is ${longDate(b.check_out)}. One week left to line up the next tenant.`
 
-      await Promise.all(rentalsMembers.map((m) => notifyMember(m.id, { title, body, url: '/' })))
-      await supabaseAdmin
-        .from('rental_bookings')
-        .update({ turnover_reminder_sent_at: new Date().toISOString() })
-        .eq('id', b.id)
+      const results = await Promise.all(rentalsMembers.map((m) => notifyMember(m.id, { title, body, url: '/' })))
+      if (shouldRetryReminder(results)) console.error(`notify-reminders: will retry "turnover" for booking ${b.id}`)
+      else await markSent('rental_bookings', b.id, { turnover_reminder_sent_at: new Date().toISOString() })
     }
   }
 

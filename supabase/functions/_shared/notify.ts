@@ -5,6 +5,7 @@
 // service role key to read across both).
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { isTransientPushFailure, type PushResult } from './delivery.ts'
 
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically
 // in every Edge Function's environment — only the VAPID keys need to be
@@ -73,34 +74,48 @@ export function memberHasPermission(member, feature) {
   return member?.permissions?.[feature] !== false
 }
 
-export async function notifyMember(memberId, payload) {
-  if (!memberId) return
-  const { data: subs } = await supabaseAdmin.from('push_subscriptions').select('*').eq('member_id', memberId)
-  if (!subs?.length) return
+// Returns how it went so a caller that must not lose a one-shot reminder
+// (notify-reminders) can leave it unmarked and try again: `delivered` is how
+// many devices accepted the push, `retry` is true when something temporary
+// went wrong (see isTransientPushFailure). Other callers ignore the result.
+export async function notifyMember(memberId, payload): Promise<PushResult> {
+  if (!memberId) return { delivered: 0, retry: false }
+  const { data: subs, error: subsError } = await supabaseAdmin.from('push_subscriptions').select('*').eq('member_id', memberId)
+  if (subsError) {
+    console.error(`notifyMember: could not read subscriptions for member ${memberId}: ${subsError.message}`)
+    return { delivered: 0, retry: true }
+  }
+  if (!subs?.length) return { delivered: 0, retry: false }
 
-  await Promise.all(
+  const outcomes = await Promise.all(
     subs.map(async (sub) => {
       const pushSubscription = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }
       try {
         await webpush.sendNotification(pushSubscription, JSON.stringify(payload))
+        return { delivered: 1, retry: false }
       } catch (err) {
         // 404/410 means the subscription is dead (browser data cleared,
         // app uninstalled, etc.) — drop it so we stop retrying forever.
         if (err.statusCode === 404 || err.statusCode === 410) {
           await supabaseAdmin.from('push_subscriptions').delete().eq('id', sub.id)
-        } else {
-          // Every other failure (a VAPID key mismatch, a malformed
-          // subscription, a push-service-side error) used to be caught
-          // and silently discarded here — the caller (manual-notify,
-          // notify-task-events) still returns 200 either way, since this
-          // whole call is fire-and-forget, so a real delivery failure had
-          // no trace anywhere. Logged now so it shows up in this
-          // function's own logs instead of vanishing.
-          console.error(
-            `notifyMember: push failed for subscription ${sub.id} (member ${memberId}): ${err.statusCode ?? '?'} ${err.body || err.message}`,
-          )
+          return { delivered: 0, retry: false }
         }
+        // Every other failure (a VAPID key mismatch, a malformed
+        // subscription, a push-service-side error) used to be caught
+        // and silently discarded here — the caller (manual-notify,
+        // notify-task-events) still returns 200 either way, since this
+        // whole call is fire-and-forget, so a real delivery failure had
+        // no trace anywhere. Logged now so it shows up in this
+        // function's own logs instead of vanishing.
+        console.error(
+          `notifyMember: push failed for subscription ${sub.id} (member ${memberId}): ${err.statusCode ?? err.code ?? '?'} ${err.body || err.message}`,
+        )
+        return { delivered: 0, retry: isTransientPushFailure(err) }
       }
     }),
   )
+  return {
+    delivered: outcomes.reduce((sum, o) => sum + o.delivered, 0),
+    retry: outcomes.some((o) => o.retry),
+  }
 }
