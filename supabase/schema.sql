@@ -4725,3 +4725,50 @@ revoke all on function public.staff_push_registered(text) from public, anon;
 grant execute on function public.staff_push_registered(text) to authenticated;
 
 
+
+-- ===== Reminders for the house manager (October 11, 2026; add-staff-reminders.sql) =====
+alter table public.rental_visits add column if not exists staff_reminder_sent_at timestamptz;
+alter table public.rental_bookings add column if not exists staff_moveout_reminder_sent_at timestamptz;
+alter table public.rental_bookings add column if not exists staff_movein_reminder_sent_at timestamptz;
+
+-- A visit that moves (date, time, unit or location) or comes back from Done
+-- gets a fresh reminder. Setting the mark itself changes none of these, so the
+-- job writing it does not clear it.
+create or replace function public.reset_staff_visit_reminder() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if new.visit_date is distinct from old.visit_date
+     or new.visit_time is distinct from old.visit_time
+     or new.property_id is distinct from old.property_id
+     or new.work_site_id is distinct from old.work_site_id
+     or (new.status = 'scheduled' and old.status is distinct from 'scheduled') then
+    new.staff_reminder_sent_at := null;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists rental_visit_reset_staff_reminder on public.rental_visits;
+create trigger rental_visit_reset_staff_reminder before update on public.rental_visits
+  for each row execute function public.reset_staff_visit_reminder();
+
+-- A move-out reminder is cleared when the check-out date, unit or status
+-- changes; a move-in reminder when the check-in date, unit or status changes.
+create or replace function public.reset_staff_booking_reminders() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if new.check_out is distinct from old.check_out
+     or new.property_id is distinct from old.property_id
+     or (new.status = 'confirmed' and old.status is distinct from 'confirmed') then
+    new.staff_moveout_reminder_sent_at := null;
+  end if;
+  if new.check_in is distinct from old.check_in
+     or new.property_id is distinct from old.property_id
+     or (new.status = 'confirmed' and old.status is distinct from 'confirmed') then
+    new.staff_movein_reminder_sent_at := null;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists rental_booking_reset_staff_reminders on public.rental_bookings;
+create trigger rental_booking_reset_staff_reminders before update on public.rental_bookings
+  for each row execute function public.reset_staff_booking_reminders();

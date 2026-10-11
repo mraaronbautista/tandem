@@ -25,6 +25,12 @@
 //    rather than relying on someone to notice a calendar they're not
 //    looking at.
 //
+// 6. Reminders for the house manager (a staff account): a visit starting in
+//    about an hour, a dated visit on its morning, and an evening-before
+//    digest of tomorrow's move-outs and move-ins. All the rules live in
+//    _shared/staffReminders.ts; this file only starts its reads with the
+//    others and runs it last, so a problem there never stops checks 1-5.
+//
 // (1) and (2) are symmetric regardless of who created the task —
 // reminders and nudges are about who the task belongs to (task.
 // assignee_ids, already real member ids, no resolution step needed),
@@ -33,8 +39,9 @@
 // ids) — none of these are tied to a specific assignee the way a task
 // is, and Rentals is mutually visible to every member who has access to
 // it, not necessarily every member in the app any more.
-import { fetchAllMembers, memberHasPermission, notifyMember, rejectUnlessNotifySecret, supabaseAdmin } from '../_shared/notify.ts'
+import { fetchAllMembers, memberHasPermission, notifyMember, notifyStaff, rejectUnlessNotifySecret, supabaseAdmin } from '../_shared/notify.ts'
 import { shouldRetryReminder } from '../_shared/delivery.ts'
+import { loadStaffReminderData, sendStaffReminders } from '../_shared/staffReminders.ts'
 
 const REMINDER_WINDOW_MINUTES = 15
 const OVERDUE_NUDGE_DAYS = 3
@@ -140,6 +147,13 @@ Deno.serve(async (req) => {
   // clock: by evening Central it is already "tomorrow" in UTC, so "Rent due
   // today" used to arrive the evening before (audit finding 11).
   const todayStr = centralDateStr(now)
+
+  // The house manager's reminder reads join the same batch (started now, read
+  // after the member checks below). A failure is reported there, never thrown.
+  const staffReminderData = loadStaffReminderData(supabaseAdmin, now).then(
+    (data) => ({ data, error: null as Error | null }),
+    (error) => ({ data: null, error: error as Error }),
+  )
 
   // Every read this run needs, started together. They were five awaits in a
   // row, and the scheduled job gives the whole run only 5 seconds, so a slow
@@ -276,6 +290,16 @@ Deno.serve(async (req) => {
       if (shouldRetryReminder(results)) console.error(`notify-reminders: will retry "turnover" for booking ${b.id}`)
       else await markSent('rental_bookings', b.id, { turnover_reminder_sent_at: new Date().toISOString() })
     }
+  }
+
+  // Reminders for the house manager. Last, and fenced off: whatever happens
+  // here, the member reminders above have already gone out.
+  try {
+    const staff = await staffReminderData
+    if (staff.error) console.error(`notify-reminders: could not load house manager reminders: ${staff.error.message}`)
+    else await sendStaffReminders({ admin: supabaseAdmin, notifyStaff }, staff.data!, now)
+  } catch (err) {
+    console.error(`notify-reminders: house manager reminders failed: ${(err as Error).message}`)
   }
 
   return new Response('ok')
