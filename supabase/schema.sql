@@ -4667,4 +4667,61 @@ end $$;
 revoke all on function public.staff_my_issue_reports() from public, anon;
 grant execute on function public.staff_my_issue_reports() to authenticated;
 
+-- ===== Push alerts for the house manager (October 11, 2026; add-staff-push.sql) =====
+alter table public.push_subscriptions add column if not exists staff_id uuid references public.staff(id) on delete cascade;
+alter table public.push_subscriptions alter column member_id drop not null;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'push_subscriptions_one_owner') then
+    alter table public.push_subscriptions add constraint push_subscriptions_one_owner
+      check ((member_id is null) <> (staff_id is null));
+  end if;
+end $$;
+create index if not exists push_subscriptions_staff_idx on public.push_subscriptions (staff_id) where staff_id is not null;
+
+alter table public.staff_issue_reports add column if not exists done_notified_at timestamptz;
+
+create or replace function public.staff_register_push(p_endpoint text, p_p256dh text, p_auth text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_staff() then
+    raise exception 'Not allowed' using errcode = '42501';
+  end if;
+  if p_endpoint is null or p_endpoint !~ '^https://' or length(p_endpoint) > 2000
+     or coalesce(length(p_p256dh), 0) not between 20 and 200 or coalesce(length(p_auth), 0) not between 10 and 100 then
+    raise exception 'That phone could not be registered for alerts' using errcode = '22023';
+  end if;
+  delete from public.push_subscriptions where endpoint = p_endpoint;
+  insert into public.push_subscriptions (staff_id, endpoint, p256dh, auth) values (auth.uid(), p_endpoint, p_p256dh, p_auth);
+  -- Keep at most five phones per account, newest first.
+  delete from public.push_subscriptions
+  where staff_id = auth.uid()
+    and id not in (select id from public.push_subscriptions where staff_id = auth.uid() order by created_at desc, id limit 5);
+end $$;
+revoke all on function public.staff_register_push(text, text, text) from public, anon;
+grant execute on function public.staff_register_push(text, text, text) to authenticated;
+
+create or replace function public.staff_unregister_push(p_endpoint text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_staff() then
+    raise exception 'Not allowed' using errcode = '42501';
+  end if;
+  delete from public.push_subscriptions where endpoint = p_endpoint and staff_id = auth.uid();
+end $$;
+revoke all on function public.staff_unregister_push(text) from public, anon;
+grant execute on function public.staff_unregister_push(text) to authenticated;
+
+-- Is this phone registered for him? (so the screen shows the real state)
+create or replace function public.staff_push_registered(p_endpoint text)
+returns boolean language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_staff() then
+    raise exception 'Not allowed' using errcode = '42501';
+  end if;
+  return exists (select 1 from public.push_subscriptions where endpoint = p_endpoint and staff_id = auth.uid());
+end $$;
+revoke all on function public.staff_push_registered(text) from public, anon;
+grant execute on function public.staff_push_registered(text) to authenticated;
+
 

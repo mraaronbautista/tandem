@@ -31,7 +31,7 @@ export default function LocationVisitSheet({ location, unitCount, visitStore, co
         ) : saved ? (
           <>
             <p role="status" className="text-sm text-text-h">
-              Visit saved. It shows on {unitCount > 1 ? `all ${unitCount} units` : 'every unit'} at {location.name} and on the house manager's schedule.
+              Visit saved. It shows on {unitCount > 1 ? `all ${unitCount} units` : 'every unit'} at {location.name} and on the house manager's schedule, and he gets an alert if he has alerts on.
             </p>
             <SubmissionActions>
               <SubmissionButton variant="primary" className="min-h-[44px]" onClick={onClose}>Done</SubmissionButton>

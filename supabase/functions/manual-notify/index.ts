@@ -1,6 +1,6 @@
 // Triggered directly from the browser. Deployed with --no-verify-jwt;
 // the handler validates the caller session explicitly below.
-import { fetchAllMembers, notifyMember, supabaseAdmin } from '../_shared/notify.ts'
+import { fetchAllMembers, memberHasPermission, notifyMember, notifyStaff, supabaseAdmin } from '../_shared/notify.ts'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -188,6 +188,49 @@ Deno.serve(async (req) => {
         notifyMember(m.id, { title: `${staffName} requested a time correction`, body: note, url: '/' }),
       ),
     )
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  // staff_alert — a member tells the house manager something (a visit was
+  // booked, changed or cancelled; a unit note changed). Members with Rentals
+  // only, like the screens that send it; the text is capped, and only active
+  // staff accounts that turned alerts on receive it. Members are trusted to
+  // write the text, the same as the nudge.
+  if (payload.kind === 'staff_alert') {
+    if (!caller || !memberHasPermission(caller, 'rentals')) {
+      return new Response('Forbidden — Rentals members only', { status: 403, headers: corsHeaders })
+    }
+    const title = String(payload.title || '').trim().slice(0, 80)
+    const body = String(payload.body || '').trim().slice(0, 200)
+    if (!title) return new Response('Missing title', { status: 400, headers: corsHeaders })
+    const result = await notifyStaff({ title, body, url: '/' })
+    return new Response(JSON.stringify({ reached: result.delivered }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
+  // staff_issue_done — a member ticked off one of the house manager's issue
+  // reports. Looks the report up by its task, checks the task really is done,
+  // and tells only the reporter, once (done_notified_at is claimed first).
+  if (payload.kind === 'staff_issue_done') {
+    if (!caller || !memberHasPermission(caller, 'rentals')) {
+      return new Response('Forbidden — Rentals members only', { status: 403, headers: corsHeaders })
+    }
+    const taskId = String(payload.taskId || '')
+    const { data: report } = await supabaseAdmin
+      .from('staff_issue_reports')
+      .select('id, staff_id, place, body, done_notified_at, task_id')
+      .eq('task_id', taskId)
+      .maybeSingle()
+    if (!report || report.done_notified_at) return new Response('ok', { headers: corsHeaders })
+    const { data: task } = await supabaseAdmin.from('tasks').select('status').eq('id', taskId).maybeSingle()
+    if (task?.status !== 'done') return new Response('ok', { headers: corsHeaders })
+    const { data: claimed } = await supabaseAdmin
+      .from('staff_issue_reports')
+      .update({ done_notified_at: new Date().toISOString() })
+      .eq('id', report.id)
+      .is('done_notified_at', null)
+      .select('id')
+    if (!claimed?.length) return new Response('ok', { headers: corsHeaders })
+    await notifyStaff({ title: 'Your report was marked done', body: `${report.place}: ${String(report.body).slice(0, 120)}`, url: '/' }, [report.staff_id])
     return new Response('ok', { headers: corsHeaders })
   }
 

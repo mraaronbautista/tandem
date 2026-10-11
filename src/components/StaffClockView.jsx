@@ -24,6 +24,7 @@ import HelpHint from './HelpHint'
 import StaffChangePasswordForm from './StaffChangePasswordForm'
 import StaffScheduleView from './StaffScheduleView'
 import StaffIssueReports from './StaffIssueReports'
+import StaffAlertsCard from './StaffAlertsCard'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -632,6 +633,8 @@ export default function StaffClockView({ theme, toggleTheme }) {
           </ModalCard>
         </Modal>
       )}
+
+      {profile?.active !== false && <StaffAlertsCard />}
 
       {profile?.active !== false && (
         <PeriodTabs role="tablist" aria-label="Clock or schedule">

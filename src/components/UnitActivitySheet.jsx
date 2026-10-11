@@ -3,6 +3,7 @@ import { CalendarCheck, CircleCheck, ClipboardCheck, LogIn, LogOut, Sparkles, Tr
 import { formatDateStr, todayDateStr } from '../lib/rentals'
 import { deleteRentalVisit, setRentalVisitDone } from '../lib/rentalVisits'
 import { saveUnitStaffNote } from '../lib/rentals'
+import { alertStaff, noteAlertText, visitAlertText } from '../lib/staffAlerts'
 import { addDaysStr, buildUnitTimeline } from '../lib/unitTimeline'
 import { todayInZone, visitTimeText, zoneForSite } from '../lib/locationTime'
 import { friendlyError } from '../lib/friendlyError'
@@ -62,12 +63,17 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
   }
   async function saveNote() {
     if (noteState.saving) return
+    if (noteDraft.trim() === noteSaved.text) { setNoteState({ saving: false, message: 'No changes to save.' }); return }
     setNoteState({ saving: true, message: '' })
     try {
       const row = await saveUnitStaffNote(unit.id, noteDraft)
       setNoteDraft(row.staff_note)
       setNoteSaved({ text: row.staff_note, at: row.staff_note_updated_at })
-      setNoteState({ saving: false, message: row.staff_note ? 'Saved. The house manager can see it.' : 'Note cleared.' })
+      setNoteState({ saving: false, message: row.staff_note ? 'Saved. The house manager can see it, and gets an alert if he has alerts on.' : 'Note cleared.' })
+      if (row.staff_note) {
+        const text = noteAlertText({ unitName: unit.unit_name, note: row.staff_note.slice(0, 150) })
+        alertStaff(text.title, text.body)
+      }
       onUnitChanged?.()
     } catch (err) {
       setNoteState({ saving: false, message: friendlyError(err) })
@@ -79,7 +85,16 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
       message: 'It will be removed for everyone. If it just got done, use Mark done instead.',
       confirmLabel: 'Delete visit',
     })
-    if (ok) run(visit.id, () => deleteRentalVisit(visit.id), 'Visit deleted.')
+    if (ok) {
+      run(visit.id, async () => {
+        await deleteRentalVisit(visit.id)
+        // A visit he may be expecting is gone: tell him (a past or done visit needs no alert).
+        if (visit.status === 'scheduled' && visit.visit_date >= today) {
+          const text = visitAlertText({ visit, place: visit.work_site_id ? locationName || unit.unit_name : unit.unit_name, tz, change: 'cancelled' })
+          alertStaff(text.title, text.body)
+        }
+      }, 'Visit deleted.')
+    }
   }
 
   function visitBody(event) {
@@ -182,7 +197,7 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
             timezone={tz}
             locationUnitCount={locationUnitCount}
             onCancel={() => setForm(null)}
-            onSaved={() => { setForm(null); reload(); setNotice('Visit saved.') }}
+            onSaved={() => { setForm(null); reload(); setNotice('Visit saved. The house manager gets an alert if he has alerts on.') }}
           />
         ) : (
           <>

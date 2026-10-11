@@ -74,19 +74,11 @@ export function memberHasPermission(member, feature) {
   return member?.permissions?.[feature] !== false
 }
 
-// Returns how it went so a caller that must not lose a one-shot reminder
-// (notify-reminders) can leave it unmarked and try again: `delivered` is how
-// many devices accepted the push, `retry` is true when something temporary
-// went wrong (see isTransientPushFailure). Other callers ignore the result.
-export async function notifyMember(memberId, payload): Promise<PushResult> {
-  if (!memberId) return { delivered: 0, retry: false }
-  const { data: subs, error: subsError } = await supabaseAdmin.from('push_subscriptions').select('*').eq('member_id', memberId)
-  if (subsError) {
-    console.error(`notifyMember: could not read subscriptions for member ${memberId}: ${subsError.message}`)
-    return { delivered: 0, retry: true }
-  }
-  if (!subs?.length) return { delivered: 0, retry: false }
-
+// Sends one payload to a list of stored push subscriptions and reports how it
+// went: `delivered` is how many devices accepted it, `retry` is true when
+// something temporary went wrong (see isTransientPushFailure). A dead
+// subscription (404/410) is dropped so it is not tried forever.
+async function deliver(subs, payload, ownerLabel: string): Promise<PushResult> {
   const outcomes = await Promise.all(
     subs.map(async (sub) => {
       const pushSubscription = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }
@@ -108,7 +100,7 @@ export async function notifyMember(memberId, payload): Promise<PushResult> {
         // no trace anywhere. Logged now so it shows up in this
         // function's own logs instead of vanishing.
         console.error(
-          `notifyMember: push failed for subscription ${sub.id} (member ${memberId}): ${err.statusCode ?? err.code ?? '?'} ${err.body || err.message}`,
+          `notifyMember: push failed for subscription ${sub.id} (${ownerLabel}): ${err.statusCode ?? err.code ?? '?'} ${err.body || err.message}`,
         )
         return { delivered: 0, retry: isTransientPushFailure(err) }
       }
@@ -118,4 +110,33 @@ export async function notifyMember(memberId, payload): Promise<PushResult> {
     delivered: outcomes.reduce((sum, o) => sum + o.delivered, 0),
     retry: outcomes.some((o) => o.retry),
   }
+}
+
+// Returns how it went so a caller that must not lose a one-shot reminder
+// (notify-reminders) can leave it unmarked and try again. Other callers ignore
+// the result.
+export async function notifyMember(memberId, payload): Promise<PushResult> {
+  if (!memberId) return { delivered: 0, retry: false }
+  const { data: subs, error: subsError } = await supabaseAdmin.from('push_subscriptions').select('*').eq('member_id', memberId)
+  if (subsError) {
+    console.error(`notifyMember: could not read subscriptions for member ${memberId}: ${subsError.message}`)
+    return { delivered: 0, retry: true }
+  }
+  if (!subs?.length) return { delivered: 0, retry: false }
+  return deliver(subs, payload, `member ${memberId}`)
+}
+
+// The house manager is a staff account, not a member. `staffIds` limits it to
+// specific staff accounts; leave it out to alert every ACTIVE staff account
+// that has turned alerts on. A deactivated account is never alerted.
+export async function notifyStaff(payload, staffIds: string[] | null = null): Promise<PushResult> {
+  let query = supabaseAdmin.from('push_subscriptions').select('*, staff!inner(active)').not('staff_id', 'is', null).eq('staff.active', true)
+  if (staffIds) query = query.in('staff_id', staffIds)
+  const { data: subs, error } = await query
+  if (error) {
+    console.error(`notifyStaff: could not read subscriptions: ${error.message}`)
+    return { delivered: 0, retry: true }
+  }
+  if (!subs?.length) return { delivered: 0, retry: false }
+  return deliver(subs, payload, 'staff')
 }

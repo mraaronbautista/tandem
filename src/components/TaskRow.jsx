@@ -19,6 +19,7 @@ import { isTurnoverTask } from '../lib/turnoverTask'
 import AssigneePicker from './AssigneePicker'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
+import { alertStaffIssueDone } from '../lib/staffAlerts'
 import { readableTextColor } from '../lib/colorContrast'
 
 // Auto-dismiss window for the post-completion Notify prompt — same 8s
@@ -240,6 +241,10 @@ export default function TaskRow({
     if (next === 'done') {
       setOpen(true)
       loadCompletionNotify()
+      // One of the house manager's issue reports? Tell him it was handled.
+      // The server re-checks the task is really done, so give the write a
+      // moment to land first.
+      if (task.title?.startsWith('Issue at ')) setTimeout(() => alertStaffIssueDone(task.id), 1500)
     } else {
       // Unchecking cancels an in-flight or showing prompt — it's no
       // longer a completion worth flagging to anyone.

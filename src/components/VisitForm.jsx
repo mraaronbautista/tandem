@@ -4,6 +4,7 @@ import { todayInZone, visitTimeText, zoneName } from '../lib/locationTime'
 import { VISIT_KIND_SUGGESTIONS, saveRentalVisit } from '../lib/rentalVisits'
 import { recentVisitKinds } from '../lib/unitTimeline'
 import { friendlyError } from '../lib/friendlyError'
+import { alertStaff, visitAlertText } from '../lib/staffAlerts'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 
 const INPUT = 'w-full min-h-[44px] rounded-[8px] border border-border bg-bg px-3 py-2 text-[15px] text-text-h'
@@ -45,7 +46,7 @@ export default function VisitForm({ unit, visit, preset, visits, contacts, locat
     if (!date) { setError('Choose a date.'); return }
     pending.current = true; setSaving(true); setError('')
     try {
-      await saveRentalVisit(visit?.id, {
+      const fields = {
         kind,
         visit_date: date,
         visit_time: time,
@@ -54,7 +55,23 @@ export default function VisitForm({ unit, visit, preset, visits, contacts, locat
         contact_id: otherWho ? null : picked?.id || null,
         property_id: wholeBuilding ? null : unit.id,
         work_site_id: wholeBuilding ? unit.work_site_id : null,
-      })
+      }
+      await saveRentalVisit(visit?.id, fields)
+      // Tell the house manager (best effort, after the save): a new visit is
+      // "booked"; an edit only alerts when something he cares about changed,
+      // so pressing Save without a change stays quiet.
+      const same = visit
+        && visit.kind === fields.kind.trim()
+        && visit.visit_date === fields.visit_date
+        && (visit.visit_time ? visit.visit_time.slice(0, 5) : '') === (fields.visit_time || '')
+        && (visit.who || '') === fields.who.trim()
+        && (visit.property_id || null) === fields.property_id
+        && (visit.work_site_id || null) === fields.work_site_id
+      if (!same) {
+        const place = wholeBuilding ? locationName || unit.unit_name : unit.unit_name
+        const text = visitAlertText({ visit: { ...fields, kind: fields.kind.trim(), visit_time: fields.visit_time || null }, place, tz: timezone, change: visit ? 'changed' : 'booked' })
+        alertStaff(text.title, text.body)
+      }
       onSaved()
     } catch (err) {
       setError(friendlyError(err))
