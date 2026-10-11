@@ -1,4 +1,5 @@
 import DataExport from './DataExport'
+import IssuePhotoBackup from './IssuePhotoBackup'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GanttChart, Home, FileText, LayoutGrid, Timer, Hand, Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -178,6 +179,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [issuePhotosOpen, setIssuePhotosOpen] = useState(false)
   const [manageAccessOpen, setManageAccessOpen] = useState(false)
   const [myProfileOpen, setMyProfileOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('today')
@@ -1453,6 +1455,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       {reportOpen && <EndOfDayReportForm tasks={tasks} me={me} members={members} onClose={() => setReportOpen(false)} />}
 
       {exportOpen && <DataExport me={me} onClose={() => setExportOpen(false)} />}
+      {issuePhotosOpen && <IssuePhotoBackup me={me} onClose={() => setIssuePhotosOpen(false)} />}
       {vaultOpen && <VaultView me={me} members={members} onClose={() => setVaultOpen(false)} />}
 
       {manageAccessOpen && (
@@ -1471,6 +1474,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
       {settingsOpen && (
         <SettingsMenu
           onOpenExport={() => { setSettingsOpen(false); setExportOpen(true) }}
+          onOpenIssuePhotos={hasPermission('rentals') ? () => { setSettingsOpen(false); setIssuePhotosOpen(true) } : undefined}
           theme={theme}
           toggleTheme={toggleTheme}
           showPush={pushSupported()}

@@ -11,6 +11,7 @@ import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 // alert go out first, the photos follow). Renders nothing when there are none.
 export default function IssuePhotos({ taskId }) {
   const [photos, setPhotos] = useState([])
+  const [moved, setMoved] = useState([])
   const [viewing, setViewing] = useState(null) // index
 
   useEffect(() => {
@@ -19,7 +20,10 @@ export default function IssuePhotos({ taskId }) {
     async function load() {
       const version = ++generation
       const next = await fetchIssuePhotos(taskId)
-      if (!cancelled && version === generation) setPhotos(next)
+      if (!cancelled && version === generation) {
+        setPhotos(next.photos)
+        setMoved(next.moved)
+      }
     }
     load()
     // A unique channel name per mount: two open copies of the same task must
@@ -34,14 +38,36 @@ export default function IssuePhotos({ taskId }) {
     }
   }, [taskId])
 
-  if (photos.length === 0) return null
+  if (photos.length === 0 && moved.length === 0) return null
+  const driveMoved = moved.filter((m) => m.kind === 'drive')
+  const zipMoved = moved.filter((m) => m.kind !== 'drive')
+  const when = (list) => new Date(list[list.length - 1].removedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })
+  const folderUrl = driveMoved.find((m) => m.folderUrl)?.folderUrl
   const current = viewing === null ? null : photos[viewing]
 
   return (
     <div className="mb-2">
       <p className="m-0 mb-1.5 text-[13px] font-semibold text-text-h">
-        Photos from the house manager ({photos.length})
+        Photos from the house manager ({photos.length + moved.length})
       </p>
+      {moved.length > 0 && (
+        <div className="mb-2 rounded-[8px] bg-pill-bg px-3 py-2 text-[13px] text-text-h">
+          {driveMoved.length > 0 && (
+            <p className="m-0">
+              {driveMoved.length === 1 ? '1 photo' : `${driveMoved.length} photos`} moved to Google Drive on {when(driveMoved)}.
+              {folderUrl && (
+                <>
+                  {' '}
+                  <a href={folderUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text">Open the folder in Drive</a>
+                </>
+              )}
+            </p>
+          )}
+          {zipMoved.length > 0 && (
+            <p className="m-0">{zipMoved.length === 1 ? '1 photo was' : `${zipMoved.length} photos were`} saved in a zip file and removed from Tandem on {when(zipMoved)}.</p>
+          )}
+        </div>
+      )}
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
         {photos.map((p, i) => (
           <li key={p.id}>
