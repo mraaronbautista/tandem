@@ -191,5 +191,40 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // staff_issue — the house manager's "Report an issue". The browser sends only
+  // the report id; everything in the alert is read back from the stored report,
+  // so a staff session cannot push text of its own choosing. Alerts the admin(s)
+  // only, once per report (notified_at is claimed first), and only within ten
+  // minutes of the report being made.
+  if (payload.kind === 'staff_issue') {
+    const reportId = String(payload.reportId || '')
+    const { data: report } = await supabaseAdmin
+      .from('staff_issue_reports')
+      .select('id, staff_id, place, body, urgency, notified_at, created_at')
+      .eq('id', reportId)
+      .maybeSingle()
+    if (!report || report.staff_id !== user.id) return new Response('Unknown report', { status: 404, headers: corsHeaders })
+    if (report.notified_at) return new Response('ok', { headers: corsHeaders })
+    if (Date.now() - new Date(report.created_at).getTime() > 10 * 60_000) {
+      return new Response('Too old to send an alert', { status: 400, headers: corsHeaders })
+    }
+    const { data: claimed } = await supabaseAdmin
+      .from('staff_issue_reports')
+      .update({ notified_at: new Date().toISOString() })
+      .eq('id', report.id)
+      .is('notified_at', null)
+      .select('id')
+    if (!claimed?.length) return new Response('ok', { headers: corsHeaders })
+    const { data: staffRow } = await supabaseAdmin.from('staff').select('display_name').eq('id', user.id).maybeSingle()
+    const staffName = staffRow?.display_name || 'The house manager'
+    const prefix = report.urgency === 'urgent' ? 'Urgent: ' : report.urgency === 'soon' ? 'Soon: ' : ''
+    await Promise.all(
+      allMembers
+        .filter((m) => m.is_admin)
+        .map((m) => notifyMember(m.id, { title: `${prefix}Issue at ${report.place}`, body: `${staffName}: ${String(report.body).slice(0, 200)}`, url: '/' })),
+    )
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   return new Response('Unknown kind', { status: 400, headers: corsHeaders })
 })

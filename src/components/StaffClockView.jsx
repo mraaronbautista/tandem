@@ -23,6 +23,7 @@ import MarkdownText from './MarkdownText'
 import HelpHint from './HelpHint'
 import StaffChangePasswordForm from './StaffChangePasswordForm'
 import StaffScheduleView from './StaffScheduleView'
+import StaffIssueReports from './StaffIssueReports'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -642,6 +643,8 @@ export default function StaffClockView({ theme, toggleTheme }) {
           </PeriodTab>
         </PeriodTabs>
       )}
+
+      {profile?.active !== false && <StaffIssueReports />}
 
       {profile?.active !== false && tab === 'schedule' && <StaffScheduleView />}
 

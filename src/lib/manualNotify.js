@@ -73,3 +73,11 @@ export async function sendTimeEntryCorrectionRequest(note) {
   })
   if (error) throw error
 }
+
+// The house manager's "Report an issue": only the report id goes over the wire;
+// manual-notify reads the report back itself and alerts the admin(s).
+export async function sendStaffIssueNotification(reportId) {
+  const { error } = await supabase.functions.invoke('manual-notify', { body: { kind: 'staff_issue', reportId } })
+  if (error) throw error
+}
+

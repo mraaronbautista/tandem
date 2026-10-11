@@ -498,3 +498,9 @@ October 11, 2026 — Claude: standing unit note for the house manager (Aaron pic
 
 October 11, 2026 — Claude: `supabase/add-unit-staff-note.sql` APPLIED to production by Claude on Aaron's "run it", before the app deploy. Read-only verification: both columns present, stamping trigger present, 500-character check present, no notes yet, `staff_unit_notes()` not executable by anon and executable by signed-in users. Frontend committed and pushed next.
 
+October 11, 2026 — Claude: unit note committed and pushed as `bed3307`, SQL applied first (read-only checks: columns, trigger, 500-char check, `staff_unit_notes()` not executable by anon); live bundle confirmed to contain the note editor and Unit notes.
+
+October 11, 2026 — Claude: house manager's "Report an issue" (Aaron: yes, go with recommendations: task for Aaron only, three urgency levels, no photos, his list with Open/Done) PREPARED LOCALLY, NOT COMMITTED, SQL NOT RUN, `manual-notify` NOT DEPLOYED. `supabase/add-staff-issue-reports.sql` (table + three staff-only functions; mirrored into schema.sql), `manual-notify` `staff_issue` kind, `lib/staffIssues.js`, `StaffIssueReports.jsx`, How-to entry, CLAUDE.md. Checks: SQL 36/36 on a real Postgres; alert logic 9/9 against fakes; real screens at 375px; lint/build ok. ORDER: run the SQL, deploy `manual-notify`, then push the frontend. Needs Aaron's "run it" for the SQL.
+
+October 11, 2026 — Claude: `supabase/add-staff-issue-reports.sql` APPLIED to production by Claude on Aaron's "run it" (before the app deploy). Read-only verification: table present with row-level security on, the three functions present, `staff_report_issue` not executable by anon and executable by signed-in users, no direct insert privilege on the table for signed-in users, 0 reports so far, 1 admin (Aaron) to receive them. `manual-notify` redeployed by Claude (version 18) with the new `staff_issue` kind. Frontend committed and pushed next.
+
