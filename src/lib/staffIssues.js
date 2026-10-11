@@ -59,3 +59,45 @@ export async function reportIssue({ propertyId = null, workSiteId = null, body, 
 export function isIssueSetupMissing(err) {
   return err?.code === 'PGRST202' || err?.code === '42883'
 }
+
+// ---- Photos ---------------------------------------------------------------
+
+// The most one report holds. The database enforces the same number; this just
+// lets the screen say so before he tries.
+export const MAX_PHOTOS_PER_REPORT = 100
+
+// Uploads one already-shrunk JPEG to the private bucket under
+// {his id}/{report id}-{random}.jpg, then records it against the report. The
+// upload and the record are separate steps; if the record step fails the file
+// is simply unused, and a retry uploads it again under a new name.
+export async function uploadIssuePhoto(reportId, blob) {
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) throw userError || new Error('Your session expired. Sign in again.')
+  const path = `${userData.user.id}/${reportId}-${crypto.randomUUID()}.jpg`
+  const { error: uploadError } = await supabase.storage.from('issue-photos').upload(path, blob, {
+    contentType: 'image/jpeg',
+    upsert: false,
+  })
+  if (uploadError) throw uploadError
+  const { error } = await supabase.rpc('staff_add_issue_photo', { p_report_id: reportId, p_path: path })
+  if (error) throw error
+  return path
+}
+
+// Uploads photos one after another (a phone connection does better than many at
+// once). `onProgress(done, total)` is called after each. Returns the photos
+// that did not make it, so "Try again" can resend just those.
+export async function uploadIssuePhotos(reportId, blobs, onProgress = () => {}) {
+  const failed = []
+  let done = 0
+  for (const blob of blobs) {
+    try {
+      await uploadIssuePhoto(reportId, blob)
+    } catch {
+      failed.push(blob)
+    }
+    done += 1
+    onProgress(done, blobs.length)
+  }
+  return failed
+}

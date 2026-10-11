@@ -9,6 +9,8 @@ import { sendTaskNudge, sendTaskCompletedNotify } from '../lib/manualNotify'
 import { Pencil, Paperclip, Copy, Eye, Trash2, Bell, AlertTriangle, StickyNote, CheckSquare, MessageCircle, Repeat2, ChevronDown, ChevronUp, Pin, CalendarPlus } from 'lucide-react'
 import TaskForm, { recurrenceLabel as getRecurrenceLabel } from './TaskForm'
 import ChecklistView from './ChecklistView'
+import IssuePhotos from './IssuePhotos'
+import { isIssueTask } from '../lib/issuePhotos'
 import TaskClarifications from './TaskClarifications'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -540,6 +542,7 @@ export default function TaskRow({
               )}
             </div>
           )}
+          {isIssueTask(task) && <IssuePhotos taskId={task.id} />}
           <ChecklistView items={checklist} onItemChange={handleChecklistItemChange} />
           {recurrence !== 'none' && recurrenceLabel && (
             <p>Repeats {recurrenceLabel.toLowerCase()}</p>

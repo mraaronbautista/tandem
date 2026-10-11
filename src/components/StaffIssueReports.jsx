@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, Camera, ImagePlus, X } from 'lucide-react'
 import {
+  MAX_PHOTOS_PER_REPORT,
   URGENCY_OPTIONS,
   fetchIssuePlaces,
   fetchMyIssueReports,
   groupIssuePlaces,
   isIssueSetupMissing,
   reportIssue,
+  uploadIssuePhotos,
 } from '../lib/staffIssues'
+import { shrinkImage } from '../lib/photoShrink'
 import { friendlyError } from '../lib/friendlyError'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -89,7 +92,7 @@ export default function StaffIssueReports() {
                   </span>
                 </div>
                 <p className="m-0 mt-0.5 line-clamp-2 text-[13px] text-text [overflow-wrap:anywhere]">{r.body}</p>
-                <span className="text-xs opacity-80">{when(r.created_at)}{r.urgency === 'urgent' ? ' · urgent' : ''}</span>
+                <span className="text-xs opacity-80">{when(r.created_at)}{r.urgency === 'urgent' ? ' · urgent' : ''}{r.photo_count > 0 ? ` · ${r.photo_count} ${r.photo_count === 1 ? 'photo' : 'photos'}` : ''}</span>
               </li>
             ))}
           </ul>
@@ -115,6 +118,60 @@ function IssueSheet({ onClose, onSent }) {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
+  const [photos, setPhotos] = useState([]) // { id, blob, url } already shrunk
+  const [preparing, setPreparing] = useState(0)
+  const [photoNote, setPhotoNote] = useState('')
+  const [upload, setUpload] = useState(null) // { done, total, failed: Blob[], running }
+  const photosRef = useRef(photos)
+  photosRef.current = photos
+  const cameraInput = useRef(null)
+  const libraryInput = useRef(null)
+
+  // Preview addresses are released when the sheet goes away.
+  useEffect(() => () => { photosRef.current.forEach((p) => URL.revokeObjectURL(p.url)) }, [])
+
+  async function addFiles(fileList) {
+    const files = [...(fileList || [])]
+    if (files.length === 0) return
+    setPhotoNote('')
+    const room = MAX_PHOTOS_PER_REPORT - photosRef.current.length
+    const take = files.slice(0, Math.max(0, room))
+    let unreadable = 0
+    setPreparing((n) => n + take.length)
+    for (const file of take) {
+      try {
+        const blob = await shrinkImage(file)
+        setPhotos((current) => [...current, { id: crypto.randomUUID(), blob, url: URL.createObjectURL(blob) }])
+      } catch {
+        unreadable += 1
+      } finally {
+        setPreparing((n) => n - 1)
+      }
+    }
+    const notes = []
+    if (files.length > take.length) notes.push(`A report holds up to ${MAX_PHOTOS_PER_REPORT} photos, so the rest were skipped.`)
+    if (unreadable > 0) notes.push(`${unreadable} ${unreadable === 1 ? 'photo' : 'photos'} couldn't be read. Try taking ${unreadable === 1 ? 'it' : 'them'} again.`)
+    setPhotoNote(notes.join(' '))
+  }
+
+  function removePhoto(id) {
+    setPhotos((current) => {
+      const gone = current.find((p) => p.id === id)
+      if (gone) URL.revokeObjectURL(gone.url)
+      return current.filter((p) => p.id !== id)
+    })
+  }
+
+  // `all` is how many photos the report has in total, so a retry of two failed
+  // ones still says "All 5 photos are uploaded".
+  async function sendPhotos(reportId, blobs, all = blobs.length) {
+    setUpload({ done: 0, total: blobs.length, all, failed: [], running: true })
+    const failed = await uploadIssuePhotos(reportId, blobs, (done, total) =>
+      setUpload((u) => ({ ...u, done, total })),
+    )
+    setUpload({ done: blobs.length, total: blobs.length, all, failed, running: false })
+    onSent()
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -139,12 +196,15 @@ function IssueSheet({ onClose, onSent }) {
     const place = options.find((o) => o.key === placeKey)
     if (!place) { setError('Choose where the issue is.'); return }
     if (!body.trim()) { setError('Say what is wrong.'); return }
+    if (preparing > 0) { setError('Wait a moment, the photos are still being prepared.'); return }
     setSending(true)
     setError('')
     try {
       const sent = await reportIssue({ propertyId: place.propertyId, workSiteId: place.workSiteId, body: body.trim(), urgency })
       setResult(sent)
       onSent()
+      // The report and its alert are already out; the photos follow.
+      if (photos.length > 0) await sendPhotos(sent.id, photos.map((p) => p.blob))
     } catch (err) {
       setError(friendlyError(err))
     } finally {
@@ -153,7 +213,7 @@ function IssueSheet({ onClose, onSent }) {
   }
 
   return (
-    <Modal onClose={() => { if (!sending) onClose() }}>
+    <Modal onClose={() => { if (!sending && !upload?.running) onClose() }}>
       <ModalCard>
         <h2>Report an issue</h2>
         {result ? (
@@ -163,8 +223,22 @@ function IssueSheet({ onClose, onSent }) {
                 ? 'Sent. It is on the task list and an alert went out.'
                 : 'Saved. It is on the task list, but the alert may not have gone out. Call if it is urgent.'}
             </p>
+            {upload && (
+              <p role="status" className="text-sm text-text-h">
+                {upload.running
+                  ? `Uploading photos: ${upload.done} of ${upload.total}…`
+                  : upload.failed.length === 0
+                    ? `${upload.all === 1 ? 'Your photo is' : `All ${upload.all} photos are`} uploaded.`
+                    : `${upload.failed.length} of ${upload.all} ${upload.all === 1 ? 'photo' : 'photos'} didn't upload. The report is saved.`}
+              </p>
+            )}
             <SubmissionActions>
-              <SubmissionButton variant="primary" className="min-h-[44px]" onClick={onClose}>Done</SubmissionButton>
+              {upload && !upload.running && upload.failed.length > 0 && (
+                <SubmissionButton className="min-h-[44px]" onClick={() => sendPhotos(result.id, upload.failed, upload.all)}>
+                  Try again
+                </SubmissionButton>
+              )}
+              <SubmissionButton variant="primary" className="min-h-[44px]" disabled={upload?.running} onClick={onClose}>Done</SubmissionButton>
             </SubmissionActions>
           </>
         ) : loadError ? (
@@ -199,6 +273,50 @@ function IssueSheet({ onClose, onSent }) {
                 />
                 <span className="text-xs opacity-80">{body.length}/{MAX}</span>
               </label>
+              <p className="mb-1 mt-3 text-sm text-text-h">Photos</p>
+              {photos.length > 0 && (
+                <ul className="m-0 mb-2 flex list-none flex-wrap gap-2 p-0" aria-label="Photos to send">
+                  {photos.map((p, i) => (
+                    <li key={p.id} className="relative">
+                      <img src={p.url} alt={`Photo ${i + 1}`} className="h-16 w-16 rounded-[8px] border border-border object-cover" />
+                      <button
+                        type="button"
+                        aria-label={`Remove photo ${i + 1}`}
+                        className="absolute -right-2 -top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-card-bg p-0 text-text-h after:absolute after:-inset-2 after:content-['']"
+                        onClick={() => removePhoto(p.id)}
+                      >
+                        <X size={13} aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border border-border bg-pill-bg px-2 text-sm text-text-h"
+                  onClick={() => cameraInput.current?.click()}
+                >
+                  <Camera size={16} aria-hidden="true" /> Take photo
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border border-border bg-pill-bg px-2 text-sm text-text-h"
+                  onClick={() => libraryInput.current?.click()}
+                >
+                  <ImagePlus size={16} aria-hidden="true" /> Choose photos
+                </button>
+              </div>
+              <input ref={cameraInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+              <input ref={libraryInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+              <p className="mb-0 mt-1 text-xs text-text" role="status">
+                {preparing > 0
+                  ? `Preparing ${preparing} ${preparing === 1 ? 'photo' : 'photos'}…`
+                  : photos.length > 0
+                    ? `${photos.length} ${photos.length === 1 ? 'photo' : 'photos'}, shrunk to fit.`
+                    : 'Add as many as you need.'}
+                {photoNote ? ` ${photoNote}` : ''}
+              </p>
               <p className="mb-1 mt-3 text-sm text-text-h">How urgent</p>
               <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="How urgent">
                 {URGENCY_OPTIONS.map((o) => (
@@ -214,7 +332,7 @@ function IssueSheet({ onClose, onSent }) {
                   </button>
                 ))}
               </div>
-              <p className="mb-0 mt-1 text-xs text-text">Urgent sends a high-priority alert right away. Photos are not included yet.</p>
+              <p className="mb-0 mt-1 text-xs text-text">Urgent sends a high-priority alert right away. The alert goes out first and the photos follow.</p>
             </fieldset>
             {error && <p role="alert" className="error">{error}</p>}
             <SubmissionActions>
