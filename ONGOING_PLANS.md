@@ -7,7 +7,7 @@ This file is the canonical home for work that is approved but not fully shipped 
 - Update the status checklist whenever a related commit lands.
 - If implementation changes the plan, update this file in the same commit.
 
-## Plan status index (updated October 11, 2026)
+## Plan status index (updated October 12, 2026)
 
 Shipped plans stay in this file, marked complete, so the history and decisions remain findable (Aaron, Oct 11: "don't remove shipped ones, just mark them complete").
 
@@ -20,6 +20,10 @@ Shipped plans stay in this file, marked complete, so the history and decisions r
 | Dated lease notes | **COMPLETE** (published `9125b9b`); live write/author/Realtime checks outstanding |
 | Export records (Excel/CSV) | **COMPLETE** (published `4801425`) |
 | Unit activity, scheduled visits, house manager Schedule tab, turnover shortcut | **COMPLETE and pushed** (`f83ff84`, `40aaa91`, `0ed2a6c`; SQL run); real phone and staff-login checks outstanding |
+| House manager toolkit: whole-location visits and time zones, unit note, Report an issue (`fec7d4f`, `bed3307`, `b859f45`) | **COMPLETE and pushed**; SQL run; real phone and staff-login checks outstanding |
+| House manager alerts (visits, notes, issue done) and reminders (`98c3c88`, `65be373`) | **COMPLETE and pushed**; SQL run, functions deployed; no real push has reached a real phone yet |
+| Photos on issue reports (`70448f5`) | **COMPLETE and pushed**; SQL run; real phone camera/library untested |
+| Issue photo back-up to Google Drive or zip, then removal (`7391710`) | **Built, pushed and deployed. Aaron's Google setup is still to do** (`apps-script/README.md`, then two secrets he sets himself) |
 | Call/text logging | **Not built.** Deferred Oct 6; design resumed Oct 11 (mockup requested, nothing approved yet) |
 | Reply templates, per-unit file | **Not built**, proposed only |
 
@@ -342,3 +346,23 @@ The house manager (a staff account) needs to know when tenants move in or out an
 
 ### Order
 1. Phase 1: notification secret (in progress). 2. Phase 2: Staff-permission check on the two staff account functions. 3. This feature, member side first, then the staff Schedule tab, then the turnover-task link.
+
+## House manager toolkit, alerts, reminders and photos (October 10–12, 2026)
+
+**Status (October 12, 2026): COMPLETE and pushed, except Aaron's Google setup for the Drive back-up.** Commits: `fec7d4f` (whole-location visits, Locations row, time zones), `bed3307` (standing unit note), `b859f45` (Report an issue), `98c3c88` (alerts), `65be373` (reminders), `70448f5` (photos), `7391710` (back-up and removal). All SQL files run in production after Aaron's "run it" and verified read-only; functions deployed. Architecture and per-phase checks are in `CLAUDE.md`; the log is `AUDIT_HANDOFF.md`. Kept here, marked complete.
+
+### Why
+The house manager (a staff account) could only clock in and read a schedule. Aaron wanted him to see location-wide work and time zones correctly, read standing notes per unit, report problems with photos, and be alerted and reminded on his own phone, without ever giving a staff login access to tasks, rental tables, notifications tables or the photo store.
+
+### Decisions (Aaron's picks)
+1. **Visits:** a visit belongs to a unit or a whole location (a Where choice, default "this unit only"); each location has a time zone (default Eastern, editable per location); visit times stay property wall-clock, labelled with the zone and a "your time" line for a viewer elsewhere; tasks keep their own customizable zones.
+2. **Standing note per unit:** option A, written in the unit's What's happening sheet (placement X), 500 characters, read on his Schedule tab.
+3. **Report an issue:** place (unit or whole building), what is wrong, how urgent (Can wait / Soon / Urgent); becomes a task for the admin plus an alert; he sees his own reports as Open or Done.
+4. **Alerts (phase 1):** Android one tap, iPhone via Add to Home Screen (platform rule); he is alerted on a visit booked, changed (only when something he cares about changed) or cancelled, a unit note saved (not cleared or unchanged), and his issue ticked done.
+5. **Reminders (phase 2, "all A"):** timed visit about an hour before; date-only visit at 8 AM on the day (until 5 PM); one evening alert (6–10 PM property time) for tomorrow's confirmed move-outs and move-ins; a reminder counts as sent only when a phone took it and keeps waiting until its window closes; rescheduling clears the mark.
+6. **Photos (phase 3, "all A"):** report and alert go out first, photos follow one by one with Try again; Take photo and Choose photos; shrunk to 1600 px JPEG on his phone; private bucket he can only add to, members with Rentals read; no "add photos later"; 100-per-report safety ceiling.
+7. **Back-up (phase 4, "all A" plus Drive via Apps Script with a zip fallback):** Settings > Issue photos; backup everything but remove only photos of DONE issues and only by an admin; Drive tree `location / unit / date description / photo N.jpg` plus `report.txt`; a zip counts as backed up only after "I saved this file somewhere safe"; the task shows a Drive folder link afterward; no waiting period.
+
+### Next action
+Aaron: do the Google setup in `apps-script/README.md`, then test on phones with the checklist in `PROJECT_JOURNEY.md` ("Still needs a human or a real device"). Claude: count the reminder job's timeouts, watch for further 500s, and redeploy `issue-photo-backup` if it still reports "not connected" after the secrets are set.
+
