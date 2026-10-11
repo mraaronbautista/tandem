@@ -4,6 +4,7 @@ import { todayDateStr } from '../lib/rentals'
 import { fetchRentalVisits } from '../lib/rentalVisits'
 import { fetchRentalContacts, fetchRentalLocations } from '../lib/rentalContacts'
 import { cleaningPreset, tickCleanerStep } from '../lib/turnoverTask'
+import { todayInZone, zoneForSite } from '../lib/locationTime'
 import { friendlyError } from '../lib/friendlyError'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
@@ -69,6 +70,7 @@ export default function TurnoverVisitModal({ task, onUpdateTask, onClose }) {
   }
 
   const locationName = data?.unit.work_site_id ? data.locations.find((s) => s.id === data.unit.work_site_id)?.name : ''
+  const tz = data ? zoneForSite(data.unit.work_site_id, data.locations) : null
 
   return (
     <Modal onClose={onClose}>
@@ -101,7 +103,8 @@ export default function TurnoverVisitModal({ task, onUpdateTask, onClose }) {
         ) : (
           <VisitForm
             unit={data.unit}
-            preset={cleaningPreset(data.booking.check_out, todayDateStr())}
+            preset={cleaningPreset(data.booking.check_out, tz ? todayInZone(tz) : todayDateStr())}
+            timezone={tz}
             visits={data.visits}
             contacts={data.contacts}
             locationName={locationName}

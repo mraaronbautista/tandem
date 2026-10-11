@@ -249,6 +249,8 @@ const FAQS = [
     items: [
       'Open Rentals, find the unit, and tap What\'s happening, then + Schedule a visit. The kind of visit is free text with quick buttons (Cleaning, Repair, Inspection, plus anything you have typed before). Pick who is coming from your contacts, or choose Someone else and type a name. For work on the whole building, such as a gate, tick Whole building and it will show on every unit at that location. After a move-out the sheet also reminds you when no cleaning is booked yet.',
       'Shortcut: when Tandem makes a "Schedule turnover cleaning" task for a move-out, open the task and tap Schedule visit. The unit, Cleaning and the day after the move-out are already filled in; save it and the "book the cleaner" step on the task is ticked for you.',
+      'Visits for a whole address: at the top of Rentals, the Locations row has one card per place (for example 1072 Rachel, 4 units). Tap Schedule visit on a card to book something for the whole location, like camera security setup. It shows on every unit there and once on the house manager\'s schedule. From a single unit\'s visit form, the Where choice picks "all units at this location" or "this unit only".',
+      'Time zones: each location has a time zone (set in its settings; all three current ones are Eastern). A visit time is the time at the property and is labelled, like 2:30 PM ET. If you are in another zone it also shows what that is for you, like 2:30 AM Thu. Tasks are not affected: each task keeps its own time zone.',
     ],
   },
   {

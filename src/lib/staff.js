@@ -4,7 +4,7 @@ import { throwFunctionError } from './functionError'
 
 const STAFF_COLUMNS = 'id, display_name, hourly_rate, emergency_rate, job_description, active, payroll_cadence'
 const WORK_SITE_COLUMNS =
-  'id, name, address, latitude, longitude, geofence_radius_m, rental_property_id, active, ' +
+  'id, name, address, latitude, longitude, geofence_radius_m, rental_property_id, active, timezone, ' +
   'pending_latitude, pending_longitude, pending_accuracy_m, pending_captured_by, pending_captured_at'
 const TIME_ENTRY_COLUMNS =
   'id, staff_id, work_site_id, rate_type, rate_amount, clock_in_at, clock_in_lat, clock_in_lng, ' +
@@ -130,7 +130,7 @@ export function workSiteStatus(site) {
   return 'inactive'
 }
 
-export async function createWorkSite({ name, address, latitude, longitude, geofence_radius_m, active }) {
+export async function createWorkSite({ name, address, latitude, longitude, geofence_radius_m, active, timezone }) {
   const { data, error } = await supabase
     .from('work_sites')
     .insert({
@@ -140,6 +140,7 @@ export async function createWorkSite({ name, address, latitude, longitude, geofe
       longitude: longitude ?? null,
       geofence_radius_m: geofence_radius_m || 100,
       active,
+      ...(timezone && { timezone }),
     })
     .select(WORK_SITE_COLUMNS)
     .single()
@@ -156,7 +157,7 @@ export async function createWorkSite({ name, address, latitude, longitude, geofe
 // not this function.
 export async function updateWorkSite(
   id,
-  { name, address, latitude, longitude, geofence_radius_m, active },
+  { name, address, latitude, longitude, geofence_radius_m, active, timezone },
 ) {
   const clearPending = latitude != null && longitude != null
   const { data, error } = await supabase
@@ -168,6 +169,7 @@ export async function updateWorkSite(
       longitude: longitude ?? null,
       geofence_radius_m,
       active,
+      ...(timezone && { timezone }),
       ...(clearPending && {
         pending_latitude: null,
         pending_longitude: null,

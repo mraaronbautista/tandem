@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { CalendarCheck, CircleCheck, ClipboardCheck, LogIn, LogOut, Sparkles, TriangleAlert, Wrench } from 'lucide-react'
 import { formatDateStr, todayDateStr } from '../lib/rentals'
 import { deleteRentalVisit, setRentalVisitDone } from '../lib/rentalVisits'
-import { addDaysStr, buildUnitTimeline, formatVisitTime } from '../lib/unitTimeline'
+import { addDaysStr, buildUnitTimeline } from '../lib/unitTimeline'
+import { todayInZone, visitTimeText, zoneForSite } from '../lib/locationTime'
 import { friendlyError } from '../lib/friendlyError'
 import { useConfirm } from '../lib/confirmContext'
 import Modal from './Modal'
@@ -29,7 +30,7 @@ function visitIcon(kind) {
 // What is happening at one unit: upcoming move-outs and move-ins, plus the
 // visits someone has scheduled (a cleaner, a plumber, an inspection). Opened
 // from the "What's happening" button on a unit card.
-export default function UnitActivitySheet({ unit, bookings, visitStore, contacts, locations, onClose }) {
+export default function UnitActivitySheet({ unit, bookings, visitStore, contacts, locations, locationUnitCount = 0, onClose }) {
   const [form, setForm] = useState(null) // null | { visit?: row, preset?: {...} }
   const [showPast, setShowPast] = useState(false)
   const [busyId, setBusyId] = useState('')
@@ -37,7 +38,10 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
   const pending = useRef(false)
   const confirm = useConfirm()
   const { visits, error, reload } = visitStore
-  const today = todayDateStr()
+  // The property's own clock decides what "today" is for this unit, so a
+  // viewer in another zone does not see a visit flagged "date passed" early.
+  const tz = zoneForSite(unit.work_site_id, locations)
+  const today = tz ? todayInZone(tz) : todayDateStr()
   const timeline = useMemo(
     () => buildUnitTimeline({ unit, bookings, visits: visits || [], today }),
     [unit, bookings, visits, today],
@@ -64,12 +68,14 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
     const v = event.visit
     const Icon = visitIcon(v.kind)
     const detail = [v.who, v.note].filter(Boolean).join(' · ')
+    const time = visitTimeText({ date: v.visit_date, time: v.visit_time, tz })
     return (
       <>
         <div className="flex min-w-0 items-center gap-1.5">
           <Icon size={16} className="flex-none text-accent-text" aria-hidden="true" />
-          <span className="min-w-0 font-semibold text-text-h [overflow-wrap:anywhere]">{v.kind}{v.visit_time ? ` · ${formatVisitTime(v.visit_time)}` : ''}</span>
+          <span className="min-w-0 font-semibold text-text-h [overflow-wrap:anywhere]">{v.kind}{time.label ? ` · ${time.label}` : ''}</span>
         </div>
+        {time.yours && <div className="text-xs text-text">{time.yours}</div>}
         {detail && <div className="text-xs text-text [overflow-wrap:anywhere]">{detail}</div>}
         {v.work_site_id && <div className="text-xs text-text">Whole building{locationName ? ` · ${locationName}` : ''}</div>}
         {event.overdue && (
@@ -155,6 +161,8 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
             visits={visits}
             contacts={contacts}
             locationName={locationName}
+            timezone={tz}
+            locationUnitCount={locationUnitCount}
             onCancel={() => setForm(null)}
             onSaved={() => { setForm(null); reload(); setNotice('Visit saved.') }}
           />
@@ -179,7 +187,7 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
                         <div className="min-w-0 text-sm">
                           <div className="flex min-w-0 items-center gap-1.5 font-semibold text-text-h">
                             <CircleCheck size={16} className="flex-none text-text-h" aria-hidden="true" />
-                            <span className="min-w-0 [overflow-wrap:anywhere]">{event.visit.kind}{event.visit.visit_time ? ` · ${formatVisitTime(event.visit.visit_time)}` : ''}</span>
+                            <span className="min-w-0 [overflow-wrap:anywhere]">{event.visit.kind}{event.visit.visit_time ? ` · ${visitTimeText({ date: event.visit.visit_date, time: event.visit.visit_time, tz }).label}` : ''}</span>
                           </div>
                           {[event.visit.who, event.visit.note].filter(Boolean).length > 0 && (
                             <div className="text-xs text-text [overflow-wrap:anywhere]">{[event.visit.who, event.visit.note].filter(Boolean).join(' · ')}</div>

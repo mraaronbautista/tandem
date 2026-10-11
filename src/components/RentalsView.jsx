@@ -29,6 +29,9 @@ import { useRentalContacts } from '../lib/useRentalContacts'
 import { useRentalVisits } from '../lib/useRentalVisits'
 import { upcomingVisitCount } from '../lib/unitTimeline'
 import UnitActivitySheet from './UnitActivitySheet'
+import RentalLocations from './RentalLocations'
+import LocationVisitSheet from './LocationVisitSheet'
+import { todayInZone, zoneForSite } from '../lib/locationTime'
 
 // Persistent tab content (bottom tab bar on mobile, sidebar nav on wide
 // screens — see TaskBoard.jsx), not a modal — no onClose, nothing to
@@ -59,6 +62,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   const contactStore = useRentalContacts()
   const visitStore = useRentalVisits()
   const [activityUnitId, setActivityUnitId] = useState('')
+  const [visitLocation, setVisitLocation] = useState(null)
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date()
@@ -290,7 +294,14 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
 
   // "What's happening" sheet: one shared list of scheduled visits feeds the
   // cards' "N visits" badge and the sheet's timeline.
-  const visitCounts = new Map(properties.map((p) => [p.id, upcomingVisitCount(visitStore.visits || [], p, todayDateStr())]))
+  // "Today" for a unit is today at its own location, not on this device.
+  const siteZones = contactStore.error || !contactStore.contacts ? [] : contactStore.locations
+  const unitToday = (unit) => {
+    const tz = zoneForSite(unit.work_site_id, siteZones)
+    return tz ? todayInZone(tz) : todayDateStr()
+  }
+  const visitCounts = new Map(properties.map((p) => [p.id, upcomingVisitCount(visitStore.visits || [], p, unitToday(p))]))
+  const unitsAtLocation = (siteId) => (contactStore.properties || []).filter((u) => u.work_site_id === siteId && u.active !== false).length
   const openActivity = (unit) => setActivityUnitId(unit.id)
   const activityUnit = properties.find((p) => p.id === activityUnitId)
   const activitySheet = activityUnit && (
@@ -300,7 +311,28 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       visitStore={visitStore}
       contacts={contactStore.contacts}
       locations={contactStore.locations}
+      locationUnitCount={activityUnit.work_site_id ? unitsAtLocation(activityUnit.work_site_id) : 0}
       onClose={() => setActivityUnitId('')}
+    />
+  )
+
+  const termProperties = properties.filter((p) => (p.term || 'short_midterm') === rentalTerm)
+  const locationsRow = !contactStore.error && contactStore.contacts && (
+    <RentalLocations
+      locations={contactStore.locations}
+      units={contactStore.properties}
+      visibleUnitIds={new Set(termProperties.map((p) => p.id))}
+      visits={visitStore.visits}
+      onSchedule={setVisitLocation}
+    />
+  )
+  const locationSheet = visitLocation && (
+    <LocationVisitSheet
+      location={visitLocation}
+      unitCount={unitsAtLocation(visitLocation.id)}
+      visitStore={visitStore}
+      contacts={contactStore.contacts}
+      onClose={() => setVisitLocation(null)}
     />
   )
 
@@ -322,7 +354,9 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
     return (
       <div className="tab-panel">
         {termToggle}
+        {locationsRow}
         {activitySheet}
+        {locationSheet}
         <RentalLongTermView
           me={me}
           properties={properties}
@@ -370,7 +404,9 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       <div className="rentals-desktop-dashboard grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6">
         <div className="flex min-w-0 flex-col gap-3">
           {termToggle}
+          {locationsRow}
           {activitySheet}
+          {locationSheet}
           <div className="flex flex-wrap items-center gap-3.5">
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               <ChevronLeft size={14} />
@@ -466,7 +502,9 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
   return (
     <div className="tab-panel">
       {termToggle}
+      {locationsRow}
       {activitySheet}
+      {locationSheet}
       <h3 className="task-section-heading">Overview</h3>
       <RentalOverview
         properties={shortMidtermProperties}

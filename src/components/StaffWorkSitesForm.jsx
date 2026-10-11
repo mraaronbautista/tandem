@@ -15,6 +15,8 @@ import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
+import { DEFAULT_LOCATION_TZ } from '../lib/locationTime'
+import { TIMEZONE_OPTIONS } from '../lib/timezone'
 
 const FIELD_INPUT_CLASS =
   'w-full rounded-[8px] border border-border bg-bg px-3 py-[10px] text-[15px] text-text-h [font-family:inherit] [line-height:inherit]'
@@ -46,6 +48,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
   // new-site default, close to the previously-documented 150m.
   const [radiusM, setRadiusM] = useState(site?.geofence_radius_m ?? 152)
   const [radiusUnit, setRadiusUnit] = useState('ft')
+  const [timezone, setTimezone] = useState(site?.timezone || DEFAULT_LOCATION_TZ)
   const [propertyIds, setPropertyIds] = useState(
     rentalProperties.filter((property) => property.work_site_id === site?.id).map((property) => property.id),
   )
@@ -173,6 +176,7 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
         longitude: hasCoordinates ? Number(longitude) : null,
         geofence_radius_m: Number(radiusM) || 152,
         active: shouldBeActive,
+        timezone,
       }
       const saved = site ? await updateWorkSite(site.id, payload) : await createWorkSite(payload)
       await assignRentalPropertiesToWorkSite(saved.id, propertyIds)
@@ -265,6 +269,14 @@ export default function StaffWorkSitesForm({ site, rentalProperties, onClose, on
         <label>
           Location name
           <input required autoFocus placeholder="e.g. Rachel or Parkside" value={name} onChange={(event) => setName(event.target.value)} className={FIELD_INPUT_CLASS} />
+        </label>
+
+        <label>
+          Time zone
+          <select value={timezone} onChange={(event) => setTimezone(event.target.value)} className={FIELD_INPUT_CLASS}>
+            {TIMEZONE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+          <span className="mt-1 block text-xs opacity-80">Visit times at this location are read in this zone. Tasks keep their own time zones.</span>
         </label>
 
         <div className="flex flex-col gap-2">

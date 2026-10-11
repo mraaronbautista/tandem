@@ -7,9 +7,25 @@ This file is the canonical home for work that is approved but not fully shipped 
 - Update the status checklist whenever a related commit lands.
 - If implementation changes the plan, update this file in the same commit.
 
+## Plan status index (updated October 11, 2026)
+
+Shipped plans stay in this file, marked complete, so the history and decisions remain findable (Aaron, Oct 11: "don't remove shipped ones, just mark them complete").
+
+| Plan | Status |
+| --- | --- |
+| Staff timekeeping and payroll redesign | **Shipped.** One check left that only a signed-in member can do: the cadence field and payroll-period stepper |
+| Rentals: multiple tenants per booking | **COMPLETE.** Production has the `guest_names` column and two bookings with more than one tenant (read-only check, Oct 11) |
+| Rental contacts (directory, per-unit panels, Google import) | **COMPLETE** (published `57f8c82`, importer `752d4c9`); signed-in write/Realtime checks still outstanding |
+| Contacts: location-wide service coverage | **COMPLETE** (published `deb69c9`) |
+| Dated lease notes | **COMPLETE** (published `9125b9b`); live write/author/Realtime checks outstanding |
+| Export records (Excel/CSV) | **COMPLETE** (published `4801425`) |
+| Unit activity, scheduled visits, house manager Schedule tab, turnover shortcut | **COMPLETE and pushed** (`f83ff84`, `40aaa91`, `0ed2a6c`; SQL run); real phone and staff-login checks outstanding |
+| Call/text logging | **Not built.** Deferred Oct 6; design resumed Oct 11 (mockup requested, nothing approved yet) |
+| Reply templates, per-unit file | **Not built**, proposed only |
+
 ## Staff timekeeping and payroll redesign
 
-**Status:** Approved; implementation in progress.
+**Status:** Shipped (all phases below are built and pushed). Remaining: one signed-in check of the cadence field and payroll-period stepper, then nothing else. Kept here, marked complete, rather than removed.
 
 ### Product goal
 
@@ -104,7 +120,7 @@ Run the incremental `staff_payroll_cadence` schema block against the live Supaba
 
 ## Rentals — multiple tenants per booking
 
-**Status:** Implemented and locally verified; awaiting live migration/data verification.
+**Status: COMPLETE (October 11, 2026).** The `guest_names` column exists in production and two bookings there hold more than one tenant (read-only check). Kept in this file, marked complete.
 
 ### Goal and decisions
 
@@ -121,16 +137,16 @@ Run the incremental `staff_payroll_cadence` schema block against the live Supaba
 - [x] Bound calendar tracks so long names truncate instead of inflating the month grid.
 - [x] Add the backward-compatible `guest_names` migration and pre-migration read/write fallbacks.
 - [x] Verify the long-name calendar and repeatable Tenant controls at desktop and 390px mobile widths.
-- [ ] Run the incremental SQL block against live Supabase.
-- [ ] Verify create/edit of a two-tenant booking on desktop and mobile against live data.
-- [ ] Remove this completed plan after live verification and keep the final behavior in `CLAUDE.md`.
+- [x] Run the incremental SQL block against live Supabase. (Column confirmed present in production, Oct 11.)
+- [x] Verify create/edit of a two-tenant booking against live data. (Two multi-tenant bookings exist in production; creation confirmed by their existence, edit on a phone not separately observed.)
+- [x] Final behavior is in `CLAUDE.md`. Plan kept here and marked complete instead of removed (Aaron, Oct 11).
 
 
 ## Rental contacts, call logging, lease notes, unit files, reply templates and export
 
 **October 6, 2026 — Aaron’s scope update:** Call/text logging is deferred at Aaron’s request because it may not be useful right now. Do not implement the logging flow, Call/Text task sources, or related task links for this feature unless he explicitly resumes it. The logging portions of the proposal, phases, export datasets, and questions below are historical proposals, not current scope. Contacts, lease notes, unit files, reply templates, and export remain proposed; no next feature has been selected or approved.
 
-**Status:** Property contacts approved and prepared locally; manual migration and live verification pending. Call/text logging deferred. Other improvements below remain proposed. No production SQL, commits, pushes or deployments performed for contacts.
+**Status (October 11, 2026):** Property contacts, location-wide coverage, dated lease notes, Export records and Google Contacts import are all SHIPPED (sections below mark each one complete). Call/text logging, reply templates and the per-unit file are NOT built: call logging was deferred Oct 6 and design resumed Oct 11 with a mockup request; templates and unit files remain proposals. The phase list further down is the original proposal, kept as history.
 
 ### Approved first delivery — property contacts (October 6, 2026)
 
@@ -247,7 +263,7 @@ Aaron answers the open questions and approves (or amends) the phases. Then Phase
 
 ## Contacts — location-wide service coverage (October 6, 2026)
 
-**Approved; migration reported successfully run by Aaron.** Aaron approved location-wide service coverage by default, with specific-unit coverage as an option. Units inherit service contacts through their existing `rental_properties.work_site_id`; tenants stay linked to units. New service contacts opened from a unit default to its location after choosing Vendor/Other. Existing direct-unit coverage is preserved. Directory adds Location and Service filters; unit forms can set the existing location link. No location mappings or John/Martin records are created automatically.
+**COMPLETE: published (`deb69c9`); migration reported successfully run by Aaron.** Aaron approved location-wide service coverage by default, with specific-unit coverage as an option. Units inherit service contacts through their existing `rental_properties.work_site_id`; tenants stay linked to units. New service contacts opened from a unit default to its location after choosing Vendor/Other. Existing direct-unit coverage is preserved. Directory adds Location and Service filters; unit forms can set the existing location link. No location mappings or John/Martin records are created automatically.
 
 `supabase/add-rental-contact-locations.sql` (run AFTER the original contacts migration) adds location links, a Rentals-only location-name RPC, atomic coverage save RPC, and a metadata-only Realtime refresh signal for location edits. It leaves Staff policies and GPS data inaccessible to Rentals-only members. Existing clients' unit-contact saves preserve location links. Guard prevents tenants acquiring location-wide coverage.
 
@@ -283,7 +299,9 @@ Preview: `/Users/aaron/Documents/Codex/2026-10-06/i/outputs/lease-notes-preview.
 
 Lease notes are published. SQL application is user-reported and authenticated reads are verified; production write/access/Realtime checks remain outstanding. Prior contacts/location grouping and long-term lease controls are already published; creating real Amarillo location/contact/lease records remains separate setup work.
 
-## Export records — implementation prepared October 6, 2026
+## Export records — COMPLETE (published `4801425`, October 6, 2026)
+
+**Status (October 11, 2026): shipped.** The paragraph labelled "prepared locally" below is the original pre-publication note; the publication section after it supersedes it.
 
 Aaron approved expanding export to all app records except Tasks, then approved one Excel file with separate sheets and optional Vault inclusion. Settings → Export records now offers All records, Rentals, Contacts, Reports, Priorities, Board, Staff, Team and Vault. All records combines both rental companies and available sections; individual sections offer Excel plus CSV per record type. Include archived is optional. Tasks, comments/submissions tied to Tasks, task-linked archived board pins and milestone task references are excluded. Report text itself remains intact, including any task descriptions previously written into a report.
 
@@ -301,7 +319,7 @@ Aaron’s “perfect” answered the concrete commit/publish request. Export fea
 
 ## Unit activity, scheduled visits and the house manager's Schedule tab
 
-**Status (Oct 10, 2026):** Approved by Aaron (design picks below). Phases 1 and 2 of the Oct 8 audit fix plan are done. **Member side BUILT LOCALLY, not committed, SQL not run:** `rental_visits` table (`supabase/add-rental-visits.sql`), the "What's happening" button and sheet on unit cards (short/midterm cards and long-term lease cards), the visit form, Past visits, the "No cleaning booked yet" nudge with a Schedule cleaning shortcut. Checked: SQL on a real Postgres (32 checks), timeline rules (31 checks), the real components mounted at phone and desktop width with a stand-in database (open, schedule, failed save keeps entries, validation, whole-building, mark done, delete with confirm, overdue flag, long text wrapping, unset-table message and recovery). **Member side is committed and pushed (f83ff84) and its SQL has been run.** **Staff Schedule tab BUILT LOCALLY, not committed, `supabase/add-staff-schedule.sql` not run** (function tested on a real Postgres, screens mounted at phone width). **Turnover-task "Schedule visit" shortcut (decision 8) BUILT LOCALLY, not committed, no SQL.** Everything in this plan is now built. Not seen in the signed-in app, with a real staff login, or on a real phone.
+**Status (October 11, 2026): COMPLETE and pushed.** Member side `f83ff84`, house manager Schedule tab `40aaa91`, turnover-task shortcut `0ed2a6c`. `add-rental-visits.sql` and `add-staff-schedule.sql` are run in production (read-only checks confirm the table, the functions and the Realtime entry). Tested with a real Postgres and mounted screens; NOT yet tried on a real phone or the house manager's login. Kept here, marked complete.
 
 ### Why
 The house manager (a staff account) needs to know when tenants move in or out and when cleaners and other vendors are coming. Today a staff login can read no rental data at all, and Tandem has no record of a cleaner or vendor visit: the automatic turnover task only reminds Aaron to book one, and tasks are hidden from staff. Aaron's own workflow: the reminder task arrives about a week before a move-in/out, he books a cleaner, then ticks the task.

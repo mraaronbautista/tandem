@@ -45,7 +45,8 @@ returns text language sql immutable set search_path = public as $$
 $$;
 revoke all on function public.staff_tenant_label(jsonb) from public, anon, authenticated;
 
-create or replace function public.staff_schedule(p_from date, p_days integer default 60)
+drop function if exists public.staff_schedule(date, integer);
+create function public.staff_schedule(p_from date, p_days integer default 60)
 returns table (
   kind text,            -- 'move_out' | 'move_in' | 'visit'
   event_date date,
@@ -53,6 +54,7 @@ returns table (
   unit_name text,
   location_id uuid,
   location_name text,
+  location_timezone text, -- the location's time zone, so staff see "2:30 PM ET"
   title text,           -- tenant label, or the visit type
   who text,
   trade text,
@@ -74,7 +76,7 @@ begin
 
   return query
   select * from (
-    select 'move_out'::text, b.check_out, null::time, p.unit_name, p.work_site_id, w.name,
+    select 'move_out'::text, b.check_out, null::time, p.unit_name, p.work_site_id, w.name, w.timezone,
            public.staff_tenant_label(to_jsonb(b)), ''::text, ''::text, ''::text, ''::text
     from public.rental_bookings b
     join public.rental_properties p on p.id = b.property_id and p.active
@@ -82,7 +84,7 @@ begin
     where b.status = 'confirmed' and b.check_out between v_from and v_to
 
     union all
-    select 'move_in'::text, b.check_in, null::time, p.unit_name, p.work_site_id, w.name,
+    select 'move_in'::text, b.check_in, null::time, p.unit_name, p.work_site_id, w.name, w.timezone,
            public.staff_tenant_label(to_jsonb(b)), ''::text, ''::text, ''::text, ''::text
     from public.rental_bookings b
     join public.rental_properties p on p.id = b.property_id and p.active
@@ -91,7 +93,7 @@ begin
 
     union all
     select 'visit'::text, v.visit_date, v.visit_time, p.unit_name,
-           coalesce(p.work_site_id, v.work_site_id), coalesce(w.name, vw.name),
+           coalesce(p.work_site_id, v.work_site_id), coalesce(w.name, vw.name), coalesce(w.timezone, vw.timezone),
            v.kind,
            case when c.kind = 'tenant' then '' else v.who end,
            case when c.kind in ('vendor', 'other') then c.trade else '' end,

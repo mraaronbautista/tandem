@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarCheck, ClipboardCheck, LogIn, LogOut, Phone, Sparkles, Wrench } from 'lucide-react'
 import { todayDateStr } from '../lib/rentals'
-import { formatVisitTime } from '../lib/unitTimeline'
+import { visitTimeText } from '../lib/locationTime'
 import {
   NO_LOCATION,
   SCHEDULE_DAYS,
@@ -164,7 +164,9 @@ export default function StaffScheduleView() {
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="min-w-0 font-semibold text-text-h [overflow-wrap:anywhere]">{headline}</span>
                         {row.event_time && (
-                          <span className="flex-none text-[13px] tabular-nums">{formatVisitTime(row.event_time)}</span>
+                          <span className="flex-none text-[13px] tabular-nums">
+                            {visitTimeText({ date: row.event_date, time: row.event_time, tz: row.location_timezone, viewerTz: row.location_timezone }).label}
+                          </span>
                         )}
                       </div>
                       <span className="text-[13px] opacity-80 [overflow-wrap:anywhere]">

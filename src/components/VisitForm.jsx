@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { todayDateStr } from '../lib/rentals'
+import { todayInZone, visitTimeText, zoneName } from '../lib/locationTime'
 import { VISIT_KIND_SUGGESTIONS, saveRentalVisit } from '../lib/rentalVisits'
 import { recentVisitKinds } from '../lib/unitTimeline'
 import { friendlyError } from '../lib/friendlyError'
@@ -9,8 +10,11 @@ const INPUT = 'w-full min-h-[44px] rounded-[8px] border border-border bg-bg px-3
 
 // The add/edit visit form, shared by the unit's "What's happening" sheet and
 // the turnover task's "Schedule visit" shortcut.
-export default function VisitForm({ unit, visit, preset, visits, contacts, locationName, onCancel, onSaved }) {
-  const start = { kind: '', visit_date: todayDateStr(), visit_time: '', who: '', note: '', contact_id: '', ...preset }
+// `timezone` is the location's zone (or null when the unit has no location);
+// `locationOnly` is the Locations row's form, where a visit always belongs to
+// the whole location; `locationUnitCount` words the "Where" choice.
+export default function VisitForm({ unit, visit, preset, visits, contacts, locationName, timezone = null, locationOnly = false, locationUnitCount = 0, onCancel, onSaved }) {
+  const start = { kind: '', visit_date: timezone ? todayInZone(timezone) : todayDateStr(), visit_time: '', who: '', note: '', contact_id: '', ...preset }
   const people = (contacts || [])
     .filter((c) => c.active && c.kind !== 'tenant')
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -25,7 +29,7 @@ export default function VisitForm({ unit, visit, preset, visits, contacts, locat
   const [typedWho, setTypedWho] = useState(visit && !linkedContactListed ? visit.who : '')
   const [otherWho, setOtherWho] = useState(!!visit && !linkedContactListed && !!visit.who)
   const [note, setNote] = useState(visit?.note ?? start.note)
-  const [wholeBuilding, setWholeBuilding] = useState(!!visit?.work_site_id)
+  const [wholeBuilding, setWholeBuilding] = useState(locationOnly || !!visit?.work_site_id)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const pending = useRef(false)
@@ -82,6 +86,14 @@ export default function VisitForm({ unit, visit, preset, visits, contacts, locat
           <label>Date<input className={INPUT} type="date" required value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <label>Time (optional)<input className={INPUT} type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
         </div>
+        {timezone && time && (() => {
+          const { yours } = visitTimeText({ date, time, tz: timezone })
+          return (
+            <p className="mb-0 mt-1 text-xs text-text">
+              {zoneName(timezone)} time, at the property.{yours ? ` That is ${yours.replace(' your time', '')} for you.` : ''}
+            </p>
+          )
+        })()}
         <label className="mt-2 block">Who is coming
           <select
             className={INPUT}
@@ -98,11 +110,28 @@ export default function VisitForm({ unit, visit, preset, visits, contacts, locat
         </label>
         {otherWho && <label className="mt-2 block">Name<input className={INPUT} value={typedWho} maxLength={120} onChange={(e) => setTypedWho(e.target.value)} /></label>}
         <label className="mt-2 block">Note (optional)<input className={INPUT} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="Deep clean, fix bathroom sink…" /></label>
-        {unit.work_site_id && (
-          <label className="mt-2 flex min-h-11 items-center gap-2" style={{ flexDirection: 'row' }}>
-            <input type="checkbox" checked={wholeBuilding} onChange={(e) => setWholeBuilding(e.target.checked)} />
-            Whole building{locationName ? ` (${locationName})` : ''}: show on every unit there
-          </label>
+        {unit.work_site_id && !locationOnly && (
+          <fieldset className="mt-3 min-w-0 border-0 p-0" aria-label="Where is this visit">
+            <legend className="mb-1 p-0 text-sm text-text-h">Where</legend>
+            {[
+              [true, locationUnitCount > 1 ? `All ${locationUnitCount} units at ${locationName || 'this location'}` : `Everything at ${locationName || 'this location'}`],
+              [false, `${unit.unit_name} only`],
+            ].map(([whole, label]) => (
+              <label
+                key={String(whole)}
+                className={`mt-1.5 flex min-h-11 cursor-pointer items-center gap-2 rounded-[8px] border px-3 text-sm ${wholeBuilding === whole ? 'border-accent bg-pill-bg font-semibold text-text-h' : 'border-border text-text'}`}
+                style={{ flexDirection: 'row' }}
+              >
+                <input type="radio" name="visit-where" checked={wholeBuilding === whole} onChange={() => setWholeBuilding(whole)} />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+        )}
+        {locationOnly && (
+          <p className="mb-0 mt-3 rounded-[8px] bg-pill-bg px-3 py-2 text-sm text-text-h">
+            {locationUnitCount > 1 ? `Shows on all ${locationUnitCount} units at ${locationName}.` : `Shows on everything at ${locationName}.`}
+          </p>
         )}
       </fieldset>
       {error && <p role="alert" className="error">{error}</p>}
