@@ -129,22 +129,61 @@ Deno.serve(async (req) => {
   const denied = rejectUnlessNotifySecret(req)
   if (denied) return denied
 
-  const allMembers = await fetchAllMembers()
-  const rentalsMembers = allMembers.filter((m) => memberHasPermission(m, 'rentals'))
-
   const now = new Date()
   const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_MINUTES * 60_000)
+  const overdueCutoff = new Date(now.getTime() - OVERDUE_NUDGE_DAYS * 24 * 60 * 60_000)
 
-  // A task sent to the board is archived on purpose ("not doing this now"),
-  // so neither task check may nag about it.
-  const { data: dueSoon, error: dueSoonError } = await supabaseAdmin
-    .from('tasks')
-    .select('*')
-    .is('reminder_sent_at', null)
-    .neq('status', 'done')
-    .eq('archived', false)
-    .gte('due_date', now.toISOString())
-    .lte('due_date', windowEnd.toISOString())
+  // Plain calendar dates (Postgres `date` columns, no time-of-day or
+  // timezone of their own) — matches how src/lib/rentals.js treats every
+  // rental date as a bare 'YYYY-MM-DD' string throughout. "Today" is the
+  // calendar date in Central time (America/Chicago), not this server's UTC
+  // clock: by evening Central it is already "tomorrow" in UTC, so "Rent due
+  // today" used to arrive the evening before (audit finding 11).
+  const todayStr = centralDateStr(now)
+
+  // Every read this run needs, started together. They were five awaits in a
+  // row, and the scheduled job gives the whole run only 5 seconds, so a slow
+  // start (a cold function) tipped some runs over the limit. None of these
+  // reads depends on another or on anything the loops below write.
+  const [allMembers, dueSoonResult, staleOverdueResult, activeBookingsResult, longTermResult] = await Promise.all([
+    fetchAllMembers(),
+    // A task sent to the board is archived on purpose ("not doing this now"),
+    // so neither task check may nag about it.
+    supabaseAdmin
+      .from('tasks')
+      .select('*')
+      .is('reminder_sent_at', null)
+      .neq('status', 'done')
+      .eq('archived', false)
+      .gte('due_date', now.toISOString())
+      .lte('due_date', windowEnd.toISOString()),
+    supabaseAdmin
+      .from('tasks')
+      .select('*')
+      .is('overdue_nudge_sent_at', null)
+      .neq('status', 'done')
+      .eq('archived', false)
+      .not('due_date', 'is', null)
+      .lt('due_date', overdueCutoff.toISOString()),
+    supabaseAdmin
+      .from('rental_bookings')
+      .select('id, check_in, check_out, paid_charges, rent_reminder_sent_for, rental_properties(unit_name, monthly_rent)')
+      .eq('status', 'confirmed')
+      .gte('check_out', todayStr),
+    supabaseAdmin
+      .from('rental_bookings')
+      .select(
+        'id, property_id, guest_name, guest_names, check_in, check_out, last_month_reminder_sent_at, turnover_reminder_sent_at, rental_properties!inner(unit_name, term)',
+      )
+      .eq('status', 'confirmed')
+      .eq('rental_properties.term', 'long_term')
+      .gte('check_out', todayStr),
+  ])
+  const rentalsMembers = allMembers.filter((m) => memberHasPermission(m, 'rentals'))
+  const { data: dueSoon, error: dueSoonError } = dueSoonResult
+  const { data: staleOverdue, error: staleOverdueError } = staleOverdueResult
+  const { data: activeBookings, error: activeBookingsError } = activeBookingsResult
+  const { data: longTermBookings, error: longTermError } = longTermResult
 
   if (dueSoonError) console.error(`notify-reminders: could not load tasks due soon: ${dueSoonError.message}`)
 
@@ -157,17 +196,6 @@ Deno.serve(async (req) => {
     await markSent('tasks', task.id, { reminder_sent_at: new Date().toISOString() })
   }
 
-  const overdueCutoff = new Date(now.getTime() - OVERDUE_NUDGE_DAYS * 24 * 60 * 60_000)
-
-  const { data: staleOverdue, error: staleOverdueError } = await supabaseAdmin
-    .from('tasks')
-    .select('*')
-    .is('overdue_nudge_sent_at', null)
-    .neq('status', 'done')
-    .eq('archived', false)
-    .not('due_date', 'is', null)
-    .lt('due_date', overdueCutoff.toISOString())
-
   if (staleOverdueError) console.error(`notify-reminders: could not load overdue tasks: ${staleOverdueError.message}`)
 
   for (const task of staleOverdue || []) {
@@ -177,19 +205,8 @@ Deno.serve(async (req) => {
     await markSent('tasks', task.id, { overdue_nudge_sent_at: new Date().toISOString() })
   }
 
-  // Plain calendar dates (Postgres `date` columns, no time-of-day or
-  // timezone of their own) — matches how src/lib/rentals.js treats every
-  // rental date as a bare 'YYYY-MM-DD' string throughout. "Today" is the
-  // calendar date in Central time (America/Chicago), not this server's UTC
-  // clock: by evening Central it is already "tomorrow" in UTC, so "Rent due
-  // today" used to arrive the evening before (audit finding 11).
-  const todayStr = centralDateStr(now)
-
-  const { data: activeBookings } = await supabaseAdmin
-    .from('rental_bookings')
-    .select('id, check_in, check_out, paid_charges, rent_reminder_sent_for, rental_properties(unit_name, monthly_rent)')
-    .eq('status', 'confirmed')
-    .gte('check_out', todayStr)
+  if (activeBookingsError) console.error(`notify-reminders: could not load rent bookings: ${activeBookingsError.message}`)
+  if (longTermError) console.error(`notify-reminders: could not load long-term leases: ${longTermError.message}`)
 
   for (const b of activeBookings || []) {
     if (b.rent_reminder_sent_for === todayStr) continue
@@ -213,15 +230,6 @@ Deno.serve(async (req) => {
   // since a lease only has one final month and one move-out, not a
   // repeating monthly cycle.
   const sevenDaysOutStr = addDays(todayStr, 7)
-
-  const { data: longTermBookings } = await supabaseAdmin
-    .from('rental_bookings')
-    .select(
-      'id, property_id, guest_name, guest_names, check_in, check_out, last_month_reminder_sent_at, turnover_reminder_sent_at, rental_properties!inner(unit_name, term)',
-    )
-    .eq('status', 'confirmed')
-    .eq('rental_properties.term', 'long_term')
-    .gte('check_out', todayStr)
 
   for (const b of longTermBookings || []) {
     const unitName = b.rental_properties?.unit_name || 'A unit'
