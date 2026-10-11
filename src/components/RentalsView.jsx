@@ -312,6 +312,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       contacts={contactStore.contacts}
       locations={contactStore.locations}
       locationUnitCount={activityUnit.work_site_id ? unitsAtLocation(activityUnit.work_site_id) : 0}
+      onUnitChanged={reloadProperties}
       onClose={() => setActivityUnitId('')}
     />
   )

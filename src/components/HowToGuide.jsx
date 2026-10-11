@@ -251,6 +251,7 @@ const FAQS = [
       'Shortcut: when Tandem makes a "Schedule turnover cleaning" task for a move-out, open the task and tap Schedule visit. The unit, Cleaning and the day after the move-out are already filled in; save it and the "book the cleaner" step on the task is ticked for you.',
       'Visits for a whole address: at the top of Rentals, the Locations row has one card per place (for example 1072 Rachel, 4 units). Tap Schedule visit on a card to book something for the whole location, like camera security setup. It shows on every unit there and once on the house manager\'s schedule. From a single unit\'s visit form, the Where choice picks "all units at this location" or "this unit only".',
       'Time zones: each location has a time zone (set in its settings; all three current ones are Eastern). A visit time is the time at the property and is labelled, like 2:30 PM ET. If you are in another zone it also shows what that is for you, like 2:30 AM Thu. Tasks are not affected: each task keeps its own time zone.',
+      'Note for the house manager: open a unit\'s What\'s happening and write a short standing note ("tenant has a dog, gate code changed, use the side door"), then Save note. He sees it on his Schedule tab under Unit notes with the date it was last changed, until you clear it. He can read whatever you write, so keep tenant phone numbers and private details out.',
     ],
   },
   {

@@ -7,6 +7,9 @@ import {
   SCHEDULE_DAYS,
   dayHeading,
   fetchStaffSchedule,
+  fetchStaffUnitNotes,
+  filterNotesByLocation,
+  noteUpdatedLabel,
   groupScheduleByDay,
   isScheduleMissing,
   scheduleLocations,
@@ -41,6 +44,7 @@ function describe(row) {
 // change anything.
 export default function StaffScheduleView() {
   const [rows, setRows] = useState(null)
+  const [notes, setNotes] = useState([])
   const [error, setError] = useState('')
   const [locationId, setLocationId] = useState(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -53,7 +57,15 @@ export default function StaffScheduleView() {
       const version = ++generation
       try {
         const data = await fetchStaffSchedule(todayDateStr())
-        if (!cancelled && version === generation) { setRows(data); setError('') }
+        // Unit notes are a bonus: if they cannot load (not set up yet, a
+        // network blip) the schedule itself still shows, and the last notes
+        // stay on screen.
+        const noteRows = await fetchStaffUnitNotes().catch(() => null)
+        if (!cancelled && version === generation) {
+          setRows(data)
+          if (noteRows) setNotes(noteRows)
+          setError('')
+        }
       } catch (err) {
         if (!cancelled && version === generation) {
           setError(isScheduleMissing(err)
@@ -81,10 +93,11 @@ export default function StaffScheduleView() {
     }
   }, [reloadKey])
 
-  const locations = useMemo(() => scheduleLocations(rows || []), [rows])
+  const locations = useMemo(() => scheduleLocations([...(rows || []), ...notes]), [rows, notes])
   // A filter whose location no longer has anything coming up falls back to all.
   const activeFilter = locations.some((l) => l.id === locationId) ? locationId : null
   const days = useMemo(() => groupScheduleByDay(rows || [], activeFilter), [rows, activeFilter])
+  const shownNotes = useMemo(() => filterNotesByLocation(notes, activeFilter), [notes, activeFilter])
 
   if (rows === null && !error) return <LoadingText />
 
@@ -133,6 +146,23 @@ export default function StaffScheduleView() {
             </button>
           ))}
         </div>
+      )}
+
+      {shownNotes.length > 0 && (
+        <section className="flex flex-col gap-2" aria-label="Unit notes">
+          <h2 className="m-0 text-[13px] font-semibold uppercase tracking-wide text-text-h">Unit notes</h2>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {shownNotes.map((n) => (
+              <li key={`${n.location_id}-${n.unit_name}`} className="min-w-0 rounded-[12px] border border-border border-l-[3px] border-l-accent bg-card-bg p-3">
+                <div className="flex min-w-0 items-baseline justify-between gap-2">
+                  <span className="min-w-0 font-semibold text-text-h [overflow-wrap:anywhere]">{n.unit_name}</span>
+                  <span className="flex-none text-xs opacity-80">{noteUpdatedLabel(n.updated_at)}</span>
+                </div>
+                <p className="m-0 mt-1 whitespace-pre-wrap text-[14px] text-text [overflow-wrap:anywhere]">{n.note}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {days.length === 0 ? (

@@ -14,6 +14,27 @@ export async function fetchStaffSchedule(today, days = SCHEDULE_DAYS) {
   return data || []
 }
 
+// The house manager's standing notes per unit (staff_unit_notes()). Notes
+// are a bonus on the Schedule tab, so a failure here never hides the schedule.
+export async function fetchStaffUnitNotes() {
+  const { data, error } = await supabase.rpc('staff_unit_notes')
+  if (error) throw error
+  return data || []
+}
+
+// Notes for the chosen location (null = everything), same rule as the rows.
+export function filterNotesByLocation(notes, locationId = null) {
+  return (notes || []).filter((n) =>
+    !locationId || (locationId === NO_LOCATION ? !n.location_id : n.location_id === locationId),
+  )
+}
+
+// 'Oct 12' for a stored timestamp, in the viewer's own zone.
+export function noteUpdatedLabel(iso) {
+  if (!iso) return ''
+  return `Updated ${new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
+}
+
 export function isScheduleMissing(err) {
   // PostgREST: function not found in the schema cache.
   return err?.code === 'PGRST202' || err?.code === '42883'

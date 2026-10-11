@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { CalendarCheck, CircleCheck, ClipboardCheck, LogIn, LogOut, Sparkles, TriangleAlert, Wrench } from 'lucide-react'
 import { formatDateStr, todayDateStr } from '../lib/rentals'
 import { deleteRentalVisit, setRentalVisitDone } from '../lib/rentalVisits'
+import { saveUnitStaffNote } from '../lib/rentals'
 import { addDaysStr, buildUnitTimeline } from '../lib/unitTimeline'
 import { todayInZone, visitTimeText, zoneForSite } from '../lib/locationTime'
 import { friendlyError } from '../lib/friendlyError'
@@ -30,11 +31,15 @@ function visitIcon(kind) {
 // What is happening at one unit: upcoming move-outs and move-ins, plus the
 // visits someone has scheduled (a cleaner, a plumber, an inspection). Opened
 // from the "What's happening" button on a unit card.
-export default function UnitActivitySheet({ unit, bookings, visitStore, contacts, locations, locationUnitCount = 0, onClose }) {
+export default function UnitActivitySheet({ unit, bookings, visitStore, contacts, locations, locationUnitCount = 0, onUnitChanged, onClose }) {
   const [form, setForm] = useState(null) // null | { visit?: row, preset?: {...} }
   const [showPast, setShowPast] = useState(false)
   const [busyId, setBusyId] = useState('')
   const [notice, setNotice] = useState('')
+  // The standing note the house manager reads on his Schedule tab.
+  const [noteDraft, setNoteDraft] = useState(unit.staff_note || '')
+  const [noteSaved, setNoteSaved] = useState({ text: unit.staff_note || '', at: unit.staff_note_updated_at || null })
+  const [noteState, setNoteState] = useState({ saving: false, message: '' })
   const pending = useRef(false)
   const confirm = useConfirm()
   const { visits, error, reload } = visitStore
@@ -54,6 +59,19 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
     try { await action(); reload(); if (done) setNotice(done) }
     catch (err) { setNotice(friendlyError(err)) }
     finally { pending.current = false; setBusyId('') }
+  }
+  async function saveNote() {
+    if (noteState.saving) return
+    setNoteState({ saving: true, message: '' })
+    try {
+      const row = await saveUnitStaffNote(unit.id, noteDraft)
+      setNoteDraft(row.staff_note)
+      setNoteSaved({ text: row.staff_note, at: row.staff_note_updated_at })
+      setNoteState({ saving: false, message: row.staff_note ? 'Saved. The house manager can see it.' : 'Note cleared.' })
+      onUnitChanged?.()
+    } catch (err) {
+      setNoteState({ saving: false, message: friendlyError(err) })
+    }
   }
   async function removeVisit(visit) {
     const ok = await confirm({
@@ -169,6 +187,30 @@ export default function UnitActivitySheet({ unit, bookings, visitStore, contacts
         ) : (
           <>
             <RentalButton variant="primary" className="min-h-[44px]" onClick={() => { setNotice(''); setForm({}) }}>+ Schedule a visit</RentalButton>
+            <div className="mt-3 min-w-0 rounded-[10px] border border-border p-3">
+              <label className="block text-sm font-semibold text-text-h" htmlFor="unit-staff-note">Note for the house manager</label>
+              <textarea
+                id="unit-staff-note"
+                className="mt-1 min-h-[72px] w-full rounded-[8px] border border-border bg-bg px-3 py-2 text-[15px] text-text-h"
+                value={noteDraft}
+                maxLength={500}
+                placeholder="Tenant has a dog. Gate code changed. Use the side door."
+                onChange={(e) => { setNoteDraft(e.target.value); setNoteState((st) => ({ ...st, message: '' })) }}
+              />
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs text-text">
+                  {noteDraft.trim() !== noteSaved.text
+                    ? 'Not saved yet'
+                    : noteSaved.at
+                      ? `Updated ${new Date(noteSaved.at).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
+                      : 'No note yet'}
+                  {` · ${noteDraft.length}/500`}
+                </span>
+                <RentalButton className="min-h-[44px]" disabled={noteState.saving} onClick={saveNote}>{noteState.saving ? 'Saving…' : 'Save note'}</RentalButton>
+              </div>
+              <p className="mb-0 mt-1 text-xs text-text">He can read this. Keep tenant phone numbers and private details out.</p>
+              {noteState.message && <p role="status" className="mb-0 mt-1 break-words text-sm">{noteState.message}</p>}
+            </div>
             {timeline.upcoming.length ? (
               <ul className="m-0 mt-3 list-none p-0">{timeline.upcoming.map(row)}</ul>
             ) : (

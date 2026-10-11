@@ -105,7 +105,9 @@ export function chargeDatesForBooking(booking) {
   return dates
 }
 
-const PROPERTY_COLUMNS = 'id, company, term, unit_name, address, monthly_rent, color, active, in_negotiation, work_site_id'
+const BASE_PROPERTY_COLUMNS = 'id, company, term, unit_name, address, monthly_rent, color, active, in_negotiation, work_site_id'
+// The house manager's standing note per unit (add-unit-staff-note.sql).
+const PROPERTY_COLUMNS = `${BASE_PROPERTY_COLUMNS}, staff_note, staff_note_updated_at`
 
 export async function fetchRentalProperties(company) {
   let { data, error } = await supabase
@@ -120,6 +122,18 @@ export async function fetchRentalProperties(company) {
   // the migration instead of pretending a link was persisted. Same
   // reasoning covers `term` — a unit fetched before that migration runs
   // just reads as Short/Midterm (the column's own default) until it does.
+  // Same idea for the note columns: until add-unit-staff-note.sql has run, read
+  // the units without them (the note then reads as empty).
+  if (error?.code === '42703' && error.message?.includes('staff_note')) {
+    const withoutNote = await supabase
+      .from('rental_properties')
+      .select(BASE_PROPERTY_COLUMNS)
+      .eq('company', company)
+      .eq('active', true)
+      .order('monthly_rent', { ascending: false })
+    data = withoutNote.data?.map((property) => ({ ...property, staff_note: '', staff_note_updated_at: null }))
+    error = withoutNote.error
+  }
   if (error?.code === '42703' && (error.message?.includes('work_site_id') || error.message?.includes('term'))) {
     const fallback = await supabase
       .from('rental_properties')
@@ -150,6 +164,19 @@ export async function updateRentalProperty(id, { unit_name, address, monthly_ren
     .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term, ...(work_site_id !== undefined ? { work_site_id } : {}) })
     .eq('id', id)
     .select(PROPERTY_COLUMNS)
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Writes the standing note for the house manager. The database trims it,
+// limits it to 500 characters and stamps when it last changed.
+export async function saveUnitStaffNote(id, note) {
+  const { data, error } = await supabase
+    .from('rental_properties')
+    .update({ staff_note: note })
+    .eq('id', id)
+    .select('id, staff_note, staff_note_updated_at')
     .single()
   if (error) throw error
   return data
