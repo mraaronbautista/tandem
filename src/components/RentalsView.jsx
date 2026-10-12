@@ -385,6 +385,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
             locations={contactStore.error || !contactStore.contacts ? null : contactStore.locations}
             property={editingProperty}
             defaultTerm={rentalTerm}
+            bookings={upcomingBookings}
             onClose={closePropertyForm}
             onSaved={() => {
               closePropertyForm()
@@ -485,6 +486,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
             locations={contactStore.error || !contactStore.contacts ? null : contactStore.locations}
             property={editingProperty}
             defaultTerm={rentalTerm}
+            bookings={upcomingBookings}
             onClose={closePropertyForm}
             onSaved={() => {
               closePropertyForm()
@@ -577,6 +579,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           locations={contactStore.error || !contactStore.contacts ? null : contactStore.locations}
           property={editingProperty}
           defaultTerm={rentalTerm}
+          bookings={upcomingBookings}
           onClose={closePropertyForm}
           onSaved={() => {
             closePropertyForm()

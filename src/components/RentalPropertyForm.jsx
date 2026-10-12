@@ -5,6 +5,7 @@ import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
 import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
+import RentDuePreview from './RentDuePreview'
 
 const DEFAULT_COLOR = '#3b82f6'
 
@@ -30,7 +31,7 @@ const FIELD_INPUT_CLASS =
 // tapped — same reasoning the company picker already scopes a new unit to
 // whichever company tab you're on, rather than making term a choice with
 // no sensible default.
-export default function RentalPropertyForm({ company, property, defaultTerm, locations = null, onClose, onSaved, onArchived }) {
+export default function RentalPropertyForm({ company, property, defaultTerm, locations = null, bookings = [], onClose, onSaved, onArchived }) {
   const confirm = useConfirm()
   const [unitName, setUnitName] = useState(property?.unit_name || '')
   const [address, setAddress] = useState(property?.address || '')
@@ -158,6 +159,16 @@ export default function RentalPropertyForm({ company, property, defaultTerm, loc
               : `Rent is charged on ${dueDayLabel(Number(rentDueDay))} of every month, like TurboTenant. A part-month at move-in or move-out is prorated by days.`}
           </span>
         </label>
+
+        {/* What each setting would charge the unit's tenant, calculated live from
+            the dropdown above. Nothing is saved until Save changes. */}
+        <RentDuePreview
+          property={property}
+          bookings={bookings}
+          rent={monthlyRent}
+          currentDueDay={property?.rent_due_day ?? null}
+          selectedDueDay={rentDueDay === '' ? null : Number(rentDueDay)}
+        />
 
         <label>
           Calendar color
