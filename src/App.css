@@ -983,10 +983,6 @@ select:focus-visible {
   white-space: nowrap;
 }
 
-.day-timeline-block-date {
-  font-size: 10px;
-}
-
 /* The time column is already dimmed as a whole; dimming its date and zone
    badge again compounded to ~0.64 opacity. */
 .day-timeline-block-time .task-zone-badge {

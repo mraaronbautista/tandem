@@ -4,7 +4,7 @@ import { isAllDayTask, formatDuration, assigneeIdsOverlap } from '../lib/tasks'
 import { PRIORITY_COLOR, PRIORITY_LABEL } from '../lib/priorityColors'
 import PriorityBadge from './PriorityBadge'
 import { assigneeBadge } from '../lib/whoLabels'
-import { zoneAbbreviation, zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
+import { zoneLabel, splitDueDateInZone, DEFAULT_TIMEZONE } from '../lib/timezone'
 import AllDayRow from './AllDayRow'
 import TaskIcon from './TaskIcon'
 import { readableTextColor } from '../lib/colorContrast'
@@ -49,14 +49,14 @@ const MIN_BLOCK_HEIGHT = 58
 // first task instead of leaving an hour-scale-sized blank area.
 const TIMELINE_TOP_PADDING = 8
 const TIMELINE_BOTTOM_PADDING = 20
-// A real gap between tasks shorter than this still renders at the normal
-// proportional scale (a 20-40min gap between two tasks is normal daily
-// texture, not something worth collapsing). Anything longer collapses
-// into a fixed-height marker instead — otherwise a single early-morning
-// task and a single evening one would force a mostly-empty multi-hour
-// scroll between them, burying whatever's on the other side of the gap.
-const GAP_THRESHOLD_MINUTES = 90
-const GAP_MARKER_HEIGHT = 30
+// A real gap between tasks no longer than this still renders at the normal
+// proportional scale (a 15-30min gap between two tasks is normal daily
+// texture). Anything longer collapses into a fixed-height marker whose label
+// carries the duration. It used to be 90 minutes, which drew a 1.5 hour gap
+// about 225px tall (with an hour line inside it as well), so a day with four
+// tasks took two screens and the page read as mostly blank.
+const GAP_THRESHOLD_MINUTES = 30
+const GAP_MARKER_HEIGHT = 34
 // Even a short positive gap needs enough room to carry its duration
 // label. Without this floor, a 5-minute gap was only 12.5px tall and the
 // label either collided with a block or had to disappear.
@@ -87,60 +87,27 @@ function calendarDayOffset(start, end) {
   return Math.round((endDay - startDay) / 86400000)
 }
 
-// "Completed 10:00 PM" for a finished task — always the real
-// completed_at instant, read straight off the task rather than derived
-// from `start` (which is always due_date now — see the layout useMemo
-// below, and tasks.js's getTasksForDay for why a task's *position*
-// no longer follows it to wherever it actually got finished). The two
-// are deliberately decoupled: the block still sits where it was
-// scheduled, but the label states honestly when it was actually done,
-// even if that's a different day entirely. "10:00–10:40 PM" for a real
-// duration, or just "10:00 PM" for a point-in-time task — never the
-// fake POINT_TASK_MINUTES sizing used purely for a legible minimum block
-// height, which isn't a real duration worth stating as one.
-//
-// Formatted in the task's own due_timezone, not the viewer's, for the
-// still-open cases — the time/zone badge's whole job is "can I trust
-// this was scheduled right in the zone it says it's in," which a
-// silently-converted time right next to that zone's abbreviation
-// actively defeats: a task set for 10 PM–2 AM Eastern showed as
-// "10:00 AM–2:00 PM" next to an "ET" badge for a viewer ~12 hours
-// away, reading as if 10 AM–2 PM *was* Eastern time. "Completed" shows
-// completed_at in the viewer's own zone instead — that's when it was
-// actually finished in the real world, not tied to whatever zone the
-// original due time was set in.
-// A task whose real duration (not its compact render height) crosses
-// into another calendar day gets a compact day offset after its end
-// time: "10:55 PM–2:00 AM +1". Longer tasks naturally become +2, +3,
-// and so on. Compared in due_timezone, matching every other zone-aware
-// label here (blockDateLabel, the badge).
-function blockTimeLabel(task, start, end, displayTimezone) {
-  if (task.status === 'done') {
-    const fmt = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: displayTimezone })
-    return `Completed ${fmt(new Date(task.completed_at))}`
-  }
-  const fmt = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  if (!task.duration_minutes) return fmt(start)
-  const dayOffset = calendarDayOffset(start, end)
-  return (
-    <>
-      {fmt(start)}–{fmt(end)}
-      {dayOffset > 0 && <sup className="day-timeline-day-offset">+{dayOffset}</sup>}
-    </>
-  )
+// "Completed 10:00 PM" for a finished task: always the real completed_at
+// instant, read straight off the task rather than derived from `start` (which
+// is always due_date; a task's *position* stays where it was scheduled, see
+// tasks.js's getTasksForDay). Shown in the viewer's display zone, and with the
+// date only when it was finished on a different day than it was scheduled,
+// since the block no longer prints its own date (the day is already selected).
+// Open tasks show no time on the block at all: the left gutter already carries
+// the start and end, and repeating them (plus the date and zone) squeezed the
+// title.
+function dayKey(date, timeZone) {
+  return date.toLocaleDateString('en-CA', { timeZone })
 }
 
-// "Tue 08/18/26" — start is always due_date now (see blockTimeLabel
-// above), so this always reads in due_timezone regardless of done
-// status; a task set for late evening in a zone hours ahead of the
-// viewer's can still land on a different calendar date there than
-// where the block's own position (also due_date-based) might suggest.
-// toLocaleDateString inserts a comma after the weekday by default
-// ("Tue, 08/18/26"); stripped since the requested format is
-// space-separated.
-function blockDateLabel(start) {
-  const opts = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' }
-  return start.toLocaleDateString('en-US', opts).replace(', ', ' ')
+function completedLabel(task, start, displayTimezone) {
+  const completed = new Date(task.completed_at)
+  const pad = (n) => String(n).padStart(2, '0')
+  const scheduledKey = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
+  const time = completed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: displayTimezone })
+  if (dayKey(completed, displayTimezone) === scheduledKey) return `Completed ${time}`
+  const day = completed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: displayTimezone })
+  return `Completed ${day}, ${time}`
 }
 
 // A Date carrying the wall-clock fields for an instant in the selected
@@ -373,7 +340,7 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
       // timeline stays where it was scheduled regardless of when it
       // actually got finished (see getTasksForDay in tasks.js). The
       // label still states the real completed_at separately —
-      // blockTimeLabel reads that straight off `task`, not `start`.
+      // completedLabel reads that straight off `task`, not `start`.
       const start = wallClockDate(task.due_date, displayTimezone)
       const end = new Date(start.getTime() + (task.duration_minutes || POINT_TASK_MINUTES) * 60000)
       // The floor every block actually renders at (MIN_BLOCK_HEIGHT),
@@ -392,6 +359,10 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
   return (
     <div className="day-timeline-wrap">
       {untimed.length > 0 && <AllDayRow tasks={untimed} members={members} onSelect={onSelect} onStatusChange={onStatusChange} />}
+
+      {layout && (
+        <p className="m-0 text-right text-[11px] text-text opacity-80">Times shown in {zoneLabel(displayTimezone)}</p>
+      )}
 
       {layout && (
         <div className="day-timeline" style={{ height: layout.height }}>
@@ -471,7 +442,7 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
               </div>
             ))}
 
-            {layout.positioned.map(({ task, start, end, truncated, top, height }) => {
+            {layout.positioned.map(({ task, start, truncated, top, height }) => {
               const overlapping = overlappingIds?.has(task.id) ?? false
               const classes = ['day-timeline-block']
               if (overlapping) classes.push('day-timeline-block-overlapping')
@@ -504,17 +475,10 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
                   }}
                   title={PRIORITY_LABEL[task.priority]}
                 >
-                  {/* Time/zone live in their own fixed right-hand column
-                      (day-timeline-block-time), not stacked below the
-                      title — a title long enough to wrap its full 2 lines
-                      would otherwise eat all the block's vertical room
-                      and push the time/zone out entirely, which is
-                      exactly backwards: those are the two things worth
-                      the most "can I trust this is scheduled right at a
-                      glance" value. Checklist/notes/question indicators
-                      stay in a secondary row below the title — genuinely
-                      optional context, fine to lose on the shortest
-                      blocks the same way it always has been. */}
+                  {/* An open task shows only its title and indicators: its
+                      time is in the left gutter and the zone is stated once
+                      above the timeline. A finished task keeps a small
+                      "Completed ..." column on the right. */}
                   <button type="button" className="day-timeline-block-body" onClick={() => onSelect(task)}>
                     <span className="day-timeline-block-main">
                       <span className="day-timeline-block-top">
@@ -553,19 +517,11 @@ export default function DayTimeline({ tasks, members = [], onSelect, onStatusCha
                         </span>
                       )}
                     </span>
-                    <span className="day-timeline-block-time">
-                      <span className="day-timeline-block-date">
-                        {blockDateLabel(start)}
+                    {task.status === 'done' && (
+                      <span className="day-timeline-block-time">
+                        <span className="day-timeline-block-time-label">{completedLabel(task, start, displayTimezone)}</span>
                       </span>
-                      <span className="day-timeline-block-time-row">
-                        <span className="day-timeline-block-time-label">{blockTimeLabel(task, start, end, displayTimezone)}</span>
-                        {!isAllDayTask(task) && (
-                          <span className="task-zone-badge" title={`Displayed in ${zoneLabel(displayTimezone)}`}>
-                            {zoneAbbreviation(displayTimezone)}
-                          </span>
-                        )}
-                      </span>
-                    </span>
+                    )}
                   </button>
                   {/* Trailing, not leading — same "checkbox on the right"
                       placement TaskRow.jsx's collapsed row now uses. */}
