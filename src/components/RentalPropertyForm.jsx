@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createRentalProperty, updateRentalProperty, archiveRentalProperty } from '../lib/rentals'
+import { createRentalProperty, updateRentalProperty, archiveRentalProperty, LAST_DAY, dueDayLabel } from '../lib/rentals'
 import Modal from './Modal'
 import ModalCard from './ModalCard'
 import { SubmissionActions, SubmissionButton } from './SubmissionActions'
@@ -7,6 +7,10 @@ import { useConfirm } from '../lib/confirmContext'
 import { friendlyError } from '../lib/friendlyError'
 
 const DEFAULT_COLOR = '#3b82f6'
+
+// "1st", "2nd", ... for the Rent due day dropdown (1 to 28; the 29th to 31st do
+// not exist in every month, so "Last day of the month" covers those).
+const DUE_DAY_OPTIONS = Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: dueDayLabel(i + 1).replace('the ', '') }))
 
 // Matches .submission-field input[type='text'/'number'] (App.css:1366-1376)
 // — same fix as RentalSavingsGoalForm.jsx/RentalExpenseForm.jsx. Does NOT
@@ -34,6 +38,8 @@ export default function RentalPropertyForm({ company, property, defaultTerm, loc
   const [color, setColor] = useState(property?.color || DEFAULT_COLOR)
   const [term, setTerm] = useState(property?.term || defaultTerm || 'short_midterm')
   const [workSiteId, setWorkSiteId] = useState(property?.work_site_id || '')
+  // '' = "Same as move-in day" (null in the database).
+  const [rentDueDay, setRentDueDay] = useState(property?.rent_due_day == null ? '' : String(property.rent_due_day))
   const [saving, setSaving] = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState('')
@@ -51,6 +57,11 @@ export default function RentalPropertyForm({ company, property, defaultTerm, loc
         color,
         term,
         ...(locations ? { work_site_id: workSiteId || null } : {}),
+        // Only sent when it changed, so saving a unit never touches a database
+        // that has not had add-rent-due-day.sql run yet.
+        ...(rentDueDay !== (property?.rent_due_day == null ? '' : String(property.rent_due_day))
+          ? { rent_due_day: rentDueDay === '' ? null : Number(rentDueDay) }
+          : {}),
       }
       const saved = property
         ? await updateRentalProperty(property.id, payload)
@@ -132,6 +143,20 @@ export default function RentalPropertyForm({ company, property, defaultTerm, loc
             onChange={(e) => setMonthlyRent(e.target.value)}
             className={FIELD_INPUT_CLASS}
           />
+        </label>
+
+        <label>
+          Rent due day
+          <select value={rentDueDay} onChange={(e) => setRentDueDay(e.target.value)} className={FIELD_INPUT_CLASS}>
+            <option value="">Same as move-in day</option>
+            {DUE_DAY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <option value={String(LAST_DAY)}>Last day of the month</option>
+          </select>
+          <span className="mt-1 block text-xs text-text">
+            {rentDueDay === ''
+              ? "Rent is charged on each tenant's move-in day, a full month at a time."
+              : `Rent is charged on ${dueDayLabel(Number(rentDueDay))} of every month, like TurboTenant. A part-month at move-in or move-out is prorated by days.`}
+          </span>
         </label>
 
         <label>

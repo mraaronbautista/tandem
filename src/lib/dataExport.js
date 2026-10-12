@@ -6,7 +6,7 @@ import { formulaSafeText } from './csvSafe'
 // Only user records: no task tables, credentials, push subscriptions or access grants.
 export const EXPORT_GROUPS = {
   Rentals: [
-    ['Rental units', 'rental_properties', 'id,company,term,unit_name,address,monthly_rent,color,active,in_negotiation,work_site_id,created_at', ['id']],
+    ['Rental units', 'rental_properties', 'id,company,term,unit_name,address,monthly_rent,rent_due_day,color,active,in_negotiation,work_site_id,created_at', ['id']],
     ['Leases and bookings', 'rental_bookings', 'id,property_id,guest_name,guest_names,check_in,check_out,status,source,source_note,notes,paid_charges,created_by,created_at', ['id']],
     ['Expenses', 'rental_expenses', 'id,company,label,amount,created_at', ['id']],
     ['Savings goals', 'rental_savings_goal', 'id,company,label,target_amount,saved_amount,updated_at', ['id']],

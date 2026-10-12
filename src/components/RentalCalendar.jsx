@@ -293,6 +293,7 @@ const RentalCalendar = forwardRef(function RentalCalendar(
       {selectedBooking && (
         <RentalBookingDetail
           booking={selectedBooking}
+          rentDueDay={properties.find((p) => p.id === selectedBooking.property_id)?.rent_due_day ?? null}
           onClose={() => setSelectedBooking(null)}
           onEdit={(booking) => {
             setSelectedBooking(null)

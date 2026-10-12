@@ -62,7 +62,7 @@ const SECTIONS = [
       'Tap + while on Rentals to open Add booking directly.',
       'A booking can have more than one tenant in the same unit. Use “Add tenant” in Add/Edit booking instead of creating overlapping bookings or combining everybody into one Guest name field.',
       'Tip: record where a booking came from (Airbnb, Furnished Finder, Referral, etc.) when adding or editing it — Financials tallies revenue by source every month, so you can actually see which platform is worth the effort instead of guessing.',
-      'Financials: revenue is recognized by upfront charge cycle (roughly every 30 days from check-in), not day-by-day occupancy — a guest still there in month two doesn\'t get double-counted.',
+      'Financials: revenue is recognized by upfront charge cycle, not day-by-day occupancy — a guest still there in month two doesn\'t get double-counted. Each unit has a Rent due day (Edit unit): leave it on Same as move-in day to charge a full month on each tenant\'s move-in day, or pick the 1st to the 28th or the last day of the month to charge on that fixed day every month, with a part-month at move-in or move-out prorated by days (like TurboTenant).',
       'Tip: tap any overhead line to edit or delete it, or use "+ Add overhead" — it\'s not a fixed list, keep it current as costs change.',
       'Savings goal progress is a manually-updated number, not calculated from bookings — update it directly in its own edit form.',
       'Overview: every unit\'s status at a glance — occupied through a date, or vacant with the next upcoming booking if there is one.',

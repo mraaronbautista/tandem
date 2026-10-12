@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import {
-  chargeDatesForBooking,
+  chargeScheduleForBooking,
+  chargeAmount,
+  formatRent,
+  prorationNote,
   monthRangeStrings,
   todayDateStr,
   formatDateStr,
@@ -12,8 +15,9 @@ import RentalSavingsGoal from './RentalSavingsGoal'
 import RentalExpenseForm from './RentalExpenseForm'
 import RentalButton from './RentalButton'
 
+// Whole dollars stay whole ($1,250); a prorated charge shows its cents ($40.32).
 function money(n) {
-  return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+  return formatRent(n)
 }
 
 // "Available {date}[ – {until}]" from nextAvailability()'s raw
@@ -125,12 +129,18 @@ export default function RentalFinancials({
   // below only calls out "N tenants" when it's actually more than one
   // booking, rather than always implying a double payment from the same
   // tenant.
+  // The unit's rent due day decides each booking's charge schedule (and which
+  // charges are part-months), see chargeScheduleForBooking in rentals.js.
+  const propertyById = new Map(properties.map((p) => [p.id, p]))
+  const scheduleFor = (b) => chargeScheduleForBooking(b, propertyById.get(b.property_id)?.rent_due_day ?? null)
+  const rentFor = (b) => propertyById.get(b.property_id)?.monthly_rent
   const chargesByProperty = new Map()
   for (const b of confirmedBookings) {
-    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end, b.paid_charges)).length
-    if (count > 0) {
-      const existing = chargesByProperty.get(b.property_id) || { count: 0, bookingIds: new Set() }
-      existing.count += count
+    const billable = scheduleFor(b).filter((c) => isBillableCharge(c.date, start, end, b.paid_charges))
+    if (billable.length > 0) {
+      const existing = chargesByProperty.get(b.property_id) || { count: 0, amount: 0, bookingIds: new Set() }
+      existing.count += billable.length
+      existing.amount += billable.reduce((sum, c) => sum + chargeAmount(rentFor(b), c), 0)
       existing.bookingIds.add(b.id)
       chargesByProperty.set(b.property_id, existing)
     }
@@ -143,17 +153,24 @@ export default function RentalFinancials({
   // cycle and an already-booked replacement tenant's move-in charge
   // (the back-to-back-turnover case) the same way — whichever charge
   // date lands first this month is what's shown, regardless of which
-  // booking it belongs to. chargeDatesForBooking returns dates in
+  // booking it belongs to. chargeScheduleForBooking returns charges in
   // chronological order already, so the first one left after filtering
   // is the soonest. Keeps the whole booking, not just the date, so the
   // "Mark paid" button below has the booking id + its current
   // paid_charges to act on.
   const upcomingChargeByProperty = new Map()
   for (const b of confirmedBookings) {
-    const soonest = chargeDatesForBooking(b).find((d) => d >= start && d < end && d > todayDateStr())
+    const soonest = scheduleFor(b).find((c) => c.date >= start && c.date < end && c.date > todayDateStr())
     if (!soonest) continue
     const existing = upcomingChargeByProperty.get(b.property_id)
-    if (!existing || soonest < existing.date) upcomingChargeByProperty.set(b.property_id, { date: soonest, booking: b })
+    if (!existing || soonest.date < existing.date) {
+      upcomingChargeByProperty.set(b.property_id, {
+        date: soonest.date,
+        amount: chargeAmount(rentFor(b), soonest),
+        note: prorationNote(soonest),
+        booking: b,
+      })
+    }
   }
 
   const confirmedOccupiedIds = new Set(confirmedBookings.map((b) => b.property_id))
@@ -168,7 +185,7 @@ export default function RentalFinancials({
   const pendingOnly = properties.filter((p) => pendingOnlyIds.has(p.id))
   const vacant = properties.filter((p) => !confirmedOccupiedIds.has(p.id) && !pendingOnlyIds.has(p.id))
 
-  const revenue = billed.reduce((sum, p) => sum + Number(p.monthly_rent) * chargesByProperty.get(p.id).count, 0)
+  const revenue = billed.reduce((sum, p) => sum + chargesByProperty.get(p.id).amount, 0)
   const overhead = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const surplus = revenue - overhead
 
@@ -177,17 +194,16 @@ export default function RentalFinancials({
   // this month tells you nothing about a platform's real return. Grouped
   // by revenue like the rest of this component, so the "most effective"
   // platform reads as the top row without needing to eyeball it.
-  const propertyById = new Map(properties.map((p) => [p.id, p]))
   const sourceBreakdown = new Map()
   for (const b of confirmedBookings) {
     const property = propertyById.get(b.property_id)
     if (!property) continue
-    const count = chargeDatesForBooking(b).filter((d) => isBillableCharge(d, start, end, b.paid_charges)).length
-    if (count === 0) continue
+    const billable = scheduleFor(b).filter((c) => isBillableCharge(c.date, start, end, b.paid_charges))
+    if (billable.length === 0) continue
     const key = b.source || 'unspecified'
     const entry = sourceBreakdown.get(key) || { count: 0, revenue: 0 }
     entry.count += 1
-    entry.revenue += count * Number(property.monthly_rent)
+    entry.revenue += billable.reduce((sum, c) => sum + chargeAmount(property.monthly_rent, c), 0)
     sourceBreakdown.set(key, entry)
   }
   const sourceRows = [...sourceBreakdown.entries()].sort((a, b) => b[1].revenue - a[1].revenue)
@@ -284,7 +300,7 @@ export default function RentalFinancials({
 
       <h3 className="mt-1 -mb-1 text-[13px] opacity-80">Units</h3>
       {billed.map((p) => {
-        const { count, bookingIds } = chargesByProperty.get(p.id)
+        const { count, amount, bookingIds } = chargesByProperty.get(p.id)
         const tenantCount = bookingIds.size
         return (
           <div key={p.id} className="py-1">
@@ -295,7 +311,7 @@ export default function RentalFinancials({
               </span>
               <span className="text-[13px] text-[#22c55e]">
                 Billed{count > 1 ? ` ×${count}` : ''}
-                {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(Number(p.monthly_rent) * count)}
+                {tenantCount > 1 ? ` (${tenantCount} tenants)` : ''} — {money(amount)}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2 pl-[15px] text-xs opacity-80">
@@ -319,7 +335,7 @@ export default function RentalFinancials({
                   the longest badge in the list for no extra information. */}
               <span className="text-[13px] italic opacity-80">
                 {upcoming
-                  ? `Occupied — ${money(p.monthly_rent)} due ${formatDateStr(upcoming.date)}`
+                  ? `Occupied — ${money(upcoming.amount)} due ${formatDateStr(upcoming.date)}${upcoming.note ? ` (${upcoming.note})` : ''}`
                   : 'Occupied — no charge this month'}
               </span>
             </div>

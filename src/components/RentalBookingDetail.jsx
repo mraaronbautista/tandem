@@ -24,7 +24,7 @@ function formatDateStr(dateStr) {
 // Viewing a booking and deleting it are separate deliberate steps —
 // tapping a highlighted calendar day used to prompt for deletion
 // immediately, which was too easy to trigger by an exploratory tap.
-export default function RentalBookingDetail({ booking, onClose, onDeleted, onConfirmed, onEdit }) {
+export default function RentalBookingDetail({ booking, rentDueDay = null, onClose, onDeleted, onConfirmed, onEdit }) {
   const confirm = useConfirm()
   const [deleting, setDeleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -42,7 +42,7 @@ export default function RentalBookingDetail({ booking, onClose, onDeleted, onCon
   // advance for something that might still be declined.
   const nextUnpaidCharge = isPending
     ? null
-    : chargeDatesForBooking(booking).find((d) => d > todayDateStr() && !(booking.paid_charges || []).includes(d))
+    : chargeDatesForBooking(booking, rentDueDay).find((d) => d > todayDateStr() && !(booking.paid_charges || []).includes(d))
 
   async function handleMarkPaid() {
     setMarkingPaid(true)

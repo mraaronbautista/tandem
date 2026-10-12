@@ -5011,3 +5011,14 @@ begin
 end $$;
 revoke all on function public.mark_issue_photos_backed_up_zip(uuid[]) from public, anon;
 grant execute on function public.mark_issue_photos_backed_up_zip(uuid[]) to authenticated;
+
+-- ===== Rent due day per unit (October 12, 2026; add-rent-due-day.sql) =====
+alter table public.rental_properties add column if not exists rent_due_day smallint;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rental_properties_rent_due_day_check') then
+    alter table public.rental_properties add constraint rental_properties_rent_due_day_check
+      check (rent_due_day is null or rent_due_day between 1 and 28 or rent_due_day = -1);
+  end if;
+end $$;

@@ -11,9 +11,8 @@
 //    above (not a repeating daily nag) — a manual per-task nudge
 //    (manual-notify's task_nudge kind) sets the same column, so whichever
 //    fires first (this cron pass or a manual nudge) suppresses the other.
-// 3. Rental charges (see chargeDatesForBooking in src/lib/rentals.js —
-//    reimplemented below since an Edge Function can't import frontend
-//    code) landing today that haven't been paid in advance
+// 3. Rental charges (rentChargeSchedule in _shared/rentCharges.ts, the same
+//    file the app uses; each unit's rent_due_day decides the days) landing today that haven't been paid in advance
 //    (rental_bookings.paid_charges) or already reminded about
 //    (rent_reminder_sent_for, a *date* rather than a boolean so the
 //    same booking's later monthly cycles can still trigger their own
@@ -42,26 +41,13 @@
 import { fetchAllMembers, memberHasPermission, notifyMember, notifyStaff, rejectUnlessNotifySecret, supabaseAdmin } from '../_shared/notify.ts'
 import { shouldRetryReminder } from '../_shared/delivery.ts'
 import { loadStaffReminderData, sendStaffReminders } from '../_shared/staffReminders.ts'
+import { chargeAmount, rentChargeSchedule } from '../_shared/rentCharges.ts'
 
 const REMINDER_WINDOW_MINUTES = 15
 const OVERDUE_NUDGE_DAYS = 3
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
-}
-
-// Same "N calendar months after, same day-of-month" logic as
-// addCalendarMonths in src/lib/rentals.js — duplicated rather than
-// shared, since this Edge Function can't import from the frontend's src/
-// (same reasoning _shared/notify.ts already gives for re-deriving the
-// who/display_name mapping). A day that does not exist in the target
-// month (the 29th-31st) lands on that month's last day, so a Jan 31
-// check-in is billed Feb 28, Mar 31, Apr 30 (audit finding 10).
-function addCalendarMonths(dateStr: string, months: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const lastDayOfTargetMonth = new Date(y, m - 1 + months + 1, 0).getDate()
-  const dt = new Date(y, m - 1 + months, Math.min(d, lastDayOfTargetMonth))
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
 }
 
 // The calendar date ('YYYY-MM-DD') in Central time at the given instant.
@@ -78,16 +64,10 @@ function addDays(dateStr: string, days: number): string {
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
 }
 
-function chargeDatesForBooking(checkIn: string, checkOut: string): string[] {
-  const dates = [checkIn]
-  let cycle = 1
-  let d = addCalendarMonths(checkIn, cycle)
-  while (d < checkOut) {
-    dates.push(d)
-    cycle += 1
-    d = addCalendarMonths(checkIn, cycle)
-  }
-  return dates
+// "$1,250", or "$40.32" for a prorated charge (the schedule and its rules are in
+// _shared/rentCharges.ts, shared with the app so the two cannot disagree).
+function money(n: number): string {
+  return `$${n.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`
 }
 
 // Parsed as local, not UTC — a bare 'YYYY-MM-DD' parsed via `new Date()`
@@ -192,7 +172,7 @@ Deno.serve(async (req) => {
         .lt('due_date', overdueCutoff.toISOString()),
       supabaseAdmin
         .from('rental_bookings')
-        .select('id, check_in, check_out, paid_charges, rent_reminder_sent_for, rental_properties(unit_name, monthly_rent)')
+        .select('id, check_in, check_out, paid_charges, rent_reminder_sent_for, rental_properties(unit_name, monthly_rent, rent_due_day)')
         .eq('status', 'confirmed')
         .gte('check_out', todayStr),
       supabaseAdmin
@@ -235,12 +215,16 @@ Deno.serve(async (req) => {
 
     for (const b of activeBookings || []) {
       if (b.rent_reminder_sent_for === todayStr) continue
-      const chargesToday = chargeDatesForBooking(b.check_in, b.check_out).includes(todayStr)
-      const alreadyPaid = (b.paid_charges || []).includes(todayStr)
-      if (!chargesToday || alreadyPaid) continue
-
       const property = b.rental_properties
-      const amount = property ? `$${Number(property.monthly_rent).toLocaleString()}` : ''
+      // The unit's rent due day decides the schedule; a first or last part-month
+      // is prorated, so the reminder names the real amount due.
+      const chargeToday = rentChargeSchedule(b.check_in, b.check_out, property?.rent_due_day ?? null).find((c) => c.date === todayStr)
+      const alreadyPaid = (b.paid_charges || []).includes(todayStr)
+      if (!chargeToday || alreadyPaid) continue
+
+      const amount = property
+        ? `${money(chargeAmount(property.monthly_rent, chargeToday))}${chargeToday.fraction < 1 ? ` (${chargeToday.days} of ${chargeToday.periodDays} days)` : ''}`
+        : ''
       const unitName = property?.unit_name || 'A unit'
       const results = await Promise.all(
         rentalsMembers.map((m) => notifyMember(m.id, { title: 'Rent due today', body: `${unitName} — ${amount}`, url: '/' })),

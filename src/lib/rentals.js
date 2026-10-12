@@ -1,4 +1,9 @@
 import { supabase } from './supabaseClient'
+// The charge schedule lives in one file shared with the reminder function, so
+// what Financials shows and what "Rent due today" says cannot disagree.
+import { rentChargeSchedule, chargeAmount, dueDayLabel, LAST_DAY } from '../../supabase/functions/_shared/rentCharges.ts'
+
+export { chargeAmount, dueDayLabel, LAST_DAY }
 
 // Display labels for rental_bookings.source — 'unspecified' isn't a real
 // enum value, it's the fallback for bookings that predate this column or
@@ -47,23 +52,6 @@ export function monthRangeStrings(monthDate) {
   return { start, end }
 }
 
-// N calendar months after dateStr, same day-of-month — not "+30*N days",
-// which drifts the billing day earlier every cycle it crosses a
-// shorter month (Jan 30 + 30 days lands on Mar 1, not Feb 30). Always
-// computed from the ORIGINAL date, not the previous cycle's result, so
-// a short month can't compound into the next cycle. When the day does
-// not exist in the target month (a check-in on the 29th, 30th or 31st),
-// the charge lands on that month's LAST day instead: Jan 31 bills
-// Feb 28, Mar 31, Apr 30, May 31, Jun 30. (JS's own overflow used to
-// roll such a date into the next month, which skipped a month and
-// double-billed another; fixed Oct 10, 2026, audit finding 10.)
-function addCalendarMonths(dateStr, months) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const lastDayOfTargetMonth = new Date(y, m - 1 + months + 1, 0).getDate()
-  const dt = new Date(y, m - 1 + months, Math.min(d, lastDayOfTargetMonth))
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
-}
-
 // 'YYYY-MM-DD' for the current date in the browser's local timezone.
 export function todayDateStr() {
   const now = new Date()
@@ -77,91 +65,89 @@ export function formatDateStr(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
-// Rent is paid upfront in monthly cycles anchored to check-in's calendar
-// day-of-month (a security deposit / Airbnb-style upfront payment, not a
-// smooth per-calendar-day accrual) — so a guest who checked in May 30
-// bills on the 30th of every month from then on (May 30, Jun 30, Jul 30,
-// ...), not "30 days later" repeatedly, which would drift the billing
-// day earlier and earlier across shorter months. A guest who checked in
-// Aug 15 hasn't paid anything new by Sep 1 — that's still covered by the
-// Aug 15 charge, and their next one lands Sep 15, not "Sep 14" the way
-// raw +30-day math would put it.
+// When a booking's rent is charged, and how much of a month each charge
+// covers, as [{ date, fraction, days, periodDays }]. `dueDay` is the unit's
+// rent_due_day (null = "Same as move-in day", 1-28, or LAST_DAY = -1):
 //
-// A later cycle only counts if there's an actual day of stay left beyond
-// it: a booking checking out on exactly its next billing day (e.g.
-// check-in Aug 7, check-out Sep 7) has that would-be next cycle land
-// exactly on check_out itself, with zero days of occupancy past it, so
-// no second charge happens — the trailing day is absorbed into the first
-// cycle rather than billed again.
-export function chargeDatesForBooking(booking) {
-  const dates = [booking.check_in]
-  let cycle = 1
-  let d = addCalendarMonths(booking.check_in, cycle)
-  while (d < booking.check_out) {
-    dates.push(d)
-    cycle += 1
-    d = addCalendarMonths(booking.check_in, cycle)
-  }
-  return dates
+//  * null: a full month is charged on the move-in day and then every month
+//    on that same day-of-month (a guest who checked in May 30 bills on the
+//    30th of every following month, never "30 days later", which would drift
+//    earlier across shorter months). A day a shorter month does not have lands
+//    on its last day (Jan 31 -> Feb 28, Mar 31, Apr 30). Never prorated.
+//  * a fixed day: rent is charged on that day each month, like TurboTenant;
+//    the first charge (on move-in) and the last are prorated by days.
+//
+// The rules and their tests live in supabase/functions/_shared/rentCharges.ts.
+export function chargeScheduleForBooking(booking, dueDay = null) {
+  return rentChargeSchedule(booking.check_in, booking.check_out, dueDay)
+}
+
+// Just the dates, in order (what "Mark paid" and the reminders key on).
+export function chargeDatesForBooking(booking, dueDay = null) {
+  return chargeScheduleForBooking(booking, dueDay).map((charge) => charge.date)
+}
+
+// "$1,250", or "$40.32" when the amount has cents (a prorated charge).
+export function formatRent(amount) {
+  const n = Number(amount) || 0
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`
+}
+
+// "1 of 31 days" for a prorated charge, '' for a full month.
+export function prorationNote(charge) {
+  return charge && charge.fraction < 1 ? `${charge.days} of ${charge.periodDays} days` : ''
 }
 
 const BASE_PROPERTY_COLUMNS = 'id, company, term, unit_name, address, monthly_rent, color, active, in_negotiation, work_site_id'
 // The house manager's standing note per unit (add-unit-staff-note.sql).
-const PROPERTY_COLUMNS = `${BASE_PROPERTY_COLUMNS}, staff_note, staff_note_updated_at`
+const NOTE_COLUMNS = `${BASE_PROPERTY_COLUMNS}, staff_note, staff_note_updated_at`
+// The unit's rent due day (add-rent-due-day.sql).
+const PROPERTY_COLUMNS = `${NOTE_COLUMNS}, rent_due_day`
 
 export async function fetchRentalProperties(company) {
-  let { data, error } = await supabase
-    .from('rental_properties')
-    .select(PROPERTY_COLUMNS)
-    .eq('company', company)
-    .eq('active', true)
-    .order('monthly_rent', { ascending: false })
-  // The location-group frontend may deploy a few minutes before Aaron
-  // runs its one-time SQL block. Keep Rentals and the Staff tab readable
-  // during that window; configuration writes still correctly wait for
-  // the migration instead of pretending a link was persisted. Same
-  // reasoning covers `term` — a unit fetched before that migration runs
-  // just reads as Short/Midterm (the column's own default) until it does.
-  // Same idea for the note columns: until add-unit-staff-note.sql has run, read
-  // the units without them (the note then reads as empty).
+  const read = (columns) =>
+    supabase.from('rental_properties').select(columns).eq('company', company).eq('active', true).order('monthly_rent', { ascending: false })
+  let { data, error } = await read(PROPERTY_COLUMNS)
+  // Each newer migration may deploy a few minutes before Aaron runs its
+  // one-time SQL, so Rentals and the Staff tab stay readable in that window by
+  // stepping back to the columns that exist. Configuration writes still
+  // correctly wait for the migration. A unit fetched before add-rent-due-day.sql
+  // reads as "Same as move-in day" (the column's own default); before
+  // add-unit-staff-note.sql its note reads as empty; before the location-group
+  // migration `term` reads as Short/Midterm (that column's own default).
+  if (error?.code === '42703' && error.message?.includes('rent_due_day')) {
+    const withoutDueDay = await read(NOTE_COLUMNS)
+    data = withoutDueDay.data?.map((property) => ({ ...property, rent_due_day: null }))
+    error = withoutDueDay.error
+  }
   if (error?.code === '42703' && error.message?.includes('staff_note')) {
-    const withoutNote = await supabase
-      .from('rental_properties')
-      .select(BASE_PROPERTY_COLUMNS)
-      .eq('company', company)
-      .eq('active', true)
-      .order('monthly_rent', { ascending: false })
-    data = withoutNote.data?.map((property) => ({ ...property, staff_note: '', staff_note_updated_at: null }))
+    const withoutNote = await read(BASE_PROPERTY_COLUMNS)
+    data = withoutNote.data?.map((property) => ({ ...property, staff_note: '', staff_note_updated_at: null, rent_due_day: null }))
     error = withoutNote.error
   }
   if (error?.code === '42703' && (error.message?.includes('work_site_id') || error.message?.includes('term'))) {
-    const fallback = await supabase
-      .from('rental_properties')
-      .select('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
-      .eq('company', company)
-      .eq('active', true)
-      .order('monthly_rent', { ascending: false })
-    data = fallback.data?.map((property) => ({ ...property, term: 'short_midterm', work_site_id: null }))
+    const fallback = await read('id, company, unit_name, address, monthly_rent, color, active, in_negotiation')
+    data = fallback.data?.map((property) => ({ ...property, term: 'short_midterm', work_site_id: null, rent_due_day: null }))
     error = fallback.error
   }
   if (error) throw error
   return data
 }
 
-export async function createRentalProperty(company, { unit_name, address, monthly_rent, color, term, work_site_id }) {
+export async function createRentalProperty(company, { unit_name, address, monthly_rent, color, term, work_site_id, rent_due_day }) {
   const { data, error } = await supabase
     .from('rental_properties')
-    .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term, ...(work_site_id !== undefined ? { work_site_id } : {}) })
+    .insert({ company, unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term, ...(work_site_id !== undefined ? { work_site_id } : {}), ...(rent_due_day !== undefined ? { rent_due_day } : {}) })
     .select(PROPERTY_COLUMNS)
     .single()
   if (error) throw error
   return data
 }
 
-export async function updateRentalProperty(id, { unit_name, address, monthly_rent, color, term, work_site_id }) {
+export async function updateRentalProperty(id, { unit_name, address, monthly_rent, color, term, work_site_id, rent_due_day }) {
   const { data, error } = await supabase
     .from('rental_properties')
-    .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term, ...(work_site_id !== undefined ? { work_site_id } : {}) })
+    .update({ unit_name, address: address || null, monthly_rent: monthly_rent || null, color, term, ...(work_site_id !== undefined ? { work_site_id } : {}), ...(rent_due_day !== undefined ? { rent_due_day } : {}) })
     .eq('id', id)
     .select(PROPERTY_COLUMNS)
     .single()
