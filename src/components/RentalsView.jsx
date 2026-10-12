@@ -18,7 +18,6 @@ import { PeriodTabs, PeriodTab } from './PeriodTabs'
 import RentalButton from './RentalButton'
 import RentalCalendar from './RentalCalendar'
 import RentalFinancials from './RentalFinancials'
-import RentalOverview from './RentalOverview'
 import RentalLongTermView from './RentalLongTermView'
 import RentalBookingForm from './RentalBookingForm'
 import RentalPropertyForm from './RentalPropertyForm'
@@ -30,7 +29,7 @@ import { useRentalVisits } from '../lib/useRentalVisits'
 import { upcomingVisitCount } from '../lib/unitTimeline'
 import UnitActivitySheet from './UnitActivitySheet'
 import RentalLocations from './RentalLocations'
-import { RentalUnitStrip, RentalUnitHeader, RentalUnitDetails } from './RentalUnitPanel'
+import { RentalUnitStrip, RentalUnitCarousel, RentalUnitHeader, RentalUnitDetails } from './RentalUnitPanel'
 import LocationVisitSheet from './LocationVisitSheet'
 import { todayInZone, zoneForSite } from '../lib/locationTime'
 
@@ -326,7 +325,6 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       visibleUnitIds={new Set(termProperties.map((p) => p.id))}
       visits={visitStore.visits}
       onSchedule={setVisitLocation}
-      compact={isDesktop}
     />
   )
   const locationSheet = visitLocation && (
@@ -507,19 +505,16 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       {locationsRow}
       {activitySheet}
       {locationSheet}
-      <h3 className="task-section-heading">Overview</h3>
-      <RentalOverview
+      <RentalUnitCarousel
         properties={shortMidtermProperties}
         bookings={upcomingBookings}
         selectedUnitId={selectedUnitId}
         onSelectUnit={setSelectedUnitId}
-        onEditUnit={openEditProperty}
         onToggleNegotiating={handleToggleNegotiating}
-        onOpenActivity={openActivity}
         visitCounts={visitCounts}
       />
-      <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
-      {properties.find((unit) => unit.id === selectedUnitId) && <RentalContacts key={selectedUnitId} store={contactStore} property={properties.find((unit) => unit.id === selectedUnitId)} />}
+      <RentalButton className="self-start" onClick={openNewProperty}>+ Add unit</RentalButton>
+      {selectedUnit && <RentalUnitHeader unit={selectedUnit} bookings={upcomingBookings} onEdit={openEditProperty} />}
 
       <MonthNavRow>
         <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
@@ -529,21 +524,14 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
         <IconButton onClick={() => shiftMonth(1)} title="Next month" aria-label="Next month">
           <ChevronRight size={14} />
         </IconButton>
+        <RentalButton variant="primary" className="ml-auto" onClick={() => calendarRef.current?.openAddBooking()}>
+          + Add booking
+        </RentalButton>
       </MonthNavRow>
 
-      {/* Overview's cards above are the only unit-switcher here — no
-          .rental-unit-tabs strip and no bold $/mo header, both redundant
-          once Overview is always visible and already showing per-unit
-          price. Deliberately not the same unitTabsReplacement trick the
-          desktop dashboard uses for this: that renders Overview *inside*
-          Calendar's own toolbar, and the CSS that makes it fit there
-          (.rental-calendar-toolbar .rental-overview-list, a horizontal
-          wrapping row) is tuned for a wide desktop toolbar — forcing
-          Overview's multi-line cards into that same row at 375px would
-          just squeeze them. Kept as its own section instead; the two
-          components staying visually separate doesn't matter since they
-          already share selectedUnitId/onSelectUnit from here regardless
-          of whether one is nested inside the other. */}
+      {/* The unit strip above is the only unit switcher here, so the calendar
+          renders without its own unit tabs, price header or Add booking
+          button (the month row above has one). */}
       <div onTouchStart={handleMonthSwipeStart} onTouchEnd={handleMonthSwipeEnd}>
         <RentalCalendar
           ref={calendarRef}
@@ -555,12 +543,23 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
           selectedUnitId={selectedUnitId}
           onSelectUnit={setSelectedUnitId}
           showUnitTabs={false}
+          showAddBooking={false}
           showUnitHeader={false}
         />
       </div>
 
-      <h3 className="task-section-heading">Financials</h3>
+      {selectedUnit && (
+        <RentalUnitDetails
+          key={selectedUnit.id}
+          unit={selectedUnit}
+          contactStore={contactStore}
+          visitCount={visitCounts.get(selectedUnit.id) || 0}
+          onOpenActivity={openActivity}
+        />
+      )}
+
       <RentalFinancials
+        collapsible
         company={company}
         properties={shortMidtermProperties}
         bookings={bookings}

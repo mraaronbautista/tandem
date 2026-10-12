@@ -80,7 +80,10 @@ export default function RentalFinancials({
   goals,
   onGoalsChanged,
   onExpensesChanged,
+  collapsible = false,
 }) {
+  // `collapsible` (phone layout): the whole block folds to one summary line.
+  const [open, setOpen] = useState(!collapsible)
   const [expenseFormOpen, setExpenseFormOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
   // Collapsed by default — the Financials column already stacks goals,
@@ -209,6 +212,25 @@ export default function RentalFinancials({
   const sourceRows = [...sourceBreakdown.entries()].sort((a, b) => b[1].revenue - a[1].revenue)
 
   return (
+    <div className="flex flex-col gap-3">
+      {collapsible && (
+        <button
+          type="button"
+          className="flex w-full min-w-0 cursor-pointer items-center justify-between gap-3 rounded-[10px] border border-border bg-card-bg px-3.5 py-2.5 text-left text-sm text-text-h [font-family:inherit]"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className="min-w-0">
+            <span className="font-semibold">Financials</span>
+            <span className="text-text">
+              {' '}
+              · {money(revenue)} · {surplus >= 0 ? 'surplus' : 'shortfall'} {money(Math.abs(surplus))}
+            </span>
+          </span>
+          <span className="text-[18px] font-bold leading-none text-accent-text">{open ? '▾' : '▸'}</span>
+        </button>
+      )}
+      {open && (
     <div className="flex flex-col gap-3">
       <RentalSavingsGoal company={company} goals={goals} onGoalsChanged={onGoalsChanged} />
 
@@ -395,6 +417,8 @@ export default function RentalFinancials({
           </div>
         </div>
       ))}
+    </div>
+      )}
     </div>
   )
 }
