@@ -33,6 +33,7 @@ import {
   DEFAULT_TIMEZONE,
 } from '../lib/timezone'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import { useConfirm } from '../lib/confirmContext'
 import { pushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 import { sendNudge } from '../lib/manualNotify'
 import { useAuth } from '../lib/AuthContext'
@@ -148,6 +149,7 @@ function dateInTimezone(date, timeZone) {
 
 export default function TaskBoard({ theme, toggleTheme }) {
   const { session, signOut } = useAuth()
+  const confirm = useConfirm()
   const isDesktop = useMediaQuery('(min-width: 900px)')
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState([])
@@ -494,6 +496,12 @@ export default function TaskBoard({ theme, toggleTheme }) {
     [whoFiltered, isToday, displayTimezone],
   )
 
+  const oldestOverdueLabel = useMemo(() => {
+    const times = overdue.map((t) => new Date(t.due_date).getTime()).filter((n) => !Number.isNaN(n))
+    if (!times.length) return ''
+    return new Date(Math.min(...times)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: displayTimezone })
+  }, [overdue, displayTimezone])
+
   // Same "right now" reasoning as overdue above — a task's own position
   // in the day-by-day list always stays on its due date now (see
   // getTasksForDay in tasks.js), so "what did I actually finish today"
@@ -750,6 +758,20 @@ export default function TaskBoard({ theme, toggleTheme }) {
     } finally {
       setMovingOverdue(false)
     }
+  }
+
+  // The overdue strip's one-tap "Move all to today" (desktop). The same
+  // action also lives in the Overdue pop-up, which is a deliberate second
+  // step; on the page itself it asks first.
+  async function handleMoveOverdueFromStrip() {
+    const n = overdue.length
+    const ok = await confirm({
+      title: `Move ${n} overdue ${n === 1 ? 'task' : 'tasks'} to today?`,
+      message: 'Each keeps its time of day and moves to today. Their original dates are not kept.',
+      confirmLabel: 'Move to today',
+      tone: 'neutral',
+    })
+    if (ok) handleMoveOverdueToToday()
   }
 
   function toggleOverdueSelectMode() {
@@ -1133,6 +1155,17 @@ export default function TaskBoard({ theme, toggleTheme }) {
                   Timeline-only class also keeps the three short labels
                   in a compact 138px capsule instead of filling every
                   spare pixel in the now-wider desktop shell. */}
+              {/* Desktop: the week strip sits in this row between the ‹ Today ›
+                  arrows and Day/Week/Month, instead of stretching across the
+                  full width on a row of its own. A phone keeps it below. */}
+              {isDesktop && viewMode !== 'month' && (
+                <div className="min-w-0 flex-1">
+                  <div className="mx-auto max-w-[520px]">
+                    <DateStrip compact selectedDate={selectedDate} onSelect={setSelectedDate} />
+                  </div>
+                </div>
+              )}
+
               <PeriodTabs className="timeline-view-tabs">
                 {VIEW_MODES.map((m) => (
                   <PeriodTab
@@ -1156,7 +1189,7 @@ export default function TaskBoard({ theme, toggleTheme }) {
               </select>
             </div>
 
-            {viewMode !== 'month' && <DateStrip selectedDate={selectedDate} onSelect={setSelectedDate} />}
+            {!isDesktop && viewMode !== 'month' && <DateStrip selectedDate={selectedDate} onSelect={setSelectedDate} />}
 
             {/* A task's position in the lists below always stays on its
                 own due date now (see getTasksForDay in tasks.js) — this
@@ -1165,26 +1198,46 @@ export default function TaskBoard({ theme, toggleTheme }) {
                 today's list instead. Same isToday gate Overdue already
                 uses, and who-scoped the same way as everything else on
                 this tab. */}
-            {isToday && (completedToday.length > 0 || overdue.length > 0) && (
-              <div className="flex flex-wrap gap-2">
-                {overdue.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setOverdueModalOpen(true)}
-                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-overdue hover:text-overdue-text active:scale-[0.97]"
-                  >
-                    <AlertTriangle size={13} className="text-overdue-text" />
-                    {overdue.length} overdue
-                  </button>
+            {isToday && (overdue.length > 0 || completedToday.length > 0) && (
+              <div className="flex items-center gap-3">
+                {overdue.length > 0 ? (
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-[8px] border border-overdue bg-overdue/10 px-3 py-1.5 text-sm text-overdue-text">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <AlertTriangle size={15} className="flex-none" aria-hidden="true" />
+                      <strong className="font-semibold">{overdue.length} overdue</strong>
+                      {oldestOverdueLabel && <span className="max-[480px]:hidden">· oldest due {oldestOverdueLabel}</span>}
+                    </span>
+                    <span className="flex flex-none items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setOverdueModalOpen(true)}
+                        className="cursor-pointer border-0 bg-transparent px-0 py-1 text-sm font-semibold text-overdue-text underline [font-family:inherit]"
+                      >
+                        Review<span className="hidden max-[480px]:inline"> ›</span>
+                      </button>
+                      {isDesktop && (
+                        <button
+                          type="button"
+                          disabled={movingOverdue}
+                          onClick={handleMoveOverdueFromStrip}
+                          className="cursor-pointer border-0 bg-transparent px-0 py-1 text-sm font-semibold text-overdue-text underline [font-family:inherit] disabled:cursor-default disabled:opacity-60"
+                        >
+                          {movingOverdue ? 'Moving…' : 'Move all to today'}
+                        </button>
+                      )}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="flex-1" />
                 )}
                 {completedToday.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setCompletedTodayOpen(true)}
-                    className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-border bg-pill-bg px-3 py-1 text-xs font-medium text-text-h transition-all duration-[120ms] ease-tactile hover:border-accent hover:text-accent-text active:scale-[0.97]"
+                    className="flex-none cursor-pointer whitespace-nowrap border-0 bg-transparent px-0 py-1 text-xs font-medium text-text-h [font-family:inherit] hover:text-accent-text"
                   >
-                    <CheckCircle2 size={13} className="text-accent-text" />
-                    {completedToday.length} completed today
+                    <CheckCircle2 size={13} className="mr-1 inline align-[-2px] text-accent-text" aria-hidden="true" />
+                    {completedToday.length} done<span className="max-[480px]:hidden"> today</span> ›
                   </button>
                 )}
               </div>

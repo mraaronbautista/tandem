@@ -24,12 +24,12 @@ function isSameDay(a, b) {
 // re-scopes itself to match so the visible week always reflects what's
 // actually selected. `today` is still tracked separately, only to
 // highlight the current day when it happens to fall in the displayed week.
-export default function DateStrip({ selectedDate, onSelect }) {
+export default function DateStrip({ selectedDate, onSelect, compact = false }) {
   const today = startOfDay(new Date())
   const days = getWeekDays(selectedDate)
 
   return (
-    <div className="mb-[18px]">
+    <div className={compact ? '' : 'mb-[18px]'}>
       <div className="grid grid-cols-7 gap-1">
         {days.map((d) => {
           const selected = isSameDay(d, selectedDate)
@@ -37,12 +37,12 @@ export default function DateStrip({ selectedDate, onSelect }) {
           return (
             <button
               key={d.toISOString()}
-              className="flex cursor-pointer flex-col items-center gap-1 rounded-[12px] border-0 bg-transparent py-1.5 text-text [font:inherit] transition-transform duration-[120ms] ease-tactile active:scale-[0.94]"
+              className={`flex cursor-pointer flex-col items-center rounded-[12px] border-0 bg-transparent text-text [font:inherit] transition-transform duration-[120ms] ease-tactile active:scale-[0.94] ${compact ? 'gap-0 py-0.5' : 'gap-1 py-1.5'}`}
               onClick={() => onSelect(startOfDay(d))}
             >
               <span className="text-[11px] uppercase opacity-80">{WEEKDAY[d.getDay()]}</span>
               <span
-                className={`flex h-[30px] w-[30px] items-center justify-center rounded-full border font-semibold text-[15px] ${
+                className={`flex items-center justify-center rounded-full border font-semibold ${compact ? 'h-7 w-7 text-[14px]' : 'h-[30px] w-[30px] text-[15px]'} ${
                   selected
                     ? 'border-transparent bg-accent text-on-accent'
                     : isToday
