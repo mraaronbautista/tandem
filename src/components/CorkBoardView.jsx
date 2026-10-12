@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Target, Undo2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
+import { Check, Target, Undo2, ChevronDown, ChevronUp, MoreHorizontal, Plus, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import HelpHint from './HelpHint'
 import { fetchCorkNotes, createCorkNote, updateCorkNote, deleteCorkNote, addCorkNoteComment, restoreArchivedTask, addRoadmapItemTask } from '../lib/corkNotes'
@@ -10,6 +10,7 @@ import { friendlyError } from '../lib/friendlyError'
 import LoadingText from './LoadingText'
 
 const composeClasses = 'flex flex-col gap-2 [&_textarea]:min-h-[70px] [&_textarea]:resize-y [&_textarea]:rounded-[8px] [&_textarea]:border [&_textarea]:border-border [&_textarea]:bg-card-bg [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-[15px] [&_textarea]:text-text-h [&_textarea]:[font-family:inherit] [&_textarea]:[font-style:inherit] [&_textarea]:[font-variant:inherit] [&_textarea]:[font-weight:inherit] [&_textarea]:[line-height:inherit]'
+const menuItemClasses = 'cursor-pointer rounded-sm border-0 bg-transparent px-2.5 py-1.5 text-left text-[13px] whitespace-nowrap text-text-h hover:bg-pill-bg disabled:cursor-default disabled:opacity-60 [font-family:inherit]'
 const itemActionClasses = 'cursor-pointer rounded-[6px] border border-border bg-pill-bg px-2.5 py-1 text-xs text-text-h'
 
 // How long a removed roadmap step stays undoable. The removal is already
@@ -296,11 +297,24 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
   const [commentDrafts, setCommentDrafts] = useState({})
   const [postingCommentId, setPostingCommentId] = useState(null)
   const composerRef = useRef(null)
+  // The composer is collapsed behind a "+ New pin" / "+ New project" button so
+  // the existing cards are what you see first (it used to fill the first screen
+  // on a phone). It opens by itself when there is nothing active to show yet.
+  const [composerOpen, setComposerOpen] = useState(false)
+  // Which card's ⋯ menu is open, and which cards show their whole comment
+  // thread instead of just the latest comment.
+  const [menuId, setMenuId] = useState(null)
+  const [expandedComments, setExpandedComments] = useState(() => new Set())
 
   useEffect(() => {
     if (!focusPinRequest) return
-    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    composerRef.current?.focus()
+    setComposerOpen(true)
+    // The textarea only exists once the composer has opened.
+    const timer = setTimeout(() => {
+      composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      composerRef.current?.focus()
+    }, 50)
+    return () => clearTimeout(timer)
   }, [focusPinRequest])
 
   function reload() {
@@ -341,6 +355,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       setBody('')
       setSharedWith([])
       setRoadmapDraft('')
+      setComposerOpen(false)
       reload()
     } catch (err) {
       setError(friendlyError(err))
@@ -622,70 +637,104 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
   const activeNotes = modeNotes.filter((n) => !n.archived)
   const archivedNotes = modeNotes.filter((n) => n.archived)
 
+  // Open by itself with nothing active to show; otherwise only when asked.
+  const showComposer = composerOpen || (notes && activeNotes.length === 0)
+  const newLabel = isProjects ? 'New project' : 'New pin'
+  const openComposer = () => setComposerOpen(true)
+
   return (
     <div className="tab-panel">
-      <p className="text-[13px] opacity-80">
-        {isProjects
-          ? 'Break a project into milestones, then pull steps onto the real timeline when you\'re ready for them.'
-          : 'Pin something with no deadline, so it doesn\'t get lost.'}
-      </p>
-
-      <form className={composeClasses} onSubmit={handlePost}>
-        <textarea
-          ref={composerRef}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder={isProjects ? 'Project name or goal…' : 'Pin a task or note…'}
-          maxLength={2000}
-        />
-
-        {isProjects ? (
-          <label className="flex flex-col gap-1 text-[13px] opacity-85">
-            Roadmap steps — one per line. Start a line with <code>##</code> to group the steps under it into a
-            milestone.
-            <textarea
-              value={roadmapDraft}
-              onChange={(e) => setRoadmapDraft(e.target.value)}
-              placeholder={'## Setup\nRegister the business\nSet up the store\n\n## Sourcing\nSource a manufacturer\nDesign packaging'}
-              maxLength={4000}
-            />
-          </label>
-        ) : null}
-
-        {members.length > 1 && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] opacity-85">
-            <span className="opacity-80">Share with:</span>
-            {members
-              .filter((m) => m.id !== me?.id)
-              .map((m) => (
-                <label key={m.id} className="flex cursor-pointer items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={sharedWith.includes(m.id)}
-                    onChange={() => toggleComposeShare(m.id)}
-                  />
-                  {m.display_name}
-                </label>
-              ))}
-          </div>
-        )}
-        {members.length > 1 && (
-          <HelpHint label="Who can see this?">
-            {isProjects ? 'A project' : 'A pin'} is private to you until you tick someone above. Only you can edit it;
-            the people you share it with can read it and add comments.
-          </HelpHint>
-        )}
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="m-0 min-w-0 text-[13px] text-text">
+          <strong className="text-[15px] font-semibold text-text-h">{isProjects ? 'Projects' : 'Pins'}</strong>
+          {activeNotes.length > 0 && ` · ${activeNotes.length}`} ·{' '}
+          {isProjects ? 'steps you can pull onto the timeline' : 'private until you share them'}
+        </p>
+        {!showComposer && (
           <button
-            type="submit"
-            className="cursor-pointer rounded-[8px] border-0 bg-accent px-4 py-2 font-semibold text-on-accent disabled:cursor-default disabled:opacity-60"
-            disabled={posting || !body.trim() || (isProjects && !roadmapDraft.trim()) || !me}
+            type="button"
+            className="flex-none cursor-pointer rounded-[8px] border-0 bg-accent px-3.5 py-2 text-sm font-semibold text-on-accent"
+            onClick={openComposer}
           >
-            {posting ? (isProjects ? 'Creating…' : 'Pinning…') : isProjects ? 'Create project' : 'Pin it'}
+            + {newLabel}
           </button>
-        </div>
-      </form>
+        )}
+      </div>
+
+      {showComposer && (
+        <form className={composeClasses} onSubmit={handlePost}>
+          <p className="m-0 text-[13px] text-text">
+            {isProjects
+              ? "Break a project into milestones, then pull steps onto the real timeline when you're ready for them."
+              : "Pin something with no deadline, so it doesn't get lost."}
+          </p>
+          <textarea
+            ref={composerRef}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder={isProjects ? 'Project name or goal…' : 'Pin a task or note…'}
+            maxLength={2000}
+          />
+
+          {isProjects ? (
+            <label className="flex flex-col gap-1 text-[13px] text-text">
+              <span>
+                Roadmap steps, one per line. Start a line with <code>##</code> to group the steps under it into a
+                milestone.
+              </span>
+              <textarea
+                value={roadmapDraft}
+                onChange={(e) => setRoadmapDraft(e.target.value)}
+                placeholder={'## Setup\nRegister the business\nSet up the store\n\n## Sourcing\nSource a manufacturer\nDesign packaging'}
+                maxLength={4000}
+              />
+            </label>
+          ) : null}
+
+          {members.length > 1 && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-text">
+              <span>Share with:</span>
+              {members
+                .filter((m) => m.id !== me?.id)
+                .map((m) => (
+                  <label key={m.id} className="flex cursor-pointer items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={sharedWith.includes(m.id)}
+                      onChange={() => toggleComposeShare(m.id)}
+                    />
+                    {m.display_name}
+                  </label>
+                ))}
+            </div>
+          )}
+          {members.length > 1 && (
+            <HelpHint label="Who can see this?">
+              {isProjects ? 'A project' : 'A pin'} is private to you until you tick someone above. Only you can edit it;
+              the people you share it with can read it and add comments.
+            </HelpHint>
+          )}
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {composerOpen && (
+              <button
+                type="button"
+                className="cursor-pointer rounded-[8px] border border-border bg-transparent px-4 py-2 text-text-h"
+                onClick={() => setComposerOpen(false)}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              className="cursor-pointer rounded-[8px] border-0 bg-accent px-4 py-2 font-semibold text-on-accent disabled:cursor-default disabled:opacity-60"
+              disabled={posting || !body.trim() || (isProjects && !roadmapDraft.trim()) || !me}
+            >
+              {posting ? (isProjects ? 'Creating…' : 'Pinning…') : isProjects ? 'Create project' : 'Pin it'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {error && <p className="error">{error}</p>}
       {!error && !notes && <LoadingText />}
@@ -702,7 +751,11 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
       )}
 
       {activeNotes.length > 0 && (
-        <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+        <ul
+          className={`m-0 grid list-none grid-cols-1 items-start gap-2.5 p-0 ${
+            isProjects ? 'min-[900px]:grid-cols-2' : 'md:grid-cols-2 min-[1100px]:grid-cols-3'
+          }`}
+        >
           {activeNotes.map((note) => {
             const isOwn = note.author_id === me?.id
             const isEditing = editingId === note.id
@@ -817,7 +870,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                   </div>
                 )}
 
-                {!isEditing && isOwn && (
+                {!isEditing && isOwn && (isRoadmapPin(note) || addSubtaskId === note.id) && (
                   <div className="mb-2">
                     {addSubtaskId === note.id ? (
                       <form
@@ -888,7 +941,7 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                     {sharedLabel(note.shared_with, memberName)}
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   {isEditing ? (
                     <>
                       <button
@@ -952,64 +1005,116 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
                         </button>
                       )}
                       {isOwn && (
-                        <>
-                          <button type="button" className={itemActionClasses} onClick={() => startEdit(note)}>
-                            Edit
-                          </button>
-                          {members.length > 1 && (
-                            <div className="relative">
-                              <button type="button" className={itemActionClasses} onClick={() => openSharing(note)}>
-                                Share
-                              </button>
-                              {sharingId === note.id && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={() => setSharingId(null)} />
-                                  <div className="absolute left-0 top-full z-20 mt-1 flex flex-col gap-1.5 rounded-md border border-border bg-card-bg p-2.5 shadow-raised">
-                                    {members
-                                      .filter((m) => m.id !== me?.id)
-                                      .map((m) => (
-                                        <label
-                                          key={m.id}
-                                          className="flex cursor-pointer items-center gap-1.5 text-[13px] whitespace-nowrap text-text-h"
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            checked={sharingDraft.includes(m.id)}
-                                            onChange={() => toggleSharingDraft(m.id)}
-                                          />
-                                          {m.display_name}
-                                        </label>
-                                      ))}
-                                    <button
-                                      type="button"
-                                      className={`${itemActionClasses} mt-1 border-accent font-semibold text-accent-text`}
-                                      onClick={() => saveSharing(note)}
-                                    >
-                                      Save
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
+                        <div className="relative ml-auto">
                           <button
                             type="button"
-                            className={itemActionClasses}
-                            onClick={() => handleArchive(note, true)}
-                            disabled={archivingId === note.id}
+                            className={`${itemActionClasses} flex items-center px-2`}
+                            aria-label="More actions"
+                            aria-expanded={menuId === note.id}
+                            onClick={() => setMenuId(menuId === note.id ? null : note.id)}
                           >
-                            {archivingId === note.id ? '…' : 'Archive'}
+                            <MoreHorizontal size={16} aria-hidden="true" />
                           </button>
-                        </>
+                          {menuId === note.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setMenuId(null)} />
+                              <div className="absolute right-0 top-full z-20 mt-1 flex min-w-[150px] flex-col rounded-md border border-border bg-card-bg p-1 shadow-raised">
+                                <button
+                                  type="button"
+                                  className={menuItemClasses}
+                                  onClick={() => {
+                                    setMenuId(null)
+                                    startEdit(note)
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                {members.length > 1 && (
+                                  <button
+                                    type="button"
+                                    className={menuItemClasses}
+                                    onClick={() => {
+                                      setMenuId(null)
+                                      openSharing(note)
+                                    }}
+                                  >
+                                    Share…
+                                  </button>
+                                )}
+                                {!isRoadmapPin(note) && (
+                                  <button
+                                    type="button"
+                                    className={menuItemClasses}
+                                    onClick={() => {
+                                      setMenuId(null)
+                                      setAddSubtaskId(note.id)
+                                    }}
+                                  >
+                                    Add subtask
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className={menuItemClasses}
+                                  disabled={archivingId === note.id}
+                                  onClick={() => {
+                                    setMenuId(null)
+                                    handleArchive(note, true)
+                                  }}
+                                >
+                                  Archive
+                                </button>
+                              </div>
+                            </>
+                          )}
+                          {sharingId === note.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setSharingId(null)} />
+                              <div className="absolute right-0 top-full z-20 mt-1 flex flex-col gap-1.5 rounded-md border border-border bg-card-bg p-2.5 shadow-raised">
+                                {members
+                                  .filter((m) => m.id !== me?.id)
+                                  .map((m) => (
+                                    <label
+                                      key={m.id}
+                                      className="flex cursor-pointer items-center gap-1.5 text-[13px] whitespace-nowrap text-text-h"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={sharingDraft.includes(m.id)}
+                                        onChange={() => toggleSharingDraft(m.id)}
+                                      />
+                                      {m.display_name}
+                                    </label>
+                                  ))}
+                                <button
+                                  type="button"
+                                  className={`${itemActionClasses} mt-1 border-accent font-semibold text-accent-text`}
+                                  onClick={() => saveSharing(note)}
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       )}
                     </>
                   )}
                 </div>
                 {!isEditing && (
                   <div className="mt-2.5 flex flex-col gap-2 border-t border-border pt-2.5">
+                    {note.comments?.length > 1 && !expandedComments.has(note.id) && (
+                      <button
+                        type="button"
+                        className="cursor-pointer self-start border-0 bg-transparent p-0 text-xs font-semibold text-accent-text [font-family:inherit]"
+                        onClick={() => setExpandedComments((prev) => new Set(prev).add(note.id))}
+                      >
+                        Show {note.comments.length - 1} earlier
+                      </button>
+                    )}
                     {note.comments?.length > 0 && (
                       <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-                        {note.comments.map((c) => (
+                        {(expandedComments.has(note.id) ? note.comments : note.comments.slice(-1)).map((c) => (
                           <li key={c.id} className="flex items-baseline gap-1.5 text-[13px]">
                             <span className="flex-none font-semibold opacity-75">{memberName(c.authorId)}</span>
                             <span className="break-words whitespace-pre-wrap">{c.body}</span>
@@ -1045,6 +1150,17 @@ export default function CorkBoardView({ me, memberName, members = [], focusPinRe
               </li>
             )
           })}
+          {!showComposer && (
+            <li className={`hidden ${isProjects ? 'min-[900px]:flex' : 'md:flex'}`}>
+              <button
+                type="button"
+                className="flex min-h-[150px] w-full cursor-pointer items-center justify-center rounded-md border border-dashed border-[var(--control-border)] bg-transparent text-[13px] text-text [font-family:inherit]"
+                onClick={openComposer}
+              >
+                + {newLabel}
+              </button>
+            </li>
+          )}
         </ul>
       )}
 
