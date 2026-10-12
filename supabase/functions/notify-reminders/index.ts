@@ -131,6 +131,13 @@ async function markSent(table: string, id: string, patch: Record<string, string>
   if (error) console.error(`notify-reminders: could not mark ${table} ${id} as reminded: ${error.message}`)
 }
 
+// One short, single-line reason for a failure, safe to return to the scheduled
+// job (no stack, no secrets: these messages come from our own queries).
+function describeError(err: unknown): string {
+  const text = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+  return text.replace(/\s+/g, ' ').slice(0, 300)
+}
+
 Deno.serve(async (req) => {
   // Only the scheduled job (which sends x-notify-secret) may run this.
   const denied = rejectUnlessNotifySecret(req)
@@ -155,152 +162,175 @@ Deno.serve(async (req) => {
     (error) => ({ data: null, error: error as Error }),
   )
 
-  // Every read this run needs, started together. They were five awaits in a
-  // row, and the scheduled job gives the whole run only 5 seconds, so a slow
-  // start (a cold function) tipped some runs over the limit. None of these
-  // reads depends on another or on anything the loops below write.
-  const [allMembers, dueSoonResult, staleOverdueResult, activeBookingsResult, longTermResult] = await Promise.all([
-    fetchAllMembers(),
-    // A task sent to the board is archived on purpose ("not doing this now"),
-    // so neither task check may nag about it.
-    supabaseAdmin
-      .from('tasks')
-      .select('*')
-      .is('reminder_sent_at', null)
-      .neq('status', 'done')
-      .eq('archived', false)
-      .gte('due_date', now.toISOString())
-      .lte('due_date', windowEnd.toISOString()),
-    supabaseAdmin
-      .from('tasks')
-      .select('*')
-      .is('overdue_nudge_sent_at', null)
-      .neq('status', 'done')
-      .eq('archived', false)
-      .not('due_date', 'is', null)
-      .lt('due_date', overdueCutoff.toISOString()),
-    supabaseAdmin
-      .from('rental_bookings')
-      .select('id, check_in, check_out, paid_charges, rent_reminder_sent_for, rental_properties(unit_name, monthly_rent)')
-      .eq('status', 'confirmed')
-      .gte('check_out', todayStr),
-    supabaseAdmin
-      .from('rental_bookings')
-      .select(
-        'id, property_id, guest_name, guest_names, check_in, check_out, last_month_reminder_sent_at, turnover_reminder_sent_at, rental_properties!inner(unit_name, term)',
-      )
-      .eq('status', 'confirmed')
-      .eq('rental_properties.term', 'long_term')
-      .gte('check_out', todayStr),
-  ])
-  const rentalsMembers = allMembers.filter((m) => memberHasPermission(m, 'rentals'))
-  const { data: dueSoon, error: dueSoonError } = dueSoonResult
-  const { data: staleOverdue, error: staleOverdueError } = staleOverdueResult
-  const { data: activeBookings, error: activeBookingsError } = activeBookingsResult
-  const { data: longTermBookings, error: longTermError } = longTermResult
-
-  if (dueSoonError) console.error(`notify-reminders: could not load tasks due soon: ${dueSoonError.message}`)
-
-  for (const task of dueSoon || []) {
-    const targets: string[] = task.assignee_ids || []
-    const results = await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Starting soon', body: task.title, url: '/' })))
-    // Nobody was reached and something temporary went wrong: leave it
-    // unmarked so the next run (every 5 minutes) tries again.
-    if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Starting soon" for task ${task.id}`); continue }
-    await markSent('tasks', task.id, { reminder_sent_at: new Date().toISOString() })
-  }
-
-  if (staleOverdueError) console.error(`notify-reminders: could not load overdue tasks: ${staleOverdueError.message}`)
-
-  for (const task of staleOverdue || []) {
-    const targets: string[] = task.assignee_ids || []
-    const results = await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Still on your plate?', body: task.title, url: '/' })))
-    if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Still on your plate?" for task ${task.id}`); continue }
-    await markSent('tasks', task.id, { overdue_nudge_sent_at: new Date().toISOString() })
-  }
-
-  if (activeBookingsError) console.error(`notify-reminders: could not load rent bookings: ${activeBookingsError.message}`)
-  if (longTermError) console.error(`notify-reminders: could not load long-term leases: ${longTermError.message}`)
-
-  for (const b of activeBookings || []) {
-    if (b.rent_reminder_sent_for === todayStr) continue
-    const chargesToday = chargeDatesForBooking(b.check_in, b.check_out).includes(todayStr)
-    const alreadyPaid = (b.paid_charges || []).includes(todayStr)
-    if (!chargesToday || alreadyPaid) continue
-
-    const property = b.rental_properties
-    const amount = property ? `$${Number(property.monthly_rent).toLocaleString()}` : ''
-    const unitName = property?.unit_name || 'A unit'
-    const results = await Promise.all(
-      rentalsMembers.map((m) => notifyMember(m.id, { title: 'Rent due today', body: `${unitName} — ${amount}`, url: '/' })),
-    )
-    if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Rent due today" for booking ${b.id}`); continue }
-    await markSent('rental_bookings', b.id, { rent_reminder_sent_for: todayStr })
-  }
-
-  // Long-term lease reminders — see the file-top comment (checks 4 & 5).
-  // Both are one-shot per booking (last_month_reminder_sent_at/
-  // turnover_reminder_sent_at), unlike the recurring rent-due check above,
-  // since a lease only has one final month and one move-out, not a
-  // repeating monthly cycle.
-  const sevenDaysOutStr = addDays(todayStr, 7)
-
-  for (const b of longTermBookings || []) {
-    const unitName = b.rental_properties?.unit_name || 'A unit'
-    const guest = (b.guest_names?.length ? b.guest_names.join(' and ') : b.guest_name) || 'The tenant'
-
-    // "Last month" — fires starting the 1st of the calendar month right
-    // before check_out's own month, regardless of which day of that month
-    // check_out actually falls on (the 1st, the 20th, the 31st — all have
-    // the same "last month," even though a day-preserving month offset from
-    // check_out's exact date would not: see monthIndex's own comment).
-    if (!b.last_month_reminder_sent_at && monthIndex(todayStr) >= monthIndex(b.check_out) - 1) {
-      const body = `Their lease ends ${longDate(b.check_out)} — this is their final month.`
-      const results = await Promise.all(
-        rentalsMembers.map((m) => notifyMember(m.id, { title: `${guest}'s last month at ${unitName}`, body, url: '/' })),
-      )
-      if (shouldRetryReminder(results)) console.error(`notify-reminders: will retry "last month" for booking ${b.id}`)
-      else await markSent('rental_bookings', b.id, { last_month_reminder_sent_at: new Date().toISOString() })
-    }
-
-    // "Turnover in one week" — branches on whether a CONFIRMED booking
-    // already starts on/after this one's own check_out. A pending inquiry
-    // doesn't count as "already lined up" — it isn't a sure thing, so that
-    // case still gets the tenant-search nudge.
-    if (!b.turnover_reminder_sent_at && b.check_out <= sevenDaysOutStr) {
-      const { data: nextBooking } = await supabaseAdmin
+  // The checks for members (tasks, rent, leases). Run inside a try below so
+  // that if one of their reads fails, the house manager's reminders still run and
+  // the failure is reported with its reason instead of a bare crash.
+  async function runMemberChecks() {
+    // Every read this run needs, started together. They were five awaits in a
+    // row, and the scheduled job gives the whole run only 5 seconds, so a slow
+    // start (a cold function) tipped some runs over the limit. None of these
+    // reads depends on another or on anything the loops below write.
+    const [allMembers, dueSoonResult, staleOverdueResult, activeBookingsResult, longTermResult] = await Promise.all([
+      fetchAllMembers(),
+      // A task sent to the board is archived on purpose ("not doing this now"),
+      // so neither task check may nag about it.
+      supabaseAdmin
+        .from('tasks')
+        .select('*')
+        .is('reminder_sent_at', null)
+        .neq('status', 'done')
+        .eq('archived', false)
+        .gte('due_date', now.toISOString())
+        .lte('due_date', windowEnd.toISOString()),
+      supabaseAdmin
+        .from('tasks')
+        .select('*')
+        .is('overdue_nudge_sent_at', null)
+        .neq('status', 'done')
+        .eq('archived', false)
+        .not('due_date', 'is', null)
+        .lt('due_date', overdueCutoff.toISOString()),
+      supabaseAdmin
         .from('rental_bookings')
-        .select('guest_name, guest_names, check_in')
-        .eq('property_id', b.property_id)
+        .select('id, check_in, check_out, paid_charges, rent_reminder_sent_for, rental_properties(unit_name, monthly_rent)')
         .eq('status', 'confirmed')
-        .neq('id', b.id)
-        .gte('check_in', b.check_out)
-        .order('check_in', { ascending: true })
-        .limit(1)
-        .maybeSingle()
+        .gte('check_out', todayStr),
+      supabaseAdmin
+        .from('rental_bookings')
+        .select(
+          'id, property_id, guest_name, guest_names, check_in, check_out, last_month_reminder_sent_at, turnover_reminder_sent_at, rental_properties!inner(unit_name, term)',
+        )
+        .eq('status', 'confirmed')
+        .eq('rental_properties.term', 'long_term')
+        .gte('check_out', todayStr),
+    ])
+    const rentalsMembers = allMembers.filter((m) => memberHasPermission(m, 'rentals'))
+    const { data: dueSoon, error: dueSoonError } = dueSoonResult
+    const { data: staleOverdue, error: staleOverdueError } = staleOverdueResult
+    const { data: activeBookings, error: activeBookingsError } = activeBookingsResult
+    const { data: longTermBookings, error: longTermError } = longTermResult
 
-      const nextGuest = nextBooking && (nextBooking.guest_names?.length ? nextBooking.guest_names.join(' and ') : nextBooking.guest_name)
+    if (dueSoonError) console.error(`notify-reminders: could not load tasks due soon: ${dueSoonError.message}`)
 
-      const title = nextBooking ? `${unitName} — turnover in one week` : `${unitName} — moving out ${shortDate(b.check_out)}`
-      const body = nextBooking
-        ? `${guest} moves out ${shortDate(b.check_out)}, ${nextGuest} moves in ${shortDate(nextBooking.check_in)}. Confirm the turnover cleaning task is set.`
-        : `${guest}'s last day is ${longDate(b.check_out)}. One week left to line up the next tenant.`
+    for (const task of dueSoon || []) {
+      const targets: string[] = task.assignee_ids || []
+      const results = await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Starting soon', body: task.title, url: '/' })))
+      // Nobody was reached and something temporary went wrong: leave it
+      // unmarked so the next run (every 5 minutes) tries again.
+      if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Starting soon" for task ${task.id}`); continue }
+      await markSent('tasks', task.id, { reminder_sent_at: new Date().toISOString() })
+    }
 
-      const results = await Promise.all(rentalsMembers.map((m) => notifyMember(m.id, { title, body, url: '/' })))
-      if (shouldRetryReminder(results)) console.error(`notify-reminders: will retry "turnover" for booking ${b.id}`)
-      else await markSent('rental_bookings', b.id, { turnover_reminder_sent_at: new Date().toISOString() })
+    if (staleOverdueError) console.error(`notify-reminders: could not load overdue tasks: ${staleOverdueError.message}`)
+
+    for (const task of staleOverdue || []) {
+      const targets: string[] = task.assignee_ids || []
+      const results = await Promise.all(targets.map((memberId) => notifyMember(memberId, { title: 'Still on your plate?', body: task.title, url: '/' })))
+      if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Still on your plate?" for task ${task.id}`); continue }
+      await markSent('tasks', task.id, { overdue_nudge_sent_at: new Date().toISOString() })
+    }
+
+    if (activeBookingsError) console.error(`notify-reminders: could not load rent bookings: ${activeBookingsError.message}`)
+    if (longTermError) console.error(`notify-reminders: could not load long-term leases: ${longTermError.message}`)
+
+    for (const b of activeBookings || []) {
+      if (b.rent_reminder_sent_for === todayStr) continue
+      const chargesToday = chargeDatesForBooking(b.check_in, b.check_out).includes(todayStr)
+      const alreadyPaid = (b.paid_charges || []).includes(todayStr)
+      if (!chargesToday || alreadyPaid) continue
+
+      const property = b.rental_properties
+      const amount = property ? `$${Number(property.monthly_rent).toLocaleString()}` : ''
+      const unitName = property?.unit_name || 'A unit'
+      const results = await Promise.all(
+        rentalsMembers.map((m) => notifyMember(m.id, { title: 'Rent due today', body: `${unitName} — ${amount}`, url: '/' })),
+      )
+      if (shouldRetryReminder(results)) { console.error(`notify-reminders: will retry "Rent due today" for booking ${b.id}`); continue }
+      await markSent('rental_bookings', b.id, { rent_reminder_sent_for: todayStr })
+    }
+
+    // Long-term lease reminders — see the file-top comment (checks 4 & 5).
+    // Both are one-shot per booking (last_month_reminder_sent_at/
+    // turnover_reminder_sent_at), unlike the recurring rent-due check above,
+    // since a lease only has one final month and one move-out, not a
+    // repeating monthly cycle.
+    const sevenDaysOutStr = addDays(todayStr, 7)
+
+    for (const b of longTermBookings || []) {
+      const unitName = b.rental_properties?.unit_name || 'A unit'
+      const guest = (b.guest_names?.length ? b.guest_names.join(' and ') : b.guest_name) || 'The tenant'
+
+      // "Last month" — fires starting the 1st of the calendar month right
+      // before check_out's own month, regardless of which day of that month
+      // check_out actually falls on (the 1st, the 20th, the 31st — all have
+      // the same "last month," even though a day-preserving month offset from
+      // check_out's exact date would not: see monthIndex's own comment).
+      if (!b.last_month_reminder_sent_at && monthIndex(todayStr) >= monthIndex(b.check_out) - 1) {
+        const body = `Their lease ends ${longDate(b.check_out)} — this is their final month.`
+        const results = await Promise.all(
+          rentalsMembers.map((m) => notifyMember(m.id, { title: `${guest}'s last month at ${unitName}`, body, url: '/' })),
+        )
+        if (shouldRetryReminder(results)) console.error(`notify-reminders: will retry "last month" for booking ${b.id}`)
+        else await markSent('rental_bookings', b.id, { last_month_reminder_sent_at: new Date().toISOString() })
+      }
+
+      // "Turnover in one week" — branches on whether a CONFIRMED booking
+      // already starts on/after this one's own check_out. A pending inquiry
+      // doesn't count as "already lined up" — it isn't a sure thing, so that
+      // case still gets the tenant-search nudge.
+      if (!b.turnover_reminder_sent_at && b.check_out <= sevenDaysOutStr) {
+        const { data: nextBooking } = await supabaseAdmin
+          .from('rental_bookings')
+          .select('guest_name, guest_names, check_in')
+          .eq('property_id', b.property_id)
+          .eq('status', 'confirmed')
+          .neq('id', b.id)
+          .gte('check_in', b.check_out)
+          .order('check_in', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+
+        const nextGuest = nextBooking && (nextBooking.guest_names?.length ? nextBooking.guest_names.join(' and ') : nextBooking.guest_name)
+
+        const title = nextBooking ? `${unitName} — turnover in one week` : `${unitName} — moving out ${shortDate(b.check_out)}`
+        const body = nextBooking
+          ? `${guest} moves out ${shortDate(b.check_out)}, ${nextGuest} moves in ${shortDate(nextBooking.check_in)}. Confirm the turnover cleaning task is set.`
+          : `${guest}'s last day is ${longDate(b.check_out)}. One week left to line up the next tenant.`
+
+        const results = await Promise.all(rentalsMembers.map((m) => notifyMember(m.id, { title, body, url: '/' })))
+        if (shouldRetryReminder(results)) console.error(`notify-reminders: will retry "turnover" for booking ${b.id}`)
+        else await markSent('rental_bookings', b.id, { turnover_reminder_sent_at: new Date().toISOString() })
+      }
     }
   }
 
-  // Reminders for the house manager. Last, and fenced off: whatever happens
-  // here, the member reminders above have already gone out.
+  let memberError = ''
+  try {
+    await runMemberChecks()
+  } catch (err) {
+    memberError = describeError(err)
+    console.error(`notify-reminders: member checks failed: ${memberError}`)
+  }
+
+  // Reminders for the house manager. Fenced off from the member checks above:
+  // whatever happened there, these still run.
+  let staffError = ''
   try {
     const staff = await staffReminderData
-    if (staff.error) console.error(`notify-reminders: could not load house manager reminders: ${staff.error.message}`)
-    else await sendStaffReminders({ admin: supabaseAdmin, notifyStaff }, staff.data!, now)
+    if (staff.error) throw staff.error
+    await sendStaffReminders({ admin: supabaseAdmin, notifyStaff }, staff.data!, now)
   } catch (err) {
-    console.error(`notify-reminders: house manager reminders failed: ${(err as Error).message}`)
+    staffError = describeError(err)
+    console.error(`notify-reminders: house manager reminders failed: ${staffError}`)
   }
 
+  // A failure is returned with its reason. The scheduled job stores each reply
+  // in net._http_response, so a crash can be diagnosed from the database (the
+  // function's own logs are not readable from there). Only the scheduled job,
+  // which holds the secret, ever sees this reply.
+  if (memberError || staffError) {
+    const parts = [memberError && `member checks: ${memberError}`, staffError && `house manager reminders: ${staffError}`].filter(Boolean)
+    return new Response(`notify-reminders failed. ${parts.join(' | ')}`, { status: 500 })
+  }
   return new Response('ok')
 })
