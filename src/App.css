@@ -3769,6 +3769,15 @@ label.new-task-checkbox-label {
   }
 }
 
+/* The desktop calendar's day cells are fixed-height, not square. Square
+   cells grew with the column (about 130px each in a wide window), which
+   pushed everything under the calendar well below the fold. */
+.rentals-desktop-dashboard .rental-month-day,
+.rentals-desktop-dashboard .rental-month-day-empty {
+  aspect-ratio: auto;
+  height: 58px;
+}
+
 /* UNUSED — see .rentals-dashboard above. Now `flex min-w-0 flex-col
    gap-3`. */
 .rentals-main {

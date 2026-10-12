@@ -30,6 +30,7 @@ import { useRentalVisits } from '../lib/useRentalVisits'
 import { upcomingVisitCount } from '../lib/unitTimeline'
 import UnitActivitySheet from './UnitActivitySheet'
 import RentalLocations from './RentalLocations'
+import { RentalUnitStrip, RentalUnitHeader, RentalUnitDetails } from './RentalUnitPanel'
 import LocationVisitSheet from './LocationVisitSheet'
 import { todayInZone, zoneForSite } from '../lib/locationTime'
 
@@ -325,6 +326,7 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
       visibleUnitIds={new Set(termProperties.map((p) => p.id))}
       visits={visitStore.visits}
       onSchedule={setVisitLocation}
+      compact={isDesktop}
     />
   )
   const locationSheet = visitLocation && (
@@ -405,10 +407,22 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
     return (
       <div className="rentals-desktop-dashboard grid grid-cols-[minmax(0,1fr)_340px] items-start gap-6">
         <div className="flex min-w-0 flex-col gap-3">
-          {termToggle}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {termToggle}
+            <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
+          </div>
           {locationsRow}
           {activitySheet}
           {locationSheet}
+          <RentalUnitStrip
+            properties={shortMidtermProperties}
+            bookings={upcomingBookings}
+            selectedUnitId={selectedUnitId}
+            onSelectUnit={setSelectedUnitId}
+            onToggleNegotiating={handleToggleNegotiating}
+            visitCounts={visitCounts}
+          />
+          {selectedUnit && <RentalUnitHeader unit={selectedUnit} bookings={upcomingBookings} onEdit={openEditProperty} />}
           <div className="flex flex-wrap items-center gap-3.5">
             <IconButton onClick={() => shiftMonth(-1)} title="Previous month" aria-label="Previous month">
               <ChevronLeft size={14} />
@@ -424,21 +438,8 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
             >
               + Add booking
             </RentalButton>
-            <RentalButton onClick={() => openEditProperty(selectedUnit)} disabled={!selectedUnit}>
-              Edit unit
-            </RentalButton>
-            <RentalButton onClick={openNewProperty}>+ Add unit</RentalButton>
           </div>
-          {selectedUnit && <RentalContacts key={selectedUnit.id} store={contactStore} property={selectedUnit} />}
 
-          {/* The per-unit status list renders in place of the (hidden)
-              unit-tabs toolbar row and, same as mobile's Overview tab,
-              doubles as the way to switch units here — it's the only unit
-              switcher in the toolbar now that the plain unit-tabs are
-              hidden (the ‹ Unit › nav above is the other one). The bold
-              $/mo unit header and the toolbar's own "+ Add booking" are
-              both suppressed here too — this list already shows each
-              unit's price, and the button moved up beside the unit nav. */}
           <RentalCalendar
             ref={calendarRef}
             properties={shortMidtermProperties}
@@ -451,18 +452,16 @@ export default function RentalsView({ me, company, registerQuickAdd }) {
             showUnitTabs={false}
             showAddBooking={false}
             showUnitHeader={false}
-            unitTabsReplacement={
-              <RentalOverview
-                properties={shortMidtermProperties}
-                bookings={upcomingBookings}
-                selectedUnitId={selectedUnitId}
-                onSelectUnit={setSelectedUnitId}
-                onToggleNegotiating={handleToggleNegotiating}
-                onOpenActivity={openActivity}
-                visitCounts={visitCounts}
-              />
-            }
           />
+          {selectedUnit && (
+            <RentalUnitDetails
+              key={selectedUnit.id}
+              unit={selectedUnit}
+              contactStore={contactStore}
+              visitCount={visitCounts.get(selectedUnit.id) || 0}
+              onOpenActivity={openActivity}
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-3">
